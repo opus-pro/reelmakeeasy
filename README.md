@@ -116,36 +116,36 @@ Every Short below was made by ReelMakeEasy from a one-line idea: script, voice, 
       <br><sub><b>Why Your Favorite Song Gives You Goosebumps</b><br>Watercolor</sub>
     </td>
     <td align="center" width="33%">
-      <a href="https://res.cloudinary.com/cqrlxhmm/video/upload/v1791988781/reelmakeeasy/showcase/great-wall-from-space.mp4"><img src="https://res.cloudinary.com/cqrlxhmm/image/upload/v1791988784/reelmakeeasy/showcase/great-wall-from-space-poster.jpg" width="200" alt="You Can't Actually See the Great Wall From Space (Short made with ReelMakeEasy)"></a>
+      <a href="https://www.youtube.com/shorts/qeF2p_zwd8I"><img src="https://i.ytimg.com/vi/qeF2p_zwd8I/oar2.jpg" width="200" alt="You Can't Actually See the Great Wall From Space (Short made with ReelMakeEasy)"></a>
       <br><sub><b>You Can't Actually See the Great Wall From Space</b><br>Vintage Editorial</sub>
     </td>
   </tr>
   <tr>
     <td align="center" width="33%">
-      <a href="https://res.cloudinary.com/cqrlxhmm/video/upload/v1791988791/reelmakeeasy/showcase/hum-nose-pinched.mp4"><img src="https://res.cloudinary.com/cqrlxhmm/image/upload/v1791988794/reelmakeeasy/showcase/hum-nose-pinched-poster.jpg" width="200" alt="Why You Can't Hum With Your Nose Pinched (Short made with ReelMakeEasy)"></a>
+      <a href="https://www.youtube.com/shorts/TXBpR4eG3hg"><img src="https://i.ytimg.com/vi/TXBpR4eG3hg/oar2.jpg" width="200" alt="Why You Can't Hum With Your Nose Pinched (Short made with ReelMakeEasy)"></a>
       <br><sub><b>Why You Can't Hum With Your Nose Pinched</b><br>Playful Overlay</sub>
     </td>
     <td align="center" width="33%">
-      <a href="https://res.cloudinary.com/cqrlxhmm/video/upload/v1791988776/reelmakeeasy/showcase/rain-sleep.mp4"><img src="https://res.cloudinary.com/cqrlxhmm/image/upload/v1791988778/reelmakeeasy/showcase/rain-sleep-poster.jpg" width="200" alt="Why Rain Sounds Help You Sleep (Short made with ReelMakeEasy)"></a>
+      <a href="https://www.youtube.com/shorts/wdDERr8wgLY"><img src="https://i.ytimg.com/vi/wdDERr8wgLY/oar2.jpg" width="200" alt="Why Rain Sounds Help You Sleep (Short made with ReelMakeEasy)"></a>
       <br><sub><b>Why Rain Sounds Help You Sleep</b><br>Collage</sub>
     </td>
     <td align="center" width="33%">
-      <a href="https://res.cloudinary.com/cqrlxhmm/video/upload/v1791988770/reelmakeeasy/showcase/airplane-windows.mp4"><img src="https://res.cloudinary.com/cqrlxhmm/image/upload/v1791988773/reelmakeeasy/showcase/airplane-windows-poster.jpg" width="200" alt="Why Airplane Windows Are Never Square (Short made with ReelMakeEasy)"></a>
+      <a href="https://www.youtube.com/shorts/EmCAAUijCmI"><img src="https://i.ytimg.com/vi/EmCAAUijCmI/oar2.jpg" width="200" alt="Why Airplane Windows Are Never Square (Short made with ReelMakeEasy)"></a>
       <br><sub><b>Why Airplane Windows Are Never Square</b><br>Low-Poly Retro</sub>
     </td>
   </tr>
   <tr>
     <td align="center" width="33%">
-      <a href="https://res.cloudinary.com/cqrlxhmm/video/upload/v1791988802/reelmakeeasy/showcase/cleopatra-moon-landing.mp4"><img src="https://res.cloudinary.com/cqrlxhmm/image/upload/v1791988804/reelmakeeasy/showcase/cleopatra-moon-landing-poster.jpg" width="200" alt="Cleopatra Lived Closer to the Moon Landing Than to the Pyramids (Short made with ReelMakeEasy)"></a>
+      <a href="https://www.youtube.com/shorts/k1y-1etwElM"><img src="https://i.ytimg.com/vi/k1y-1etwElM/oar2.jpg" width="200" alt="Cleopatra Lived Closer to the Moon Landing Than to the Pyramids (Short made with ReelMakeEasy)"></a>
       <br><sub><b>Cleopatra Lived Closer to the Moon Landing Than to the Pyramids</b><br>Halftone collage</sub>
     </td>
     <td align="center" width="33%">
-      <a href="https://res.cloudinary.com/cqrlxhmm/video/upload/v1791988787/reelmakeeasy/showcase/smell-memories.mp4"><img src="https://res.cloudinary.com/cqrlxhmm/image/upload/v1791988789/reelmakeeasy/showcase/smell-memories-poster.jpg" width="200" alt="Why One Smell Can Bring Back Childhood Memories (Short made with ReelMakeEasy)"></a>
+      <a href="https://www.youtube.com/shorts/uu9Uv7RuGHs"><img src="https://i.ytimg.com/vi/uu9Uv7RuGHs/oar2.jpg" width="200" alt="Why One Smell Can Bring Back Childhood Memories (Short made with ReelMakeEasy)"></a>
       <br><sub><b>Why One Smell Can Bring Back Childhood Memories</b><br>Handcrafted Miniature</sub>
     </td>
     <td align="center" width="33%">
-      <a href="https://res.cloudinary.com/cqrlxhmm/video/upload/v1791988796/reelmakeeasy/showcase/microwave-wifi.mp4"><img src="https://res.cloudinary.com/cqrlxhmm/image/upload/v1791988799/reelmakeeasy/showcase/microwave-wifi-poster.jpg" width="200" alt="Why Your Microwave Slows Your Wi-Fi (Short made with ReelMakeEasy)"></a>
-      <br><sub><b>Why Your Microwave Slows Your Wi-Fi</b><br>Software Showcase</sub>
+      <a href="https://www.youtube.com/shorts/oYjcyHCTass"><img src="https://i.ytimg.com/vi/oYjcyHCTass/oar2.jpg" width="200" alt="Astronauts Come Home Younger (Short made with ReelMakeEasy)"></a>
+      <br><sub><b>Astronauts Come Home Younger</b><br>Digital Chalk</sub>
     </td>
   </tr>
 </table>
