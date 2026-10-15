@@ -1,0 +1,81 @@
+{
+  "version": 1,
+  "tracks": [
+    {
+      "id": "warm-lofi",
+      "title": "Warm Lo-fi",
+      "mood": "lo-fi",
+      "type": "calm",
+      "description": "Warm, nostalgic lo-fi with soft electric piano and gentle boom-bap drums. The default for calm videos.",
+      "credit": {
+        "artist": "ElevenLabs Music v2.5 (via fal)",
+        "license": "AI-generated for ReelMakeEasy; commercial use under the fal and ElevenLabs terms",
+        "source": "https://fal.ai/models/fal-ai/elevenlabs/music",
+        "prompt": "Warm lo-fi hip hop, nostalgic and mellow. Soft electric piano chords, gentle boom-bap drums, upright bass, light vinyl crackle. 76 BPM, relaxed and cozy. Instrumental, no vocals."
+      },
+      "variants": [
+        {
+          "durationSec": 60,
+          "file": "music/warm-lofi-60s.mp3"
+        }
+      ]
+    },
+    {
+      "id": "dreamy-keys",
+      "title": "Dreamy Keys",
+      "mood": "chill",
+      "type": "calm",
+      "description": "Dreamy electric piano and a catchy piano motif over a soft, smooth beat.",
+      "credit": {
+        "artist": "ElevenLabs Music v2.5 (via fal)",
+        "license": "AI-generated for ReelMakeEasy; commercial use under the fal and ElevenLabs terms",
+        "source": "https://fal.ai/models/fal-ai/elevenlabs/music",
+        "prompt": "Chill lo-fi beat, warm and hopeful. Dreamy electric piano chords, a simple catchy piano motif, soft kick and snare, warm bass. 82 BPM, smooth and relaxed. Instrumental, no vocals."
+      },
+      "variants": [
+        {
+          "durationSec": 60,
+          "file": "music/dreamy-keys-60s.mp3"
+        }
+      ]
+    },
+    {
+      "id": "groovy-lofi",
+      "title": "Groovy Lo-fi",
+      "mood": "groove",
+      "type": "dynamic",
+      "description": "Positive, curious lo-fi with jazzy Rhodes and crisp drums. The default for dynamic videos.",
+      "credit": {
+        "artist": "ElevenLabs Music v2.5 (via fal)",
+        "license": "AI-generated for ReelMakeEasy; commercial use under the fal and ElevenLabs terms",
+        "source": "https://fal.ai/models/fal-ai/elevenlabs/music",
+        "prompt": "Groovy lo-fi hip hop, positive and curious. Jazzy Rhodes chords, crisp drums, round bass, a catchy short melody. 88 BPM. Instrumental, no vocals."
+      },
+      "variants": [
+        {
+          "durationSec": 60,
+          "file": "music/groovy-lofi-60s.mp3"
+        }
+      ]
+    },
+    {
+      "id": "piano-groove",
+      "title": "Piano Groove",
+      "mood": "piano",
+      "type": "dynamic",
+      "description": "A warm, memorable piano hook over a punchy, relaxed lo-fi beat.",
+      "credit": {
+        "artist": "ElevenLabs Music v2.5 (via fal)",
+        "license": "AI-generated for ReelMakeEasy; commercial use under the fal and ElevenLabs terms",
+        "source": "https://fal.ai/models/fal-ai/elevenlabs/music",
+        "prompt": "Warm piano-led lo-fi beat with a memorable piano hook, punchy kick, soft snare and deep bass. Confident but relaxed, 90 BPM. Instrumental, no vocals."
+      },
+      "variants": [
+        {
+          "durationSec": 60,
+          "file": "music/piano-groove-60s.mp3"
+        }
+      ]
+    }
+  ]
+}

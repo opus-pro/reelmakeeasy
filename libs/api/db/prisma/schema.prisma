@@ -1,0 +1,858 @@
+generator client {
+  provider      = "prisma-client"
+  output        = "../src/generated"
+  binaryTargets = ["native", "debian-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "mongodb"
+  url      = env("DATABASE_URL")
+}
+
+enum ProjectStage {
+  INITIALIZING
+
+  SCRIPT
+  VIRAL_HOOK
+  STORY_LOADER
+  STORYBOARD
+  VIDEO_CREW
+  RESEARCHER
+
+  PAUSED
+  FINISHED
+
+  // for 1.0, new added navigator agent and editor agent
+  /**
+   * /**
+   * /**
+   * /**
+   * /**
+   * Navigator is a pre-director or pre-execution agent
+   */
+  NAVIGATOR
+  /**
+   * Editor is a post-execution agent, must has a final video.
+   */
+  EDITOR
+  // UIP (User Intent Planner), planning stage before story-mode pipeline
+  UIP_PLANNING
+
+  // for motion graphics projects for now
+  FAILED
+  CANCELED
+}
+
+enum ProjectEnv {
+  DEV
+  STG
+  PRD
+}
+
+enum ProjectLifecycleStatus {
+  ACTIVE
+  LOCKED
+  HARD_DELETED
+}
+
+model Project {
+  dbId         String      @id @default(auto()) @map("_id") @db.ObjectId
+  id           String      @unique
+  name         String
+  isCustomName Boolean?    @default(false)
+  initPrompt   String
+  orgId        String? // org of creator
+  userId       String? // userId in org
+  owner        String? // owner's user id (the single local user)
+  ownerEmail   String? // owner's email (the single local user)
+  env          ProjectEnv? @default(DEV)
+  avatarId     String? // References AiAvatar.id or StockAvatar.id
+
+  stage            ProjectStage? @default(INITIALIZING)
+  failedReason     String? // User-facing reason when stage is FAILED (e.g. an interrupted run)
+  lastSeenAt       DateTime?
+  paused           Boolean?      @default(false)
+  isDeleted        Boolean?      @default(false)
+  rerunFrom        String?
+  rerunTo          String?
+  // Stored files are saved as their store:// address (the delivered videos and
+  // thumbnails below too): the served URL is built when the project is sent to a
+  // browser, so no saved field holds a host or port.
+  previewThumbnail String? // for project preview
+
+  script          String?
+  scriptRefId     String? // which version of script is used
+  scriptConfirmed Boolean? @default(false)
+  // Write-once vector-search source: truncated script snapshot taken when the
+  // project first reaches FINISHED. The Atlas project_search_vector index
+  // autoEmbeds this instead of the live script so embedding cost is one per
+  // project, not one per script rewrite.
+  searchText      String?
+
+  // True after we sent the "first message" onboarding reply (video plan intro) for this project
+  firstMessageReplySent Boolean? @default(false)
+
+  resultVideo            String?
+  resultVideoThumbnail   String?
+  watermarkVideo         String?
+  duration               Int? // final video duration in seconds; null until first render
+  // Legacy 4K export state: { masterCacheKey, variantKeys, completedAt,
+  // workflowId }. Read-only now that 4K export is gone.
+  upscale4k              Json?
+  // 4K delivery URLs pushed by the export workflow's project patch.
+  resultVideo4k          String?
+  resultVideo4kNocaption String?
+  resultVideo4kThumbnail String?
+  // The card status pill's "4K export in flight" record, the sibling of bgmRun
+  // above and read by the same resolver. Workflow-owned in the same sense:
+  // stamped `running` by the start endpoint before the workflow starts,
+  // settled to `done` by the export's terminal step, cleared to null when the
+  // start itself fails. User actions never touch it, so its writes never race
+  // the processingSeenAt acknowledgement, which is shared across job kinds.
+  // Shape: { status: 'running'|'done', kind: 'export', startedAt, settledAt? }
+  // -- see Upscale4kRunState in @shared/types/api/project.
+  upscale4kRun           Json?
+  voiceOverJson          Json? // {id, name, labels}
+  style                  Style?
+
+  storyboardRefId String?
+  storyboardReady Boolean? @default(false)
+
+  viralHookRefId   String?
+  hookId           String? // Selected hook ID
+  hookTemplateName String? // Selected hook template name
+  hookRefIdList    String[] @default([]) // List of refIds of hooks
+
+  researcherRefId String?
+
+  // Debug/experimental feature flags (per-project overrides)
+  // Structure: { storyboard: { fixedTemplate: true, genAI: false }, ... }
+  debugSettings Json?
+
+  // Whether this project was created by UIP (User Intent Planner)
+  isUip       Boolean?  @default(false)
+  // Timestamp when UIP plan was locked (confirmed)
+  uipLockedAt DateTime?
+
+  // Whether this project is a Story Mode project
+  isLongTake                    Boolean? @default(false)
+  // Original estimated seconds used for creation billing, independent of rendered duration.
+  creationBilledDurationSeconds Float?
+  // Long take input type: 'audio' | 'transcript'
+  longTakeInput                 String?
+  // Long take aspect ratio: '1:1' | '9:16' | '16:9'
+  longTakeRatio                 String?
+  // Create use case key chosen at creation = Story Mode project type, e.g.
+  // 'script-to-video' | 'song-to-video' | 'audio-to-video' | 'animation-style-ad'.
+  // Null on rows created before this field existed (no backfill).
+  createUseCase                 String?
+  // Story Mode style text
+  styleText                     String?
+  // Story Mode style name (e.g. "Claymation", "Anime")
+  styleName                     String?
+  // Story Mode style thumbnail URL
+  styleThumbnailUrl             String?
+
+  // Model switched by user per scene
+  // Structure: { 'generate_video': 'veo-3.1-flash', ... }
+  modelSwitch Json?
+
+  // Canonical per-project user-selected image generation model id (config model
+  // id, e.g. gemini-3-pro-image). Written at project creation / update on
+  // both entry paths (UIP + direct long-take). Read at regeneration time so regen
+  // honors the user's current selection. Null => existing default behavior.
+  imageModel String?
+
+  // User-facing quality tier selected when this Story Mode project was
+  // submitted: standard | standard_plus | premium | ultra. Analytics-only;
+  // model ids remain the execution authority.
+  modelSelectorTier String?
+
+  // Routed image model: the image model a project actually rendered on (e.g.
+  // gemini-3-pro-image or gpt-image-2) when it was routed rather than picked.
+  // Read at regeneration so the whole project stays on one model.
+  // Distinct from imageModel (the user's explicit pick; null = no pick).
+  // Null => not routed / pre-feature.
+  routedImageModel String?
+
+  // Per-project generation-resolution setting:
+  // { videoResolution?: '480p'|'720p'|'1080p', imageSize?: '1K'|'2K'|'4K' }.
+  // Validated server-side; forwarded into story-mode workflows so reruns
+  // reuse one pixel class. Null => default behavior.
+  generationResolution Json?
+
+  projectTier String?
+
+  // Agent mode (the user's local Codex) made this project: 'agent'. Drives the Projects page
+  // "Agent" tag; kept when its chat is deleted.
+  createdVia     String?
+  // The agent chat (agent session id) that made this project; cleared when that chat is deleted.
+  agentSessionId String?
+
+  // Whether to enable captions in the rendered video
+  enableCaption Boolean? @default(false)
+  // The caption look the user picked for this video (CaptionStyleSettings in @shared/types:
+  // { preset?, accent?, position?, size? }), written by PUT /long-take-videos/:id/caption-settings.
+  // Null = never chosen; consumers resolve the default with resolveCaptionRenderPref (a schema
+  // default would freeze today's look into rows and shadow the shared presets), like bgmVolume.
+  captionStyle  Json?
+
+  // Camera style for long-take clips: 'dynamic' or 'calm'. Null (older rows) means calm.
+  cameraStyle String?
+
+  // BGM (Story Mode background music) data contract.
+  // The single persisted source of truth the editor and export read; written
+  // by creation, generation, and the editor backend. Exposed UNCONDITIONALLY
+  // on the project/status API (there is no gate at the API boundary) and null
+  // until generation writes them; consumers (FE editor/export) gate
+  // *rendering* on the `enable_bgm` flag.
+  // Additive + nullable => safe against older in-flight runs (old rows read
+  // as null; no backfill).
+  // The bed is a standalone audio file (bgmBedUri/CdnUrl), NOT a baked video.
+  bgmEnabled   Boolean? @default(false) // user on/off toggle (creation sets true when gated)
+  bgmNote      String? // the user's wish for the music (a preset mood or their words), fed to the bed director; null = none
+  bgmSource    String? // where the bed comes from: 'generated' | 'library' | 'upload'; null reads as generated
+  bgmTrackId   String? // the library track id or UserMusicTrack id the bed was fitted from
+  bgmVolume    Int? // 0-100, persisted only on an explicit user choice; null = never chosen, consumers apply BGM_DEFAULT_VOLUME (a schema default would freeze the current default into rows and shadow the shared constant)
+  bgmBedUri    String? // store:// address of the standalone bed
+  bgmBedCdnUrl String? // the bed again, for the browser: served as a URL when sent to one
+  bgmPrompt    String? // text-to-music prompt used to generate the bed
+  bgmModel     String? // Lyria model id (e.g. lyria-3-clip-preview)
+  bgmTrackName String? // short human-readable track name from the director
+  bgmDuckDb    Float? // positive dB the bed is attenuated below the voice in the export mix (e.g. 10)
+  bgmBedGainDb Float? // bed->voice loudness parity gain in dB (voice LUFS - bed LUFS), measured at generation; the live preview derives its element gain from this so slider positions sound like the export duck
+  bgmVersions  Json? // regen history: [{ uri, prompt, model, trackName, createdAt }]
+  // The project-card status pill's cheap "BGM job in flight" record. One bulk
+  // list read answers "which of these N projects is busy" with zero per-row
+  // workflow lookups. Workflow-owned ONLY: written at regen start, settled by
+  // the bed persist step, cleared to null on failure; user actions never touch
+  // it, so its writes never race the processingSeenAt acknowledgement below.
+  // Shape: { status: 'running'|'done', kind: 'generate'|'regenerate',
+  // startedAt, settledAt? } -- see BgmRunState in @shared/types/api/project.
+  bgmRun       Json?
+
+  // User-owned acknowledgement for the status pill's done state. Set to now()
+  // when the user opens the project; a run's green check renders only while
+  // run.settledAt > processingSeenAt. Shared across job kinds (4K later) on
+  // purpose: opening the project acknowledges everything at once. Distinct
+  // from lastSeenAt, which the mark-seen pipeline stamps on list RENDER --
+  // reusing that would clear the check before the user ever saw it.
+  processingSeenAt DateTime?
+
+  // editorWarningCopyVersion lets a future copy change re-prompt users who acked an older version.
+  editorWarningAcknowledgedAt DateTime?
+  editorWarningCopyVersion    String?
+
+  // Agent version: '1.0' | '2.0'
+  agentVersion  String?
+  // Whether to show video plan flow (feature-flag snapshot per project)
+  // Deprecated
+  showVideoPlan Boolean?
+
+  // Project expiry fields. Nothing in this app expires projects: they are internal, stripped from
+  // every client response, and null on most rows (null lifecycleStatus reads as ACTIVE).
+  lifecycleStatus     ProjectLifecycleStatus? @default(ACTIVE)
+  expiresAt           DateTime? // active->locked trigger; null = never
+  lockedAt            DateTime?
+  hardDeleteAt        DateTime? // locked->purge trigger
+  purgedAt            DateTime? // set once the project's files are purged
+  expiryPlanTier      String? // not projectTier
+  expiryNotifications Json? // sent-notice map {kind: sentAtIso}; null = none sent
+
+  // Size in bytes of the project's ONE delivered video -- the 4K export if it exists, else the
+  // 1080p final_video.mp4 -- not the project's whole storage footprint. Measured at render finish
+  // and at 4K-export finish. null = not yet measured; 0 = measured, no delivery yet. A BigInt, so
+  // it must be stripped from JSON responses.
+  storageBytes          BigInt?
+  storageBytesUpdatedAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([name])
+  @@index([orgId])
+  @@index([owner])
+  // "Is this the user's first project?" check: filter by owner + sort
+  // [createdAt asc, id asc] as a single index seek.
+  @@index([owner, createdAt, id])
+  @@index([env])
+  @@index([resultVideo])
+  @@index([ownerEmail, env, resultVideo])
+  @@index([createdAt])
+  @@index([orgId, env, isDeleted, createdAt])
+  // Projects list long-take vs regular count: seeks an org's projects by isLongTake
+  // without scanning every [orgId, env, isDeleted] match.
+  @@index([orgId, env, isDeleted, isLongTake])
+  @@index([orgId, createdAt, stage])
+  @@index([orgId, stage, lastSeenAt, createdAt])
+  @@index([lifecycleStatus, expiresAt])
+  @@index([lifecycleStatus, hardDeleteAt])
+  @@index([lifecycleStatus, hardDeleteAt, id])
+  @@index([lifecycleStatus, expiryPlanTier, id])
+  @@index([orgId, lifecycleStatus, expiryPlanTier, id])
+  @@index([orgId, env, lifecycleStatus, isDeleted, storageBytes])
+}
+
+type Style {
+  id String
+}
+
+model ProjectShared {
+  id              String   @id @default(auto()) @map("_id") @db.ObjectId
+  projectId       String   @unique // real project id, 1 to 1 mapping
+  sharedProjectId String   @unique // shared project id
+  owner           String // owner's user id (the single local user)
+  accessLevel     String   @default("public") // "public" | "private"
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([owner]) // for owner to find all shared projects
+}
+
+model ProjectAttachment {
+  id        String @id @default(auto()) @map("_id") @db.ObjectId
+  projectId String
+
+  name            String?
+  md5             String
+  uri             String
+  previewImageUrl String?
+  mime            String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([projectId, id])
+}
+
+// UIP (User Intent Planner) session metadata + timeline.
+// Spec + session state snapshots live in storage (projects/{projectId}/user-intent-planner/).
+// Related to Project via projectId. Persisted by the workflow's local activity.
+model UipSession {
+  id                   String    @id @default(auto()) @map("_id") @db.ObjectId
+  projectId            String    @unique
+  // Row-level optimistic lock clock used by appendAndPushTimeline CAS writes.
+  timelineVersion      Int       @default(0)
+  // mode_confirmation | bootstrap_script | script_review | bootstrap_visual | refinement
+  phase                String
+  // active | completed | cancelled | timed_out | failed
+  status               String    @default("active")
+  specVersion          Int       @default(0)
+  // Voice ID pre-selected by the user at project-creation time. Reserved
+  // for future voice-metadata handling in the pre-voiceover pipeline and
+  // carried to story-mode TTS for no-audio sessions.
+  voiceId              String?
+  // Aspect ratio ('1:1' | '9:16' | '16:9') selected at project creation.
+  // Forwarded to uipToStoryMode at confirm time; drives visual-sequence /
+  // transitions / motion-design stages. Not consumed by UIP planner itself.
+  aspectRatio          String?
+  // Transition video model variant (e.g. seedance 2.0 dreamina id) chosen
+  // at project creation. Forwarded to uipToStoryMode at confirm time; drives
+  // transitions stage model selection. Not consumed by UIP planner itself.
+  transitionVideoModel String?
+  // Image generation model id (config model id, e.g. gemini-3-pro-image)
+  // chosen by the user at project creation. Validated server-side against the
+  // image-model-selector config; forwarded to story mode at confirm time and
+  // used to scale the frozen generation cost. Null => existing default behavior.
+  imageModel           String?
+  // Final user-facing selector tier at submission. Forwarded to Story Mode
+  // completion analytics; model ids remain the execution authority.
+  modelSelectorTier    String?
+  // Creation tab / entry use case (web `CreateUseCaseKey`, e.g. 'song-to-video')
+  // the session was started from. Null => no per-tab multiplier (1.0x).
+  entryUseCase         String?
+  // Per-project generation-resolution setting, same shape as
+  // Project.generationResolution. Forwarded to story mode at confirm time.
+  generationResolution Json?
+  // Custom-style flag for `project.long_take.completed` tracking parity.
+  customStyle          Boolean?
+  // Reference to the style the user picked pre-UIP ({kind:'preset',presetId} |
+  // {kind:'custom',userSavedStyleId}). Written at create, read at brand-review
+  // confirm so a saved brief references the picked library style instead of a
+  // snapshot. Mongo-only (never enters workflow input), so safe to add to.
+  selectedStyleRef     Json?
+  // Timeline event log for UIP realtime sync and state rebuild.
+  timeline             Json?
+  // High-frequency runtime state (editing heartbeat, review gate token, etc).
+  // Updated with optimistic locking via stateVersion.
+  state                Json?
+  stateVersion         Int       @default(0)
+  // Durable next action record used to guarantee idempotent trigger-next-action delivery.
+  // Written atomically by claimNextAction; cleared once the workflow claims it via callback.
+  nextAction           Json?
+  nextActionVersion    Int       @default(0)
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+  lockedAt             DateTime?
+  // When the draft was committed at continueUipDraft ("Create video") time, by
+  // the user or the review deadline. executeConfirmOrchestration requires it;
+  // cancelSession clears it.
+  continuedAt          DateTime?
+
+  // Transcript the user confirmed at continueUipDraft ("Create video") time,
+  // persisted synchronously by the API. Preferred over the storage working_script,
+  // which is only updated through the async uip-gui-update signal and can lag
+  // the confirmed text. Null for older clients that don't send it.
+  confirmedScript String?
+
+  // Track discriminator for the create flow this session belongs to.
+  // null | 'uip' => the User Intent Planner (existing behavior); 'screenplay' => the
+  // screenplay track (staged world/idea/script/assets/clips flow, ScreenplaySessionWorkflow).
+  // Mongo-only, nullable, no default => safe to add to; existing docs read as null.
+  track String?
+
+  @@index([status, createdAt])
+}
+
+model History {
+  id        String  @id @default(auto()) @map("_id") @db.ObjectId
+  projectId String
+  type      String // 'text-delta' | 'tool-call' | 'tool-result' | 'reasoning' | 'source' | 'finish' | 'text'
+  role      String // 'agent' | 'tool' | 'user'
+  from      String? // 'agent' | 'user'
+  text      String?
+  toolName  String?
+  agentName String?
+  // for logging raw agent message
+  raw       Json?
+  // for embedded block
+  content   Json?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([projectId, createdAt])
+}
+
+model GenerationRecord {
+  id        String  @id @default(auto()) @map("_id") @db.ObjectId
+  taskId    String
+  attempt   Int
+  projectId String
+  userId    String?
+
+  anchorId   String?
+  anchorType String?
+
+  type   String // 'llm' | 'image' | 'video'
+  task   String
+  status String // 'success' | 'failed'
+  model  String?
+
+  inputText  String?
+  outputText String?
+  inputUris  String[] @default([])
+  outputUris String[] @default([])
+
+  stagingStatus String? // 'pending' | 'ready' | 'failed'
+  stagingError  String?
+
+  errorName    String?
+  errorMessage String?
+  errorStack   String?
+
+  meta Json?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([projectId, type, createdAt])
+  @@index([projectId, taskId, attempt])
+  @@index([projectId, anchorType, anchorId, createdAt])
+  @@index([projectId, task, createdAt])
+  @@index([status, createdAt])
+}
+
+model UserVoiceClone {
+  id                   String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId               String
+  orgId                String?
+  voiceId              String
+  name                 String
+  provider             String? // 'minimax' | 'elevenlabs' | 'fal' | 'qwen3' | 'byteplus' (retired) - optional for existing data
+  // DEPRECATED. File ID or store path of the raw user audio the clone was made from.
+  //
+  // No code reads this to fetch audio any more. It existed for BytePlus Seed Audio, whose
+  // clones were zero-shot: the stored file IS the voice model, so every synthesis re-read and
+  // re-inlined it. That path is deleted, so the field is now write-only metadata, still set
+  // on save and still consumed by the delete path to find the object to remove.
+  //
+  // Kept, not dropped: dropping a persisted field is a separate migration.
+  //
+  // NOTE: clone-time deletion of the raw sample is SUSPENDED for the provider migration, so
+  // the object this points at normally DOES still exist, and this column is its only pointer.
+  // The migration reads it to re-submit the original audio. An earlier version of this
+  // comment said the sample is always deleted and that nothing should read it as an audio
+  // source; both were true only while that suspension wasn't yet in force.
+  originalSource       String?
+  // Set only on a `provider: 'fal'` row: the MiniMax `voiceId` this Fal clone was minted
+  // from. Fal's clone endpoint takes no `voice_id` input and returns its own
+  // `custom_voice_id`, and clone ids are tenant-scoped, so a voice cannot be carried across
+  // by swapping the id -- it has to be re-cloned into a NEW row that coexists with the
+  // MiniMax original. This is the only link between the pair.
+  //
+  // Load-bearing for the A/B read-resolver (map old -> new while the gate is on), backfill
+  // idempotency, and cleanup pairing.
+  migratedFromVoiceId  String?
+  // How the Fal clone was minted: 'sample' from the user's original upload, 'preview' from
+  // the MiniMax-synthesized preview when the sample is gone (a clone-of-clone). Null on
+  // MiniMax rows. Preview-sourced clones are a step further from the user's real voice and
+  // may warrant re-doing from sample later.
+  cloneSource          String?
+  // Set only on a `provider: 'qwen3'` row: the storage path of the Qwen3-TTS speaker
+  // embedding (a small safetensors file) the voice is synthesized from, and the text
+  // spoken in the reference audio it was made from.
+  speakerEmbeddingPath String?
+  referenceText        String?
+  createdAt            DateTime @default(now())
+
+  @@unique([voiceId, provider])
+  @@unique([userId, name, provider])
+  @@index([userId])
+  @@index([orgId])
+  // The A/B read-resolver hits this per render and the backfill hits it once per migrated
+  // voice, so an unindexed lookup would COLLSCAN the whole collection on the voiceover hot
+  // path. Single-field rather than compound with `provider`: migratedFromVoiceId is set only
+  // on Fal rows and is ~1:1 with its source voice.
+  @@index([migratedFromVoiceId])
+}
+
+// One generate/refine/restore step of a custom style. Embedded,
+// append-only history on UserSavedStyle; current state = the last entry.
+type StyleSnapshot {
+  id                  String // server-generated snapshot id
+  createdAt           DateTime
+  userRequest         String? // chat msg that produced it; null for the initial generate
+  reusableStylePrompt String
+  colorPalette        Json? // { primary, secondary, accent }
+  summary             String?
+  analysis            Json?
+  scenePreviewUrls    String[] @default([]) // store:// addresses (served as URLs), ordered by STYLE_SCENE_ARCHETYPES
+  restoredFromId      String? // set when this snapshot is an append-a-copy restore
+}
+
+// A user's own background-music track, uploaded once and reusable across videos (a
+// brand track). The file is a standard mp3 in music-tracks/<userId>/; a project that
+// uses it keeps its own fitted copy, so deleting a track never breaks a video.
+model UserMusicTrack {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId      String
+  orgId       String?
+  name        String
+  fileUri     String
+  cdnUrl      String // the track again, for the browser: served as a URL when sent to one
+  durationSec Float
+  sizeBytes   Int
+  // 'upload' | 'generated' (a bed made for one of the user's videos); null reads as upload.
+  source      String?
+  // The video a generated track was made for.
+  projectId   String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([userId, createdAt])
+}
+
+model UserSavedStyle {
+  id                  String          @id @default(auto()) @map("_id") @db.ObjectId
+  userId              String
+  orgId               String?
+  name                String
+  styleText           String // distilled reusable style prompt; used for DISPLAY (short summary)
+  // Full composed style (reusable prompt + face logic + reproduction guidance +
+  // palette) used for GENERATION. Additive/nullable: legacy rows and
+  // styles saved before this field fall back to styleText at apply time.
+  generationStyleText String?
+  styleInputMode      String // 'image' | 'text'
+  thumbnailUrl        String? // compressed WebP thumbnail (a store:// address, served as a URL)
+  originalImageUri    String? // store:// address of the original uploaded image
+  // Structured extras from the custom-style generator: the
+  // analyzer's {summary, analysis, colorPalette, faceDepiction}. Additive/
+  // nullable -- legacy styles leave this null. The FE 2-stage modal
+  // reads it; generationStyleText is composed from these pieces server-side.
+  styleMetadata       Json? // { summary, analysis, colorPalette, faceDepiction }
+  // Append-only generate/refine/restore history. Current state is the
+  // last entry. Legacy docs written before this field read back as an empty
+  // array (Prisma-mongo treats a missing composite list as []).
+  snapshots           StyleSnapshot[]
+  createdAt           DateTime        @default(now())
+  updatedAt           DateTime        @updatedAt
+
+  @@unique([userId, name])
+  @@index([orgId, userId, createdAt])
+  @@index([userId, createdAt])
+  @@index([userId])
+  @@index([orgId])
+}
+
+// Append-only record of which saved style produced which project.
+//
+// A style has no identity anywhere else on the backend: it reaches the render
+// path as three loose strings (styleText / styleName / styleThumbnailUrl) and
+// Project stores no style id, so "which style made this video" and reuse depth
+// are both unanswerable today. This join row is the
+// smallest thing that makes them answerable, and it lives beside the style
+// rather than threading an id through five create paths and the workflow spec.
+//
+// realismClass is SNAPSHOT at apply time on purpose: a style can be edited
+// afterwards (which reclassifies it), and the video was made with the label as
+// it stood. Reading the style's current label instead would silently rewrite
+// history.
+model UserSavedStyleUse {
+  id           String   @id @default(auto()) @map("_id") @db.ObjectId
+  savedStyleId String   @db.ObjectId
+  projectId    String
+  userId       String
+  orgId        String?
+  realismClass String?
+  createdAt    DateTime @default(now())
+
+  // One row per (style, project): applying the same style to the same project
+  // twice is the same use, so the write is idempotent under retry.
+  @@unique([savedStyleId, projectId])
+  @@index([savedStyleId, createdAt])
+  @@index([userId, createdAt])
+  @@index([projectId])
+}
+
+// Server-side capture of every custom-style generation attempt,
+// including sessions that never save, so the raw inputs (text, video links,
+// reference images) can be read to improve prompts and the model. This is raw
+// user content: keep it off any PII-gated read path. Rows expire after 30 days
+// via a Mongo TTL index on createdAt that StyleAttemptService ensures at
+// startup -- Prisma's mongodb provider cannot declare a TTL index in-schema.
+model StyleGenerationAttempt {
+  id              String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId          String
+  orgId           String?
+  stage           String // analyze | analyze_from_video | refine | render
+  modality        String // canonical '+'-joined input kinds (image+text, video_url, ...) or 'none'
+  descriptionText String? // verbatim Stage-1 description
+  refinePrompt    String? // verbatim refine message
+  videoUrl        String? // verbatim video link, or store:// address of an uploaded video file
+  imageUris       String[] @default([]) // durable refs to the input images, never blobs
+  outputStyleText String? // model output (reusable style prompt)
+  savedStyleId    String? // set when the attempt's output is later saved (joins inputs to outcomes)
+  createdAt       DateTime @default(now())
+
+  @@index([orgId, userId, createdAt])
+  @@index([userId, createdAt])
+  @@index([savedStyleId])
+}
+
+model SourcePreference {
+  id            String   @id @default(auto()) @map("_id") @db.ObjectId
+  orgId         String?  @unique
+  userId        String   @unique
+  youtubeFilter String   @default("all") // 'all' | 'creativeCommonsOnly' | 'blockAll'
+  blockedSites  String[] @default([])
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+model SystemConfig {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  key       String   @unique
+  value     Json
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model AiAvatar {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId      String
+  orgId       String?
+  voiceId     String
+  status      String // 'generating', 'ready', 'active', 'failed'
+  modelId     String? // Generated AI avatar model ID
+  displayName String? // User-defined name for the avatar
+  previewUrl  String? // URL to the generated preview video
+  images      Json // Array of image objects: [{originalName, fileUri, contentType, size}]
+  cropOffset  Float?   @default(0.18) // Offset for 9:8 nested crop (0-1, where 0=top, 0.5=center, 1=bottom)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([userId])
+  @@index([orgId])
+  @@index([userId, status]) // For finding active avatars
+  @@index([createdAt])
+}
+
+model StockAvatar {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  displayName String // Stock avatar display name (required)
+  description String? // Optional description for stock avatar
+  modelId     String   @unique // Hedra model ID (unique, required)
+  voiceId     String // Fixed voice ID bound to this stock avatar (required)
+  previewUrl  String // Preview video URL (required)
+  images      Json // Array of image objects: [{originalName, fileUri, contentType, size}]
+  cropOffset  Float    @default(0.18) // Offset for 9:8 nested crop
+  isActive    Boolean  @default(true) // Enable/disable stock avatar
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([isActive])
+  @@index([voiceId])
+  @@map("stock_avatars")
+}
+
+enum DemoProjectType {
+  S2V
+  STORY_MODE
+  SCREENPLAY
+}
+
+type DemoAsset {
+  name     String
+  url      String
+  mimeType String
+}
+
+model DemoProject {
+  id              String          @id @default(auto()) @map("_id") @db.ObjectId
+  projectId       String          @unique @map("project_id")
+  source          String          @map("source")
+  sourceProjectId String?         @map("source_project_id")
+  sourceUserId    String?         @map("source_user_id")
+  title           String?         @map("title")
+  description     String?         @map("description") // for internal notes
+  projectType     DemoProjectType @map("project_type")
+  useCases        String[]        @default([]) @map("use_cases")
+  goals           String[]        @default([]) @map("goals")
+  industries      String[]        @default([]) @map("industries")
+  inputType       String?         @map("input_type")
+  initPrompt      String          @map("init_prompt")
+  resultVideo     String          @map("result_video")
+  thumbnail       String          @map("thumbnail")
+
+  presetId          String?     @map("preset_id")
+  styleDescription  String?     @map("style_description")
+  shotDescription   String?     @map("shot_description")
+  motionDescription String?     @map("motion_description")
+  assets            DemoAsset[] @map("assets")
+
+  // for S2V projects
+  s2vLandingPageMeta Json? @map("s2v_landing_page_meta")
+
+  // for Story Mode projects
+  styleText         String? @map("style")
+  styleName         String? @map("style_name")
+  styleThumbnailUrl String? @map("style_thumbnail_url")
+  aspectRatio       String? @map("aspect_ratio")
+  transcript        String? @map("transcript")
+
+  // Model the source project used, snapshotted at curation time so the demo's
+  // model badges survive source-project deletion (parity with the
+  // userUploadedAudioUrl snapshot). These mirror the source Project's explicit
+  // `imageModel` and `debugSettings.transitionVideoModel`, the same fields the
+  // live project badge reads. Write-once at create/copy; null is a valid value
+  // (e.g. transitionVideoModel null = Seedance 1.5 default).
+  imageModel           String? @map("image_model")
+  transitionVideoModel String? @map("transition_video_model")
+
+  // Story Mode user-uploaded snapshot, populated when user_uploaded/ is mirrored
+  // into the demo folder so the demo survives source-project deletion.
+  userUploadedAudioUrl String?   @map("user_uploaded_audio_url")
+  userUploadedSyncedAt DateTime? @map("user_uploaded_synced_at")
+
+  displayOrder Int     @default(999) @map("display_order")
+  isActive     Boolean @default(false) @map("is_active")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([projectType, displayOrder, createdAt])
+  @@index([projectType, inputType])
+  @@index([projectType, useCases])
+  @@index([projectType, goals])
+  @@index([projectType, industries])
+  @@index([createdAt, projectType])
+  @@index([projectType, isActive, displayOrder, createdAt])
+}
+
+model StyleConfig {
+  id          String @id @default(auto()) @map("_id") @db.ObjectId
+  name        String @unique // Unique snake_case identifier (e.g., "minimalist", "neon_noir") - no spaces allowed
+  displayName String // Human-readable display name (e.g., "Minimalist", "Neon Noir")
+  description String // Detailed style description (XML format with Color Palette, Illustration Rules, Photo Treatment)
+
+  // Use cases
+  preferredGenres String // Comma-separated applicable genres
+  overview        String // Style overview
+
+  // Font configuration
+  fonts Json // Array<{family: string, uri: string, weight: string}>
+
+  // Color palette
+  palette Json // {primary, secondary, background}
+
+  // Reference images
+  referenceImageUrl String? // reference image URL
+  thumbnailUrl      String? // Thumbnail URL (400x400)
+
+  // Default background image
+  defaultBackgroundImageUrl     String? // default background image URL
+  defaultBackgroundThumbnailUrl String? // Thumbnail URL
+
+  // Metadata
+  status    String  @default("Draft") // 'Draft' | 'Live' | 'Archived'
+  createdBy String? // User ID
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([status])
+  @@index([createdAt])
+}
+
+// Saved brand brief for the Brand Library: a snapshot of a confirmed UIP
+// brand_bank, reusable across projects.
+model BrandBrief {
+  id                       String    @id @default(auto()) @map("_id") @db.ObjectId
+  // Owner scope: a brief is shared across the org, which is how a team of
+  // seats reuses one brand. orgId is the query/index key.
+  orgId                    String
+  // The seat that created the brief; provenance only, never the scope key.
+  userId                   String
+  brandName                String
+  // Registrable domain of the extraction website; null for freeform briefs.
+  sourceDomain             String?
+  sourceUrl                String?
+  // 'auto' (saved silently on confirm) | 'user' (explicitly saved)
+  savedKind                String    @default("auto")
+  brandBank                Json
+  // Embedded styles. Each entry may carry isDefault; exactly one style is the
+  // brand's default (MS2 holds up to 3 per brief).
+  styles                   Json      @default("[]")
+  // Marks the org's default brand brief; the set-default mutation lands in MS2.
+  isDefault                Boolean   @default(false)
+  // Stamped while a background brand-style generation runs for this brief;
+  // cleared (null) when it settles. The FE renders a "generating" tile from it.
+  styleGenerationPendingAt DateTime?
+  assetBasePath            String?
+  videosCreated            Int       @default(0)
+  lastUsedAt               DateTime  @default(now())
+  createdAt                DateTime  @default(now())
+  updatedAt                DateTime  @updatedAt
+
+  @@index([orgId, sourceDomain])
+  @@index([orgId, lastUsedAt])
+}
+
+// First-party download signal for story-mode discovery v2. Append-only:
+// one row per successful download-url issuance from GET /project/:id/download-url.
+// The discovery list joins these back to Project at read time for use case / style /
+// rating, so this table stays minimal. No backfill, only captures post-launch
+// downloads.
+// Retention: 30 days via a TTL on [createdAt], applied at startup by
+// ProjectDownloadRetentionService (Prisma cannot declare TTL in-schema).
+model ProjectDownloadEvent {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  projectId String
+  userId    String?
+  watermark Boolean
+  createdAt DateTime @default(now())
+
+  @@index([projectId, createdAt])
+  @@index([createdAt])
+}

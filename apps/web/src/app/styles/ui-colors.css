@@ -1,0 +1,201 @@
+@tailwind base;
+
+@layer base {
+  :root.ui {
+    /* =================================================================== */
+    /* Color tokens: reference palette -> system tokens -> Tailwind aliases. */
+    /* =================================================================== */
+
+    /* Reference palette */
+    --ui-ref-color-white-100: #ffffff;
+    --ui-ref-color-white-a90: #ffffffe5;
+    --ui-ref-color-white-a80: #ffffffcc;
+    --ui-ref-color-white-a70: #ffffffb2;
+    --ui-ref-color-white-a60: #ffffff99;
+    --ui-ref-color-white-a50: #ffffff80;
+    --ui-ref-color-white-a40: #ffffff66;
+    --ui-ref-color-white-a30: #ffffff4d;
+    --ui-ref-color-white-a25: #ffffff40;
+    --ui-ref-color-white-a18: #ffffff2e;
+    --ui-ref-color-white-a15: #ffffff26;
+    --ui-ref-color-white-a12: #ffffff1f;
+    --ui-ref-color-white-a10: #ffffff1a;
+    --ui-ref-color-white-a8: #ffffff14;
+    --ui-ref-color-white-a5: #ffffff0d;
+    --ui-ref-color-black-100: #000000;
+    --ui-ref-color-black-a90: #000000e5;
+    --ui-ref-color-black-a80: #000000cc;
+    --ui-ref-color-black-a70: #000000b2;
+    --ui-ref-color-black-a60: #00000099;
+    --ui-ref-color-black-a50: #00000080;
+    --ui-ref-color-black-a40: #00000066;
+    --ui-ref-color-black-a30: #0000004d;
+    --ui-ref-color-black-a25: #00000040;
+    --ui-ref-color-black-a18: #0000002e;
+    --ui-ref-color-black-a15: #00000026;
+    --ui-ref-color-black-a12: #0000001f;
+    --ui-ref-color-black-a10: #0000001a;
+    --ui-ref-color-black-a8: #00000014;
+    --ui-ref-color-black-a5: #0000000d;
+    --ui-ref-color-grey-900: #121212;
+    --ui-ref-color-grey-800: #191919;
+    --ui-ref-color-grey-700: #1a1a1a;
+    --ui-ref-color-grey-600: #1e1e1e;
+    --ui-ref-color-grey-500: #2d2d2d;
+    --ui-ref-color-grey-400: #303030;
+    --ui-ref-color-grey-400-a80: #303030cc;
+    --ui-ref-color-grey-300: #444444;
+    --ui-ref-color-grey-300-a50: #44444480;
+    --ui-ref-color-grey-200: #666666;
+    --ui-ref-color-grey-100: #969696;
+    --ui-ref-color-grey-50: #b8b8b8;
+    --ui-ref-color-red-100: #ff570a;
+    --ui-ref-color-red-a80: #ff570acc;
+    --ui-ref-color-red-a10: #ff570a1a;
+    --ui-ref-color-green-100: #bef737;
+    --ui-ref-color-green-a80: #bef737cc;
+    --ui-ref-color-green-a10: #bef7371a;
+    --ui-ref-color-orange-100: #ff570a;
+    --ui-ref-color-orange-a80: #ff570acc;
+    --ui-ref-color-orange-a10: #ff570a1a;
+    --ui-ref-color-blue-100: #00b2f8;
+    --ui-ref-color-blue-a80: #00b2f8cc;
+    --ui-ref-color-blue-a10: #00b2f81a;
+    --ui-ref-color-yellow-100: #ffc141;
+    --ui-ref-color-yellow-a80: #ffc141cc;
+    --ui-ref-color-yellow-a10: #ffc1411a;
+
+    /* System tokens */
+    --ui-sys-color-text-primary: var(--ui-ref-color-white-100);
+    /* 60%, not 50%: readable (4.5:1 or better) on the panels and cards, not only on the page. */
+    --ui-sys-color-text-secondary: var(--ui-ref-color-white-a60);
+    --ui-sys-color-text-disabled: var(--ui-ref-color-white-a25);
+    --ui-sys-color-text-inverse: var(--ui-ref-color-black-100);
+    --ui-sys-color-surface-bg: var(--ui-ref-color-grey-700);
+    --ui-sys-color-surface-overlay: var(--ui-ref-color-grey-300-a50);
+    --ui-sys-color-surface-floating: var(--ui-ref-color-grey-300);
+    --ui-sys-color-fill-primary: var(--ui-ref-color-white-100);
+    --ui-sys-color-fill-primary-hover: var(--ui-ref-color-white-a80);
+    --ui-sys-color-fill-secondary: var(--ui-ref-color-white-a10);
+    --ui-sys-color-fill-secondary-hover: var(--ui-ref-color-white-a18);
+    --ui-sys-color-status-success: var(--ui-ref-color-green-100);
+    --ui-sys-color-status-error: var(--ui-ref-color-red-100);
+    --ui-sys-color-accent-green: var(--ui-ref-color-green-100);
+    --ui-sys-color-accent-yellow: var(--ui-ref-color-yellow-100);
+    --ui-sys-color-accent-orange: var(--ui-ref-color-orange-100);
+    --ui-sys-color-accent-blue: var(--ui-ref-color-blue-100);
+    --ui-sys-color-border-heavy: var(--ui-ref-color-white-100);
+    --ui-sys-color-border-strong: var(--ui-ref-color-white-a50);
+    --ui-sys-color-border-weak: var(--ui-ref-color-white-a18);
+    --ui-sys-color-border-subtle: var(--ui-ref-color-white-a10);
+    --ui-sys-color-icon-primary: var(--ui-ref-color-white-100);
+    --ui-sys-color-icon-secondary: var(--ui-ref-color-white-a50);
+    --ui-sys-color-icon-disabled: var(--ui-ref-color-white-a25);
+    --ui-sys-color-icon-inverse: var(--ui-ref-color-black-100);
+
+    /* Tailwind aliases (pinned entries hold their production value) */
+    --ui-bg-black: #0d0d0d;
+    --bg-background: var(--ui-sys-color-surface-bg);
+    --bg-background-transparent: #1a1a1a00;
+    --bg-foreground: #242424; /* pinned: legacy value, differs from the system token */
+    --bg-panel: #1e1e1e; /* pinned: legacy value, differs from the system token */
+    --bg-overlay: #444444d9; /* pinned: legacy value, differs from the system token */
+    --ui-bg-overlay-subtle: var(--ui-sys-color-surface-overlay);
+    --bg-overlay-subtle: var(--ui-sys-color-surface-overlay);
+    --ui-bg-menu: 0 0% 26.7%; /* #444444, HSL channels for the menu utility */
+    --bg-secondary: var(--fill-secondary);
+    --bg-tertiary: var(--fill-tertiary);
+    --primary: var(--ui-sys-color-text-primary);
+    --secondary: var(--ui-sys-color-text-secondary);
+    --tertiary: var(--ui-ref-color-white-a40);
+    --primary-foreground: var(--ui-sys-color-text-inverse);
+    --fill-primary: var(--ui-sys-color-fill-primary);
+    --fill-secondary: var(--ui-sys-color-fill-secondary);
+    --fill-tertiary: var(--ui-ref-color-white-a8);
+    --fill-hover: var(--ui-sys-color-fill-secondary-hover);
+    --fill-disabled: var(--ui-ref-color-white-a5);
+    --border-primary: var(--ui-sys-color-border-heavy);
+    --border-secondary: var(--ui-sys-color-border-weak);
+    --border-tertiary: rgba(
+      255,
+      255,
+      255,
+      0.08
+    ); /* pinned: legacy value, differs from the system token */
+    --border-subtle: rgba(
+      255,
+      255,
+      255,
+      0.08
+    ); /* pinned: legacy value, differs from the system token */
+    --border-muted: rgba(
+      255,
+      255,
+      255,
+      0.08
+    ); /* pinned: legacy value, differs from the system token */
+    --accent: var(--ui-ref-color-white-100);
+    --accent-foreground: var(--ui-ref-color-black-100);
+    --accent-green: 86, 97%, 75%; /* pinned: legacy value, differs from the system token */
+    --accent-orange: 255 87 10; /* #ff570a, RGB channels for the rgb() utility */
+    --accent-blue: 0 178 248; /* #00b2f8, RGB channels for the rgb() utility */
+    --muted: rgba(255, 255, 255, 0.08); /* pinned: legacy value, differs from the system token */
+
+    /* =================================================================== */
+    /* DEPRECATION BRIDGE -- legacy alias names kept alive so existing       */
+    /* app code resolves to the same rendered color. Remove an entry once    */
+    /* its call sites move to the new token.                                */
+    /* =================================================================== */
+    --ui-bg-background: var(--bg-background);
+    --ui-bg-background-transparent: var(--bg-background-transparent);
+    --ui-bg-foreground: var(--bg-foreground);
+    --ui-bg-panel: var(--bg-panel);
+    --ui-bg-overlay: var(--bg-overlay);
+    --ui-text-light-primary: var(--primary);
+    --ui-text-light-secondary: var(--secondary);
+    --ui-text-light-tertiary: var(--tertiary);
+    --ui-text-dark-primary: var(--primary-foreground);
+    --ui-fill-light-primary: var(--fill-primary);
+    --ui-fill-light-secondary: var(--fill-secondary);
+    --ui-fill-light-tertiary: var(--fill-tertiary);
+    --ui-fill-light-hover: var(--fill-hover);
+    --ui-fill-light-disabled: var(--fill-disabled);
+    --ui-border-primary: var(--border-primary);
+    --ui-border-secondary: var(--border-secondary);
+    --ui-border-tertiary: var(--border-tertiary);
+    --ui-border-subtle: var(--border-subtle);
+    --ui-accent-green: var(--accent-green);
+    --ui-accent-orange: var(--accent-orange);
+  }
+}
+
+@layer base {
+  :root.ui.light {
+    /* System tokens -- light mode. Dormant until an app-side light toggle exists. */
+    --ui-sys-color-text-primary: var(--ui-ref-color-black-100);
+    --ui-sys-color-text-secondary: var(--ui-ref-color-black-a50);
+    --ui-sys-color-text-disabled: var(--ui-ref-color-black-a25);
+    --ui-sys-color-text-inverse: var(--ui-ref-color-white-100);
+    --ui-sys-color-surface-bg: var(--ui-ref-color-white-100);
+    --ui-sys-color-surface-overlay: var(--ui-ref-color-black-a70);
+    --ui-sys-color-surface-floating: #f5f5f5;
+    --ui-sys-color-fill-primary: var(--ui-ref-color-black-100);
+    --ui-sys-color-fill-primary-hover: var(--ui-ref-color-black-a80);
+    --ui-sys-color-fill-secondary: var(--ui-ref-color-black-a10);
+    --ui-sys-color-fill-secondary-hover: var(--ui-ref-color-black-a12);
+    --ui-sys-color-status-success: var(--ui-ref-color-green-100);
+    --ui-sys-color-status-error: var(--ui-ref-color-red-100);
+    --ui-sys-color-accent-green: var(--ui-ref-color-green-100);
+    --ui-sys-color-accent-yellow: var(--ui-ref-color-yellow-100);
+    --ui-sys-color-accent-orange: var(--ui-ref-color-orange-100);
+    --ui-sys-color-accent-blue: var(--ui-ref-color-blue-100);
+    --ui-sys-color-border-heavy: var(--ui-ref-color-black-100);
+    --ui-sys-color-border-strong: var(--ui-ref-color-black-a50);
+    --ui-sys-color-border-weak: var(--ui-ref-color-black-a12);
+    --ui-sys-color-border-subtle: var(--ui-ref-color-black-a10);
+    --ui-sys-color-icon-primary: var(--ui-ref-color-black-100);
+    --ui-sys-color-icon-secondary: var(--ui-ref-color-black-a50);
+    --ui-sys-color-icon-disabled: var(--ui-ref-color-black-a25);
+    --ui-sys-color-icon-inverse: var(--ui-ref-color-white-100);
+  }
+}

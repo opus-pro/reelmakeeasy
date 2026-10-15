@@ -1,0 +1,11 @@
+{
+  "extends": "../../../tsconfig.node.json",
+  "compilerOptions": {
+    "noImplicitOverride": true,
+    "noPropertyAccessFromIndexSignature": true,
+    "noImplicitReturns": true,
+    "noFallthroughCasesInSwitch": true,
+    "declaration": true
+  },
+  "include": ["src/**/*.ts"]
+}

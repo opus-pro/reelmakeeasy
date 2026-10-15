@@ -1,0 +1,38 @@
+{
+  "$schema": "../../../schemas/nx-project.schema.json",
+  "name": "api",
+  "sourceRoot": "apps/services/api/src",
+  "projectType": "application",
+  "tags": ["scope:api", "type:app"],
+  "targets": {
+    "build": {
+      "executor": "@tools/bundler:bundle",
+      "cache": true,
+      "outputs": ["{projectRoot}/dist"],
+      "dependsOn": ["api/db:generate"],
+      "options": {
+        "mainFile": "src/main.ts",
+        "tsConfigPath": "tsconfig.app.json",
+        "runTsc": true,
+        "runtimeDeps": ["@prisma/client", "fluent-ffmpeg", "pino-pretty"]
+      }
+    },
+    "dev": { "options": { "port": 9235 } },
+    "start": {
+      "executor": "nx:run-commands",
+      "dependsOn": ["build"],
+      "options": { "command": "node apps/services/api/dist/main.js" }
+    },
+    "type-check": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "cross-env NODE_OPTIONS='--max-old-space-size=8192' tsc --noEmit",
+        "cwd": "{projectRoot}"
+      }
+    },
+    "test": {
+      "executor": "@nx/jest:jest",
+      "options": { "jestConfig": "apps/services/api/jest.config.mjs", "passWithNoTests": true }
+    }
+  }
+}

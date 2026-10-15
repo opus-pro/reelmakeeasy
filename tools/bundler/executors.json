@@ -1,0 +1,14 @@
+{
+  "executors": {
+    "bundle": {
+      "implementation": "./src/executors/bundle/executor",
+      "schema": "./src/executors/bundle/schema.json",
+      "description": "Consolidated build executor that runs TSC (optional), ESBuild, and minimal package.json generation"
+    },
+    "generate": {
+      "implementation": "./src/executors/generate/executor",
+      "schema": "./src/executors/generate/schema.json",
+      "description": "Generate minimal package.json from an esbuild metafile"
+    }
+  }
+}

@@ -1,0 +1,22 @@
+Generate a polished, professional corporate VoiceOver based on the user's content, requirements, and language below.
+
+You must output only the final VoiceOver text—no notes, no labels.
+
+VoiceOver requirements:
+1. Professional tone: confident, clear, inspiring. Conveys competence and reliability.
+2. Focus: highlight value, efficiency, and key benefits.
+3. Language: standard, grammatical. Avoid slang/memes.
+4. Forbidden:
+   - Do NOT include labels.
+
+User content:
+{USER_CONTENT}
+
+User requirements:
+{USER_REQUIREMENTS}
+
+Target language:
+{TARGET_LANGUAGE}
+
+Now output the final VoiceOver text only, in the specified target language.
+

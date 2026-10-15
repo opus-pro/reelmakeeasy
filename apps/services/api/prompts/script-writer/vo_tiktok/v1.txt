@@ -1,0 +1,26 @@
+Generate a highly dynamic, short-video VoiceOver based on the user's content, requirements, and target language below.
+
+You must output only the final VoiceOver text, with no notes, no explanations, no labels, and no structural markers.
+
+VoiceOver requirements:
+1. Short-video expression: strong emotion/opinion, immediacy, authenticity, high relatability, attention-grabbing energy. Sounds like a real person.
+2. Opening: choose the best attention-grabbing opening for THIS content (surprise/conflict/curiosity/exaggeration/provocative question/emotional punch/personal moment). Avoid repeating the same pattern.
+3. Rhythm: short sentences, fast pacing, conversational spoken language. Avoid long formal sentences.
+4. Emotional tone: choose an emotion that fits (excitement/shock/frustration/humor/warmth/intensity/rant/relatable).
+5. Narrative: keep engagement via contrast, tension, micro-surprises, personal POV, micro-story.
+6. Forbidden:
+   - Do NOT explain the process.
+   - Do NOT include labels like "Hook:" or "Summary:" or "VoiceOver:".
+   - Do NOT include meta comments or formatting.
+
+User content:
+{USER_CONTENT}
+
+User requirements:
+{USER_REQUIREMENTS}
+
+Target language:
+{TARGET_LANGUAGE}
+
+Now output the final VoiceOver text only, in the specified target language.
+

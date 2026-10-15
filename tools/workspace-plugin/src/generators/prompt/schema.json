@@ -1,0 +1,22 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "@reelmakeeasy/workspace:prompt",
+  "title": "Prompt generator schema",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Path (relative to the repo root) for the prompt without the .prompt.ts extension",
+      "$default": {
+        "$source": "argv",
+        "index": 0
+      }
+    },
+    "description": {
+      "type": "string",
+      "description": "Optional description stored in the prompt metadata"
+    }
+  },
+  "required": ["name"],
+  "additionalProperties": false
+}

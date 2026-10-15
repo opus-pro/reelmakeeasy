@@ -1,0 +1,13 @@
+{
+  "name": "@reelmakeeasy/workspace",
+  "version": "0.0.1",
+  "private": true,
+  "license": "AGPL-3.0-or-later",
+  "main": "generators.json",
+  "generators": "./generators.json",
+  "type": "commonjs",
+  "dependencies": {
+    "@nx/devkit": "22.5.4",
+    "tslib": "2.3.0"
+  }
+}

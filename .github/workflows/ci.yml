@@ -1,0 +1,74 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    # A GitHub-hosted runner by default. A copy that can't use those (an IP
+    # allow list, say) names its own runner in the CI_RUNNER repository
+    # variable. Pull requests from forks always use a GitHub-hosted runner.
+    runs-on: ${{ (github.event.pull_request.head.repo.fork && 'ubuntu-latest') || vars.CI_RUNNER || 'ubuntu-latest' }}
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm exec prisma generate --schema=libs/api/db/prisma/schema.prisma --no-hints
+      - name: Type-check
+        run: |
+          pnpm exec nx run-many -t type-check -p api story-mode render
+          pnpm exec tsc -p apps/web/tsconfig.json --noEmit
+      # The beat-loop tests (common long-take, the loop activities and render) run real FFmpeg
+      # and fail on CI without it; install it when the runner doesn't have it. The org runner
+      # runs as root with no sudo; GitHub's ubuntu runner needs sudo. Without apt, take a static
+      # build. pipefail: the version check must fail the step when FFmpeg is still missing.
+      - name: FFmpeg
+        run: |
+          set -o pipefail
+          if ! command -v ffmpeg >/dev/null || ! command -v ffprobe >/dev/null; then
+            SUDO=""
+            if [ "$(id -u)" != 0 ]; then SUDO=sudo; fi
+            if command -v apt-get >/dev/null; then
+              $SUDO apt-get update -q && $SUDO apt-get install -y -q --no-install-recommends ffmpeg
+            else
+              mkdir -p "$RUNNER_TEMP/ffmpeg"
+              curl -fsSL https://johnvansickle.com/ffmpeg/releases/ffmpeg-release-amd64-static.tar.xz \
+                | tar -xJ --strip-components=1 -C "$RUNNER_TEMP/ffmpeg"
+              echo "$RUNNER_TEMP/ffmpeg" >> "$GITHUB_PATH"
+              export PATH="$RUNNER_TEMP/ffmpeg:$PATH"
+            fi
+          fi
+          ffmpeg -hide_banner -version | head -1
+          ffprobe -hide_banner -version | head -1
+      - name: Test
+        run: |
+          pnpm exec jest -c libs/workflow-engine/jest.config.mjs
+          pnpm exec jest -c libs/shared/common/jest.config.mjs libs/shared/common/src/storage libs/shared/common/src/tts libs/shared/common/src/asr libs/shared/common/src/workflow libs/shared/common/src/video-models libs/shared/common/src/utils/llm-not-set-up.test.ts libs/shared/common/src/utils/download.test.ts libs/shared/common/src/utils/silence.test.ts libs/shared/common/src/utils/beat-lock.test.ts libs/shared/common/src/long-take/beat-loop libs/shared/common/src/long-take/render-final.test.ts libs/shared/common/src/long-take/render-and-finalize.test.ts libs/shared/common/src/long-take/camera-craft.test.ts libs/shared/common/src/long-take/prompts/camera-pacing.test.ts libs/shared/common/src/veo3/gen-video.test.ts libs/shared/common/src/adapters libs/shared/common/src/codex-agent libs/shared/common/src/inpaint/state-store.test.ts
+          pnpm exec jest -c libs/llm/jest.config.mjs
+          pnpm exec jest -c libs/agent/jest.config.mjs libs/agent/src/agents/story-loader/voice-tools/utils
+          pnpm exec jest -c libs/uip-planner-runtime/jest.config.mjs libs/uip-planner-runtime/src/normalization.test.ts libs/uip-planner-runtime/src/runtime/auto-brand-extraction.test.ts
+          pnpm exec jest -c apps/services/api/jest.config.mjs apps/services/api/src/setup apps/services/api/src/caption-fonts apps/services/api/src/agent apps/services/api/src/voice-clones apps/services/api/src/voice-over apps/services/api/src/long-take apps/services/api/src/shared apps/services/api/src/presets apps/services/api/src/media apps/services/api/src/files apps/services/api/src/uip apps/services/api/src/projects apps/services/api/src/speech apps/services/api/src/cors.test.ts
+          pnpm exec jest -c libs/story-mode-runtime/jest.config.mjs libs/story-mode-runtime/src/activities/long-take libs/story-mode-runtime/src/activities/long-take-generation-record.test.ts libs/story-mode-runtime/src/activities/circuit-breaker-policy-google.test.ts libs/story-mode-runtime/src/activities/google-provider-errors.test.ts libs/story-mode-runtime/src/workflows/long-take libs/story-mode-runtime/src/workflows/uip-v2 libs/story-mode-runtime/src/workflows/uip-to-story-mode libs/story-mode-runtime/src/activities/beat-loop libs/story-mode-runtime/src/workflows/beat-loop
+          pnpm exec jest -c apps/web/jest.config.mjs apps/web/src/components/setup apps/web/src/components/dictation apps/web/src/components/voice apps/web/src/components/agent apps/web/src/components/captions apps/web/src/components/omni-chat-box-v2/video-choices.test.ts apps/web/src/app/story-mode/components/LongTakeViewer apps/web/src/app/story-mode/components/editor/render apps/web/src/app/story-mode/components/editor/index.test.tsx apps/web/src/app/long-take/hooks/useLongTakeArtifacts.test.ts apps/web/src/app/dashboard-v2 apps/web/src/util/media.test.ts editor/utils/extract-prefetch-tasks.test.ts render-engine-sdk/engine-plan-json.test.ts
+          pnpm exec jest -c apps/services/render/jest.config.mjs
+          pnpm exec jest -c libs/shared/ui/jest.config.mjs libs/shared/ui/src/tokens
+          node --test scripts/reelmakeeasy-onboarding.test.mjs scripts/reelmakeeasy-setup-ui.test.mjs scripts/reelmakeeasy-build.test.mjs scripts/reelmakeeasy-docs.test.mjs scripts/repo-hygiene.test.mjs
+      # The local voice server's Python tests use fake models: numpy, and FastAPI with httpx for
+      # the HTTP routes, are all they need (a few seconds of pip, not the voice venv).
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Voice server tests
+        run: |
+          python3 -m pip install --quiet --disable-pip-version-check "numpy>=1.26,<3" "fastapi==0.142.1" "httpx>=0.27,<1" "num2words==0.5.14"
+          python3 -m unittest discover -s tools/local-tts

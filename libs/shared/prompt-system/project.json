@@ -1,0 +1,22 @@
+{
+  "name": "shared-prompt-system",
+  "$schema": "../../../schemas/nx-project.schema.json",
+  "sourceRoot": "libs/shared/prompt-system/src",
+  "projectType": "library",
+  "targets": {
+    "build": {
+      "executor": "nx:run-commands",
+      "options": {
+        "cwd": "{workspaceRoot}",
+        "command": "npx tsc -p {projectRoot}/tsconfig.json --noEmit"
+      }
+    },
+    "lint": {
+      "executor": "@nx/eslint:lint",
+      "options": {
+        "lintFilePatterns": ["libs/shared/prompt-system/**/*.ts"]
+      }
+    }
+  },
+  "tags": ["scope:shared", "type:library"]
+}

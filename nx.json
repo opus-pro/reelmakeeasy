@@ -1,0 +1,111 @@
+{
+  "neverConnectToCloud": true,
+  "installation": {
+    "version": "22.5.4",
+    "plugins": {
+      "@nx/eslint": "22.5.4",
+      "@nx/next": "22.5.4"
+    }
+  },
+  "tui": {
+    "enabled": false
+  },
+  "$schema": "./node_modules/nx/schemas/nx-schema.json",
+  "plugins": [
+    {
+      "plugin": "@nx/next/plugin",
+      "options": {
+        "startTargetName": "start",
+        "buildTargetName": "build",
+        "devTargetName": "dev",
+        "serveStaticTargetName": "serve-static",
+        "buildDepsTargetName": "build-deps",
+        "watchDepsTargetName": "watch-deps"
+      }
+    },
+    {
+      "plugin": "@nx/playwright/plugin",
+      "options": {
+        "targetName": "e2e"
+      }
+    },
+    {
+      "plugin": "@nx/eslint/plugin",
+      "options": {
+        "targetName": "lint"
+      }
+    },
+    {
+      "plugin": "@nx/jest/plugin",
+      "options": {
+        "targetName": "test"
+      }
+    },
+    {
+      "plugin": "@nx/webpack/plugin",
+      "options": {
+        "buildTargetName": "build",
+        "serveTargetName": "serve",
+        "previewTargetName": "preview",
+        "buildDepsTargetName": "build-deps",
+        "watchDepsTargetName": "watch-deps"
+      }
+    }
+  ],
+  "generators": {
+    "@nx/next": {
+      "application": {
+        "style": "tailwind",
+        "linter": "eslint"
+      }
+    }
+  },
+  "targetDefaults": {
+    "@nx/esbuild:esbuild": {
+      "cache": true,
+      "dependsOn": ["^build"],
+      "inputs": ["default", "^default"]
+    },
+    "@nx/webpack:webpack": {
+      "cache": true,
+      "inputs": ["default", "^default"],
+      "outputs": ["{options.outputPath}"]
+    },
+    "test": {
+      "executor": "@nx/jest:jest",
+      "options": {
+        "forceExit": true,
+        "jestConfig": "{projectRoot}/jest.config.mjs",
+        "passWithNoTests": true
+      }
+    },
+    "build": {
+      "executor": "@tools/bundler:bundle",
+      "cache": true,
+      "outputs": ["{projectRoot}/dist"],
+      "options": {
+        "mainFile": "src/main.ts",
+        "tsConfigPath": "tsconfig.json",
+        "runtimeDeps": []
+      }
+    },
+    "dev": {
+      "continuous": true,
+      "executor": "@nx/js:node",
+      "defaultConfiguration": "development",
+      "options": {
+        "buildTarget": "{projectName}:build",
+        "watch": false,
+        "inspect": "inspect",
+        "runBuildTargetDependencies": true
+      }
+    },
+    "clean": {
+      "executor": "nx:run-commands",
+      "options": {
+        "cwd": "{projectRoot}",
+        "command": "pwd && rm -rf out-tsc dist"
+      }
+    }
+  }
+}

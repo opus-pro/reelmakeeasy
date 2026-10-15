@@ -1,0 +1,17 @@
+{
+  "$schema": "../../../schemas/nx-project.schema.json",
+  "name": "render",
+  "sourceRoot": "apps/services/render/src",
+  "projectType": "library",
+  "tags": ["scope:render", "type:worker"],
+  "targets": {
+    "type-check": {
+      "executor": "nx:run-commands",
+      "options": { "command": "tsc --noEmit -p tsconfig.json", "cwd": "{projectRoot}" }
+    },
+    "test": {
+      "executor": "@nx/jest:jest",
+      "options": { "jestConfig": "apps/services/render/jest.config.mjs", "passWithNoTests": true }
+    }
+  }
+}

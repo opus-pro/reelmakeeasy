@@ -1,0 +1,19 @@
+diff --git a/src/plugins/plugin.js b/src/plugins/plugin.js
+index a977441872391b0a439b058f19fdda45661c3846..6b36dee2a965cb8fc97e5d947e24f07c64db0da3 100644
+--- a/src/plugins/plugin.js
++++ b/src/plugins/plugin.js
+@@ -685,7 +685,13 @@ async function collectExternalFileReferences(rawConfig, absConfigFilePath, proje
+             if (tsJestMajor !== null && tsJestMajor < 30)
+                 continue;
+         }
+-        const tsconfigAbsPath = transformOptions?.tsconfig
++        // PATCHED: ts-jest's `tsconfig` option may be an inline compiler-options
++        // OBJECT, not just a path string. Upstream assumes a string and crashes the
++        // whole project graph with "filePath.startsWith is not a function" (still
++        // broken in @nx/jest 23.2.1). For the object form, fall back to the nearest
++        // tsconfig - matching ts-jest, which merges inline options over the closest
++        // tsconfig file.
++        const tsconfigAbsPath = typeof transformOptions?.tsconfig === 'string'
+             ? (0, node_path_1.resolve)(rootDir, replaceRootDirInPath(rootDir, transformOptions.tsconfig))
+             : findNearestTsconfig(rootDir, absWorkspaceRoot, tsconfigExistsCache);
+         if (!tsconfigAbsPath) {

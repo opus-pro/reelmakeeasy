@@ -1,0 +1,256 @@
+{
+  "styles": [
+    {
+      "id": "3d-animation",
+      "label": "Animation",
+      "shortDescription": "Modern 3D feature-animation — warm cinematic lighting, soft bokeh, expressive stylized characters.",
+      "useCase": "Character-driven stories, family/kids content, emotional brand narratives wanting Pixar-style polish.",
+      "styleText": "Stylize the image with modern 3D feature animation aesthetics, expressive stylized proportions, a warm cinematic palette with soft bokeh, and high-fidelity textures with subsurface scattering.",
+      "thumbnailUrl": "story-mode/styles/3d-animation.webp",
+      "previewVideoUrl": "story-mode/styles/3d-animation.webm"
+    },
+    {
+      "id": "blue-vox",
+      "label": "Blue Vox",
+      "shortDescription": "Editorial collage — grayscale photo cutouts on off-white paper, technical grid accents, pale-blue strokes.",
+      "useCase": "Business, finance, news and analysis, data-driven explainers.",
+      "styleText": "Stylize the image with clean graphic collage aesthetics, matte-finish grayscale photographic cutouts, an off-white paper background with sparse technical grid accents, and minimal pale-blue paint strokes.",
+      "thumbnailUrl": "story-mode/styles/blue-vox.webp",
+      "previewVideoUrl": "story-mode/styles/blue-vox.webm"
+    },
+    {
+      "id": "digital chalk",
+      "label": "Digital Chalk",
+      "shortDescription": "Minimalist stick-figure whiteboard on pure black — high-contrast line art with adaptive accent colors.",
+      "useCase": "Educational explainers, concept breakdowns, tutorials, how-it-works teaching content.",
+      "styleText": "Create an image in a minimalist, stick figure, digital whiteboard style on a pure, solid black background. ALL humans without exception must be rendered as stick figures using only circular heads, single-line torsos, single-line arms, and single-line legs. The visual language is simplified, constructed exclusively from stick-figure geometry (perfect circle heads, single-line bodies and limbs) drawn with a slightly organic, hand-drawn digital brush that mimics chalk or a digital pen. The background is pure black (#000000) taking up approximately 90% of the canvas. All visual elements, including humans, symbols, diagrams, and text, are rendered using clean, high-contrast drawings with occasional accent colors for emphasis, conceptual separation, or symbolic meaning. Colors should adapt to the topic, mood, and meaning of the scene instead of following a fixed palette. Text, if present, should be handwritten in a neat, legible, slightly casual print font. The overall aesthetic is educational, diagrammatic, and emotionally detached, prioritizing absolute clarity and conceptual communication over realism or detail. Colors should adapt naturally to the topic, mood, and meaning of the scene instead of following a fixed palette. Accent colors should be used for emphasis, symbolism, directional flow, conceptual grouping, warnings, emotional contrast, or key diagrammatic elements. The majority of the composition should remain high-contrast line art against a pure black background. Avoid gradients, soft lighting, muted tones, or painterly blending. Color usage should always support clarity and readability rather than decoration. stick-figure, minimalist, digital-whiteboard, educational, diagrammatic, flat-design, high-contrast, black-background, hand-drawn-digital, simplified, conceptual, symbolic, infographic, stark, void, clear, unshaded, schematic. Facial Structure: Faces are perfectly round circles representing the head. Detail Level: Minimal, relying on body language or context for meaning. Features (When Present): Facial features are reduced to tiny, simple dots for eyes and a tiny, subtle curved line for a smile. Omissions: Noses, ears, eyebrows, jaws, and hair (usually) are completely omitted. Exceptions: Hair is only added for character distinction, rendered as simple flowing lines following the curve of the circular head. What must NEVER change: The background must always be solid black (#000000) with zero texture or gradient. Primary subjects must be drawn using simple, unshaded line art. No shading, shadows, lighting effects, or 3D perspective may appear. The overall style must remain flat, schematic, and diagrammatic. ALL humans without exception must be rendered as stick figures using only circle heads and single-line limbs. What can flex depending on the subject: Accent colors may change naturally based on the narrative, symbolism, emotional tone, or informational purpose of the scene. The presence and content of handwritten text or diagrammatic elements such as arrows, boxes, circles, graphs, and icons may vary. Symbol systems, motion lines, or conceptual overlays can vary freely as long as they remain minimalist and schematic. Common failure modes to avoid: Allowing some characters to become cartoon humans while others remain stick figures. Giving foreground characters more anatomical detail than background characters. Rendering hands, feet, torsos, or clothing as filled shapes instead of lines. Adding thickness, volume, musculature, or clothing detail to stick figures. Introducing gradients, glow effects, realistic lighting, or soft rendering. Using textured backgrounds instead of pure digital black. Overcomplicating facial features or anatomy.",
+      "thumbnailUrl": "story-mode/styles/digital-chalk.webp",
+      "previewVideoUrl": "story-mode/styles/digital-chalk.webm"
+    },
+    {
+      "id": "claymation",
+      "label": "Claymation",
+      "shortDescription": "Hand-sculpted plasticine clay — tactile fingerprints, matte finish, stop-motion charm.",
+      "useCase": "Playful stories, kids content, quirky product spots, nostalgic lighthearted narratives.",
+      "styleText": "Stylize the image in hand-sculpted plasticine aesthetic, visible fingerprints and clay smudges, chunky tactile textures, matte finish, soft studio lighting with gentle shadows, macro photography style with shallow depth of field, miniature set design, vibrant polymer clay colors, slightly irregular hand-molded edges, stop-motion film aesthetic.",
+      "thumbnailUrl": "story-mode/styles/claymation.webp",
+      "previewVideoUrl": "story-mode/styles/claymation.webm"
+    },
+    {
+      "id": "Lowpoly",
+      "label": "Low-Poly Retro",
+      "shortDescription": "Retro 32-bit video-game look — blocky low-poly models with a jagged pixelated finish.",
+      "useCase": "Gaming content, retro/nostalgia themes, tech and internet-culture videos.",
+      "styleText": "Stylize the image with retro 32-bit video game aesthetics, low-poly blocky character models with compressed photorealistic face textures, flat artificial daylight rendering, and a jagged pixelated finish.",
+      "thumbnailUrl": "story-mode/styles/lowpoly.webp",
+      "previewVideoUrl": "story-mode/styles/lowpoly.webm"
+    },
+    {
+      "id": "claire",
+      "label": "Claire",
+      "shortDescription": "Clean Ligne Claire vector art — bright yellow-green on cyan-blue with crisp outlines.",
+      "useCase": "Upbeat explainers, lifestyle and productivity, optimistic friendly brand stories.",
+      "styleText": "Stylize the image with clean Ligne Claire aesthetics, smooth precise vector curvature, a vivid palette of sunshine-yellow and muted green with white accents, and an expansive cyan-blue background with minimal, solid black drop-shadows.",
+      "thumbnailUrl": "story-mode/styles/claire.webp",
+      "previewVideoUrl": "story-mode/styles/claire.webm"
+    },
+    {
+      "id": "marcinelle",
+      "label": "Marcinelle",
+      "shortDescription": "Whimsical Marcinelle-school comic — loose ink outlines, saturated gouache coloring.",
+      "useCase": "Storytelling, humor, comic-style narratives, lighthearted explainers.",
+      "styleText": "Stylize the image with whimsical Marcinelle-school comic aesthetics, loose hand-drawn ink outlines, saturated gouache coloring, and soft illustrative shading.",
+      "thumbnailUrl": "story-mode/styles/marcinelle.webp",
+      "previewVideoUrl": "story-mode/styles/marcinelle.webm"
+    },
+    {
+      "id": "pen-and-ink",
+      "label": "Pen&Ink",
+      "shortDescription": "Raw pen-and-ink illustration — scratchy hand-drawn lines and bold black fills on white paper.",
+      "useCase": "Personal stories, indie/artistic pieces, thoughtful or literary narratives.",
+      "styleText": "Stylize the image with raw naive pen-and-ink illustration, scratchy hand-drawn line-work, heavy solid black fills, and a stark white paper background with minimal textural stippling.",
+      "thumbnailUrl": "story-mode/styles/pen-and-ink.webp",
+      "previewVideoUrl": "story-mode/styles/pen-and-ink.webm"
+    },
+    {
+      "id": "schematic",
+      "label": "Schematic",
+      "shortDescription": "Minimalist halftone graphics — monochrome cutouts with dot shading and one bold accent color.",
+      "useCase": "Explainers, data and insights, editorial and informational content.",
+      "styleText": "minimalist halftone illustration style, monochrome cutout forms with dot-pattern shading, flat vector accent shapes in one bold color, schematic graphic elements, bold clean composition, no realism, no gradients, modern graphic design",
+      "thumbnailUrl": "story-mode/styles/schematic.webp",
+      "previewVideoUrl": "story-mode/styles/schematic.webm"
+    },
+    {
+      "id": "yellow-vox",
+      "label": "Vox",
+      "shortDescription": "Editorial collage — grayscale photo cutouts on off-white paper, grid accents, pale-yellow strokes.",
+      "useCase": "Business, finance, news and analysis, documentary-style explainers.",
+      "styleText": "Stylize the image with clean graphic collage aesthetics, matte-finish grayscale photographic cutouts, an off-white paper background with sparse technical grid accents, and minimal pale-yellow paint strokes.",
+      "thumbnailUrl": "story-mode/styles/yellow-vox.webp",
+      "previewVideoUrl": "story-mode/styles/yellow-vox.webm"
+    },
+    {
+      "id": "watercolor",
+      "label": "Watercolor",
+      "shortDescription": "Soft storybook watercolor — pastel sage-and-peach palette, wet-on-wet textures, sepia outlines.",
+      "useCase": "Gentle stories, wellness, kids/family, heartfelt or nature-themed narratives.",
+      "styleText": "Stylize the image with whimsical storybook watercolor, soft-edge illustration fidelity, a high-key pastel palette of sage and peach, and wet-on-wet textures with delicate sepia outlines.",
+      "thumbnailUrl": "story-mode/styles/watercolor.webp",
+      "previewVideoUrl": "story-mode/styles/watercolor.webm"
+    },
+    {
+      "id": "halftone",
+      "label": "Halftone",
+      "shortDescription": "Graphic print collage — archival grayscale imagery with bold flat shapes in a red-black-beige palette.",
+      "useCase": "Editorial, history and culture, bold retro-modern explainers.",
+      "styleText": "graphic print collage style, grayscale archival imagery combined with bold flat geometric shapes, limited red-black-beige palette, modern graphic design overlays, clean negative space, structured but non-linear composition, flat texture, no painterly effects",
+      "thumbnailUrl": "story-mode/styles/halftone.webp",
+      "previewVideoUrl": "story-mode/styles/halftone.webm"
+    },
+    {
+      "id": "high-quality-product-render",
+      "label": "Studio Minimalism",
+      "shortDescription": "Hyper-real studio product render — pristine subject on a seamless monochrome cyclorama, engineered lighting.",
+      "useCase": "Product showcases, ecommerce, premium gadget reveals, commercial ads.",
+      "styleText": "A hyper-realistic, high-end commercial 3D product render of [SUBJECT] in flawless studio photography style. The subject sits in a pristine, zero-gravity floating composition (or rests on a sleek geometric pedestal of pristine marble or matte cylindrical material if gravity is contextually required) against a seamless, monochromatic cyclorama backdrop with smooth, subtle gradients — never a natural room, living environment, or cluttered scene; the subject must always feel isolated in an abstract studio void. The color treatment can shift entirely (all blues, all pinks, neutral greys, warm earth tones) as long as the cyclorama hue stays analogous or identical to the subject, keeping the palette tightly unified. Lighting is highly engineered studio-grade: soft global illumination, smooth wrapping gradients from studio softboxes shaping curved surfaces, sharp luminous edge and rim lighting carving the silhouette out from the backdrop, deep smooth shadows, and crisp specular highlights — never flat, uniform, or evenly distributed lighting, which collapses the premium 3D feel. Emphasize extreme tactile material contrast through hyper-smooth matte finishes, highly reflective polished gloss, frosted glass, liquid, chrome, enamel, woven fabric, brushed metal, or fine mesh micro-textures combined in whatever combination fits the subject — but every surface must remain absolutely pristine, with zero dust, zero scratches, no grime, no weathering, and no organic imperfection. Geometry is sleek, industrial, and perfect, with smooth bevels and elegant curves. Shallow depth of field with macro-level sharp focus on the subject's primary details lets secondary background elements fall into soft bokeh. Strictly photorealistic rendering logic throughout — no 2D graphic outlines, no cel-shading, no painterly brushstrokes, no illustrative flatness.",
+      "thumbnailUrl": "story-mode/styles/high-quality-product-render.webp",
+      "previewVideoUrl": "story-mode/styles/high-quality-product-render.webm"
+    },
+    {
+      "id": "cinematic-ui",
+      "label": "Software Showcase",
+      "shortDescription": "Premium dark-mode UI aesthetic — charcoal surfaces, glow accents, luxury SaaS/product-launch feel.",
+      "useCase": "Software and app demos, SaaS/AI product launches, tech marketing and feature highlights.",
+      "styleText": "A premium futuristic dark-mode interface aesthetic for [SUBJECT], inspired by high-end AI product launches and luxury SaaS branding. The environment lives in near-black charcoal and graphite ranges with subtle gradients, layered dark UI surfaces, and ambient glow lighting — backgrounds must always stay muted so that restrained neon accent colors function as isolated focal signals around icons, highlights, or key informational elements, never as dominant surfaces or saturated washes. The composition is modular and precision-based, built from rounded interface cards, thin low-contrast borders, generous spacing, clean geometric alignment, and carefully balanced negative space; when more information appears, the layout should become cleaner and more structured rather than denser, simplifying complexity through hierarchy and spacing. Typography uses modern geometric sans-serif fonts with strong hierarchy — oversized titles, muted secondary text, highly controlled spacing — always premium, legible, and intentional, never crowded, playful, messy, or overly technical. Depth emerges through atmospheric layering rather than realism: soft bloom glows, radial gradients, translucent overlays, inner shadows, subtle drop shadows, and opacity stacking create dimensional separation while preserving a flat, digitally native interface language. Surfaces feel subtly illuminated from within via glow halos and radial gradients rather than harsh contrast edges, realistic reflections, tactile material rendering, or heavy textures. Icons and logos appear luminous, centered, and visually elevated, surrounded by negative space and soft glow halos. The aesthetic must communicate technological sophistication, professionalism, trust, calm confidence, and luxury enterprise-tech sensibility — never cyberpunk chaos, overused neon, clutter, noisy textures, aggressive gradients, bright or saturated backgrounds, maximalism, playful decoration, flattened depth, infographic-heavy density, or generic template-based layouts. Everything should feel intentional, polished, spacious, cinematic, and art-directed.",
+      "thumbnailUrl": "story-mode/styles/cinematic-ui.webp",
+      "previewVideoUrl": "story-mode/styles/cinematic-ui.webm"
+    },
+    {
+      "id": "3d-scientific-visualization",
+      "label": "3D Scientific Visualization",
+      "shortDescription": "Cinematic 3D scientific visualization — scientifically accurate, hyper-detailed macro renders with shallow focus.",
+      "useCase": "Science and medical explainers, biology/chemistry, educational deep-dives and documentaries.",
+      "styleText": "High-end 3D scientific visualization of [SUBJECT] in cinematic macro-photography style, functioning as a 'revealer of hidden worlds' that translates invisible or hyper-complex systems into pristine structural clarity. The subject is rendered with hyper-detailed micro-textures — shifting between porous, spongy, topological, wireframe, smooth, or gelatinous as scientifically appropriate — and translucent materials exhibiting physically accurate subsurface scattering, reflectance, refraction, and subtle internal light transport; surfaces must never look flat or matte, and reflectivity, density, and structural complexity should match the real material being depicted. Camera physics are non-negotiable: extreme shallow macro depth of field with a razor-sharp focal point while foreground and distant background dissolve into heavy atmospheric blur — never infinite focus, which collapses the aesthetic into cheap 3D clip art. The environment feels suspended in a fluid or dense atmosphere, filled with floating particulate matter, subtle dust, soft light bokeh, and volumetric fog indicating depth — never a solid black void or flat gradient background. Illuminated by volumetric lighting with realistic rim lighting tracing structural contours, preserving strong contrast and deep voluminous shadows rather than flat global illumination where everything is evenly bright. All colors, textures, translucency, reflections, and illumination must remain strictly scientifically accurate and grounded in real-world biological, geological, chemical, architectural, or engineered appearance — no fantasy palettes, neon glows, oversaturated cinematic grading, or artificial stylization. Optional cross-sections or diagrammatic labeling lines may be added or removed depending on how educational the final image needs to be. Cinematic scientific composition, hyper-realistic CGI rendering, 8k resolution.",
+      "thumbnailUrl": "story-mode/styles/3d-scientific-visualization.webp",
+      "previewVideoUrl": "story-mode/styles/3d-scientific-visualization.webm"
+    },
+    {
+      "id": "2d-line",
+      "label": "2D Line",
+      "shortDescription": "Whimsical corporate line art — hand-drawn doodle contours, black-and-white with spot-color accents.",
+      "useCase": "Explainers, business/SaaS, onboarding, ideas and philosophy, friendly informational content.",
+      "styleText": "Stylize the image with whimsical corporate line art, hand-drawn doodle fidelity, a stark black-and-white palette with spot-color accents, and loose ink contours with stipple-dot shading.",
+      "thumbnailUrl": "story-mode/styles/2d-line.webp",
+      "previewVideoUrl": "story-mode/styles/2d-line.webm"
+    },
+    {
+      "id": "retro-surrealist-photomontage",
+      "label": "Vintage Editorial",
+      "shortDescription": "Restrained editorial collage — vintage B&W photo cutouts, sparse flat graphics, surreal scale shifts.",
+      "useCase": "Thought-leadership, essays, history and culture, analytical storytelling.",
+      "styleText": "A highly restrained conceptual editorial collage illustration of [SUBJECT] combining vintage black-and-white photographic cutouts with sparse flat geometric graphic design. Photographic elements retain realistic monochrome contrast and appear as crisp die-cut paper fragments with sharp edges and no painterly blending, while graphic elements stay solid flat colors with no gradients, no glow effects, no 3D polish, and no decorative rendering — the strict separation between monochrome photographic realism and flat graphic abstraction is absolute, and lighting stays materially disjointed across the two layers. The composition uses controlled surrealism through symbolic scale shifts, impossible juxtapositions, and conceptual spatial relationships rather than fantasy detail density, set against warm off-white paper-textured backgrounds with large areas of intentional negative space. Every graphic intervention must serve a specific communicative purpose — hierarchy, framing, symbolic contrast, compositional anchoring, or information clarification — and before adding any element, ask whether its function can be explained in one sentence; if not, omit it. The image should feel edited down rather than built up. Thin grids, chart lines, or analytical overlays appear rarely and only when semantically necessary; charts and structural graphics must behave like authentic editorial information design, never aesthetic filler. Accent colors, framing systems, and surreal scale may flex depending on the conceptual tone — denser overlays for analytical subjects, more restraint for emotional ones — but the overall density stays low. Typography is rare, restrained, and functional: any text must be intentionally art-directed, editorially integrated, and fully legible — never random labels, decorative microtype, or unreadable interface fragments. Strictly avoid random infographic noise pretending at intelligence, decorative geometry with no communicative role, fake mathematical notation or meaningless percentages, pseudo-interface fragments and dashboard clutter, excessive layering, gradient-heavy modern tech aesthetics, polished 3D rendering, arbitrary symbolic complexity, or visual density used as a substitute for conceptual clarity. When complexity increases, respond through reduction, hierarchy reinforcement, and selective omission rather than additional decorative detail. The result should feel curated, selective, intelligently reduced, and unmistakably human-art-directed — sophistication earned through symbolic precision, hierarchy, and compositional restraint, never through fabricated complexity.",
+      "thumbnailUrl": "story-mode/styles/retro-surrealist-photomontage.webp",
+      "previewVideoUrl": "story-mode/styles/retro-surrealist-photomontage.webm"
+    },
+    {
+      "id": "retro-videogame-vga-pixel-art",
+      "label": "Videogame Pixel Art",
+      "shortDescription": "1990s 256-color VGA pixel art — cinematic point-and-click adventure backgrounds with dithering.",
+      "useCase": "Gaming, retro/nostalgia, internet culture, atmospheric vintage-game storytelling.",
+      "styleText": "A scene rendered in classic 1990s 256-color VGA pixel art style, reminiscent of retro point-and-click adventure game backgrounds. Cinematic, atmospheric lighting with strong, localized color zoning and dramatic cast shadows. No explicit ink outlines; forms and depths are defined entirely by sharp color blocking and contrast. Extensive use of prominent checkerboard dithering and stepped color banding to simulate gradients, shading, and texture. Stylized realism with blocky, low-resolution silhouettes. The palette features rich, indexed colors with heavily tinted shadows (no pure black). The composition feels like a hand-painted digital theatrical set, prioritizing narrative mood, nostalgia, and environmental storytelling.",
+      "thumbnailUrl": "story-mode/styles/retro-videogame-vga-pixel-art.webp",
+      "previewVideoUrl": "story-mode/styles/retro-videogame-vga-pixel-art.webm"
+    },
+    {
+      "id": "Playful-overlay",
+      "label": "Playful Overlay",
+      "shortDescription": "Photoreal footage with hand-drawn doodle overlays — playful kawaii accents embedded into real scenes.",
+      "useCase": "Lifestyle, social/UGC, playful brand content, reactions and fun how-to videos.",
+      "styleText": "A premium mixed-media editorial composition of [SUBJECT] combining cinematic photorealistic photography that remains dominant, readable, and grounded with selectively integrated 2D designer-style illustration overlays that stay flat, graphic, and compositionally embedded. All illustrated elements must feel distinctly digitally hand-drawn rather than mechanically vectorized — the hand-drawn quality must remain visible across every outline, embellishment, accent, and graphic motif, preserving subtle line wobble, organic rhythm, expressive imperfect stroke variation, and the human irregularity of a stylus on a tablet, never collapsing into clean vector sterility. Illustrations use bold black outlines with natural variation, restrained vibrant accent colors, minimal cel-shading, and thick white graphic accents used for emphasis and subject separation. Motifs — arcs, sparkles, emphasis lines, vapor trails, dots, framing curves — must reinforce movement, emotion, composition, or interaction rather than appear as random decoration. Anthropomorphism stays selective: only focal inanimate objects may receive subtle kawaii-inspired faces, and those faces must integrate naturally into the object's surface itself, never floating or forced onto unsuitable geometry. Human subjects must remain fully photorealistic and are never cartoonized; overlays around people function only as accents, framing devices, or motion embellishments. All overlays must respect real-world depth, perspective, occlusion, and interaction logic so they feel embedded into the photographed scene rather than pasted on top; if any overlay interferes with realism or readability, reduce or reposition it. Strictly avoid random decorative graphics, floating facial features, generic vector aesthetics, sterile mechanically smooth linework, clutter, or broken spatial logic. The result should feel playful, whimsical, polished, editorial, premium, and distinctly digitally hand-drawn — balancing photorealism with believable hand-illustrated kawaii augmentation.",
+      "thumbnailUrl": "story-mode/styles/playful-overlay.webp",
+      "previewVideoUrl": "story-mode/styles/playful-overlay.webm"
+    },
+    {
+      "id": "mixed-media-collage-style",
+      "label": "Mixed Media Collage",
+      "shortDescription": "B&W photo with vibrant naive doodles — Memphis-style hand-drawn marks scribbled over grayscale portraits.",
+      "useCase": "Creator and personal content, music and culture, energetic social posts, expressive branding.",
+      "styleText": "A mixed-media portrait of [SUBJECT] combining a crisp, strictly black-and-white photorealistic photograph with vibrant, naive-style hand-drawn digital doodles overlaid on top — as if a creative director sketched directly onto a printed photo in Procreate with a stylus. The medium split is non-negotiable: the face and skin remain pure grayscale photorealism (never colorized) while the graphic layer stays flat, 2D, 100% opaque (no blending modes, no gradients, no realistic shadows cast onto the photo, no shading inside the doodles). The palette is dominated by off-white canvas #F0F0F0 (~30% of image, the flat background) and photographic black #121212 (~25%, the high-contrast photo tones), with a small slice of photographic mid-grey #808080 (~2%) for halftone transitions; against this neutral majority, the Memphis-inspired accent colors sit as bright, opaque doodle marks — vibrant orange #FF4500 (~12%), bright yellow #FFCC00 (~10%), cobalt blue #0044FF (~10%), neon pink #FF66B2 (~7%), and vivid purple #8A2BE2 (~4%) — totaling roughly 43% saturated color spread across the imperfect graphic overlay layer. Crucially, no mark is random or purely decorative: every squiggle, arrow, symbol, outline, blob, swoosh, star, dashed shape, and abstract form must visually reinforce something in the image — the subject's movement, pose, clothing structure, emotional tone, gaze direction, gesture, composition flow, or overall energy. The flat off-white background carries imperfect abstract shapes — uneven blobs, shaky swooshes, messy marker strokes, rough squiggles, lopsided stars, awkwardly bent arrows, irregular dashed pills, wobbly circles, warped boxes — that weave behind the head and overlap the shoulders in an intuitively unbalanced composition, never centered or perfectly framed. If clothing is present, dark garments become a doodle canvas, re-drawn with bright monolinear strokes tracing seams, pockets, collars, folds, and silhouettes. Every line must show pressure variation, uneven curvature, hand wobble, accidental overlaps, overtracing, rough joins, and inconsistent spacing; every shape must avoid mathematical precision. All text follows the same handmade aesthetic — irregular baseline, inconsistent letter sizing, imperfect kerning, marker energy — never clean fonts, corporate typography, or AI-looking handwriting. Strictly avoid vector cleanliness, smooth bezier curves, motion-graphics polish, symmetrical icons, uniform dashed lines, sterile geometric consistency, or doodles that resolve into intricate editorial illustration. The result should feel expressive, impulsive, chunky, naive, slightly messy, and unmistakably human-made digitally.",
+      "thumbnailUrl": "story-mode/styles/mixed-media-collage-style.webp",
+      "previewVideoUrl": "story-mode/styles/mixed-media-collage-style.webm"
+    },
+    {
+      "id": "nostalgic-kitsch-collage",
+      "label": "Nostalgic Kitsch Collage",
+      "shortDescription": "Retro-surrealist cutout collage — vintage B&W people with vivid pop-art props and Dadaist scale on flat pastel.",
+      "useCase": "Culture and satire, bold editorial, attention-grabbing social and creative campaigns.",
+      "styleText": "A surreal retro-surrealist digital collage of [SUBJECT] using a mixed-media hard-edge cutout aesthetic with strict visual dichotomy between monochrome nostalgia and vibrant modern surrealism. The medium split is rule-based: if an element is a human, an animal, or a piece of base architecture, it MUST be rendered as a high-contrast vintage black-and-white photograph (deep photographic black around #181818 through halftone grayscale mid-tones around #7A7A7A); if an element is an interacting prop, botanical addition, or background shape, it MUST be rendered in highly saturated, vivid pop-art color drawn from a palette of retro teal (#4BAEBF), vibrant magenta (#D60A8D), and pop-art red (#BE1E2D). These two layers must remain completely segregated — no global color grading, no sepia wash, no unifying lighting filter, no shared shadow pass — and every cutout must have sharp, razor-clean masking edges with zero soft blending, atmospheric perspective, gradient fading, or naturalistic 3D shadow integration; elements should look explicitly collaged and pasted together. Scale logic is deliberately Dadaist: realistic proportions are drastically ignored, so small objects become monumental and large structures become miniature, producing playful absurdity through extreme juxtaposition — if the scene reads as a normal naturalistic composition, the surrealist intent has failed. The entire arrangement sits against a stark, flat, depthless background — pastel blush pink (#ECAEBC), cream off-white (#F4F1E1), pale yellow, or a similar minimalist solid color rotating with the conceptual tone — never a rendered environment, never atmospheric depth, so the cutouts feel isolated and floating. The vividly colored interacting elements may take any form (giant flowers, massive consumer goods, swirling colorful smoke, abstract portals, oversized geometric shapes, monumental flora) as long as they preserve the surreal scale dynamic and the pop-art saturation. Strictly avoid global color grading across layers, realistic scaling, unified naturalistic lighting, soft blended edges, depth-of-field blur, or any treatment that dissolves the explicit collage seam between black-and-white photography and vibrant pop-art color.",
+      "thumbnailUrl": "story-mode/styles/nostalgic-kitsch-collage.webp",
+      "previewVideoUrl": "story-mode/styles/nostalgic-kitsch-collage.webm"
+    },
+    {
+      "id": "phygital-voxel-pop",
+      "label": "Phygital Voxel Pop",
+      "shortDescription": "Phygital studio look — a real human interacting with chunky retro 3D voxel objects in candy-neon tones.",
+      "useCase": "Tech and gaming, playful product/brand spots, trendy Gen-Z social content.",
+      "styleText": "Mixed-media ‘phygital‘ editorial photography of [SUBJECT] — a hyper-realistic human subject interacting with chunky, retro 8-bit 3D voxel objects (never flat 2D pixel art; the digital elements must have real physical volume, dimensional voxel geometry, and sharp distinct edges) — set in a minimal studio environment against a solid, vibrant background wall paired with a pixelated geometric floor pattern. Never use gritty, realistic, or complex photographic backgrounds; when foreground complexity increases, the background responds by staying a flat, solid color to preserve visual clarity. The palette is bright, candy-colored pastel-neon, with the subject's styling incorporating colors or patterns that bridge the physical/digital gap. Lighting is crisp, unified studio lighting that grounds both the photographic and voxel elements with soft, realistic shadows — never dull, desaturated, or moody — so every object feels like it belongs to the same physical space. The voxel objects can take any form (plants, animals, UI elements, abstract shapes, surreal intrusive props) but always remain chunky retro voxels with hard edges; they must never blend softly into the realistic elements, since the sharp juxtaposition between organic human features and rigid voxel geometry is the entire point. The aesthetic bridges high-end commercial portraiture with playful retro-gaming surrealism: photorealistic and voxel elements coexisting under the same light, distinct yet harmonized.",
+      "thumbnailUrl": "story-mode/styles/phygital-voxel-pop.webp",
+      "previewVideoUrl": "story-mode/styles/phygital-voxel-pop.webm"
+    },
+    {
+      "id": "handcrafted-miniature",
+      "label": "Handcrafted Miniature",
+      "shortDescription": "Handcrafted stop-motion miniature — Aardman/Laika-style characters and dioramas with tilt-shift focus.",
+      "useCase": "Cozy storytelling, kids/family, whimsical brand stories, nostalgic crafty narratives.",
+      "styleText": "A high-end 3D render of [SUBJECT] in the style of handcrafted stop-motion animation and miniature diorama work, inspired by Aardman and Laika. Characters have hyper-simplified faces — perfectly round black dot eyes (optionally with a tiny catchlight, never realistic irises, never photorealistic human features, never detailed lips), simple delicate line mouths, flushed cheeks, chunky stylized hair, simplified or absent nostrils, and slightly exaggerated, rounded, toy-like proportions. Character diversity flexes freely (varied hair textures, skin tones, clothing, fashion) as long as everything obeys the chunky, simplified, tactile rule. Every surface must look tangible and physically handcrafted: rough wood grain, over-scaled knitted fabrics, corduroy, matte plastic, baked clay, painted wood, resin — never glossy, digital, weightless, or smoothed into modern Pixar-style perfection. The scene is built like a tabletop model with a forced tilt-shift effect: the immediate subject is in sharp focus while foreground and background blur softly to sell the miniature scale, preserving distinct foreground/midground/background separation rather than overcrowded clutter. Environments may range from vast forests to indoor kitchens to abstract voids, provided they read as hand-built sets. Lighting stays soft and cinematic, mimicking small miniature studio lights with gentle volumetric glows and soft-edged shadows — time of day flexes (warm golden hour, cool moonlight, flat daylight) but the cinematic miniature quality holds. The color palette is warm, earthy, and nostalgic — terracotta, faded denim, forest greens, warm beige. Strictly avoid digital smoothness, video-game polish, modern CGI sheen, realistic eyes on simplified bodies (which collapse into uncanny valley), and visual overcrowding. Masterpiece-level, highly detailed textures, cozy, inviting, intentionally imperfect, and unmistakably physical.",
+      "thumbnailUrl": "story-mode/styles/handcrafted-miniature.webp",
+      "previewVideoUrl": "story-mode/styles/handcrafted-miniature.webm"
+    },
+    {
+      "id": "blue-collage",
+      "label": "Collage",
+      "shortDescription": "Playful graphic collage — sharp photo cutouts over flat geometry on powder-blue with loose ink marks.",
+      "useCase": "Explainers, culture and lifestyle, creative lighthearted informational content.",
+      "styleText": "Stylize the image with playful graphic collage, sharp photographic cutouts layered over flat geometry, a powder-blue background, and loose black ink gestural marks.",
+      "thumbnailUrl": "story-mode/styles/blue-collage.webp",
+      "previewVideoUrl": "story-mode/styles/blue-collage.webm"
+    },
+    {
+      "id": "economic",
+      "label": "Economic",
+      "shortDescription": "Premium minimalist editorial — cream paper, red-and-black geometric accents, bold dominant display type.",
+      "useCase": "Business and finance, news and analysis, authoritative data-driven explainers.",
+      "styleText": "premium minimalist illustration, cream background with subtle paper grain, bold red and black geometric accents, clean flat vector figures, large dominant bold display text as visual anchor, structured sparse layout, quiet authoritative aesthetic",
+      "thumbnailUrl": "story-mode/styles/economic.webp",
+      "previewVideoUrl": "story-mode/styles/economic.webm"
+    }
+  ],
+  "songStyles": [
+    {
+      "id": "hip-hop",
+      "label": "Hip Hop",
+      "styleText": "Hip Hop,\n1.STYLE PROMPT\nPrompt: Y2K R&B music video cinematography, dynamic motion footage. Gritty urban mini-DV camcorder aesthetic mixed with 35mm film textures. High-contrast lighting: deep crushed blacks, warm golden tungsten skin highlights, and gritty teals. Incorporate extreme camera angles: low-angle hero framing, ultra-wide fisheye distortion, and tight, dramatically lit close-ups. Prominent analog video artifacts: heavy grain, VHS tracking glitches, chromatic aberration, and motion blur. Glowing, high-contrast highlights piercing through moody, underexposed environments. Expressive, raw lo-fi visual energy.\n---\n2. COLOR PALETTE\nUse a flexible and adaptive color palette, so the colors adapt, based on the meaning and context.\n---\n3. KEY STYLE TAGS\nY2K music video, mini-DV, camcorder style footage, urban Y2K videography, dynamic motion blur, big city energy, VHS artifacts, high contrast, tungsten lighting, gritty urban, lo-fi aesthetic, glowing skin, low-angle framing, 90s R&B, cinematic grain, chromatic aberration.\n---\n4. FACE DEPICTION LOGIC\n- Lighting & Shading: High-contrast chiaroscuro. Strong directional lights (often warm gold/orange) create glowing, specular highlights on cheekbones, noses, and lips, mimicking sweat or lotion. Deep, heavy shadows obscure non-illuminated sides of the face.\n- Detail Level: Fine textures (pores, subtle wrinkles) are obliterated by heavy video grain, VHS degradation, and lens bloom. Broad strokes define the face: distinct jawlines, prominent lips, and high-contrast eyes.\n- Expression: Dynamic, expressive, and commanding. Often projecting attitude, speaking directly into the lens, or caught mid-motion.\n- Omissions: Clinical sharpness, perfect symmetry, and flat, even beauty lighting are consistently avoided.\n---\n5. REPRODUCTION GUIDANCE\n- MUST NEVER CHANGE: The lo-fi analog video texture (heavy grain, scanlines, chromatic aberration, bloom) and the high-contrast, crushed-black lighting model.\n- FLEXIBLE: The exact lens distortion (can transition between heavy fisheye, motion-blurred tracking shots, or isolated spotlight staging) and the specific urban environment.\n- ACTIONABLE RULES:\n  - If bright lights appear, treat them as blooming/flaring elements.\n  - When framing subjects, always push the camera perspective to an extreme (very low, very close, or heavily distorted).\n  - Introduce motion blur or slight focal softness to imply continuous movement and videography rather than static capture.\n- FAILURE MODES: Avoid pristine digital sharpness, modern 4K clarity, flat/even studio lighting, and static, rigid posing. Output must feel like paused playback of a kinetic, vintage video tape.",
+      "thumbnailUrl": "story-mode/styles/hip-hop.webp"
+    },
+    {
+      "id": "R&B",
+      "label": "R&B",
+      "styleText": "3. R&B and hip-hop (glam)\n1. STYLE PROMPT\nCinematic high-end 90s R&B music video aesthetic. Dramatic, moody theatrical lighting with bold color grading—deep atmospheric cyans and shadowy blues contrasted against glowing golds, warm ambers, and vibrant pink gels. Shot with premium cinema lenses featuring anamorphic spatial compression and shallow depth of field. Noticeable 35mm film grain effect, atmospheric haze, and soft halation on bright practical lights or specular highlights. Luxurious sets, emotive, highly stylized, high-fashion, conceptual, and dynamically composed. High-production value, shot in glamorous, premium high-end locations around the world.\n2. COLOR PALETTE\n{\n  \"Deep_Atmospheric_Cyan\": {\n    \"hex\": \"#0F283D\",\n    \"percentage\": \"25%\"\n  },\n  \"Crushed_Shadow_Black\": {\n    \"hex\": \"#08060A\",\n    \"percentage\": \"25%\"\n  },\n  \"Golden_Practical_Glow\": {\n    \"hex\": \"#E8A34A\",\n    \"percentage\": \"15%\"\n  },\n  \"Vibrant_Gel_Magenta\": {\n    \"hex\": \"#9E1C5E\",\n    \"percentage\": \"15%\"\n  },\n  \"Cool_Highlight_White\": {\n    \"hex\": \"#D1EDF5\",\n    \"percentage\": \"10%\"\n  },\n  \"Incandescent_Amber\": {\n    \"hex\": \"#FAD68A\",\n    \"percentage\": \"10%\"\n  }\n}\n3. KEY STYLE TAGS\ncinematic videography, Y2K, 90s R&B aesthetic, dramatic lighting, bold color grading, early 2000s music video, 35mm film grain, halation, glamorous, atmospheric haze, split-color gels, luxurious, glam, moody, chiaroscuro, anamorphic lenses, practical lighting, glossy textures, specular highlights, rim lighting, emotive performance, theatrical, stylized framing,\n4. FACE DEPICTION LOGIC\n- Lighting & Contrast: Faces are never flat-lit. They require dramatic, directional lighting (chiaroscuro, split lighting, or strong rim lights) that leaves portions of the face in deep shadow.\n- Texture & Highlights: High emphasis on specular highlights. Skin features a glamorous, glowing finish. Lips and cheekbones catch sharp reflections from off-screen light sources.\n- Eye Construction: Deeply shadowed brow bones with bright, prominent catchlights in the pupils to draw focus and convey emotion.\n- Expression: Performative, soulful, and confident.\n- Prioritization Rule: If a face is in the frame, it dictates the scene's lighting hierarchy, acting as the primary anchor for dynamic light gels and focus, while the background falls into shadow or soft bokeh.\n5. REPRODUCTION GUIDANCE\nWhat must NEVER change:\n- Heavy film grain and optical halation (glowing diffusion around light sources).\n- High-contrast, dual-tone theatrical lighting (e.g., warm subjects vs. cool backgrounds, or vice versa).\n- Deep, crushed black levels in shadow regions.\n- Cinematic aspect ratio and lens behavior (shallow depth of field).\nWhat can flex depending on the subject:\n- Specific gel colors (can shift between blue/gold, pink/orange, or cyan/magenta depending on the scene's emotion).\n- Architectural era (can range from modern glass mansions to historic ornate manors).\nCommon failure modes to avoid:\n- Avoid flat, even, or naturalistic lighting; lighting must always feel artificially staged and directed.\n- Avoid clean, digital perfection; the lack of film grain or haze will break the music video aesthetic.\n- Avoid sterile, matte textures; subjects and key props must have gloss or sparkle to catch the directional lights.",
+      "thumbnailUrl": "story-mode/styles/r-b.webp"
+    },
+    {
+      "id": "pop_music",
+      "label": "Pop Music",
+      "styleText": "Pop Music\n1. STYLE PROMPT\nA high-budget cinematic K-pop music video videography style. The visual frame features a conceptual, surreal studio set design with striking geometric architecture, reflective surfaces, and vivid, theatrical gel lighting, and visual references to nature, flowers, and celestial bodies. The cinematography employs dynamic framing, deep jewel tones contrasting with stark whites and blacks, and implied motion through wind-swept elements, liquid ripples, or staggered performer blocking. Subjects are styled in high-fashion, avant-garde attire with flawless, ethereal idol beauty aesthetics. Lighting is highly controlled, featuring dramatic spotlights, neon rim lights, and soft luminous highlights on skin. The overall aesthetic is highly polished, performative, emotionally stylized, and visually extravagant, balancing minimalist voids with bursts of dense, maximalist props to create a striking, immersive music video aesthetic.\n---\n2. COLOR PALETTE\nUse a flexible color palette, so the colors adapt, based on the meaning and context.\n---\n3. KEY STYLE TAGS\nK-pop MV, cinematic videography, theatrical lighting, surreal set design, jewel tones, reflective surfaces, high-budget, idol aesthetic, conceptual space, dynamic blocking, gel lights, avant-garde fashion, ethereal, geometric framing, performative, high-contrast, maximalist details, minimalist voids\n---\n4. FORMAL VISUAL SYSTEM\n- Illustration approach: High-fidelity live-action videography styling.\n- Contrast behavior: High contrast. Stark subjects against deep voids or brilliant brights.\n- Background treatment: Conceptual studio sets. Uses pure colored voids, large geometric cutouts, or hyper-stylized nature (perfect florals/trees).\n- Shape language: Bold geometric staging (circles, crisp horizons) intersecting with organic shapes (florals, human forms, water).\n- Outline treatment: Absent. Forms are defined entirely by sharp lighting contrast and rim lights.\n- Shading and lighting: Theatrical and dimensional. Uses heavy colored gels (purples, blues), spotlights, and stark rim lighting to separate subjects from backgrounds.\n- Texture usage: Ultra-smooth skin and glossy sets contrasting with highly textured props (sequins, rough rocks, water ripples, floral bursts).\n- Perspective/Framing: Cinematic. Ranges from extreme, intimate close-ups with shallow depth of field to wide, symmetrical master frames designed for group choreography.\n---\n5. CONCEPTUAL & SEMANTIC LAYER\n- Emotional tone: Ethereal, dramatic, untouchable, and highly stylized.\n- Implied world: A performative, surreal dreamscape detached from reality.\n- Simplification vs. Exaggeration: Environmental realism is simplified (abstract sets), while lighting and subject perfection are heavily exaggerated.\n- Communication strategy: Aesthetics and emotion over logic. Visual impact and star-power prioritization.\n---\n6. VISUAL LOGIC & DECISION RULES\n- If a group is present, they are treated as an architectural element: Staggered, highly intentional, dynamic posing rather than casual standing.\n- If an environment is shown, it is highly curated: No mundane clutter. Elements are either entirely absent (voids) or dense and symbolic (a single oversized moon, a cluster of perfect orchids).\n- When capturing motion, the style responds by: Using wind-blown hair/fabric or rippling reflective floors to convey cinematic movement without motion blur.\n---\n7. CREATION METHOD & TOOLS\n- High-end digital cinematography (simulated).\n- Studio lighting setups (gels, fresnels, bounce boards).\n- VFX compositing and highly stylized color grading.\n---\n8. REPRODUCTION GUIDANCE\n- Must NEVER change: The theatrical, high-budget studio lighting logic (gels, rim lights, contrast). Subjects must maintain the flawless \"idol\" aesthetic. Reflective or distinct studio-set grounds.\n- Can flex: The specific props (florals vs. rocks vs. moons), color dominance (shifting between the blues/purples and stark whites), and framing width (close-up vs. wide).\n- Failure modes to avoid: Do not make the lighting flat or naturalistic. Avoid realistic outdoor lighting, mundane locations, or casual, documentary-style framing. Do not use words implying still photography (e.g., \"photo,\" \"shot,\" \"lens\"); use cinematic/video terminology. Avoid messy or uncurated background elements.",
+      "thumbnailUrl": "story-mode/styles/pop-music.webp"
+    },
+    {
+      "id": "blue-vox",
+      "label": "Blue Vox",
+      "styleText": "Stylize the image with clean graphic collage aesthetics, matte-finish grayscale photographic cutouts, an off-white paper background with sparse technical grid accents, and minimal pale-blue paint strokes.",
+      "thumbnailUrl": "story-mode/styles/blue-vox.webp",
+      "previewVideoUrl": "story-mode/styles/blue-vox.webm"
+    }
+  ]
+}

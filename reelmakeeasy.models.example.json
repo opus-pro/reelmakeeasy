@@ -1,0 +1,267 @@
+{
+  "$schema": "./schemas/reelmakeeasy.models.schema.json",
+  "$comment": "Alternatives to the defaults in reelmakeeasy.models.json. Copy the entries you want into that file (or copy this whole file and set MODELS_FILE to it). Restart after editing.",
+  "version": 1,
+  "roles": {
+    "$comment": "Chat through OpenRouter: set LLM_BASE_URL=https://openrouter.ai/api/v1 and LLM_API_KEY in .env, and check the model ids at https://openrouter.ai/models.",
+    "chat.lite": "openrouter-gemini-flash-lite",
+    "chat.flash": "openrouter-claude-sonnet",
+    "chat.pro": "openrouter-gpt-5",
+    "image.generate": "seedream-4.5",
+    "image.edit": "seedream-4.5",
+    "image.fast": "flux-schnell",
+    "video.text": "veo-3.1-fast",
+    "video.image": "veo-3.1-fast",
+    "video.firstLast": "veo-3.1-fast",
+    "video.reference": null,
+    "video.lipsync": "kling-lipsync",
+    "music": "ace-step",
+    "tts": "eleven-v3",
+    "tts.elevenlabs": "eleven-v3-fal",
+    "tts.minimax": "minimax-speech-2.8-hd",
+    "tts.kokoro": "kokoro-en",
+    "tts.qwen3": "qwen3-tts-1.7b",
+    "voice.clone": "minimax-voice-clone",
+    "speech.align": "elevenlabs-align-fal",
+    "speech.transcribe": "elevenlabs-scribe-fal"
+  },
+  "fallbacks": {
+    "video.image": ["minimax-h3-max-turbo"],
+    "video.firstLast": ["minimax-h3-max-turbo"]
+  },
+  "models": {
+    "openrouter-gemini-flash-lite": {
+      "kind": "chat",
+      "provider": "openai-compatible",
+      "label": "Gemini Flash-Lite (OpenRouter)",
+      "model": "google/gemini-3.1-flash-lite"
+    },
+    "openrouter-claude-sonnet": {
+      "kind": "chat",
+      "provider": "openai-compatible",
+      "label": "Claude Sonnet (OpenRouter)",
+      "model": "anthropic/claude-sonnet-4.5"
+    },
+    "openrouter-gpt-5": {
+      "kind": "chat",
+      "provider": "openai-compatible",
+      "label": "GPT-5 (OpenRouter)",
+      "model": "openai/gpt-5"
+    },
+    "seedream-4.5": {
+      "$comment": "verify endpoint id: fal's Seedream v4.5 ids and accepted image_size range may differ.",
+      "kind": "image",
+      "provider": "fal",
+      "adapter": "seedream",
+      "label": "Seedream 4.5",
+      "endpoints": {
+        "generate": "fal-ai/bytedance/seedream/v4.5/text-to-image",
+        "edit": "fal-ai/bytedance/seedream/v4.5/edit"
+      },
+      "capabilities": {
+        "aspectRatios": ["21:9", "16:9", "4:3", "1:1", "3:4", "9:16"],
+        "resolutions": ["2K", "4K"],
+        "maxReferenceImages": 10
+      }
+    },
+    "flux-schnell": {
+      "$comment": "Any fal endpoint works with the generic adapter; `input` is merged into every request.",
+      "kind": "image",
+      "provider": "fal",
+      "adapter": "generic",
+      "label": "FLUX.1 [schnell]",
+      "endpoints": { "generate": "fal-ai/flux/schnell" },
+      "capabilities": {
+        "aspectRatios": ["1:1", "16:9", "9:16"],
+        "resolutions": ["1K"],
+        "maxReferenceImages": 0
+      },
+      "input": { "num_inference_steps": 4 }
+    },
+    "minimax-h3-max-turbo": {
+      "$comment": "MiniMax Hailuo 3 Max Turbo. First-last frame runs on image-to-video with end_image_url; clips are whole seconds from 5 to 15, at 480P, 768P (default) or 1080P. Fast enough (about 10 s per clip end to end) to make transitions one after another, each starting from the previous clip's last frame. Prices are fal's regular per-second rates (not launch promotions). frameSizes are the sizes it renders (measured); first and last frames are fitted to them so the model never reframes a mismatched pair.",
+      "kind": "video",
+      "provider": "fal",
+      "adapter": "minimax-video",
+      "label": "MiniMax Hailuo 3 Max Turbo",
+      "aliases": ["hailuo-3-turbo", "h3-turbo"],
+      "endpoints": {
+        "text": "minimax/h3-max-turbo/text-to-video",
+        "image": "minimax/h3-max-turbo/image-to-video",
+        "firstLast": "minimax/h3-max-turbo/image-to-video"
+      },
+      "capabilities": {
+        "durationsSec": [5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15],
+        "aspectRatios": ["21:9", "16:9", "4:3", "1:1", "3:4", "9:16"],
+        "maxResolution": "1080p",
+        "resolutions": ["480p", "768p", "1080p"],
+        "usdPerSecond": { "480p": 0.025, "768p": 0.04, "1080p": 0.08 },
+        "frameSizes": {
+          "480p": { "9:16": [480, 832], "16:9": [832, 480] },
+          "768p": { "9:16": [768, 1344], "16:9": [1344, 768] },
+          "1080p": { "9:16": [1080, 1912], "16:9": [1912, 1080] }
+        },
+        "audio": true,
+        "emitsNativeAudio": true,
+        "chainTransitions": true,
+        "family": "minimax"
+      }
+    },
+    "veo-3.1-fast": {
+      "kind": "video",
+      "provider": "fal",
+      "adapter": "veo",
+      "label": "Veo 3.1 Fast",
+      "endpoints": {
+        "text": "fal-ai/veo3.1/fast",
+        "image": "fal-ai/veo3.1/fast/image-to-video",
+        "firstLast": "fal-ai/veo3.1/fast/first-last-frame-to-video"
+      },
+      "capabilities": {
+        "durationsSec": [4, 6, 8],
+        "aspectRatios": ["16:9", "9:16"],
+        "maxResolution": "1080p",
+        "audio": true,
+        "family": "veo"
+      }
+    },
+    "ace-step": {
+      "$comment": "ACE-Step on fal: composes to the video's length (5 s to 4 min) from style tags, with an explicit instrumental mode, so no vocals. $0.0002 per second (a 60 s bed is about $0.01). The owner's pick after comparing CassetteAI and MiniMax Music 2.0.",
+      "kind": "music",
+      "provider": "fal",
+      "adapter": "ace-step",
+      "label": "ACE-Step",
+      "endpoints": {
+        "generate": "fal-ai/ace-step"
+      },
+      "capabilities": {
+        "maxDurationSec": 240
+      }
+    },
+    "minimax-music-v2": {
+      "$comment": "MiniMax Music 2.0 on fal: a full instrumental arrangement (song tags marked instrumental in place of lyrics), about a minute long, trimmed or looped to the video. $0.03 per piece. Not the default: in the owner's test 8 of 10 pieces had vocals despite the instrumental tags.",
+      "kind": "music",
+      "provider": "fal",
+      "adapter": "minimax-music",
+      "label": "MiniMax Music 2.0",
+      "endpoints": {
+        "generate": "fal-ai/minimax-music/v2"
+      },
+      "capabilities": {
+        "maxDurationSec": 240
+      }
+    },
+    "cassette-music": {
+      "$comment": "CassetteAI on fal: composes a piece to the video's length (10 s to 3 min) for $0.02 per minute of output (a 30 s bed costs $0.01); the cheapest option. No instrumental switch: the BGM director's prompt always ends with 'Instrumental.' Set roles.music to cassette-music to use it.",
+      "kind": "music",
+      "provider": "fal",
+      "adapter": "cassetteai-music",
+      "label": "CassetteAI Music",
+      "endpoints": {
+        "generate": "cassetteai/music-generator"
+      },
+      "capabilities": {
+        "maxDurationSec": 180
+      }
+    },
+    "eleven-music": {
+      "$comment": "ElevenLabs Music on fal: composes a piece to the video's length (3 s to 10 min), always instrumental. $0.60 per started minute of output (a 20 s bed costs $0.60), so it is not the default; set roles.music to eleven-music to use it.",
+      "kind": "music",
+      "provider": "fal",
+      "adapter": "elevenlabs-music",
+      "label": "ElevenLabs Music",
+      "endpoints": {
+        "generate": "fal-ai/elevenlabs/music"
+      },
+      "capabilities": {
+        "maxDurationSec": 300
+      }
+    },
+    "lyria2": {
+      "$comment": "Google Lyria 2: one 30 s clip for $0.10, looped to the video (a seam on longer videos); set roles.music to lyria2 to use it.",
+      "kind": "music",
+      "provider": "fal",
+      "adapter": "lyria",
+      "label": "Lyria 2",
+      "endpoints": { "generate": "fal-ai/lyria2" },
+      "capabilities": { "maxDurationSec": 30 }
+    },
+    "eleven-v3": {
+      "kind": "tts",
+      "provider": "elevenlabs",
+      "adapter": "elevenlabs-tts",
+      "label": "ElevenLabs v3",
+      "model": "eleven_v3"
+    },
+    "eleven-v3-fal": {
+      "$comment": "ElevenLabs voices without ELEVENLABS_API_KEY: Eleven v3 hosted on fal. With the key, roles.tts is called on ElevenLabs directly.",
+      "kind": "tts",
+      "provider": "fal",
+      "adapter": "elevenlabs-tts",
+      "label": "ElevenLabs v3 (on fal)",
+      "endpoints": { "generate": "fal-ai/elevenlabs/tts/eleven-v3" }
+    },
+    "minimax-speech-2.8-hd": {
+      "kind": "tts",
+      "provider": "fal",
+      "adapter": "minimax-speech",
+      "label": "MiniMax Speech 2.8 HD",
+      "endpoints": { "generate": "fal-ai/minimax/speech-2.8-hd" }
+    },
+    "kokoro-en": {
+      "kind": "tts",
+      "provider": "fal",
+      "adapter": "kokoro-tts",
+      "label": "Kokoro (English)",
+      "endpoints": { "generate": "fal-ai/kokoro/american-english" }
+    },
+    "qwen3-tts-1.7b": {
+      "kind": "tts",
+      "provider": "fal",
+      "adapter": "qwen3-tts",
+      "label": "Qwen3-TTS 1.7B",
+      "endpoints": {
+        "generate": "fal-ai/qwen-3-tts/text-to-speech/1.7b",
+        "design": "fal-ai/qwen-3-tts/voice-design/1.7b",
+        "clone": "fal-ai/qwen-3-tts/clone-voice/1.7b"
+      }
+    },
+    "minimax-voice-clone": {
+      "kind": "voice-clone",
+      "provider": "fal",
+      "adapter": "minimax-voice-clone",
+      "label": "MiniMax Voice Clone",
+      "endpoints": { "generate": "fal-ai/minimax/voice-clone" }
+    },
+    "kling-lipsync": {
+      "kind": "lipsync",
+      "provider": "fal",
+      "adapter": "kling-lipsync",
+      "label": "Kling Lipsync",
+      "endpoints": { "generate": "fal-ai/kling-video/lipsync/audio-to-video" },
+      "capabilities": { "minVideoSec": 2, "maxVideoSec": 10 }
+    },
+    "elevenlabs-align": {
+      "kind": "align",
+      "provider": "elevenlabs",
+      "adapter": "elevenlabs-align",
+      "label": "ElevenLabs Forced Alignment"
+    },
+    "elevenlabs-align-fal": {
+      "$comment": "Word timings for a known script without ELEVENLABS_API_KEY.",
+      "kind": "align",
+      "provider": "fal",
+      "adapter": "elevenlabs-align",
+      "label": "ElevenLabs Forced Alignment (on fal)",
+      "endpoints": { "generate": "fal-ai/elevenlabs/forced-alignment" }
+    },
+    "elevenlabs-scribe-fal": {
+      "$comment": "Caption timing (speech to text) without ELEVENLABS_API_KEY: Scribe v2 on fal, $0.008 per minute of audio.",
+      "kind": "align",
+      "provider": "fal",
+      "adapter": "elevenlabs-scribe",
+      "label": "ElevenLabs Scribe v2 (on fal)",
+      "endpoints": { "generate": "fal-ai/elevenlabs/speech-to-text/scribe-v2" }
+    }
+  }
+}

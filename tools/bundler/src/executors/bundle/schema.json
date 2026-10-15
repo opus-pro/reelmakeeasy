@@ -1,0 +1,131 @@
+{
+  "$schema": "https://json-schema.org/schema",
+  "version": 2,
+  "title": "Build Bundle Executor",
+  "description": "Consolidated build executor that runs TSC (optional), ESBuild, and minimize-deps in a single step",
+  "type": "object",
+  "properties": {
+    "runTsc": {
+      "type": "boolean",
+      "description": "Whether to run TypeScript compiler first (required for projects using decorators, like projects with Nest.js). Default: true",
+      "default": true
+    },
+    "tscCommand": {
+      "type": "string",
+      "description": "TSC command to run. Default: 'tsc --build'",
+      "default": "tsc --build"
+    },
+    "tscCwd": {
+      "type": "string",
+      "description": "Working directory for TSC command. Relative to workspace root. Default: {projectRoot}",
+      "default": "{projectRoot}"
+    },
+    "tscOutputDir": {
+      "type": "string",
+      "description": "Output directory for TSC compilation. Default: 'out-tsc'",
+      "default": "out-tsc"
+    },
+    "mainFile": {
+      "type": "string",
+      "description": "Path to the TypeScript entry file (relative to project root), e.g. src/main.ts. When runTsc is true, the executor uses the compiled .js under tscOutputDir. When runTsc is false, this .ts file is passed to ESBuild directly. Supports {projectRoot} and {workspaceRoot}."
+    },
+    "tsConfigPath": {
+      "type": "string",
+      "description": "Path to tsconfig.json file (relative to project root)"
+    },
+    "esbuildOptions": {
+      "type": "object",
+      "description": "Additional ESBuild options to override defaults",
+      "properties": {
+        "bundle": {
+          "type": "boolean",
+          "description": "Bundle all dependencies. Default: true",
+          "default": true
+        },
+        "platform": {
+          "type": "string",
+          "enum": ["node", "browser", "neutral"],
+          "description": "Target platform. Default: 'node'",
+          "default": "node"
+        },
+        "packages": {
+          "type": "string",
+          "enum": ["external", "bundle"],
+          "description": "How to handle packages. Default: 'external'",
+          "default": "external"
+        },
+        "format": {
+          "type": "string",
+          "enum": ["cjs", "esm", "iife"],
+          "description": "Output format. Default: 'cjs'",
+          "default": "cjs"
+        },
+        "sourcemap": {
+          "type": "boolean",
+          "description": "Generate source maps. Default: false",
+          "default": false
+        },
+        "minify": {
+          "type": "boolean",
+          "description": "Minify output. Default: false",
+          "default": false
+        }
+      }
+    },
+    "outputDir": {
+      "type": "string",
+      "description": "Output directory for the bundled file and meta.json. Default: 'dist'",
+      "default": "dist"
+    },
+    "outputFile": {
+      "type": "string",
+      "description": "Name of the output bundle file. Default: 'main.js'",
+      "default": "main.js"
+    },
+    "generateMinimalDeps": {
+      "type": "boolean",
+      "description": "Whether to generate minimal package.json using minimize-deps. Default: true",
+      "default": true
+    },
+    "runtimeDeps": {
+      "type": "array",
+      "description": "Additional runtime dependencies to always include in the minimal package.json",
+      "items": {
+        "type": "string"
+      },
+      "default": []
+    },
+    "assets": {
+      "type": "array",
+      "description": "After the bundle, copy files into outputDir (paths may use {workspaceRoot} and {projectRoot}). A string copies that file or directory into outputDir using its basename; an object globs under input and writes under output (relative to outputDir), preserving relative paths.",
+      "items": {
+        "oneOf": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "input": {
+                "type": "string",
+                "description": "Directory to glob from (workspace-relative)"
+              },
+              "glob": {
+                "type": "string",
+                "description": "Glob pattern relative to input (e.g. **/*.txt)"
+              },
+              "output": {
+                "type": "string",
+                "description": "Subdirectory under outputDir to write matched files"
+              }
+            },
+            "required": ["input", "glob", "output"]
+          }
+        ]
+      },
+      "default": []
+    }
+  },
+  "required": ["mainFile"]
+}

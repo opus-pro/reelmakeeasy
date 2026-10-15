@@ -1,0 +1,36 @@
+{
+  "name": "bundler",
+  "$schema": "../../schemas/nx-project.schema.json",
+  "sourceRoot": "tools/bundler/src",
+  "projectType": "library",
+  "tags": ["scope:tools", "type:tool"],
+  "targets": {
+    "build": {
+      "executor": "@nx/js:tsc",
+      "outputs": ["{options.outputPath}"],
+      "options": {
+        "outputPath": "dist/tools/bundler",
+        "main": "tools/bundler/src/index.ts",
+        "tsConfig": "tools/bundler/tsconfig.lib.json",
+        "assets": [
+          "tools/bundler/*.md",
+          {
+            "input": "./tools/bundler/src",
+            "glob": "**/!(*.ts)",
+            "output": "./src"
+          },
+          {
+            "input": "./tools/bundler/src",
+            "glob": "**/*.d.ts",
+            "output": "./src"
+          },
+          {
+            "input": "./tools/bundler",
+            "glob": "executors.json",
+            "output": "."
+          }
+        ]
+      }
+    }
+  }
+}

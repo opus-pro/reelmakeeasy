@@ -1,0 +1,20 @@
+{
+  "name": "shared/db-access-layer",
+  "$schema": "../../../schemas/nx-project.schema.json",
+  "sourceRoot": "libs/shared/db-access-layer/src",
+  "projectType": "library",
+  "tags": ["scope:shared", "type:library"],
+  "targets": {
+    "test": {
+      "dependsOn": ["api/db:generate-for-dirty-deps"]
+    },
+    "build": {
+      "dependsOn": ["api/db:generate-for-dirty-deps"],
+      "executor": "nx:run-commands",
+      "options": {
+        "cwd": "{workspaceRoot}",
+        "command": "npx tsc -p {projectRoot}/tsconfig.json --noEmit"
+      }
+    }
+  }
+}

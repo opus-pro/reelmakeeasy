@@ -1,0 +1,12 @@
+{
+  "extends": "../../../tsconfig.node.json",
+  "compilerOptions": {
+    "lib": ["es2023", "dom"],
+    "noImplicitOverride": true,
+    "noPropertyAccessFromIndexSignature": true,
+    "noImplicitReturns": true,
+    "noFallthroughCasesInSwitch": true,
+    "declaration": true
+  },
+  "include": ["src/**/*.ts"]
+}

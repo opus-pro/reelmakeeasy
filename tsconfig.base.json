@@ -1,0 +1,148 @@
+{
+  // What: Disable compile-on-save for faster development.
+  // Why: We use build tools (nx, pnpm, etc.) for compilation, not the editor.
+  "compileOnSave": false,
+  "compilerOptions": {
+    // What: Logical root of the TypeScript project.
+    // Why: Keeps relative paths and emitted source maps anchored at the repo root.
+    "rootDir": ".",
+
+    // What: Emit source maps for compiled output.
+    // Why: Enables debugging against original TypeScript sources in Node and browser tooling.
+    "sourceMap": true,
+
+    // What: Disable global .d.ts declaration emission from this config.
+    // Why: Libraries that need declarations should opt-in locally; apps and tools don’t need them.
+    "declaration": false,
+
+    // What: Module resolution strategy for Node-style imports.
+    // Why: Matches how Node and most tooling resolve modules on disk in this repo.
+    "moduleResolution": "node",
+
+    // What: Emit design-type metadata for decorators.
+    // Why: Required by NestJS and other decorator-heavy frameworks to perform runtime reflection.
+    "emitDecoratorMetadata": true,
+
+    // What: Enable experimental decorators support.
+    // Why: Allows NestJS-style class and method decorators throughout the codebase.
+    "experimentalDecorators": true,
+
+    // What: Use tslib helpers instead of inlining them in every file.
+    // Why: Reduces bundle size and keeps generated JS more consistent across projects.
+    "importHelpers": true,
+
+    // What: Target ECMAScript version for emitted JavaScript.
+    // Why: Aligns with modern runtimes so we can safely use up-to-date language features.
+    "target": "es2023",
+
+    // What: Output module format.
+    // Why: Default to ES modules so bundlers (Next.js, build tools) can perform tree-shaking and optimization.
+    "module": "esnext",
+
+    // What: Standard library set available to TypeScript.
+    // Why: Combine modern ECMAScript features with DOM types for browser and Node/Next hybrid environments.
+    "lib": ["es2023"],
+
+    // What: Avoid redirecting imports across project references.
+    // Why: Keeps resolution stable in monorepo setups and avoids surprising path rewrites.
+    "disableSourceOfProjectReferenceRedirect": true,
+
+    // What: Skip type checking of declaration files in node_modules.
+    // Why: Improves compile time; we trust published type packages to be valid.
+    "skipLibCheck": true,
+
+    // What: Skip checking the default lib files.
+    // Why: Further speeds up compilation without impacting the safety of our own code.
+    "skipDefaultLibCheck": true,
+
+    // What: Use `unknown` instead of `any` for caught error variables.
+    // Why: Forces explicit narrowing when working with errors, improving type safety.
+    "useUnknownInCatchVariables": true,
+
+    // What: Enable strict type-checking mode.
+    // Why: Catch more bugs at compile time and keep the codebase consistently typed.
+    "strict": true,
+
+    // What: Enable ES module interop semantics.
+    // Why: Smooths over CJS/ESM differences so imports like `import x from 'cjs-lib'` work as expected.
+    "esModuleInterop": true,
+
+    // What: Allow default imports from modules without default exports.
+    // Why: Matches how bundlers and transpilers usually treat CJS modules, reducing friction.
+    "allowSyntheticDefaultImports": true,
+
+    // What: Allow importing .json files as typed modules.
+    // Why: libs/llm bundles reelmakeeasy.models.json as the registry fallback; esbuild inlines it.
+    "resolveJsonModule": true,
+
+    // What: Enforce case-sensitive file names in imports.
+    // Why: Prevents bugs when deploying from case-insensitive dev machines to case-sensitive CI/production.
+    "forceConsistentCasingInFileNames": true,
+
+    // What: Base directory for non-relative module imports.
+    // Why: Anchors all path aliases at the repo root for predictable resolution.
+    "baseUrl": ".",
+
+    // What: Shared path aliases for monorepo packages.
+    // Why: Provide stable import prefixes so code can be moved without rewriting import paths.
+    "paths": {
+      // What: Common shared utilities and domain logic.
+      // Why: Reuse shared code across apps without deep relative paths.
+      "@reelmakeeasy/common/*": ["libs/shared/common/src/*"],
+
+      // What: Shared design system components.
+      // Why: Centralize styling and components for consistent look and feel.
+      "@shared/ui": ["libs/shared/ui/src"],
+      "@shared/ui/*": ["libs/shared/ui/src/*"],
+
+      // What: Shared type definitions.
+      // Why: Keep cross-cutting types versioned in one place instead of duplicating them.
+      "@shared/types/*": ["libs/shared/types/src/*"],
+      // What: Direct imports for prompt infrastructure helpers.
+      // Why: Keep prompt files explicit without relying on index barrels.
+      "@shared/prompt-system/*": ["libs/shared/prompt-system/src/*"],
+
+      // temporary: data service for agents
+      "@shared/db-access-layer": ["libs/shared/db-access-layer/src/index.ts"],
+
+      // What: Core agent runtime and utilities.
+      // Why: Allow all apps to depend on agent logic via a stable alias.
+      "@agent-lib/*": ["libs/agent/src/*"],
+
+      "@reelmakeeasy/api-db": ["libs/api/db/src/index.ts"],
+
+      // What: Shared Story Mode runtime used by the legacy and standalone workers.
+      // Why: Keep the workflow/activity implementation in one reusable home.
+      "@reelmakeeasy/story-mode-runtime": ["libs/story-mode-runtime/src/index.ts"],
+      "@reelmakeeasy/story-mode-runtime/*": ["libs/story-mode-runtime/src/*"],
+
+      // What: UIP planner runtime — core logic for User Intent Planner (planner loop, tools, prompts).
+      // Why: Shared between prototype (playground) and production (workflow activity).
+      "@reelmakeeasy/uip-planner-runtime": ["libs/uip-planner-runtime/src/index.ts"],
+      "@reelmakeeasy/uip-planner-runtime/*": ["libs/uip-planner-runtime/src/*"],
+
+      // What: Keyframe judge versions for Story Mode quality evaluation.
+      // Why: Centralise judge strategies so eval and production share the same scoring logic.
+      "@reelmakeeasy/story-mode-judges": ["libs/story-mode-judges/src/index.ts"],
+      "@reelmakeeasy/llm": ["libs/llm/src/index.ts"],
+      "@reelmakeeasy/llm/types": ["libs/llm/src/types.ts"],
+      "@reelmakeeasy/llm/registry": ["libs/llm/src/registry/index.ts"],
+      "@reelmakeeasy/llm/*": ["libs/llm/src/*"],
+      "@reelmakeeasy/story-mode-workers": ["apps/services/story-mode/src/register.ts"],
+      "@reelmakeeasy/render-worker": ["apps/services/render/src/register.ts"],
+      "@reelmakeeasy/workflow-engine/*": ["libs/workflow-engine/src/*"],
+      "@reelmakeeasy/story-mode-judges/*": ["libs/story-mode-judges/src/*"],
+
+      // What: Build tooling.
+      "@tools/bundler": ["tools/bundler/src/index.ts"],
+
+      // What: Workflow service wrappers (runtime, render, story-mode admission).
+      // Why: Provide a stable import path for workflow services across apps.
+      "@shared/render-services/*": ["libs/shared/render-services/src/*"]
+    }
+  },
+
+  // What: Files and directories excluded from TypeScript compilation.
+  // Why: Avoid type-checking generated artifacts, build outputs, and virtual environments.
+  "exclude": ["node_modules", "tmp", "dist", "build", ".venv", ".nx"]
+}

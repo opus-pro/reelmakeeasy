@@ -1,0 +1,12 @@
+# Shared by every backend. Kokoro's English front end (misaki) and its spaCy model.
+misaki==0.9.4
+espeakng-loader==0.2.4
+num2words==0.5.14
+phonemizer-fork==3.3.2
+spacy==3.8.16
+en_core_web_sm @ https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.8.0/en_core_web_sm-3.8.0-py3-none-any.whl
+fastapi==0.142.1
+uvicorn==0.54.0
+numpy>=1.26,<3
+# 1.x on MLX (requirements-mlx.txt); qwen-tts pins transformers 4.57.3, which needs <1.0.
+huggingface_hub>=0.34

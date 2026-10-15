@@ -1,0 +1,1139 @@
+@import '@radix-ui/themes/styles.css';
+@import './tailwind-preflight.css';
+@import './ui-colors.css';
+
+@font-face {
+  font-family: 'Geist Sans';
+  src: url('/fonts/Geist-Variable.woff2') format('woff2');
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Geist Mono';
+  src: url('/fonts/GeistMono-Variable.woff2') format('woff2');
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --font-geist-sans: 'Geist Sans', ui-sans-serif, system-ui, sans-serif;
+    --font-geist-mono: 'Geist Mono', ui-monospace, consolas, monospace;
+    --background: 0 0% 9%;
+    /* shadcn-named color tokens, bridged to the design system.
+       Each holds a COMPLETE color (via a design token defined under :root.ui
+       in ui-colors.css), never raw `H S% L%` channels. The Tailwind color
+       projector emits `var(--x)` for these (and `color-mix(... var(--x) ...)`
+       for the `/NN` alpha modifier) -- both require a full color, so channel
+       form silently compiles to an invalid, dropped declaration that inherits.
+       See projectors/tailwind.ts. (--primary/--secondary/--muted/
+       --accent below keep their legacy channel form only because :root.ui
+       overrides each of them with a full color.) */
+    --foreground: var(--ui-sys-color-text-primary);
+    --card: var(--bg-panel);
+    --card-foreground: var(--ui-sys-color-text-primary);
+    --popover: var(--ui-sys-color-surface-floating);
+    --popover-foreground: var(--ui-sys-color-text-primary);
+    --primary: 240 5.9% 10%;
+    --primary-foreground: 0 0% 98%;
+    --secondary: rgba(255, 255, 255, 0.05);
+    --secondary-foreground: var(--ui-sys-color-text-primary);
+    --muted: 240 4.8% 95.9%;
+    --muted-foreground: var(--ui-sys-color-text-secondary);
+    --accent: #c6fd7f;
+    --accent-foreground: 240 5.9% 10%;
+    /* Mirror the `error` Tailwind color (#E5484D, LITERAL_COLORS.error) -- the
+       app's established danger red, matching text-error / bg-error. NOT the design-system
+       status-error token, whose hex (#ff570a) is shared with orange-100 and
+       reads as orange for a destructive action. */
+    --destructive: #e5484d;
+    --destructive-foreground: var(--ui-sys-color-text-primary);
+    --border: var(--ui-sys-color-border-subtle);
+    --input: var(--ui-sys-color-border-weak);
+    --ring: var(--ui-ref-color-blue-100);
+    --radius: 14px;
+    --mobile-icon-size: 24px;
+    --mobile-top-bar-content-height: 56px;
+    --mobile-top-bar-height: calc(
+      var(--mobile-top-bar-content-height) + env(safe-area-inset-top, 0px)
+    );
+    --mobile-bottom-bar-content-height: 56px;
+    --mobile-bottom-bar-height: calc(
+      var(--mobile-bottom-bar-content-height) + env(safe-area-inset-bottom, 0px)
+    );
+    /* Initial value so layouts that inset past the sidebar (e.g. /advanced) are correct on first
+       paint; AppSidebar overrides this with the live, variant-specific width once mounted. */
+    --sidebar-width: 54px;
+    --accent-green: 86, 97%, 75%;
+  }
+
+  .dark {
+    --background: 0, 0%, 4%;
+    --foreground: 0, 0%, 7%;
+
+    --card: 240 10% 3.9%;
+    --card-foreground: 0 0% 98%;
+    --card-hover: 223, 5%, 10%;
+
+    --popover: var(--ui-sys-color-surface-floating);
+    --popover-foreground: var(--ui-sys-color-text-primary);
+
+    --primary: 0 0% 98%;
+    --primary-foreground: 240 5.9% 10%;
+
+    --secondary: 240 3.7% 15.9%;
+    --secondary-foreground: 0 0% 98%;
+
+    --muted: 240 3.7% 15.9%;
+    --muted-foreground: 240 5% 64.9%;
+
+    /* --accent: 240 3.7% 15.9%; */
+    --accent: 86, 50%, 99%;
+    --accent-foreground: 0 0% 98%;
+
+    /* Full color, not bare HSL channels: `text-destructive` resolves to
+       `color: var(--destructive)`, so channel triplets make the declaration
+       invalid and the text loses its color entirely. Mirrors the light theme. */
+    --destructive: #e5484d;
+    --destructive-foreground: 0 0% 98%;
+
+    --border: 0, 0%, 100%;
+    --border-secondary: 0, 0%, 100%;
+    --border-tertiary: 0, 0%, 100%;
+
+    --input: 240 3.7% 15.9%;
+    --ring: var(--ui-ref-color-blue-100);
+
+    /* Text/light */
+    --text-primary: 0, 0%, 100%;
+    --text-secondary: 0, 0%, 100%;
+    --text-tertiary: 0, 0%, 100%;
+    --text-disabled: 0, 0%, 100%;
+
+    /* Text/dark */
+    --text-dark-primary: 0, 0%, 0%;
+
+    /* Fill/light */
+    --fill-primary: 0, 0%, 100%;
+    /*, 1); */
+    --fill-secondary: 0, 0%, 100%;
+    /*, 0.08); */
+    --fill-tertiary: 0, 0%, 100%;
+    /*, 0.05); */
+    --fill-hover: 0, 0%, 100%;
+    /*, 0.12); */
+    --fill-disabled: 0, 0%, 100%;
+    /*, 0.03); */
+
+    /* Fill/dark */
+    --fill-dark-primary: 0, 0%, 0%;
+
+    /* Border */
+    /* , 0.12) */
+    --border-primary: 0, 0%, 100%;
+    /* , 0.08) */
+    --border-secondary: 0, 0%, 100%;
+    /* , 0.05) */
+    --border-tertiary: 0, 0%, 100%;
+
+    /* Background */
+    --bg-true-black: 0, 0%, 0%;
+    --bg-background: 0, 0%, 4%;
+    --bg-background-transparent: hsla(var(--bg-background), 0);
+    --bg-foreground: 0, 0%, 7%;
+    --bg-panel: 0, 0%, 12%;
+    /* , 0.85) */
+    --bg-overlay: 0, 0%, 12%;
+
+    --accent-green: 86, 97%, 75%;
+  }
+}
+
+@layer base {
+  /* Keyboard focus is always visible: a 2px brand-blue line just inside the element's edge
+     (WCAG 2.4.7). Inside, not outside: a scrolling or clipping parent (the sidebar, a card)
+     cuts off anything drawn past a child's edge, an outer outline and an outer box-shadow
+     alike. An outline is also painted after everything in the element, so a thumbnail or a
+     background layer never covers it (an inset box-shadow sits under them), it follows the
+     rounded corners, and it never fights the box-shadows Tailwind's ring-* and shadow-*
+     utilities set. Only keyboard focus matches :focus-visible, so a mouse click draws
+     nothing. A component that draws its own indicator turns this off with
+     `focus-visible:outline-none` and shows `ring-ring` instead. */
+  :focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: -2px;
+  }
+  html {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    box-sizing: border-box;
+    -webkit-text-size-adjust: 100%;
+    /* 设置默认字体权重为regular */
+    font-weight: 400;
+  }
+
+  *,
+  *::before,
+  *::after {
+    box-sizing: inherit;
+  }
+
+  strong,
+  b {
+    font-weight: 700;
+  }
+
+  body {
+    margin: 0;
+    color: #fff;
+    font-family:
+      'Geist Sans', 'Poppins', 'Avenir', 'Roboto', 'PingFang SC', 'Helvetica', 'Arial',
+      'Microsoft YaHei', 'WenQuanYi Zen Hei', 'WenQuanYi Micro Hei', sans-serif;
+    font-weight: 400;
+    font-size: 1rem;
+    line-height: 1.5;
+    background-color: var(--bg-background);
+    /* Geist字体特征设置 */
+    font-feature-settings:
+      'ss01' on,
+      'ss03' on,
+      'ss04' on,
+      'ss06' on,
+      'ss08' on;
+  }
+
+  @media (max-width: 767px) {
+    body:has([data-mobile-tab-bar]) {
+      padding-bottom: var(--mobile-bottom-bar-height);
+    }
+  }
+
+  @media print {
+    body {
+      background-color: #fff;
+    }
+  }
+
+  body::backdrop {
+    background-color: #0e1015;
+  }
+
+  body::-webkit-scrollbar,
+  body *::-webkit-scrollbar {
+    background-color: var(--border) transparent;
+    width: 8px;
+    height: 8px;
+    border-radius: 9999px;
+  }
+
+  body::-webkit-scrollbar-thumb,
+  body *::-webkit-scrollbar-thumb {
+    border-radius: 9999px;
+    background-color: var(--border);
+  }
+}
+
+@supports (-webkit-touch-callout: none) {
+  .h-screen {
+    height: 100vh;
+    max-height: -webkit-fill-available !important;
+  }
+}
+
+/* Reflow after pinch-zoom on mobile: use visual viewport height when set by VisualViewportSync */
+.min-h-screen {
+  min-height: var(--visual-viewport-height, 100vh);
+}
+/* Hand-written rather than a Tailwind arbitrary value: the build's class extractor does not emit
+   min-h-[calc(var(--visual-viewport-height,...)-7rem)].
+   639.98px, not 640px: Tailwind's `sm:` starts at exactly 640px, where the transcript layer inside
+   the card switches to its desktop floor, so this rule has to be gone by then. */
+@media (max-width: 639.98px) {
+  .uip-transcript-card-mobile {
+    /* The visible area is the card's floor, not its height: the card fills the screen while there
+       is room, and once the soft keyboard shrinks that area below what the chrome plus the
+       transcript field need, the card keeps its content's height and the timeline scrolls
+. height/max-height are reset because the card's utility classes set both. */
+    height: auto;
+    min-height: calc(var(--visual-viewport-height, 100dvh) - 7rem);
+    max-height: none;
+  }
+}
+
+.shine-text {
+  -webkit-mask-image: linear-gradient(
+    -75deg,
+    rgba(0, 0, 0, 0.5) 10%,
+    rgba(0, 0, 0, 1) 30%,
+    rgba(0, 0, 0, 1) 70%,
+    rgba(0, 0, 0, 0.5) 90%
+  );
+  -webkit-mask-size: 200%;
+  animation: shine 3s linear infinite;
+}
+
+@keyframes shine {
+  0% {
+    -webkit-mask-position: 200% 0;
+  }
+  100% {
+    -webkit-mask-position: -200% 0;
+  }
+}
+
+/* Anton Font for Caption Preview */
+@font-face {
+  font-family: 'Anton';
+  src: url('https://fonts.gstatic.com/s/anton/v25/1Ptgg87LROyAm3K8-C8.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* scrollbar */
+/* Firefox honours only the standard properties, so without this it renders a
+   full-width scrollbar here. Scoped away from Chromium/Safari on purpose: they
+   support `scrollbar-width` too, and any non-`auto` value there disables the
+   `::-webkit-scrollbar` rules below, replacing the 4px custom thumb with the
+   browser's own and breaking `.scrollbar-reveal`'s thumb fade.
+   The thumb colour is left alone so `.scrollbar-reveal` keeps owning
+   `scrollbar-color` (this rule sits after `@tailwind utilities` and would
+   otherwise win). */
+@supports not selector(::-webkit-scrollbar) {
+  .scrollbar-thin {
+    scrollbar-width: thin;
+  }
+}
+
+.scrollbar-thin::-webkit-scrollbar {
+  width: 4px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-thumb {
+  background-color: hsla(0, 0%, 100%, 0.08);
+  border-radius: 2px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-track {
+  background-color: transparent;
+}
+
+.scrollbar-thumb-muted-gray::-webkit-scrollbar-thumb {
+  background-color: #666666;
+}
+
+@keyframes dropdown-slide-down {
+  0% {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-dropdown-slide-down {
+  animation: dropdown-slide-down 250ms ease-out forwards;
+}
+
+@property --r2 {
+  syntax: '<angle>';
+  inherits: false;
+  initial-value: 0deg;
+}
+
+@property --rc-border {
+  syntax: '<color>';
+  inherits: false;
+  initial-value: #452324;
+}
+
+@property --t {
+  syntax: '<number>';
+  inherits: false;
+  initial-value: 0;
+}
+
+/* Status pill: 1px border for path animation; match pill rounded-xl (12px) so animation follows same corners */
+.rc-pill {
+  padding: 1px;
+  background:
+    conic-gradient(
+      from calc(var(--r2) - 80deg) at calc(20px + (100% - 40px) * var(--t)) 50%,
+      transparent 0,
+      rgba(255, 255, 255, 0.5) 20%,
+      transparent 40%
+    ),
+    var(--rc-border);
+  border-radius: 0.75rem; /* 12px, same as rounded-xl */
+  transition: all 0.2s ease;
+  transform: translateZ(0);
+  animation: rc-rotate 3s linear -0.64s infinite;
+  will-change: transform;
+  overflow: hidden;
+}
+
+@keyframes rc-rotate {
+  0% {
+    --r2: 0deg;
+    --t: 0;
+  }
+  32.8228% {
+    --r2: 0deg;
+    --t: 1;
+  }
+  50% {
+    --r2: 180deg;
+    --t: 1;
+  }
+  82.8228% {
+    --r2: 180deg;
+    --t: 0;
+  }
+  to {
+    --r2: 360deg;
+    --t: 0;
+  }
+}
+
+@property --rc-card-sheen-angle {
+  syntax: '<angle>';
+  inherits: false;
+  initial-value: 0deg;
+}
+
+/* The card-sized variant of .rc-pill. The pill's sweep slides its conic origin left-and-right
+   across the middle and whips the wedge 180deg mid-cycle -- at ~140px wide that reads as a
+   sheen, but stretched round a 700px card it reads as a crawl with a visible jerk. Here the
+   origin sits still at the centre and only the angle advances, so one feathered arc travels
+   the perimeter at a single constant speed. Lower peak opacity than the pill: the perimeter
+   is several times longer, and 0.5 white over that distance reads as a streak. */
+.rc-card-sheen {
+  padding: 1px;
+  background:
+    conic-gradient(
+      from var(--rc-card-sheen-angle) at 50% 50%,
+      transparent 0deg,
+      rgba(255, 255, 255, 0.05) 26deg,
+      rgba(255, 255, 255, 0.42) 46deg,
+      rgba(255, 255, 255, 0.05) 66deg,
+      transparent 92deg
+    ),
+    var(--rc-border);
+  animation: rc-card-sheen 6s linear infinite;
+  transform: translateZ(0);
+  overflow: hidden;
+}
+
+@keyframes rc-card-sheen {
+  to {
+    --rc-card-sheen-angle: 360deg;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rc-card-sheen {
+    animation: none;
+  }
+}
+
+/* Placeholder text fade in with blur and movement */
+@keyframes fade-in-up {
+  0% {
+    opacity: 0;
+    filter: blur(4px);
+    transform: translateY(2px);
+  }
+  100% {
+    opacity: 1;
+    filter: blur(0px);
+    transform: translateY(0px);
+  }
+}
+
+.animate-fade-in-up {
+  animation: fade-in-up 500ms ease-out forwards;
+}
+
+/* Table full width utility */
+.table-full-width table {
+  width: 100%;
+  min-width: 100%;
+}
+/* Dialog Content - always centered */
+.dialog-content {
+  transform: translate(-50%, -50%);
+}
+
+/* Dialog animations */
+@keyframes dialogContentIn {
+  from {
+    opacity: 0;
+    transform: translate(-50%, calc(-50% + 8px)) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+}
+
+@keyframes dialogContentOut {
+  from {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: translate(-50%, calc(-50% + 8px)) scale(0.96);
+  }
+}
+
+@keyframes overlayShow {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes overlayHide {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+/* Apply animations based on Radix state */
+.dialog-content[data-state='open'] {
+  animation: dialogContentIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.dialog-content[data-state='closed'] {
+  animation: dialogContentOut 0.2s cubic-bezier(0.4, 0, 1, 1);
+}
+
+.dialog-overlay[data-state='open'] {
+  animation: overlayShow 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.dialog-overlay[data-state='closed'] {
+  animation: overlayHide 0.2s cubic-bezier(0.4, 0, 1, 1);
+}
+
+/* Mobile full-screen dialog: simple fade instead of centering-transform animation */
+@keyframes mobileDialogFadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes mobileDialogFadeOut {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+@media (max-width: 639px) {
+  .mobile-fullscreen-dialog.dialog-content {
+    transform: none !important;
+  }
+  .mobile-fullscreen-dialog.dialog-content[data-state='open'] {
+    animation: mobileDialogFadeIn 0.25s ease-out !important;
+  }
+  .mobile-fullscreen-dialog.dialog-content[data-state='closed'] {
+    animation: mobileDialogFadeOut 0.2s ease-in !important;
+  }
+}
+
+/* Enhance review mode - slow pulsing border using box-shadow to avoid layout shift */
+@keyframes enhance-review-pulse {
+  0%,
+  100% {
+    box-shadow: inset 0 0 0 4px rgba(255, 255, 255, 0.04);
+  }
+  50% {
+    box-shadow: inset 0 0 0 4px rgba(255, 255, 255, 0.16);
+  }
+}
+
+.enhance-review-border {
+  box-shadow: inset 0 0 0 4px rgba(255, 255, 255, 0.04);
+  animation: enhance-review-pulse 2s ease-in-out infinite;
+}
+
+@keyframes centerIconPop {
+  0% {
+    opacity: 0;
+    transform: scale(0.5);
+  }
+  20% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  70% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1);
+  }
+}
+
+/* Auto-mode shimmer on the UIP composer: an accent-orange highlight running around
+   the border.
+
+   offset-path, not a rotating conic plate, because offset-distance is parameterized
+   by ARC LENGTH while a conic moves by ANGLE - and on a pill this wide almost the
+   whole angular sweep points at the two long edges. Measured: 1px of travel near the
+   top centre costs 2.6deg, 1px near a cap costs 0.014deg, so a conic crawls across
+   the middle and snaps around the ends. That unevenness is the shape of the mapping,
+   not its rate, so no duration fixes it. A closed path also has no wrap to land
+   badly, which is why there is no seam to tune away.
+
+   Two layers on one clock: a crisp 1px band, and a wider band inside a blurred
+   wrapper for the halo. The blur has to sit on the PARENT - mask clips after filter
+   on the same element, so blurring a band directly hands back a hard-edged band. */
+@keyframes uip-auto-shimmer-orbit {
+  from {
+    offset-distance: 0%;
+  }
+
+  to {
+    offset-distance: 100%;
+  }
+}
+
+.uip-auto-shimmer {
+  /* Slow. A lap of the outline in 14s is a drift, not a pulse. */
+  --auto-shimmer-dur: 14000ms;
+  --auto-shimmer-radius: 27px;
+  /* Under full strength: a standing mode indicator on an always-on surface should be
+     noticed when looked at, not compete with the message being written. */
+  --auto-shimmer-strength: 0.7;
+
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  opacity: var(--auto-shimmer-strength);
+  transition: opacity 150ms ease-out;
+}
+
+/* The beam is the AT-REST tell, so it yields once the composer is being used: hover and
+   focus each draw their own accent-orange stroke on this same edge, and both at once
+   read as two competing highlights in one colour. Faded rather than paused, so the beam
+   comes back where it would have been instead of where it froze. */
+.uip-auto-shimmer-host:focus-within .uip-auto-shimmer,
+.uip-auto-shimmer-host:hover .uip-auto-shimmer {
+  opacity: 0;
+}
+
+/* The travelling light: an ellipse lying ALONG the outline, long in the direction of
+   travel and short across it.
+
+   Long, because the band clips it to a stretch of lit edge rather than a dot going
+   round, and that stretch is what gives the highlight a head and a tail. Short is the
+   constraint to respect when tuning: the composer is only ~56px tall, so a blob wide
+   enough to read as a streak is also tall enough to reach the OPPOSITE band, and both
+   edges lit at once reads as a flicker rather than as travel. offset-rotate: auto
+   keeps it tangent, flat along the long edges and turning through the caps. */
+.uip-auto-shimmer-orb {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: var(--auto-orb-length);
+  height: var(--auto-orb-depth);
+  /* Flat through the middle, then a long tail: a peaked profile makes the sum of
+     overlapping segments ripple at the step. */
+  background: radial-gradient(
+    farthest-side at 50% 50%,
+    rgb(var(--accent-orange) / 0.95),
+    rgb(var(--accent-orange) / 0.85) 30%,
+    rgb(var(--accent-orange) / 0.5) 55%,
+    rgb(var(--accent-orange) / 0.16) 75%,
+    transparent 92%
+  );
+  offset-path: inset(0 round var(--auto-shimmer-radius));
+  offset-rotate: auto;
+  animation: uip-auto-shimmer-orbit var(--auto-shimmer-dur) linear infinite;
+}
+
+.uip-auto-shimmer-ring,
+.uip-auto-shimmer-halo {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  overflow: hidden;
+  pointer-events: none;
+  /* Everything but a band along the edge. */
+  mask:
+    linear-gradient(#fff 0 0) content-box,
+    linear-gradient(#fff 0 0);
+  mask-composite: exclude;
+}
+
+/* The beam is a CHAIN of short segments, not one long shape, because the two things it
+   needs pull against each other in every single-shape mechanism:
+
+   - A beam's brightness has to fall off along its own length. One long orb gets that
+     free (it is a radial gradient) but offset-path POSITIONS and rotates a rigid box
+     without bending it, so a long one distorts at the caps: at 1100px its bbox went
+     1100x40 -> 476x1025 across ~6% of the lap, and the light stalled and jumped at the
+     corners. What drives the swing is how much longer the shape is than the path's
+     radius, and this composer is 56px tall, so shortening only shrinks it.
+   - An SVG stroke-dash bends around the caps exactly, but SVG has no gradient that
+     follows a path, so a dash carries ONE alpha along its length and reads as a line
+     going round rather than as a beam.
+
+   Short segments have both, and the per-segment opacity ramp IS the falloff. They share
+   one keyframe and are spread along the path by negative animation-delay, so the count
+   costs DOM nodes but not extra keyframe blocks.
+
+   Three numbers, and each is load-bearing:
+
+   - step, as a fraction of the LAP rather than a pixel gap, so the share of the outline
+     lit holds at any composer width. 12 x 5.8% ~= 70%.
+   - length, at 300px against that ~91px step, so every point is covered THREE segments
+     deep. Depth is what removes the dash feel: at two deep the sum of the segments' own
+     falloffs dips once per step and the periodicity shows; at three the dips fill in.
+     Depth is length/step, so this buys it without adding nodes.
+   - the ramp, quadratic rather than linear. A linear fade leaves the tail clearly lit a
+     whole beam-length behind the head, which is what makes a travelling light read as a
+     line.
+
+   Both layers are chained and both have to be: with a single glow segment the beam was
+   soft where that segment happened to be and a bare hairline everywhere else, so it read
+   as part beam and part line. */
+.uip-auto-shimmer-ring,
+.uip-auto-shimmer-halo {
+  --auto-orb-length: 300px;
+  --auto-chain-step: 0.058;
+}
+
+.uip-auto-shimmer-ring .uip-auto-shimmer-orb,
+.uip-auto-shimmer-halo .uip-auto-shimmer-orb {
+  opacity: calc(0.03 + 0.97 * var(--i) * var(--i) / 121);
+  animation-delay: calc(var(--auto-shimmer-dur) * var(--auto-chain-step) * var(--i) * -1);
+}
+
+/* The stroke. */
+.uip-auto-shimmer-ring {
+  --auto-orb-depth: 40px;
+
+  padding: 1px;
+}
+
+/* The glow: a wider band on the same chain, so the beam has body along its whole
+   length. */
+.uip-auto-shimmer-halo {
+  --auto-orb-depth: 54px;
+
+  padding: 4px;
+  opacity: 0.6;
+}
+
+.uip-auto-shimmer-bloom {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  filter: blur(7px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .uip-auto-shimmer-orb {
+    animation: none;
+  }
+}
+
+/* The composer's resting hairline, in both modes: white at 10%, from the semantic
+   layer.
+
+   Mind which token. The utility named `border-subtle` resolves to --border-subtle,
+   which is PINNED at rgba(255,255,255,0.08) and deprecated - reaching for it by name
+   quietly darkens this edge. --ui-sys-color-border-subtle is the one carrying a10.
+
+   Declared here rather than as border-[var(...)] because a new arbitrary value in
+   this repo emits the class with no CSS behind it. Width stays on the element's
+   border-[0.5px], which is already in the bundle. */
+.uip-composer-edge {
+  border-color: var(--ui-sys-color-border-subtle);
+}
+
+/* The composer's hover and focus stroke, one class per mode. Auto is accent-orange
+   (the mode's colour), Manual the neutral border-weak token; both 0.8px, so
+   colour is the only difference between them.
+
+   Three things are load-bearing here:
+
+   - Inset shadows, not borders, and the sub-pixel width is why it has to stay that
+     way: Chrome rounds a sub-pixel BORDER up to a full pixel (the resting hairline
+     above is authored at 0.5px and measures 1px). A shadow also leaves the box size
+     alone, so neither state nudges the composer's contents.
+   - Classes, not hover:/focus-within: shadow-[...] utilities. A new arbitrary value
+     in this repo emits the class with no CSS behind it and fails silently.
+   - Hover and focus at the same weight, per mode. Hover says the field can be typed
+     in and focus says it is being typed in; stepping between them would move the edge
+     under a pointer that has not moved.
+
+   Auto gets no outer glow: the shimmer already lights this edge. */
+.uip-auto-edge-stroke:focus-within,
+.uip-auto-edge-stroke:hover {
+  box-shadow: inset 0 0 0 0.8px rgb(var(--accent-orange));
+}
+
+.uip-manual-edge-stroke:focus-within,
+.uip-manual-edge-stroke:hover {
+  box-shadow: inset 0 0 0 0.8px var(--ui-sys-color-border-weak);
+}
+
+/* transitions.dev 05 - menu dropdown. Origin-aware: the surface grows from the
+   corner it shares with its trigger rather than from its own centre, which is what
+   ties the menu to the chip that opened it.
+
+   Variables live on the class, not :root, because this is the only dropdown using
+   them here - and the close duration is read back off the element in JS, so the
+   unmount waits exactly as long as the transition and the two cannot drift. */
+.t-dropdown {
+  --dropdown-open-dur: 250ms;
+  --dropdown-close-dur: 150ms;
+  --dropdown-pre-scale: 0.97;
+  --dropdown-closing-scale: 0.99;
+  --dropdown-ease: cubic-bezier(0.22, 1, 0.36, 1);
+
+  transform-origin: top left;
+  transform: scale(var(--dropdown-pre-scale));
+  opacity: 0;
+  pointer-events: none;
+  transition:
+    transform var(--dropdown-open-dur) var(--dropdown-ease),
+    opacity var(--dropdown-open-dur) var(--dropdown-ease);
+  will-change: transform, opacity;
+}
+
+.t-dropdown[data-origin='top-right'] {
+  transform-origin: top right;
+}
+
+.t-dropdown[data-origin='top-center'] {
+  transform-origin: top center;
+}
+
+.t-dropdown[data-origin='bottom-left'] {
+  transform-origin: bottom left;
+}
+
+.t-dropdown[data-origin='bottom-center'] {
+  transform-origin: bottom center;
+}
+
+.t-dropdown[data-origin='bottom-right'] {
+  transform-origin: bottom right;
+}
+
+.t-dropdown.is-open {
+  transform: scale(1);
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.t-dropdown.is-closing {
+  transform: scale(var(--dropdown-closing-scale));
+  opacity: 0;
+  pointer-events: none;
+  transition:
+    transform var(--dropdown-close-dur) var(--dropdown-ease),
+    opacity var(--dropdown-close-dur) var(--dropdown-ease);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .t-dropdown {
+    transition: none !important;
+  }
+}
+
+/* Halfway to the accent from white. The base colour of the Auto chip, and the one
+   the sweep below travels over. */
+:root {
+  --auto-shimmer-peak: color-mix(in srgb, var(--ui-sys-color-accent-orange) 40%, #fff);
+}
+
+/* One shimmer across the whole Auto chip - icon and label together.
+
+   Recipe 15 clips a travelling gradient to the glyphs it is applied to, which
+   works for the label alone. It cannot reach the icon: background-clip does
+   nothing to an SVG, so the icon had to be driven by a separate colour keyframe -
+   and then the two ran on their own schedules. Same duration, but the icon
+   changed on a timer rather than when the band physically arrived, and the band
+   only ever travelled inside the label's own box, several px to its right.
+
+   So the band belongs to the CHIP, not to either child. The content is rendered
+   twice: the base in the accent, and an aria-hidden white copy on top revealed
+   only where the band is. A mask applies to any element, SVG included, so one
+   sweep crosses the icon and then the label - which is what reads as a single
+   pass.
+
+   The tile is sized in PIXELS, not a percentage, and travels exactly its own
+   width. mask-position percentages do not resolve against the element - they map
+   onto the difference between the element and the mask - so `300% -> 0%` on a
+   300% tile is not one tile of travel, and the loop landed somewhere arbitrary
+   and cut. A px tile makes one period unambiguous, and the chip's own width stops
+   mattering. linear, because a change of pace at the seam is visible too. */
+.uip-auto-shine {
+  /* Tile and clock are two dials doing different jobs, so tuning one alone rarely
+     gives what was asked for:
+
+       tile / dur    = how fast the band crosses           (37px/s)
+       tile - 2*band = the plain-accent wait between passes (48px)
+
+     Scale both together to change the wait without changing the pace. */
+  --auto-shine-dur: 5.4s;
+  /* One period. Must stay wider than twice the band below, or the white never fully
+     clears and the chip reads white instead of accent. */
+  --auto-shine-tile: 200px;
+  /* Half-width of the white band, paired with the long ramp in the mask stops below.
+     Narrow with few intermediate steps and the white arrives as a line with an edge
+     to it, rather than the warmth giving way gradually. */
+  --auto-shine-band: 76px;
+
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  color: var(--auto-shimmer-peak);
+}
+
+.uip-auto-shine-top {
+  position: absolute;
+  inset: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  color: #fff;
+  pointer-events: none;
+  -webkit-mask-image: linear-gradient(
+    100deg,
+    transparent 0,
+    transparent calc(50% - var(--auto-shine-band)),
+    rgb(255 255 255 / 0.1) calc(50% - var(--auto-shine-band) * 0.72),
+    rgb(255 255 255 / 0.32) calc(50% - var(--auto-shine-band) * 0.48),
+    rgb(255 255 255 / 0.68) calc(50% - var(--auto-shine-band) * 0.22),
+    white 50%,
+    rgb(255 255 255 / 0.68) calc(50% + var(--auto-shine-band) * 0.22),
+    rgb(255 255 255 / 0.32) calc(50% + var(--auto-shine-band) * 0.48),
+    rgb(255 255 255 / 0.1) calc(50% + var(--auto-shine-band) * 0.72),
+    transparent calc(50% + var(--auto-shine-band)),
+    transparent 100%
+  );
+  -webkit-mask-size: var(--auto-shine-tile) 100%;
+  -webkit-mask-repeat: repeat;
+  mask-image: linear-gradient(
+    100deg,
+    transparent 0,
+    transparent calc(50% - var(--auto-shine-band)),
+    rgb(255 255 255 / 0.1) calc(50% - var(--auto-shine-band) * 0.72),
+    rgb(255 255 255 / 0.32) calc(50% - var(--auto-shine-band) * 0.48),
+    rgb(255 255 255 / 0.68) calc(50% - var(--auto-shine-band) * 0.22),
+    white 50%,
+    rgb(255 255 255 / 0.68) calc(50% + var(--auto-shine-band) * 0.22),
+    rgb(255 255 255 / 0.32) calc(50% + var(--auto-shine-band) * 0.48),
+    rgb(255 255 255 / 0.1) calc(50% + var(--auto-shine-band) * 0.72),
+    transparent calc(50% + var(--auto-shine-band)),
+    transparent 100%
+  );
+  mask-size: var(--auto-shine-tile) 100%;
+  mask-repeat: repeat;
+  animation: uip-auto-shine-sweep var(--auto-shine-dur) linear infinite;
+}
+
+@keyframes uip-auto-shine-sweep {
+  0% {
+    -webkit-mask-position: calc(var(--auto-shine-tile) * -1) 0;
+    mask-position: calc(var(--auto-shine-tile) * -1) 0;
+  }
+
+  100% {
+    -webkit-mask-position: 0 0;
+    mask-position: 0 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .uip-auto-shine-top {
+    animation: none;
+    opacity: 0;
+  }
+}
+
+/* Not a rotation: x and y run at different frequencies, so the offset wanders the rim
+   rather than orbiting it, and a fifth harmonic on y keeps the swell irregular. The
+   horizontal amplitude is the larger of the two so the caps carry as much weight as
+   the long edges, and peak |y| stays under 4.5px so the band dies before the label. */
+@keyframes pulse-edge-a {
+  0% {
+    box-shadow: inset 0px 2px 12px -7px rgb(255 255 255 / 0.163);
+  }
+  6% {
+    box-shadow: inset 3.7px 4px 12px -7px rgb(255 255 255 / 0.163);
+  }
+  12% {
+    box-shadow: inset 5.2px 0.3px 12px -7px rgb(255 255 255 / 0.163);
+  }
+  19% {
+    box-shadow: inset 3.7px -3.2px 12px -7px rgb(255 255 255 / 0.163);
+  }
+  25% {
+    box-shadow: inset 0px -2.5px 12px -7px rgb(255 255 255 / 0.163);
+  }
+  31% {
+    box-shadow: inset -3.7px 0.5px 12px -7px rgb(255 255 255 / 0.163);
+  }
+  38% {
+    box-shadow: inset -5.2px 3.2px 12px -7px rgb(255 255 255 / 0.163);
+  }
+  44% {
+    box-shadow: inset -3.7px 2.4px 12px -7px rgb(255 255 255 / 0.163);
+  }
+  50% {
+    box-shadow: inset -0px -2px 12px -7px rgb(255 255 255 / 0.163);
+  }
+  56% {
+    box-shadow: inset 3.7px -4px 12px -7px rgb(255 255 255 / 0.163);
+  }
+  62% {
+    box-shadow: inset 5.2px -0.3px 12px -7px rgb(255 255 255 / 0.163);
+  }
+  69% {
+    box-shadow: inset 3.7px 3.2px 12px -7px rgb(255 255 255 / 0.163);
+  }
+  75% {
+    box-shadow: inset 0px 2.5px 12px -7px rgb(255 255 255 / 0.163);
+  }
+  81% {
+    box-shadow: inset -3.7px -0.5px 12px -7px rgb(255 255 255 / 0.163);
+  }
+  88% {
+    box-shadow: inset -5.2px -3.2px 12px -7px rgb(255 255 255 / 0.163);
+  }
+  94% {
+    box-shadow: inset -3.7px -2.4px 12px -7px rgb(255 255 255 / 0.163);
+  }
+  100% {
+    box-shadow: inset -0px 2px 12px -7px rgb(255 255 255 / 0.163);
+  }
+}
+
+@keyframes pulse-edge-b {
+  0% {
+    box-shadow: inset 4.6px 2.3px 12px -7px rgb(255 255 255 / 0.106);
+  }
+  6% {
+    box-shadow: inset 1.2px 0.4px 12px -7px rgb(255 255 255 / 0.106);
+  }
+  12% {
+    box-shadow: inset -3.6px -2.9px 12px -7px rgb(255 255 255 / 0.106);
+  }
+  19% {
+    box-shadow: inset -4px -3.6px 12px -7px rgb(255 255 255 / 0.106);
+  }
+  25% {
+    box-shadow: inset 0.6px -1.7px 12px -7px rgb(255 255 255 / 0.106);
+  }
+  31% {
+    box-shadow: inset 4.4px -0.1px 12px -7px rgb(255 255 255 / 0.106);
+  }
+  38% {
+    box-shadow: inset 2.8px 2.1px 12px -7px rgb(255 255 255 / 0.106);
+  }
+  44% {
+    box-shadow: inset -2.3px 4px 12px -7px rgb(255 255 255 / 0.106);
+  }
+  50% {
+    box-shadow: inset -4.6px 2.3px 12px -7px rgb(255 255 255 / 0.106);
+  }
+  56% {
+    box-shadow: inset -1.2px -0.7px 12px -7px rgb(255 255 255 / 0.106);
+  }
+  62% {
+    box-shadow: inset 3.6px -2.1px 12px -7px rgb(255 255 255 / 0.106);
+  }
+  69% {
+    box-shadow: inset 4px -3.2px 12px -7px rgb(255 255 255 / 0.106);
+  }
+  75% {
+    box-shadow: inset -0.6px -2.9px 12px -7px rgb(255 255 255 / 0.106);
+  }
+  81% {
+    box-shadow: inset -4.4px 0.4px 12px -7px rgb(255 255 255 / 0.106);
+  }
+  88% {
+    box-shadow: inset -2.8px 2.9px 12px -7px rgb(255 255 255 / 0.106);
+  }
+  94% {
+    box-shadow: inset 2.3px 2.8px 12px -7px rgb(255 255 255 / 0.106);
+  }
+  100% {
+    box-shadow: inset 4.6px 2.3px 12px -7px rgb(255 255 255 / 0.106);
+  }
+}
+
+/* Each layer travels exactly one tile, right to left, so the loop wraps with no seam. */
+@keyframes slider-flow-a {
+  to {
+    background-position-x: -46px;
+  }
+}
+
+@keyframes slider-flow-b {
+  to {
+    background-position-x: -66px;
+  }
+}
+
+@keyframes slider-flow-c {
+  to {
+    background-position-x: -86px;
+  }
+}
+
+/* `scale`, not `transform: scale()`. Framer owns `transform` on the tier label for its
+   enter/exit slide; the standalone property composes with it rather than replacing it. */
+@keyframes tier-label-grow {
+  0%,
+  100% {
+    scale: 1;
+  }
+  50% {
+    scale: 1.03;
+  }
+}
+
+/* The specks are uncovered from the right once, then the window rests where the
+   permanent left-hand fade lives. */
+@keyframes slider-flow-in {
+  from {
+    -webkit-mask-position-x: 0%;
+    mask-position-x: 0%;
+  }
+  to {
+    -webkit-mask-position-x: 100%;
+    mask-position-x: 100%;
+  }
+}

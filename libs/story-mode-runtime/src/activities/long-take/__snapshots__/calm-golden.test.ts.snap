@@ -1,0 +1,129 @@
+// Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
+
+exports[`Calm stays byte for byte builds the same world bible on every route 1`] = `
+{
+  "abstract": "02ef63b667fd1ae6e0f255bde7d6e8d074e5965d2d574c98aae9d2094bed886a (3905 chars)",
+  "ads-intangible": "47e2a897b4c0eb7f6a902e4426c6a080402929d02e42fc8c64315b197d907392 (3431 chars)",
+  "ads-tangible": "000660980371e836509a2a785847fa99873abc51f500a84c136570edda912b15 (2573 chars)",
+  "default": "02a439b4ceea1c4947cec168cb459ea712c71c6e167b0ce063544b0a7cbce1cb (6895 chars)",
+  "enriched abstract": "ae142e7cbf4443b5979e224bbf4e9951383fa090a27a5e5c66ca07038ebb41d8 (3867 chars)",
+  "enriched ads-intangible": "b39d0f2be010503db4efeea15348972418f60845eaae18c3993eb225422a8f29 (3393 chars)",
+  "enriched ads-tangible": "e2198e933d3e59566834dd47d6df24012661c7546f83530e5585cf1399a8b9a4 (2535 chars)",
+  "enriched default": "818c5a6be519283850e10222eb7370a2c105eb7820cb24ec2b6bd1cd59317cb2 (6987 chars)",
+  "enriched general": "818c5a6be519283850e10222eb7370a2c105eb7820cb24ec2b6bd1cd59317cb2 (6987 chars)",
+  "enriched music": "39cb92271831afb6f05537b949f4e2e956db138fc9d525134c4a22395e5ad67a (4751 chars)",
+  "general": "02a439b4ceea1c4947cec168cb459ea712c71c6e167b0ce063544b0a7cbce1cb (6895 chars)",
+  "music": "d65c329b28be0321b09fc926c77ff76b92f59d385cc33cfc7558baea2f0e3356 (4789 chars)",
+}
+`;
+
+exports[`Calm stays byte for byte keyframe headlines puts a headline on half the title-eligible keyframes, drawn by Math.random: abstract title=false 1`] = `"d6453b5b856a621dc978d4b34dc69af59c91ed91e4bdbf0c2bb2fc177d0f9ae9 (640 chars)"`;
+
+exports[`Calm stays byte for byte keyframe headlines puts a headline on half the title-eligible keyframes, drawn by Math.random: abstract title=true 1`] = `"d6453b5b856a621dc978d4b34dc69af59c91ed91e4bdbf0c2bb2fc177d0f9ae9 (640 chars)"`;
+
+exports[`Calm stays byte for byte keyframe headlines puts a headline on half the title-eligible keyframes, drawn by Math.random: general title=false 1`] = `"747e2e27315ec05297faafe2b3ec908aa778d642d697abf50b15ec46032b8040 (384 chars)"`;
+
+exports[`Calm stays byte for byte keyframe headlines puts a headline on half the title-eligible keyframes, drawn by Math.random: general title=true 1`] = `"cfe0c0bf472398f6bf7300a480ad41d4e60f2c91a000bc8fcde83bdc6845f14b (642 chars)"`;
+
+exports[`Calm stays byte for byte plans with the same beat sheet prompt on every route 1`] = `
+{
+  "abstract": "35407c94f3a0c0102703c9f014498a0422fe838b5ba0519a13a846fb09f5c965 (2042 chars)",
+  "ads-intangible": "01b7d131eac55ac1e956472786f84a05cb6ab62355cc7c69129436d3c5e20052 (2476 chars)",
+  "ads-tangible": "3157958c4426eecf700303c7b24869cd36f4054ae0f7eda162a22f56e2e21e0e (2320 chars)",
+  "default": "9ac6480ce8a32ea3128c12f9818a39270028f275ad84dac1b52a4ed6ef35ef48 (3624 chars)",
+  "general": "9ac6480ce8a32ea3128c12f9818a39270028f275ad84dac1b52a4ed6ef35ef48 (3624 chars)",
+}
+`;
+
+exports[`Calm stays byte for byte writes the same Hailuo 3 clip request, cleaner and fallback 1`] = `
+{
+  "cleaned": "The camera pushes in as the queens slide apart. Ramesses slides in.",
+  "models": [
+    "gemini-3.8-flash",
+    "gpt-5",
+  ],
+  "prompt": "You write the prompt for one Hailuo 3 video clip made from a first frame and a last frame.
+
+The FIRST attached image is the first frame and the SECOND is the last frame. The video model sees both images, so never describe how things look. Describe only what happens between them.
+
+Clip length: 6 seconds
+First frame shows: Einstein writes at a cluttered desk.
+Last frame shows: A beam of light breaks into bright packets.
+Planned motion: The camera pushes in on the manuscript. The packets scatter across the bench.
+Narration during the clip: In 1905 a patent clerk rewrote physics. Light could behave like particles.
+
+Write one paragraph of 40 to 80 words, in the present tense, describing a single continuous shot from the first frame to the last:
+- One camera move, e.g. a slow push-in, dolly left, crane up, or slow arc.
+- How the subjects move, and how the elements of the first frame physically turn into, or make way for, the elements of the last frame: sliding, turning, rising, entering or leaving the frame. Every change is visible motion, never a jump.
+- Name characters and objects by what they are ("the pharaoh", "the two queens", "the stone tablet"), not by appearance details the images already show.
+- Keep the lighting, colours and art style of the images. Add no light, shadows, text or objects that are in neither image.
+
+Never write timestamps, shot numbers, titles, headings, lists, "cut to" or "transition". Return only the paragraph.",
+  "task": "long-take-hailuo-prompt",
+  "temperature": undefined,
+}
+`;
+
+exports[`Calm stays byte for byte writes the same Hailuo 3 clip request, cleaner and fallback 2`] = `"A single continuous shot as the camera slowly pushes in. The camera pushes in on the manuscript. The packets scatter across the bench."`;
+
+exports[`Calm stays byte for byte writes the same keyframe prompts 1`] = `
+{
+  "abstract opening=false rework=false style=false": "3b76bdec50adceb3dd454bc5cc3ea61216f5245d4925404de18599837a5e1c6e (2976 chars)",
+  "abstract opening=false rework=false style=true": "6770a36edb32689e887b8ffa4d118cf92edd636bef2603d7a3332d740c83d969 (5075 chars)",
+  "abstract opening=false rework=true style=false": "f12388a1628241c0ef9b6611d24ce654713074793756d98b6d68ee8d54950df0 (3423 chars)",
+  "abstract opening=false rework=true style=true": "b2b5f069c0802f5b1ad2e2b890ea1c8479cbb144b40cd92b9042e5c245b19b28 (5522 chars)",
+  "abstract opening=true rework=false style=false": "74855df34e0d5948b61e4abd4651b9f1bca27254c3ce376916a3af5683ecfed3 (3915 chars)",
+  "abstract opening=true rework=false style=true": "299805ab766d0e019eef832318f6c377a992f1943be8bbddd2244d1d220a1b26 (6014 chars)",
+  "abstract opening=true rework=true style=false": "bc5b6de843fad48dc8fcd27b90787487b98c4591783d8c974de3c442299a1419 (4362 chars)",
+  "abstract opening=true rework=true style=true": "c401d46b96ab8df9c526c83e2d3e6cb8b8a02161bd58f705c753caaed5e4adda (6461 chars)",
+  "ads-intangible opening=false rework=false style=false": "57a8d188e15423464557d06875156fa1f682b70000a104a87cad6d09b0f023c7 (3315 chars)",
+  "ads-intangible opening=false rework=false style=true": "b0b42462662773d8c6e45b064a98286198bf668df81ff76cc82f216838fed675 (5414 chars)",
+  "ads-intangible opening=false rework=true style=false": "3c318be51ffc646d6ce4ce8275b1fc9eaf3972b66a05f6704ad842853bbaa58b (3762 chars)",
+  "ads-intangible opening=false rework=true style=true": "fc1bd4eab51485833cb4cc88db6aedc7ae7d553bb70d75dbb9071ead3491dc5c (5861 chars)",
+  "ads-intangible opening=true rework=false style=false": "97cc8524ba441063d8d5986939f58cec0173754793de3297f8a00083ebada6f1 (4254 chars)",
+  "ads-intangible opening=true rework=false style=true": "c46b78ed252d25301793b5e07107c6d788c220ed144de74c05c5ec7c277401d8 (6353 chars)",
+  "ads-intangible opening=true rework=true style=false": "96f60e988531a48d3cbd07ba74819fb25943e2394f6b4793ac4be469e2ee1ce6 (4701 chars)",
+  "ads-intangible opening=true rework=true style=true": "23415bf9635f34e05a68fc0d4808140bb0828b99a38f1fa408775139d09d95ff (6800 chars)",
+  "ads-tangible opening=false rework=false style=false": "8dadf8148fa11b5ac042229afdfe4225381f137b62338d07e87f803c499e7273 (2943 chars)",
+  "ads-tangible opening=false rework=false style=true": "b319c8c38a54276784e77bac098ad69ff61cd04cecdeae98b4232ffc8874281d (5042 chars)",
+  "ads-tangible opening=false rework=true style=false": "42e64d191c9dc9ce5a3b2cd86d63c8ac94309770c250687c50f591c058025580 (3390 chars)",
+  "ads-tangible opening=false rework=true style=true": "e786bf5743f3350aff0ab44f27141707597e681c88a02f93ad9d35e7ba361b9f (5489 chars)",
+  "ads-tangible opening=true rework=false style=false": "1532e7bdb04b16c78bad45465b325bd0b020512817efc4a365d208924fef9296 (3882 chars)",
+  "ads-tangible opening=true rework=false style=true": "96291d02a016b579703ff81fb2e8a236eceef81564aa1e8c01398c1e77c968c6 (5981 chars)",
+  "ads-tangible opening=true rework=true style=false": "20f1f0b81f88fbc0480a94c220a3091946c21ca0cf4dd1a9fe04620e4e676c05 (4329 chars)",
+  "ads-tangible opening=true rework=true style=true": "d81077993ef672f9491709384ca40877a5a5c4c03492a5260ac9b8f4fe77ed4c (6428 chars)",
+  "default opening=false rework=false style=false": "16f8fd4e03e625504049f4651ad0ce8f5fd49b70bab6e875a4f53507f6b22141 (3130 chars)",
+  "default opening=false rework=false style=true": "36901f7f0582c32664f92c0930b028437ec14a400d3d450ad6e0ee2eec598816 (6968 chars)",
+  "default opening=false rework=true style=false": "78d2a5dae48f55caf13b660e5bc8b9fcf428118cf70294549d8e38c6900d391d (4484 chars)",
+  "default opening=false rework=true style=true": "929218ad7f4f1f316478b33354b29f8fa1544ae56f22643245d72af983eb364e (10677 chars)",
+  "default opening=true rework=false style=false": "646a3530d68b467f14bbff4e37ad60d1f662bc78160958bd889697723844d7ad (4069 chars)",
+  "default opening=true rework=false style=true": "a09ddd539aab46278d534cf8278f60217b866c7dab168c5686d7563b360ff2fa (7907 chars)",
+  "default opening=true rework=true style=false": "0f8a36a9c9fba4e7733eed4c4bf33808737ac8b86deae4bffc209676defb4b37 (5423 chars)",
+  "default opening=true rework=true style=true": "fb23afb7e4df3ea833383a161f95021c080d0af8fca243c9de68d1db5c661e22 (11616 chars)",
+  "general opening=false rework=false style=false": "16f8fd4e03e625504049f4651ad0ce8f5fd49b70bab6e875a4f53507f6b22141 (3130 chars)",
+  "general opening=false rework=false style=true": "36901f7f0582c32664f92c0930b028437ec14a400d3d450ad6e0ee2eec598816 (6968 chars)",
+  "general opening=false rework=true style=false": "78d2a5dae48f55caf13b660e5bc8b9fcf428118cf70294549d8e38c6900d391d (4484 chars)",
+  "general opening=false rework=true style=true": "929218ad7f4f1f316478b33354b29f8fa1544ae56f22643245d72af983eb364e (10677 chars)",
+  "general opening=true rework=false style=false": "646a3530d68b467f14bbff4e37ad60d1f662bc78160958bd889697723844d7ad (4069 chars)",
+  "general opening=true rework=false style=true": "a09ddd539aab46278d534cf8278f60217b866c7dab168c5686d7563b360ff2fa (7907 chars)",
+  "general opening=true rework=true style=false": "0f8a36a9c9fba4e7733eed4c4bf33808737ac8b86deae4bffc209676defb4b37 (5423 chars)",
+  "general opening=true rework=true style=true": "fb23afb7e4df3ea833383a161f95021c080d0af8fca243c9de68d1db5c661e22 (11616 chars)",
+}
+`;
+
+exports[`Calm stays byte for byte writes the same visual script prompt, looped or not 1`] = `
+{
+  "abstract loop=false": "38fbc67d0480c8383bc5089bc18cb85951ec9df35c0eb442ef6fa6c31fd1ac6b (3231 chars)",
+  "abstract loop=true": "202c45ac01fd04a99e049822f0c3b5f01ab3747b2c2a9faca0d526d4f3ff03f4 (3248 chars)",
+  "ads-intangible loop=false": "ef87e32b76195ac2452a6d7af5e8993ff429942253d379f94374683138178575 (4259 chars)",
+  "ads-intangible loop=true": "6ef85d54d6684345f6bf4a0afaeed63c91e7bd9693f7dfac4ab266f6a427fef2 (4276 chars)",
+  "ads-tangible loop=false": "4c270b2e0443770eb153c8eebb48dbf1b0c23b85ba41ab36b50416dfc3fba7e9 (3765 chars)",
+  "ads-tangible loop=true": "e9b9c8f35a3913861335bceb312f5b2892144cc4c95ad338dadbdbc9f66f3941 (3782 chars)",
+  "default loop=false": "925902089b7af8057c5ea8674a74a126a798da29b97f59d9205ce80880d2547c (16290 chars)",
+  "default loop=true": "f1ea5fb82523a6d29a00d29ebb29c3dd94eb6766f1f0c135188fe14523e8d494 (16659 chars)",
+  "general loop=false": "925902089b7af8057c5ea8674a74a126a798da29b97f59d9205ce80880d2547c (16290 chars)",
+  "general loop=true": "f1ea5fb82523a6d29a00d29ebb29c3dd94eb6766f1f0c135188fe14523e8d494 (16659 chars)",
+  "music loop=false": "4f212b42812568a45d5159f3216f8a7baefb4fc8aca0e27f52fca399c529ff79 (12071 chars)",
+  "music loop=true": "01d597283b5ace5dba5989adbf2f918dafa885c1920b790c0ba8e80d1647d690 (12088 chars)",
+}
+`;

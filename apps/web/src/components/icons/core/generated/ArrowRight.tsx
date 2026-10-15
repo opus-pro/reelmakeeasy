@@ -1,0 +1,9 @@
+import * as React from 'react'
+import { type IconProps, iconSvgProps } from '../IconBase'
+
+export const ArrowRight: React.FC<IconProps> = (props) => (
+  <svg viewBox="0 0 24 24" fill="currentColor" {...iconSvgProps(props)}>
+    <path d="M20.7069 11.294C21.0977 11.6841 21.0978 12.3171 20.7069 12.7071L12.6864 20.7081C12.2954 21.0981 11.6614 21.0981 11.2704 20.7081C10.8796 20.3181 10.8797 19.686 11.2704 19.2959L17.5809 13L3.99988 13C3.44759 13 2.99988 12.5523 2.99988 12C2.99988 11.4478 3.44759 11 3.99988 11L17.5809 11L11.2704 4.70512L11.202 4.62895C10.8814 4.23684 10.9043 3.65876 11.2704 3.29301C11.637 2.9273 12.217 2.90362 12.6102 3.22368L12.6864 3.29301L20.7069 11.294Z" />
+  </svg>
+)
+ArrowRight.displayName = 'ArrowRight'

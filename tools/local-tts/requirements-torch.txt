@@ -1,0 +1,10 @@
+# NVIDIA GPUs (and CPU fallback). torch itself is installed first with
+# `uv pip install torch --torch-backend=auto`, which picks the CUDA build that
+# matches the installed driver, or the CPU build when there is no GPU.
+-r requirements-common.txt
+kokoro==0.9.4
+qwen-tts==0.1.1
+soundfile>=0.12
+# Speech to text: Whisper on CTranslate2. The wav2vec2 aligner runs on the
+# transformers that kokoro and qwen-tts bring.
+faster-whisper==1.2.1

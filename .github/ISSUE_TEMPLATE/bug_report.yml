@@ -1,0 +1,29 @@
+name: Bug report
+description: Something doesn't work as documented
+labels: [bug]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What you did, what you expected and what happened instead.
+    validations:
+      required: true
+  - type: textarea
+    id: doctor
+    attributes:
+      label: Output of `pnpm reelmakeeasy doctor`
+      description: Remove any keys or passwords.
+      render: text
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant logs
+      description: The `[api]` or `[web]` lines around the error. Remove any keys or passwords.
+      render: text
+  - type: input
+    id: version
+    attributes:
+      label: Commit or version

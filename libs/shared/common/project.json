@@ -1,0 +1,26 @@
+{
+  "name": "common",
+  "$schema": "../../../schemas/nx-project.schema.json",
+  "sourceRoot": "libs/shared/common/src",
+  "projectType": "library",
+  "tags": [
+    "scope:shared",
+    "type:util"
+  ],
+  "targets": {
+    "clean": {},
+    "build": {
+      "executor": "nx:run-commands",
+      "dependsOn": [
+        "api/db:generate-for-dirty-deps"
+      ],
+      "options": {
+        "cwd": "{workspaceRoot}",
+        "command": "npx tsc -p {projectRoot}/tsconfig.json --noEmit"
+      }
+    },
+    "lint": {
+      "executor": "@nx/eslint:lint"
+    }
+  }
+}

@@ -1,0 +1,16 @@
+{
+  "name": "shared/render-services",
+  "$schema": "../../../schemas/nx-project.schema.json",
+  "sourceRoot": "libs/shared/render-services/src",
+  "projectType": "library",
+  "tags": ["scope:shared", "type:library"],
+  "targets": {
+    "build": {
+      "executor": "nx:run-commands",
+      "options": {
+        "cwd": "{workspaceRoot}",
+        "command": "tsc -p {projectRoot}/tsconfig.json --noEmit"
+      }
+    }
+  }
+}

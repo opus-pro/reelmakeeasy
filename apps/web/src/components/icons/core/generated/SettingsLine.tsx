@@ -1,0 +1,18 @@
+import * as React from 'react'
+import { type IconProps, iconSvgProps } from '../IconBase'
+
+export const SettingsLine: React.FC<IconProps> = (props) => (
+  <svg viewBox="0 0 24 24" fill="currentColor" {...iconSvgProps(props)}>
+    <path
+      fillRule="evenodd"
+      clipRule="evenodd"
+      d="M15 12C16.8638 12 18.43 13.2748 18.874 15H21C21.5523 15 22 15.4477 22 16C22 16.5523 21.5523 17 21 17H18.874C18.43 18.7252 16.8638 20 15 20C13.1362 20 11.57 18.7252 11.126 17H3C2.44772 17 2 16.5523 2 16C2 15.4477 2.44772 15 3 15H11.126C11.57 13.2748 13.1362 12 15 12ZM15 14C13.8954 14 13 14.8954 13 16C13 17.1046 13.8954 18 15 18C16.1046 18 17 17.1046 17 16C17 14.8954 16.1046 14 15 14Z"
+    />
+    <path
+      fillRule="evenodd"
+      clipRule="evenodd"
+      d="M9 4C10.8638 4 12.43 5.27477 12.874 7H21C21.5523 7 22 7.44772 22 8C22 8.55228 21.5523 9 21 9H12.874C12.43 10.7252 10.8638 12 9 12C7.13616 12 5.57002 10.7252 5.12598 9H3C2.44772 9 2 8.55228 2 8C2 7.44772 2.44772 7 3 7H5.12598C5.57002 5.27477 7.13616 4 9 4ZM9 6C7.89543 6 7 6.89543 7 8C7 9.10457 7.89543 10 9 10C10.1046 10 11 9.10457 11 8C11 6.89543 10.1046 6 9 6Z"
+    />
+  </svg>
+)
+SettingsLine.displayName = 'SettingsLine'

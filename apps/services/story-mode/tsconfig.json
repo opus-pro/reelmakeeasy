@@ -1,0 +1,9 @@
+{
+  "extends": "../../../tsconfig.node.json",
+  "compilerOptions": {
+    "outDir": "./out-tsc",
+    "lib": ["es2023"],
+    "esModuleInterop": true
+  },
+  "include": ["src/**/*.ts"]
+}

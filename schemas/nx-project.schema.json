@@ -1,0 +1,24 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "./nx-project.schema.json",
+  "title": "ReelMakeEasy Nx project.json",
+  "description": "Nx project configuration plus workspace tag rules (scope:* and type:* only). See nx-project.md.",
+  "allOf": [
+    {
+      "$ref": "https://nx.dev/reference/project-configuration"
+    },
+    {
+      "type": "object",
+      "properties": {
+        "tags": {
+          "type": "array",
+          "description": "Nx tags must use only the scope: or type: namespaces.",
+          "items": {
+            "type": "string",
+            "pattern": "^(scope|type):[a-z][a-z0-9_-]*$"
+          }
+        }
+      }
+    }
+  ]
+}

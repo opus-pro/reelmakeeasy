@@ -1,0 +1,38 @@
+Naming Conventions:
+1. Components use PascalCase naming (e.g., UserCard).
+2. Files use lowercase with dash naming (e.g., user-card.tsx).
+3. Use clear and explicit naming instead of comments.
+
+CSS Conventions:
+1. Always use Tailwind for styling
+2. Avoid overusing !important (e.g., !px-0), prioritize structural optimization to solve problems.
+3. Support responsive layouts using @media queries.
+4. Prefer configured semantic classes (e.g., bg-fill-secondary) over arbitrary CSS variable utilities like bg-[var(--fill-secondary)].
+
+React Component Development Conventions:
+1. Follow the single responsibility principle - components are responsible for rendering, hooks are responsible for state management.
+2. Maintain reusability of each component.
+3. Components exceeding 100 lines should be split into sub-components or extract logic to hooks.
+4. Avoid props drilling, prioritize state management (e.g., Jotai) for cross-layer parameter passing.
+5. Avoid using fixed values in components, should use props to maintain component reusability.
+6. Before creating a new component, first check if a suitable one already exists in `libs/shared/ui` or `apps/web/src/components/ui/kit`. If not found, add it under `apps/web/src/components/ui/` (`libs/shared/ui` is frozen for new files; see its `AGENTS.md`).
+7. Use semantic html components (nav, aside, etc.)
+8. Use icons from "lucide-react", or insert semantic svg icon components into "icons.tsx"
+
+Function Definition Conventions:
+1. Functions inside components use const func = () => {} definition.
+2. Functions outside components use function func() {} definition.
+
+Hook Usage Conventions:
+1. Custom Hooks should not contain JSX, only responsible for business logic.
+2. Use useQuery Hook for network requests.
+3. Use jotai for state management.
+
+Global State Management
+1. Store all state in Jotai in `/apps/web/src/atom`
+
+TypeScript Coding Conventions:
+1. Ensure all variables can be correctly inferred by the type system.
+2. Avoid redundant type declarations, keep types clear and concise.
+3. Prohibit the use of any type.
+4. Use null for values that are known to be potentially empty; undefined for unexpected error states.

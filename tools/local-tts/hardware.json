@@ -1,0 +1,16 @@
+{
+  "$comment": "Hardware Qwen3-TTS needs to run locally. Below the minimum, only Kokoro (~0.5 GB) runs locally and Qwen voices use fal. Read by scripts/reelmakeeasy.mjs (setup, doctor) and local_tts.py (serve). Apple Silicon shares RAM between CPU and GPU; NVIDIA needs both GPU memory and system RAM. Below the recommended RAM, the server keeps one Qwen model loaded at a time.",
+  "qwen3": {
+    "mlx": { "minRamGB": 24, "recommendedRamGB": 36 },
+    "mps": { "minRamGB": 24, "recommendedRamGB": 36 },
+    "cuda": { "minRamGB": 32, "minVramGB": 8 }
+  },
+  "$asrComment": "Speech to text for caption timing (stt.py): Whisper and a forced aligner, ~2.15 GB on mlx, ~2 GB on cuda, ~0.9 GB on cpu. An NVIDIA GPU under minVramGB runs the cpu models instead (mps always does). Below minRamGB, speech to text stays off and captions are timed in the cloud.",
+  "asr": {
+    "mlx": { "minRamGB": 8 },
+    "cuda": { "minVramGB": 4 },
+    "cpu": { "minRamGB": 4 }
+  },
+  "$toleranceComment": "Machines report a little less than their nominal size (a 32 GB PC shows ~31.8 GB), so checks allow this much slack.",
+  "toleranceGB": 0.75
+}

@@ -1,0 +1,27 @@
+{
+  // What: Node/NestJS preset that builds on the shared base config.
+  // Why: Provide a focused profile for server-side apps and tools that matches Node’s module system.
+  "extends": "./tsconfig.base.json",
+
+  "compilerOptions": {
+    // What: Type-check each file in isolation.
+    // Why: Matches our ts-jest transform mode and avoids deprecated ts-jest isolatedModules config.
+    "isolatedModules": true,
+
+    // What: Use CommonJS modules for emitted JavaScript.
+    // Why: Aligns with how Node executes most of our server-side code and tooling today.
+    "module": "commonjs",
+
+    // What: Resolve modules using Node’s classic resolution algorithm.
+    // Why: Matches runtime behavior in Node CLIs, NestJS apps, and other backend services.
+    "moduleResolution": "node",
+
+    // What: Standard libraries available in Node context.
+    // Why: Combine modern ECMAScript features with DOM types for the few Node tools that touch browser-like APIs.
+    "lib": ["es2023"],
+
+    // What: Allow emitting JS when running `tsc`.
+    // Why: Node apps and tools often rely on compiled output instead of purely type-checking.
+    "noEmit": false
+  }
+}

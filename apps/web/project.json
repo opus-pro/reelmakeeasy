@@ -1,0 +1,68 @@
+{
+  "$schema": "../../schemas/nx-project.schema.json",
+  "name": "web",
+  "sourceRoot": "apps/web/src",
+  "projectType": "application",
+  "tags": ["scope:web", "type:app"],
+  "targets": {
+    "dev": {
+      "executor": "@nx/next:server",
+      "options": {
+        "buildTarget": "web:next-build",
+        "dev": true,
+        "port": 3000,
+        "webpack": true
+      }
+    },
+    "serve": {
+      "executor": "@nx/next:server",
+      "options": {
+        "buildTarget": "web:next-build",
+        "dev": true,
+        "webpack": true
+      }
+    },
+    "next-build": {
+      "executor": "@nx/next:build",
+      "dependsOn": ["write-build-info"],
+      "outputs": ["{options.outputPath}"],
+      "defaultConfiguration": "production",
+      "options": {
+        "outputPath": "dist/apps/web",
+        "nextConfig": "apps/web/next.config.js",
+        "webpack": true
+      },
+      "configurations": {
+        "development": {
+          "outputPath": "dist/apps/web"
+        },
+        "production": {
+          "optimization": true,
+          "outputPath": "dist/apps/web",
+          "generatePackageJson": false
+        }
+      }
+    },
+    "build": {
+      "executor": "nx:run-commands",
+      "dependsOn": ["write-build-info"],
+      "options": {
+        "cwd": "apps/web",
+        "env": {
+          "NODE_ENV": "production"
+        },
+        "command": "npx next build --webpack"
+      }
+    },
+    "lint": {
+      "executor": "@nx/eslint:lint"
+    },
+    "write-build-info": {
+      "executor": "nx:run-commands",
+      "options": {
+        "cwd": ".",
+        "command": "node scripts/build-tools/write-build-info.mjs web"
+      }
+    }
+  }
+}

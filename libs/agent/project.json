@@ -1,0 +1,28 @@
+{
+  "$schema": "../../schemas/nx-project.schema.json",
+  "name": "agent",
+  "sourceRoot": "libs/agent/src",
+  "projectType": "library",
+  "tags": ["scope:agent", "scope:shared", "type:library"],
+  "targets": {
+    "test": {
+      "executor": "@nx/jest:jest",
+      "outputs": ["{workspaceRoot}/coverage/libs/agent"],
+      "options": {
+        "jestConfig": "libs/agent/jest.config.mjs",
+        "passWithNoTests": true
+      }
+    },
+    "build": {
+      "executor": "nx:run-commands",
+      "dependsOn": ["api/db:generate-for-dirty-deps"],
+      "options": {
+        "cwd": "{workspaceRoot}",
+        "command": "tsc -p {projectRoot}/tsconfig.json --noEmit"
+      }
+    },
+    "lint": {
+      "executor": "@nx/eslint:lint"
+    }
+  }
+}

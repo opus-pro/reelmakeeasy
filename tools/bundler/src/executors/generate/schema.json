@@ -1,0 +1,24 @@
+{
+  "$schema": "https://json-schema.org/schema",
+  "version": 2,
+  "title": "Generate executor",
+  "description": "Generate minimal package.json from an esbuild metafile",
+  "type": "object",
+  "properties": {
+    "metaFilePath": {
+      "type": "string",
+      "description": "Path to the esbuild metafile (e.g. dist/meta.json), relative to workspace root"
+    },
+    "targetFilePath": {
+      "type": "string",
+      "description": "Path where the minimal package.json will be written, relative to workspace root"
+    },
+    "runtimeDeps": {
+      "type": "array",
+      "description": "Additional runtime dependencies to always include",
+      "items": { "type": "string" },
+      "default": []
+    }
+  },
+  "required": ["metaFilePath", "targetFilePath"]
+}

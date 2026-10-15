@@ -1,0 +1,1596 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$comment": "Generated from libs/llm/src/registry/schema.ts. Do not edit; run `pnpm exec nx run llm:generate-models-schema`.",
+  "title": "ReelMakeEasy model registry",
+  "type": "object",
+  "properties": {
+    "beatLoop": {
+      "type": "object",
+      "properties": {
+        "video": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "minItems": 1
+        }
+      },
+      "required": [
+        "video"
+      ],
+      "additionalProperties": false,
+      "description": "Clip models for loop shorts, tried in order; each runs only when its provider's key is set",
+      "patternProperties": {
+        "^\\$": {}
+      }
+    },
+    "fallbacks": {
+      "type": "object",
+      "properties": {
+        "chat.lite": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "chat.flash": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "chat.pro": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "image.generate": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "image.edit": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "image.fast": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "image.agentPreview": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "video.text": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "video.image": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "video.firstLast": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "video.reference": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "video.lipsync": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "music": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "tts": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "tts.elevenlabs": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "tts.minimax": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "tts.kokoro": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "tts.qwen3": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "tts.gemini": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "voice.clone": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "speech.align": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "speech.transcribe": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      },
+      "additionalProperties": false,
+      "description": "Models to try, in order, when a role fails",
+      "patternProperties": {
+        "^\\$": {}
+      }
+    },
+    "models": {
+      "type": "object",
+      "additionalProperties": {
+        "anyOf": [
+          {
+            "type": "object",
+            "properties": {
+              "aliases": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "description": "Other ids that resolve to this entry"
+              },
+              "input": {
+                "type": "object",
+                "additionalProperties": {},
+                "description": "Extra request fields, merged last into every request",
+                "patternProperties": {
+                  "^\\$": {}
+                }
+              },
+              "label": {
+                "type": "string",
+                "minLength": 1,
+                "description": "Human-readable name"
+              },
+              "kind": {
+                "type": "string",
+                "const": "chat"
+              },
+              "model": {
+                "type": "string",
+                "minLength": 1
+              },
+              "provider": {
+                "type": "string",
+                "const": "openai-compatible"
+              }
+            },
+            "required": [
+              "label",
+              "kind",
+              "model",
+              "provider"
+            ],
+            "additionalProperties": false,
+            "patternProperties": {
+              "^\\$": {}
+            }
+          },
+          {
+            "type": "object",
+            "properties": {
+              "aliases": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "description": "Other ids that resolve to this entry"
+              },
+              "input": {
+                "type": "object",
+                "additionalProperties": {},
+                "description": "Extra request fields, merged last into every request",
+                "patternProperties": {
+                  "^\\$": {}
+                }
+              },
+              "label": {
+                "type": "string",
+                "minLength": 1,
+                "description": "Human-readable name"
+              },
+              "adapter": {
+                "type": "string",
+                "enum": [
+                  "nano-banana",
+                  "gpt-image",
+                  "seedream",
+                  "veo",
+                  "minimax-video",
+                  "lyria",
+                  "elevenlabs-music",
+                  "cassetteai-music",
+                  "minimax-music",
+                  "ace-step",
+                  "minimax-speech",
+                  "minimax-voice-clone",
+                  "kokoro-tts",
+                  "qwen3-tts",
+                  "kling-lipsync",
+                  "generic",
+                  "gemini-image",
+                  "veo-google",
+                  "omni-google",
+                  "lyria-google",
+                  "gemini-tts",
+                  "gemini-transcribe"
+                ]
+              },
+              "capabilities": {
+                "type": "object",
+                "properties": {
+                  "aspectRatios": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    },
+                    "minItems": 1
+                  },
+                  "maxReferenceImages": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "resolutions": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "enum": [
+                        "1K",
+                        "2K",
+                        "4K"
+                      ]
+                    },
+                    "minItems": 1
+                  }
+                },
+                "required": [
+                  "aspectRatios",
+                  "maxReferenceImages",
+                  "resolutions"
+                ],
+                "additionalProperties": false,
+                "patternProperties": {
+                  "^\\$": {}
+                }
+              },
+              "endpoints": {
+                "type": "object",
+                "properties": {
+                  "edit": {
+                    "type": "string",
+                    "minLength": 1,
+                    "description": "fal endpoint id (e.g. \"fal-ai/nano-banana-pro\"), or the Gemini API model id for google entries"
+                  },
+                  "generate": {
+                    "type": "string",
+                    "minLength": 1,
+                    "description": "fal endpoint id (e.g. \"fal-ai/nano-banana-pro\"), or the Gemini API model id for google entries"
+                  }
+                },
+                "required": [
+                  "generate"
+                ],
+                "additionalProperties": false,
+                "patternProperties": {
+                  "^\\$": {}
+                }
+              },
+              "kind": {
+                "type": "string",
+                "const": "image"
+              },
+              "provider": {
+                "type": "string",
+                "enum": [
+                  "fal",
+                  "google"
+                ]
+              }
+            },
+            "required": [
+              "label",
+              "adapter",
+              "capabilities",
+              "endpoints",
+              "kind",
+              "provider"
+            ],
+            "additionalProperties": false,
+            "patternProperties": {
+              "^\\$": {}
+            }
+          },
+          {
+            "type": "object",
+            "properties": {
+              "aliases": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "description": "Other ids that resolve to this entry"
+              },
+              "input": {
+                "type": "object",
+                "additionalProperties": {},
+                "description": "Extra request fields, merged last into every request",
+                "patternProperties": {
+                  "^\\$": {}
+                }
+              },
+              "label": {
+                "type": "string",
+                "minLength": 1,
+                "description": "Human-readable name"
+              },
+              "adapter": {
+                "type": "string",
+                "enum": [
+                  "nano-banana",
+                  "gpt-image",
+                  "seedream",
+                  "veo",
+                  "minimax-video",
+                  "lyria",
+                  "elevenlabs-music",
+                  "cassetteai-music",
+                  "minimax-music",
+                  "ace-step",
+                  "minimax-speech",
+                  "minimax-voice-clone",
+                  "kokoro-tts",
+                  "qwen3-tts",
+                  "kling-lipsync",
+                  "generic",
+                  "gemini-image",
+                  "veo-google",
+                  "omni-google",
+                  "lyria-google",
+                  "gemini-tts",
+                  "gemini-transcribe"
+                ]
+              },
+              "capabilities": {
+                "type": "object",
+                "properties": {
+                  "aspectRatios": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    },
+                    "minItems": 1
+                  },
+                  "audio": {
+                    "type": "boolean"
+                  },
+                  "chainTransitions": {
+                    "type": "boolean",
+                    "description": "Make transitions one after another, each starting from the previous clip's last frame"
+                  },
+                  "durationRangeSec": {
+                    "type": "array",
+                    "minItems": 2,
+                    "maxItems": 2,
+                    "items": [
+                      {
+                        "type": "number",
+                        "exclusiveMinimum": 0
+                      },
+                      {
+                        "type": "number",
+                        "exclusiveMinimum": 0
+                      }
+                    ],
+                    "description": "[min, max] seconds the API takes when a caller asks for an exact length (a loop clip); other clips snap to durationsSec"
+                  },
+                  "durationsSec": {
+                    "type": "array",
+                    "items": {
+                      "type": "number",
+                      "exclusiveMinimum": 0
+                    },
+                    "minItems": 1
+                  },
+                  "emitsNativeAudio": {
+                    "type": "boolean"
+                  },
+                  "family": {
+                    "type": "string"
+                  },
+                  "frameSizes": {
+                    "type": "object",
+                    "additionalProperties": {
+                      "type": "object",
+                      "additionalProperties": {
+                        "type": "array",
+                        "minItems": 2,
+                        "maxItems": 2,
+                        "items": [
+                          {
+                            "type": "integer",
+                            "exclusiveMinimum": 0
+                          },
+                          {
+                            "type": "integer",
+                            "exclusiveMinimum": 0
+                          }
+                        ]
+                      },
+                      "patternProperties": {
+                        "^\\$": {}
+                      }
+                    },
+                    "description": "Exact [width, height] the model renders per resolution and aspect ratio, e.g. {\"768p\": {\"9:16\": [768, 1344]}}. First and last frames are fitted to it before upload.",
+                    "patternProperties": {
+                      "^\\$": {}
+                    }
+                  },
+                  "maxReferenceImages": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "maxResolution": {
+                    "type": "string",
+                    "enum": [
+                      "480p",
+                      "720p",
+                      "1080p"
+                    ]
+                  },
+                  "promptMaxChars": {
+                    "type": "integer",
+                    "exclusiveMinimum": 0
+                  },
+                  "resolutions": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "usdPerSecond": {
+                    "type": "object",
+                    "additionalProperties": {
+                      "type": "number",
+                      "minimum": 0
+                    },
+                    "description": "Price per second of video at each resolution, e.g. {\"768p\": 0.02}",
+                    "patternProperties": {
+                      "^\\$": {}
+                    }
+                  }
+                },
+                "required": [
+                  "aspectRatios",
+                  "audio",
+                  "durationsSec",
+                  "maxResolution"
+                ],
+                "additionalProperties": false,
+                "patternProperties": {
+                  "^\\$": {}
+                }
+              },
+              "endpoints": {
+                "type": "object",
+                "properties": {
+                  "firstLast": {
+                    "type": "string",
+                    "minLength": 1,
+                    "description": "fal endpoint id (e.g. \"fal-ai/nano-banana-pro\"), or the Gemini API model id for google entries"
+                  },
+                  "image": {
+                    "type": "string",
+                    "minLength": 1,
+                    "description": "fal endpoint id (e.g. \"fal-ai/nano-banana-pro\"), or the Gemini API model id for google entries"
+                  },
+                  "reference": {
+                    "type": "string",
+                    "minLength": 1,
+                    "description": "fal endpoint id (e.g. \"fal-ai/nano-banana-pro\"), or the Gemini API model id for google entries"
+                  },
+                  "text": {
+                    "type": "string",
+                    "minLength": 1,
+                    "description": "fal endpoint id (e.g. \"fal-ai/nano-banana-pro\"), or the Gemini API model id for google entries"
+                  }
+                },
+                "additionalProperties": false,
+                "patternProperties": {
+                  "^\\$": {}
+                }
+              },
+              "kind": {
+                "type": "string",
+                "const": "video"
+              },
+              "provider": {
+                "type": "string",
+                "enum": [
+                  "fal",
+                  "google"
+                ]
+              }
+            },
+            "required": [
+              "label",
+              "adapter",
+              "capabilities",
+              "endpoints",
+              "kind",
+              "provider"
+            ],
+            "additionalProperties": false,
+            "patternProperties": {
+              "^\\$": {}
+            }
+          },
+          {
+            "type": "object",
+            "properties": {
+              "aliases": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "description": "Other ids that resolve to this entry"
+              },
+              "input": {
+                "type": "object",
+                "additionalProperties": {},
+                "description": "Extra request fields, merged last into every request",
+                "patternProperties": {
+                  "^\\$": {}
+                }
+              },
+              "label": {
+                "type": "string",
+                "minLength": 1,
+                "description": "Human-readable name"
+              },
+              "adapter": {
+                "type": "string",
+                "enum": [
+                  "nano-banana",
+                  "gpt-image",
+                  "seedream",
+                  "veo",
+                  "minimax-video",
+                  "lyria",
+                  "elevenlabs-music",
+                  "cassetteai-music",
+                  "minimax-music",
+                  "ace-step",
+                  "minimax-speech",
+                  "minimax-voice-clone",
+                  "kokoro-tts",
+                  "qwen3-tts",
+                  "kling-lipsync",
+                  "generic",
+                  "gemini-image",
+                  "veo-google",
+                  "omni-google",
+                  "lyria-google",
+                  "gemini-tts",
+                  "gemini-transcribe"
+                ]
+              },
+              "capabilities": {
+                "type": "object",
+                "properties": {
+                  "maxDurationSec": {
+                    "type": "number",
+                    "exclusiveMinimum": 0
+                  }
+                },
+                "required": [
+                  "maxDurationSec"
+                ],
+                "additionalProperties": false,
+                "patternProperties": {
+                  "^\\$": {}
+                }
+              },
+              "endpoints": {
+                "type": "object",
+                "properties": {
+                  "generate": {
+                    "type": "string",
+                    "minLength": 1,
+                    "description": "fal endpoint id (e.g. \"fal-ai/nano-banana-pro\"), or the Gemini API model id for google entries"
+                  }
+                },
+                "required": [
+                  "generate"
+                ],
+                "additionalProperties": false,
+                "patternProperties": {
+                  "^\\$": {}
+                }
+              },
+              "kind": {
+                "type": "string",
+                "const": "music"
+              },
+              "provider": {
+                "type": "string",
+                "enum": [
+                  "fal",
+                  "google"
+                ]
+              }
+            },
+            "required": [
+              "label",
+              "adapter",
+              "capabilities",
+              "endpoints",
+              "kind",
+              "provider"
+            ],
+            "additionalProperties": false,
+            "patternProperties": {
+              "^\\$": {}
+            }
+          },
+          {
+            "type": "object",
+            "properties": {
+              "aliases": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "description": "Other ids that resolve to this entry"
+              },
+              "input": {
+                "type": "object",
+                "additionalProperties": {},
+                "description": "Extra request fields, merged last into every request",
+                "patternProperties": {
+                  "^\\$": {}
+                }
+              },
+              "label": {
+                "type": "string",
+                "minLength": 1,
+                "description": "Human-readable name"
+              },
+              "adapter": {
+                "type": "string",
+                "enum": [
+                  "minimax-speech",
+                  "kokoro-tts",
+                  "qwen3-tts",
+                  "elevenlabs-tts",
+                  "gemini-tts"
+                ]
+              },
+              "endpoints": {
+                "type": "object",
+                "properties": {
+                  "clone": {
+                    "type": "string",
+                    "minLength": 1,
+                    "description": "qwen3-tts: reference audio -> speaker embedding"
+                  },
+                  "design": {
+                    "type": "string",
+                    "minLength": 1,
+                    "description": "qwen3-tts: voice description -> sample audio"
+                  },
+                  "generate": {
+                    "type": "string",
+                    "minLength": 1,
+                    "description": "fal endpoint id (e.g. \"fal-ai/nano-banana-pro\"), or the Gemini API model id for google entries"
+                  }
+                },
+                "required": [
+                  "generate"
+                ],
+                "additionalProperties": false,
+                "description": "fal only",
+                "patternProperties": {
+                  "^\\$": {}
+                }
+              },
+              "kind": {
+                "type": "string",
+                "const": "tts"
+              },
+              "model": {
+                "type": "string",
+                "minLength": 1,
+                "description": "ElevenLabs or Gemini API model id (not fal)"
+              },
+              "provider": {
+                "type": "string",
+                "enum": [
+                  "fal",
+                  "elevenlabs",
+                  "google"
+                ]
+              }
+            },
+            "required": [
+              "label",
+              "adapter",
+              "kind",
+              "provider"
+            ],
+            "additionalProperties": false,
+            "patternProperties": {
+              "^\\$": {}
+            }
+          },
+          {
+            "type": "object",
+            "properties": {
+              "aliases": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "description": "Other ids that resolve to this entry"
+              },
+              "input": {
+                "type": "object",
+                "additionalProperties": {},
+                "description": "Extra request fields, merged last into every request",
+                "patternProperties": {
+                  "^\\$": {}
+                }
+              },
+              "label": {
+                "type": "string",
+                "minLength": 1,
+                "description": "Human-readable name"
+              },
+              "adapter": {
+                "type": "string",
+                "const": "minimax-voice-clone"
+              },
+              "endpoints": {
+                "type": "object",
+                "properties": {
+                  "generate": {
+                    "type": "string",
+                    "minLength": 1,
+                    "description": "fal endpoint id (e.g. \"fal-ai/nano-banana-pro\"), or the Gemini API model id for google entries"
+                  }
+                },
+                "required": [
+                  "generate"
+                ],
+                "additionalProperties": false,
+                "patternProperties": {
+                  "^\\$": {}
+                }
+              },
+              "kind": {
+                "type": "string",
+                "const": "voice-clone"
+              },
+              "provider": {
+                "type": "string",
+                "const": "fal"
+              }
+            },
+            "required": [
+              "label",
+              "adapter",
+              "endpoints",
+              "kind",
+              "provider"
+            ],
+            "additionalProperties": false,
+            "patternProperties": {
+              "^\\$": {}
+            }
+          },
+          {
+            "type": "object",
+            "properties": {
+              "aliases": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "description": "Other ids that resolve to this entry"
+              },
+              "input": {
+                "type": "object",
+                "additionalProperties": {},
+                "description": "Extra request fields, merged last into every request",
+                "patternProperties": {
+                  "^\\$": {}
+                }
+              },
+              "label": {
+                "type": "string",
+                "minLength": 1,
+                "description": "Human-readable name"
+              },
+              "adapter": {
+                "type": "string",
+                "const": "kling-lipsync"
+              },
+              "capabilities": {
+                "type": "object",
+                "properties": {
+                  "maxVideoSec": {
+                    "type": "number",
+                    "exclusiveMinimum": 0
+                  },
+                  "minVideoSec": {
+                    "type": "number",
+                    "minimum": 0
+                  }
+                },
+                "required": [
+                  "maxVideoSec",
+                  "minVideoSec"
+                ],
+                "additionalProperties": false,
+                "patternProperties": {
+                  "^\\$": {}
+                }
+              },
+              "endpoints": {
+                "type": "object",
+                "properties": {
+                  "generate": {
+                    "type": "string",
+                    "minLength": 1,
+                    "description": "fal endpoint id (e.g. \"fal-ai/nano-banana-pro\"), or the Gemini API model id for google entries"
+                  }
+                },
+                "required": [
+                  "generate"
+                ],
+                "additionalProperties": false,
+                "patternProperties": {
+                  "^\\$": {}
+                }
+              },
+              "kind": {
+                "type": "string",
+                "const": "lipsync"
+              },
+              "provider": {
+                "type": "string",
+                "const": "fal"
+              }
+            },
+            "required": [
+              "label",
+              "adapter",
+              "capabilities",
+              "endpoints",
+              "kind",
+              "provider"
+            ],
+            "additionalProperties": false,
+            "patternProperties": {
+              "^\\$": {}
+            }
+          },
+          {
+            "type": "object",
+            "properties": {
+              "aliases": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "description": "Other ids that resolve to this entry"
+              },
+              "input": {
+                "type": "object",
+                "additionalProperties": {},
+                "description": "Extra request fields, merged last into every request",
+                "patternProperties": {
+                  "^\\$": {}
+                }
+              },
+              "label": {
+                "type": "string",
+                "minLength": 1,
+                "description": "Human-readable name"
+              },
+              "adapter": {
+                "type": "string",
+                "enum": [
+                  "elevenlabs-align",
+                  "elevenlabs-scribe",
+                  "gemini-transcribe"
+                ]
+              },
+              "endpoints": {
+                "type": "object",
+                "properties": {
+                  "generate": {
+                    "type": "string",
+                    "minLength": 1,
+                    "description": "fal endpoint id (e.g. \"fal-ai/nano-banana-pro\"), or the Gemini API model id for google entries"
+                  }
+                },
+                "required": [
+                  "generate"
+                ],
+                "additionalProperties": false,
+                "description": "fal only: the fal-hosted endpoint",
+                "patternProperties": {
+                  "^\\$": {}
+                }
+              },
+              "kind": {
+                "type": "string",
+                "const": "align"
+              },
+              "model": {
+                "type": "string",
+                "minLength": 1,
+                "description": "Gemini API model id (google only)"
+              },
+              "provider": {
+                "type": "string",
+                "enum": [
+                  "elevenlabs",
+                  "fal",
+                  "google"
+                ]
+              }
+            },
+            "required": [
+              "label",
+              "adapter",
+              "kind",
+              "provider"
+            ],
+            "additionalProperties": false,
+            "patternProperties": {
+              "^\\$": {}
+            }
+          }
+        ]
+      },
+      "description": "Model entries by key",
+      "patternProperties": {
+        "^\\$": {}
+      }
+    },
+    "providerRoles": {
+      "type": "object",
+      "properties": {
+        "google": {
+          "type": "object",
+          "properties": {
+            "chat.lite": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "minLength": 1
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "chat.flash": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "minLength": 1
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "chat.pro": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "minLength": 1
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "image.generate": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "minLength": 1
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "image.edit": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "minLength": 1
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "image.fast": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "minLength": 1
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "image.agentPreview": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "minLength": 1
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "video.text": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "minLength": 1
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "video.image": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "minLength": 1
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "video.firstLast": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "minLength": 1
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "video.reference": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "minLength": 1
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "video.lipsync": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "minLength": 1
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "music": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "minLength": 1
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "tts": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "minLength": 1
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "tts.elevenlabs": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "minLength": 1
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "tts.minimax": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "minLength": 1
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "tts.kokoro": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "minLength": 1
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "tts.qwen3": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "minLength": 1
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "tts.gemini": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "minLength": 1
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "voice.clone": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "minLength": 1
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "speech.align": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "minLength": 1
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "speech.transcribe": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "minLength": 1
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          "additionalProperties": false,
+          "description": "Role -> model key when Gemini (google) makes pictures, clips, voices and music; roles not listed use `roles`",
+          "patternProperties": {
+            "^\\$": {}
+          }
+        }
+      },
+      "additionalProperties": false,
+      "description": "Role maps per generation provider",
+      "patternProperties": {
+        "^\\$": {}
+      }
+    },
+    "roles": {
+      "type": "object",
+      "properties": {
+        "chat.lite": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "chat.flash": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "chat.pro": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "image.generate": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "image.edit": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "image.fast": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "image.agentPreview": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "video.text": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "video.image": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "video.firstLast": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "video.reference": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "video.lipsync": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "music": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "tts": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "tts.elevenlabs": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "tts.minimax": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "tts.kokoro": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "tts.qwen3": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "tts.gemini": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "voice.clone": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "speech.align": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "speech.transcribe": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "chat.lite",
+        "chat.flash",
+        "chat.pro",
+        "image.generate",
+        "image.edit",
+        "image.fast",
+        "video.text",
+        "video.image",
+        "video.firstLast",
+        "video.reference",
+        "video.lipsync",
+        "music",
+        "tts",
+        "tts.minimax",
+        "tts.kokoro",
+        "tts.qwen3",
+        "voice.clone",
+        "speech.align"
+      ],
+      "additionalProperties": false,
+      "description": "The model key each role uses; null disables the role",
+      "patternProperties": {
+        "^\\$": {}
+      }
+    },
+    "version": {
+      "type": "number",
+      "const": 1
+    }
+  },
+  "required": [
+    "models",
+    "roles",
+    "version"
+  ],
+  "additionalProperties": false,
+  "patternProperties": {
+    "^\\$": {}
+  }
+}

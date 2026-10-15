@@ -1,0 +1,27 @@
+{
+  "$schema": "../../schemas/nx-project.schema.json",
+  "name": "uip-planner-runtime",
+  "sourceRoot": "libs/uip-planner-runtime/src",
+  "projectType": "library",
+  "tags": ["scope:shared", "type:library"],
+  "targets": {
+    "build": {
+      "executor": "nx:run-commands",
+      "options": {
+        "cwd": "{workspaceRoot}",
+        "command": "tsc -p {projectRoot}/tsconfig.json --noEmit"
+      }
+    },
+    "test": {
+      "executor": "@nx/jest:jest",
+      "outputs": ["{workspaceRoot}/coverage/libs/uip-planner-runtime"],
+      "options": {
+        "jestConfig": "libs/uip-planner-runtime/jest.config.mjs",
+        "passWithNoTests": true
+      }
+    },
+    "lint": {
+      "executor": "@nx/eslint:lint"
+    }
+  }
+}

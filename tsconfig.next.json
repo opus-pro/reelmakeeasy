@@ -1,0 +1,39 @@
+{
+  // What: Next.js / browser-facing preset extending the shared base config.
+  // Why: Tailors TypeScript options to Next’s bundler and React runtime while keeping base monorepo rules.
+  "extends": "./tsconfig.base.json",
+
+  "compilerOptions": {
+    // What: Emit ESNext modules for the bundler.
+    // Why: Lets Next.js and modern bundlers perform tree-shaking and code-splitting effectively.
+    "module": "esnext",
+
+    // What: Use bundler-aware module resolution.
+    // Why: Matches how Next.js resolves imports (including TS/JS/JSX/TSX and alias handling) during builds.
+    "moduleResolution": "bundler",
+
+    // What: Preserve JSX in the output.
+    // Why: Defer JSX transformation to Next’s Babel/ SWC pipeline instead of tsc.
+    "jsx": "preserve",
+
+    // What: Browser and modern JS standard libraries.
+    // Why: Provide DOM APIs and iterables needed by React apps and Next runtime.
+    "lib": ["dom", "dom.iterable", "esnext"],
+
+    // What: Allow JavaScript files in the project.
+    // Why: Support gradual migration paths and third-party code that ships as plain JS.
+    "allowJs": true,
+
+    // What: Force each file to be treated as an isolated module.
+    // Why: Required by Next.js and other bundlers that compile files independently.
+    "isolatedModules": true,
+
+    // What: Enable importing JSON files as modules.
+    // Why: Allows configs and static JSON data to be consumed directly in Next.js code.
+    "resolveJsonModule": true,
+
+    // What: Turn on incremental builds.
+    // Why: Speeds up repeated type-checks and builds in large Next apps by reusing previous state.
+    "incremental": true
+  }
+}

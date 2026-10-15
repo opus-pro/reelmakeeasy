@@ -1,0 +1,9 @@
+{
+  "extends": "../../../tsconfig.node.json",
+  "compilerOptions": {
+    "outDir": "./out-tsc",
+    "types": ["node", "jest", "multer"],
+    "lib": ["es2023", "dom"]
+  },
+  "include": ["src/**/*.ts", "src/**/*.test.ts"]
+}

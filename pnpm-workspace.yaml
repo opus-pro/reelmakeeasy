@@ -1,0 +1,173 @@
+packages:
+  - 'apps/*'
+  - 'apps/services/*'
+  - 'libs/*'
+  - 'tools/*'
+
+# pnpm 11 ships "verify-deps-before-run: install" as a built-in default, which
+# makes any `pnpm run <script>` silently re-install the WHOLE workspace when
+# its dep-state check fails, rewriting node_modules under builds that are
+# already running. Installs are explicit in this repo, so keep runs install-free.
+verifyDepsBeforeRun: false
+
+# The @nx/jest patch (patchedDependencies) goes unused in an install without
+# devDependencies (`pnpm install --prod`); pnpm 11 hard-fails on unused patches
+# by default (ERR_PNPM_UNUSED_PATCH).
+allowUnusedPatches: true
+
+# Version overrides for transitive dependencies (moved from package.json
+# "pnpm.overrides", which pnpm >= 10 no longer reads).
+
+overrides:
+  # Single React copy across the workspace.
+  react: 19.2.4
+  react-dom: 19.2.4
+  '@types/react': 19.2.10
+  '@types/react-dom': 19.2.3
+  # CVE-2026-40345 (HIGH): deepmerge-ts stack exhaustion on recursive object
+  # graphs; fixed in 8.0.0. Transitive via @prisma/config, which still pins 7.1.5.
+  deepmerge-ts: ^8.0.0
+  # CVE-2026-77301 / CVE-2026-39244 (HIGH): adm-zip uncontrolled memory
+  # allocation via declared uncompressed size; fixed in 0.6.1.
+  adm-zip: ^0.6.1
+  axios: ^1.20.0 # CVE-2026-101898/-101901/-101903/-101905/-101906/-101907/-101909 (2026-10-02 sweep)
+  # GHSA (2026-07-20, LOW): body-parser DoS when an invalid limit silently disables
+  # size enforcement. Same-major bumps, transitive via express 4.x/5.x.
+  'body-parser@^1': 1.20.6
+  'body-parser@^2': 2.3.0
+  '@types/express': 4.17.25
+  '@types/express-serve-static-core': 4.19.7
+  rxjs: 7.8.2
+  fast-uri: 3.1.7 # + CVE-2026-84292 / -84394 (2026-10-02 sweep)
+  effect: 3.20.0
+  smol-toml: ^1.7.1 # CVE-2026-85730 (HIGH): DoS via malformed TOML; fixed in 1.7.1
+  lodash: 4.18.1
+  'path-to-regexp@~0.1': 0.1.13
+  'path-to-regexp@^8': 8.4.2
+  # GHSA (2026-07-20, HIGH): brace-expansion ReDoS across all lines; patched in
+  # 1.1.16 / 2.1.2 / 5.0.7 (same-major bumps, transitive).
+  # GHSA-mh99-v99m-4gvg / CVE-2026-14257 (2026-07-24, HIGH): brace-expansion OOM
+  # DoS via unbounded expansion length; the ^5 line's 5.0.7 pin is itself
+  # vulnerable. Patched in 5.0.8 (same-major bump). Only the v5 line is affected
+  # (the fix is a v5 release); the ^1/^2 pins stay as-is.
+  # CVE-2026-69152 (2026-09-14 sweep, HIGH): all three lines patched again — 1.1.18 / 2.1.4 / 5.0.9.
+  # CVE-2026-102276 / -102278 (2026-10-02 sweep): all three lines patched again.
+  'brace-expansion@^1': 1.1.20
+  'brace-expansion@^2': 2.1.6
+  'brace-expansion@^5': 5.0.11
+  'picomatch@^2': 2.3.2
+  'picomatch@^4': 4.0.4
+  'minimatch@^10': 10.2.5
+  'ajv@^8': 8.18.0
+  sharp: 0.35.5 # GHSA-rgj7-g3m4-5g8c (2026-09-14 sweep); + 2026-10-09 batch
+  # 2026-10-09 sweep: proxy-addr trust-input fix (CRITICAL) + patch floors.
+  proxy-addr: 2.0.8
+  source-map-js: 1.2.2
+  '@hono/node-server': '>=1.19.13'
+  defu: '>=6.1.5'
+  serialize-javascript: '>=7.0.5'
+  # CVE-2026-49982 (HIGH): tmp path traversal via non-string prefix/postfix/
+  # template (type-confusion bypass of _assertPath). Patch bump, transitive.
+  tmp: 0.2.7
+  '@ungap/structured-clone': '>=1.3.1'
+  # CVE-2026-9277 (CRITICAL): shell-quote arbitrary code execution via unescaped
+  # line terminators; GHSA-395f-4hp3-45gv (2026-07-20, HIGH) follow-on fixed in
+  # 1.9.0. Transitive (launch-editor -> webpack-dev-server).
+  shell-quote: 1.9.0
+  # CVE-2026-54466 (CRITICAL): websocket-driver message corruption via abuse of
+  # protocol length headers (attacker-controlled frame length enables payload
+  # injection/smuggling). Patch bump within 0.7.x, transitive (faye-websocket ->
+  # sockjs-client). Fixed in 0.7.5.
+  websocket-driver: 0.7.5
+  # GHSA-gv7w-rqvm-qjhr (HIGH): esbuild missing binary integrity verification
+  # in Deno module enables RCE. Fixed in 0.28.1; force transitive 0.25.x/0.27.x
+  # copies (the direct dep is bumped to 0.28.1 in package.json).
+  # GHSA-g7r4-m6w7-qqqr (LOW) covers the remaining 0.27.x copies.
+  'esbuild@^0.25': 0.28.1
+  'esbuild@^0.27': 0.28.1
+  # CVE-2026-12143 (HIGH): form-data unsafe random boundary. Patch bump within
+  # 4.x, transitive (axios).
+  'form-data@^4': 4.0.6
+  # CVE-2026-48779 (HIGH): ws memory-exhaustion DoS from tiny fragments. Patch
+  # bump within 8.x, transitive (@module-federation/*, jsdom).
+  'ws@^8': 8.21.0
+  # CVE-2026-54290 (HIGH): hono CORS middleware reflects any Origin with
+  # credentials. Patch bump within 4.x, transitive (@anthropic-ai/claude-agent-sdk
+  # -> @modelcontextprotocol/sdk).
+  'hono@^4': 4.12.25
+  # Security bumps for transitive copies, each within the installed major
+  # (non-breaking).
+  'undici@^7': 7.29.1 # CVE-2026-13697 (2026-09-14 sweep); GHSA-vxpw-j846-p89q +6 (HIGH); + CVE-2026-19534 / -84961 (2026-10-02 sweep)
+  'qs@^6': 6.15.2 # GHSA-q8mj-m7cp-5q26 (MEDIUM): prototype pollution / DoS
+  'follow-redirects@^1': 1.16.0 # GHSA-r4q5-vmmm-2653 (MEDIUM): info leak
+  'ip-address@^10': 10.3.1 # CVE-2026-69192 (2026-09-14 sweep); GHSA-v2v4-37r5-5v8g (MEDIUM): SSRF bypass
+  'launch-editor@^2': 2.14.1 # GHSA-v6wh-96g9-6wx3 (MEDIUM): command injection
+  'webpack-dev-server@^5': 5.2.6 # GHSA-mx8g-39q3-5c79 +2 (MEDIUM): source leak
+  'http-proxy-middleware@^2': 2.0.10 # GHSA-64mm-vxmg-q3vj (MEDIUM): DoS
+  'http-proxy-middleware@^3': 3.0.7 # GHSA-gcq2-9pq2-cxqm (HIGH): SSRF
+  '@babel/core@^7': 7.29.6 # GHSA-4x5r-pxfx-6jf8 (LOW): RegExp DoS
+  '@babel/plugin-transform-modules-systemjs@^7': 7.29.4 # GHSA-fv7c-fp4j-7gwp (HIGH): var name injection
+  # GHSA-5p4m-2wfm-xmqj + CVE-2026-84375 (2026-09-14 sweep); GHSA-h67p-54hq-rp68 (MEDIUM):
+  # prototype pollution.
+  'js-yaml@^3': 3.15.2
+  # Same-major transitive copies the package.json direct bumps do not reach.
+  # GHSA-5p4m-2wfm-xmqj + CVE-2026-84375 (2026-09-14 sweep); GHSA-h67p-54hq-rp68 (MED)
+  # + 2026-07-20 (HIGH): forces transitive 4.x copies.
+  'js-yaml@^4': 4.3.2
+  # CVE-2026-73646 (2026-09-14 sweep); GHSA-qx2v-qp2m-jg93 (MED) + 2026-07-23 (HIGH):
+  # bumps 8.4.x-8.5.11 copies.
+  'postcss@<8.5.18': 8.5.18
+  # CVE-2026-77037 / -77078 / -82333 (2026-09-14 sweep, fixes-only release);
+  # GHSA-72gw-mp4g-v24j (HIGH): forces the @nestjs/platform-express 2.1.1 copy.
+  'multer@^2': 2.3.0
+  'adm-zip@<0.6.1': 0.6.1 # GHSA-xcpc-8h2w-3j85 (HIGH): forces the @module-federation/dts-plugin 0.5.16 copy
+  # 2026-09-14 sweep (Trivy 0.72, HIGH): same-major floors for transitive copies with no
+  # override yet. deepmerge-ts 7->8 (pinned exactly by @prisma/config) and the
+  # ip-address 6.x copy (fix is 10.x) are majors and stay out.
+  'browserslist@^4': 4.28.7 # CVE-2026-73088 / -73089
+  'immutable@^5': 5.1.8 # CVE-2026-59879 / -59880
+  'nanoid@^3': 3.3.18 # CVE-2026-67213 / -67214 / -73086 (direct dep bumped in package.json too)
+
+# Settings moved from .npmrc, which pnpm >= 10 no longer reads for
+# pnpm-specific options (registry/auth stay in .npmrc).
+shamefullyHoist: true
+strictPeerDependencies: false
+autoInstallPeers: true
+# no version prefix. Absolute version is required.
+savePrefix: ''
+# Native optional packages to install: this machine's own (`current`, e.g. Windows), plus
+# macOS and Linux on Apple Silicon and x64 so one install covers every CI and dev platform.
+supportedArchitectures:
+  os:
+    - current
+    - darwin
+    - linux
+  cpu:
+    - current
+    - x64
+    - arm64
+
+# Dependencies allowed to run install/build (lifecycle) scripts.
+# true = run scripts, false = explicitly blocked.
+# Packages not listed here get their scripts blocked (pnpm errors with
+# ERR_PNPM_IGNORED_BUILDS and auto-appends them here with a placeholder on install).
+allowBuilds:
+  '@nestjs/core': true
+  '@parcel/watcher': true
+  '@prisma/client': true
+  '@prisma/engines': true
+  '@scarf/scarf': false # install-time telemetry only, no build output
+  '@swc/core': true
+  canvas: true
+  esbuild: true
+  # less ships prebuilt lib/; its postinstall is a build-from-source step new
+  # in 4.5.x (pulled in by nx 22.7.7 via vite), so it is safe to block.
+  less: false
+  mongodb-memory-server: false # postinstall only pre-downloads mongod; `pnpm dev` fetches it on first start
+  nx: true
+  prisma: true
+  sharp: true
+  unrs-resolver: true
+
+patchedDependencies:
+  '@nx/jest': patches/@nx__jest.patch

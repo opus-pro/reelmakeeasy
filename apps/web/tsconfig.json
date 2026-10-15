@@ -1,0 +1,27 @@
+{
+  "extends": "../../tsconfig.next.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "emitDeclarationOnly": false,
+    "plugins": [{ "name": "next" }],
+    "paths": {
+      "@/*": ["apps/web/src/*"],
+      "@reelmakeeasy/llm": ["libs/llm/src/index.ts"],
+      "@reelmakeeasy/llm/*": ["libs/llm/src/*"],
+      "@reelmakeeasy/workflow-engine/*": ["libs/workflow-engine/src/*"],
+      "@reelmakeeasy/common/*": ["libs/shared/common/src/*"],
+      "@shared/ui": ["libs/shared/ui/src"],
+      "@shared/ui/*": ["libs/shared/ui/src/*"],
+      "@shared/types/*": ["libs/shared/types/src/*"],
+      "@shared/prompt-system/*": ["libs/shared/prompt-system/src/*"],
+      "@agent-lib/*": ["libs/agent/src/*"]
+    }
+  },
+  "include": [
+    "**/*.ts",
+    "**/*.tsx",
+    ".next/types/**/*.ts",
+    "next-env.d.ts",
+    "../../dist/apps/web/.next/types/**/*.ts"
+  ]
+}

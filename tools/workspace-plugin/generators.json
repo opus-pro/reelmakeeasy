@@ -1,0 +1,11 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "cli": "nx",
+  "generators": {
+    "prompt": {
+      "factory": "./src/generators/prompt/generator#promptGenerator",
+      "schema": "./src/generators/prompt/schema.json",
+      "description": "Scaffold a type-safe prompt and its tests"
+    }
+  }
+}

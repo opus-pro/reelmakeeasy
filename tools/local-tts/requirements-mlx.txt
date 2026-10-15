@@ -1,0 +1,6 @@
+# Apple Silicon: Kokoro and Qwen3-TTS on the Metal GPU through MLX. mlx-audio
+# also runs the speech to text (Whisper and the Qwen3 forced aligner).
+-r requirements-common.txt
+mlx==0.32.3
+mlx-audio==0.5.7
+huggingface_hub>=1.0

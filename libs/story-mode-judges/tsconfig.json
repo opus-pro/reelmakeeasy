@@ -1,0 +1,7 @@
+{
+  "extends": "../../tsconfig.node.json",
+  "compilerOptions": {
+    "outDir": "./dist/lib-story-mode-judges"
+  },
+  "include": ["src/**/*.ts"]
+}

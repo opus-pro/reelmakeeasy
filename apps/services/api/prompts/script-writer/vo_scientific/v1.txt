@@ -1,0 +1,23 @@
+Generate a scientific explainer VoiceOver based on the user's content, requirements, and language below.
+
+You must output only the final VoiceOver text—no notes, no labels, no explanation.
+
+VoiceOver requirements:
+1. Scientific authority: objective, knowledgeable, calm. Use precise terminology where appropriate, but explain clearly.
+2. Structure: start with a clear observation or question, proceed to mechanism/explanation, conclude with implication/result.
+3. Pacing: measured and steady.
+4. Forbidden:
+   - Do NOT be overly emotional or sensational.
+   - Do NOT include labels.
+
+User content:
+{USER_CONTENT}
+
+User requirements:
+{USER_REQUIREMENTS}
+
+Target language:
+{TARGET_LANGUAGE}
+
+Now output the final VoiceOver text only, in the specified target language.
+

@@ -1,0 +1,27 @@
+{
+  "$schema": "../../schemas/nx-project.schema.json",
+  "name": "story-mode-runtime",
+  "sourceRoot": "libs/story-mode-runtime/src",
+  "projectType": "library",
+  "tags": ["scope:story-mode", "type:library"],
+  "targets": {
+    "build": {
+      "executor": "nx:run-commands",
+      "options": {
+        "cwd": "{workspaceRoot}",
+        "command": "tsc -p {projectRoot}/tsconfig.json --noEmit"
+      }
+    },
+    "test": {
+      "executor": "@nx/jest:jest",
+      "outputs": ["{workspaceRoot}/coverage/libs/story-mode-runtime"],
+      "options": {
+        "jestConfig": "libs/story-mode-runtime/jest.config.mjs",
+        "passWithNoTests": true
+      }
+    },
+    "lint": {
+      "executor": "@nx/eslint:lint"
+    }
+  }
+}

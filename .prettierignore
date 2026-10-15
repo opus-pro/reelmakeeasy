@@ -1,0 +1,67 @@
+# Ignore Python artifacts
+*.egg-info
+*.log
+*.pyc
+.venv
+.cursor/
+.DS_Store
+__pycache__/
+tmp
+CLAUDE.md
+build/
+.vscode/
+.idea/
+**/screenshots
+public/
+
+# Node and Nx build artifacts
+pnpm-lock.yaml
+node_modules/
+.nx/installation
+.nx/cache
+.nx/workspace-data
+
+# IDE and tooling files
+.vscode/
+.cursor/rules/nx-rules.mdc
+.github/instructions/nx.instructions.md
+
+# Frontend build outputs
+.next/
+.next-prod/
+out/
+**/dist/**/*
+**/.next/**/*
+apps/web/next-env.d.ts
+
+# Generated code
+apps/services/api/generated/prisma/
+apps/services/api/src/generated/prisma-client/
+apps/services/api/src/generated/
+
+# To keep environment variables out of version control, uncomment the line below
+# .env
+
+# ESLint
+.eslintcache
+
+# Pytest
+.pytest_cache
+
+logs/
+
+# tsconfig
+tsconfig.tsbuildinfo
+
+# Core dumps (only in the root directory)
+/core
+cache/
+
+# Jest coverage output
+/coverage/
+
+.coverage
+
+# Ignore local environment variables
+.env.local
+

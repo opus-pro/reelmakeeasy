@@ -1,0 +1,3702 @@
+[
+  {
+    "name": "line_chart_overlay_up",
+    "labels": [],
+    "desc": "This template overlays a clean, animated line chart directly onto a background video or image. A title and the final numerical value are displayed prominently. The line graph animates in, typically with a \"draw-on\" effect from left to right, visualizing the increase trend of the data over time. The background is often thematically related to the data being presented.",
+    "placeholders": [
+      {
+        "id": "title_line_1",
+        "type": "text",
+        "desc": "Title of the line chart, usually a description of the data.",
+        "color": "#primary"
+      },
+      {
+        "id": "title_line_2",
+        "type": "text",
+        "desc": "A final numerical value (e.g., dollar amount, score, metric) with an optional unit (e.g., $, %, etc.).",
+        "color": "#primary"
+      },
+      {
+        "id": "a_1",
+        "desc": "an image or video in 9:16 format",
+        "type": "image",
+        "ratio": "9:16"
+      }
+    ],
+    "useCases": "- Financial & Business Reporting: The primary use. Display key performance metrics like \"Quarterly Sales,\" \"Stock Price,\" or \"User Growth\" over time.\n- Scientific Data Visualization: In educational videos or documentaries, use this to show trends like \"Global Temperatures,\" \"Species Population,\" or \"CO2 Levels.\"\n- Analytics & Performance Tracking: Show the growth of a YouTube channel, social media account, or website traffic over a specific period.\n- Fitness & Personal Progress: Visualize progress in a fitness journey by charting metrics like \"Weight,\" \"Running Distance,\" or \"Lifting Max\" over weeks or months.",
+    "historyFiles": [],
+    "ratio": "9:16",
+    "status": "Archived",
+    "createdAt": "2025-08-26T06:53:12.018Z",
+    "updatedAt": "2025-10-23T08:56:04.038Z",
+    "version": 4,
+    "category": "data_visualization_cards",
+    "templateDuration": "2"
+  },
+  {
+    "name": "line_chart_overlay_down",
+    "labels": [],
+    "desc": "This template overlays a clean, animated line chart directly onto a background video or image. A title and the final numerical value are displayed prominently. The line graph animates in, typically with a \"draw-on\" effect from left to right, visualizing the drop trend of the data over time. The background is often thematically related to the data being presented.",
+    "placeholders": [
+      {
+        "id": "title_line_1",
+        "type": "text",
+        "desc": "Title of the line chart, usually a description of the data.",
+        "color": "#primary"
+      },
+      {
+        "id": "title_line_2",
+        "type": "text",
+        "desc": "A final numerical value (e.g., dollar amount, score, metric) with an optional unit (e.g., $, %, etc.).",
+        "color": "#primary"
+      },
+      {
+        "id": "a_1",
+        "desc": "an image or video in 9:16 format",
+        "type": "image",
+        "ratio": "9:16"
+      }
+    ],
+    "useCases": "- Financial & Business Reporting: The primary use. Display key performance metrics like \"Quarterly Sales,\" \"Stock Price,\" or \"User Growth\" over time.\n- Scientific Data Visualization: In educational videos or documentaries, use this to show trends like \"Global Temperatures,\" \"Species Population,\" or \"CO2 Levels.\"\n- Analytics & Performance Tracking: Show the growth of a YouTube channel, social media account, or website traffic over a specific period.\n- Fitness & Personal Progress: Visualize progress in a fitness journey by charting metrics like \"Weight,\" \"Running Distance,\" or \"Lifting Max\" over weeks or months.",
+    "historyFiles": [],
+    "ratio": "9:16",
+    "status": "Archived",
+    "createdAt": "2025-08-22T08:56:30.316Z",
+    "updatedAt": "2025-10-23T08:56:04.979Z",
+    "version": 4,
+    "category": "data_visualization_cards",
+    "templateDuration": "2"
+  },
+  {
+    "name": "article_quote_1",
+    "labels": [],
+    "desc": "Article text appears over a blurred or semi-transparent background, with keywords highlighted in color as they animate into focus.",
+    "placeholders": [
+      {
+        "id": "a_1",
+        "type": "image",
+        "desc": "A high-quality cutout image of logo. Displayed on the top of the screen.",
+        "ratio": "any"
+      },
+      {
+        "id": "a_2",
+        "type": "image",
+        "desc": "Article content or media element that represents the news story, blog post, research paper, or historical event being recreated. This could be a screenshot of the actual article, relevant imagery, or supporting visual content that enhances the article presentation.",
+        "ratio": "872:490"
+      },
+      {
+        "id": "title",
+        "type": "text",
+        "desc": "Title or quote headline summarizing the key idea.",
+        "color": "",
+        "backgroundColor": ""
+      },
+      {
+        "id": "description",
+        "type": "text",
+        "desc": "Descriptive body text or excerpt from the article.",
+        "color": "",
+        "backgroundColor": ""
+      },
+      {
+        "id": "date",
+        "type": "text",
+        "desc": "Date of publication or quote timestamp.",
+        "color": "",
+        "backgroundColor": ""
+      },
+      {
+        "id": "highlight",
+        "type": "text",
+        "desc": "The part that needs to be emphasized in the title is usually a few words.",
+        "color": "#secondary",
+        "backgroundColor": "#primary"
+      }
+    ],
+    "useCases": "\t•\tIdeal for summarizing trending news or opinion pieces where the viewer should stay focused on text highlights.\n\t•\tWorks well in educational or commentary clips where emphasis is on analyzing or reacting to specific statements.\n\t•\tSuitable for formats that mix on-screen narration with visual focus on textual details.",
+    "historyFiles": [],
+    "ratio": "9:16",
+    "status": "Live",
+    "createdAt": "2025-08-22T08:42:27.971Z",
+    "updatedAt": "2025-10-29T09:24:58.286Z",
+    "version": 9,
+    "category": "social_media_pull_quotes",
+    "templateDuration": "2"
+  },
+  {
+    "name": "article_quote_2",
+    "labels": [],
+    "desc": "A minimalist layout resembling a clean web article; the headline and logo fade in first, followed by text appearing line by line with key terms highlighted.\n",
+    "placeholders": [
+      {
+        "id": "a_1",
+        "type": "image",
+        "desc": "Supporting image, such as background logo or quote source.",
+        "ratio": "any"
+      },
+      {
+        "id": "a_2",
+        "type": "image",
+        "desc": "Main portrait or article image.",
+        "ratio": "16:9"
+      },
+      {
+        "id": "title",
+        "type": "text",
+        "desc": "Title or quote headline summarizing the key idea.",
+        "color": "",
+        "backgroundColor": ""
+      },
+      {
+        "id": "description",
+        "type": "text",
+        "desc": "Descriptive body text or excerpt from the article.",
+        "color": "",
+        "backgroundColor": ""
+      },
+      {
+        "id": "highlight",
+        "type": "text",
+        "desc": "The part that needs to be emphasized in the title is usually a few words.",
+        "color": "#secondary",
+        "backgroundColor": "#primary"
+      },
+      {
+        "id": "author",
+        "type": "text",
+        "desc": "Author or source of the article",
+        "color": "",
+        "backgroundColor": ""
+      }
+    ],
+    "useCases": "\t•\tGreat for explainer content or contextual storytelling — where clarity and credibility are key.\n\t•\tUsed to present curated or quoted sections from media sources without overwhelming visuals.\n\t•\tFits well in content that aims to simplify or fact-check a piece of news.",
+    "historyFiles": [],
+    "ratio": "9:16",
+    "status": "Live",
+    "createdAt": "2025-08-22T08:34:45.704Z",
+    "updatedAt": "2025-10-29T09:25:53.369Z",
+    "version": 7,
+    "category": "social_media_pull_quotes",
+    "templateDuration": "2"
+  },
+  {
+    "name": "article_quote_3",
+    "labels": [],
+    "desc": "Simulates a mobile screen scrolling through an article; the viewport subtly moves downward while highlighted phrases and visual cues keep the viewer’s focus.",
+    "placeholders": [
+      {
+        "id": "a_2",
+        "type": "image",
+        "desc": "Main portrait or article image.",
+        "ratio": "872:490"
+      },
+      {
+        "id": "title",
+        "type": "text",
+        "desc": "Title or quote headline summarizing the key idea.",
+        "color": "#description"
+      },
+      {
+        "id": "description",
+        "type": "text",
+        "desc": "Descriptive body text or excerpt from the article.",
+        "color": "#description"
+      },
+      {
+        "id": "highlight",
+        "type": "text",
+        "desc": "The part that needs to be emphasized in the title is usually a few words.",
+        "color": "#secondary",
+        "backgroundColor": "#primary"
+      },
+      {
+        "id": "author",
+        "type": "text",
+        "desc": "Author or source of the article",
+        "color": "#description"
+      },
+      {
+        "id": "a_1",
+        "desc": "Logo",
+        "type": "image",
+        "ratio": "any"
+      }
+    ],
+    "useCases": "\t•\tPerfect for realistic “screenshot” or “screen capture” storytelling — as if showing the real article in motion.\n\t•\tOften used in commentary or documentary-style videos where the creator discusses a live article or post.\n\t•\tHelps convey authenticity and immediacy when referencing digital news or social content.",
+    "historyFiles": [],
+    "ratio": "9:16",
+    "status": "Live",
+    "createdAt": "2025-08-21T06:47:48.696Z",
+    "updatedAt": "2025-10-29T09:26:54.825Z",
+    "version": 10,
+    "category": "social_media_pull_quotes",
+    "templateDuration": "2"
+  },
+  {
+    "name": "twitter_quote",
+    "labels": [],
+    "desc": "The Twitter/X logo expands to reveal the full tweet graphic.",
+    "placeholders": [
+      {
+        "id": "a_1",
+        "type": "image",
+        "desc": "The Twitter/X logo image that will expand to reveal the tweet content. This serves as the initial visual element before the full tweet graphic is displayed.",
+        "ratio": "any"
+      },
+      {
+        "id": "a_2",
+        "type": "image",
+        "desc": "The complete tweet graphic or screenshot that will be revealed after the logo expansion animation. This should contain the full tweet content including user profile, text, engagement metrics, and timestamp for authentic presentation.",
+        "ratio": "748:468"
+      },
+      {
+        "id": "nickname",
+        "type": "text",
+        "desc": "Display name of the Twitter user."
+      },
+      {
+        "id": "username",
+        "type": "text",
+        "desc": "Handle of the Twitter user (e.g., @user)."
+      },
+      {
+        "id": "date",
+        "type": "text",
+        "desc": "Timestamp when the tweet was posted."
+      },
+      {
+        "id": "content",
+        "type": "text",
+        "desc": "Full tweet content or quoted message."
+      }
+    ],
+    "useCases": "- Display a real tweet from a politician, celebrity, company, or news event to use as evidence or a discussion point.\n- For marketing or corporate videos, showcase positive customer feedback by framing it as a real tweet. It feels more authentic than a simple quote.\n- In a documentary or narrative film, create a fictional tweet to advance the plot, reveal a character's thoughts, or show public reaction within the story's world.\n- Use the format to pose a question directly to your audience, prompting them to think about a topic or leave a comment.",
+    "historyFiles": [],
+    "ratio": "9:16",
+    "status": "Archived",
+    "createdAt": "2025-09-10T05:22:40.549Z",
+    "updatedAt": "2025-11-10T21:54:45.182Z",
+    "version": 3,
+    "category": "social_media_pull_quotes"
+  },
+  {
+    "name": "fullscreen",
+    "labels": [],
+    "desc": "AI-generated full-screen visual canvas with no overlays. Optimized for abstract concepts, moods, and style cohesion; prefer GenAI over real-world assets when topics are conceptual or RWA quality/style is inconsistent.",
+    "placeholders": [],
+    "useCases": "- Use when topics/elements are abstract or conceptual (mood, metaphor, ambience)\n- Use when sourcing real-world assets is impractical (imaginary/futuristic/privacy-restricted)\n- Use to maintain strict visual style cohesion across scenes\n- Use when RWA quality/style is inconsistent; prefer GenAI to maintain quality\n- Suitable for intros/outros/montages where ambiance is primary",
+    "historyFiles": [],
+    "ratio": "9:16",
+    "status": "Archived",
+    "createdAt": "2025-08-27T05:58:55.152Z",
+    "updatedAt": "2025-11-17T21:41:54.541Z",
+    "version": 2,
+    "category": "basic_fullscreen"
+  },
+  {
+    "name": "text_static",
+    "desc": "A static text template.",
+    "useCases": "- For static text.",
+    "ratio": "1:1",
+    "placeholders": [
+      {
+        "id": "title_line_1",
+        "desc": "Static text",
+        "type": "text",
+        "contentType": "string",
+        "color": "",
+        "maxCharacterLength": 30
+      }
+    ],
+    "labels": ["atomic_template"],
+    "status": "Live",
+    "createdAt": "2025-09-02T05:25:27.711Z",
+    "updatedAt": "2025-11-11T21:22:58.183Z",
+    "version": 14,
+    "category": "basic_fullscreen"
+  },
+  {
+    "name": "object_static",
+    "desc": "A static object asset.",
+    "useCases": "- For static assets.",
+    "ratio": "1:1",
+    "placeholders": [
+      {
+        "id": "a_1",
+        "desc": "A static asset.",
+        "type": "image",
+        "ratio": "1:1"
+      }
+    ],
+    "labels": ["atomic_template"],
+    "status": "Live",
+    "createdAt": "2025-09-02T05:26:56.705Z",
+    "updatedAt": "2025-11-11T20:08:12.974Z",
+    "version": 12,
+    "category": "basic_fullscreen"
+  },
+  {
+    "name": "atomic_text_1",
+    "desc": "",
+    "useCases": "",
+    "ratio": "1:1",
+    "placeholders": [
+      {
+        "id": "title_line_1",
+        "desc": "placeholder for text up to 30 characters",
+        "type": "text",
+        "contentType": "string",
+        "color": "#primary",
+        "maxCharacterLength": 30
+      }
+    ],
+    "labels": ["atomic_template"],
+    "status": "Live",
+    "createdAt": "2025-09-02T06:26:52.341Z",
+    "updatedAt": "2025-11-11T21:22:00.366Z",
+    "version": 7,
+    "category": "basic_fullscreen"
+  },
+  {
+    "name": "atomic_text_2",
+    "desc": "",
+    "useCases": "",
+    "ratio": "1:1",
+    "placeholders": [
+      {
+        "id": "title_line_1",
+        "desc": "placeholder for text up to 30 characters",
+        "type": "text",
+        "contentType": "string",
+        "color": "#primary",
+        "maxCharacterLength": 30
+      }
+    ],
+    "labels": ["atomic_template"],
+    "status": "Live",
+    "createdAt": "2025-09-02T06:28:30.628Z",
+    "updatedAt": "2025-11-11T21:22:10.051Z",
+    "version": 7,
+    "category": "basic_fullscreen"
+  },
+  {
+    "name": "atomic_text_3",
+    "desc": "3 lines of text shown together, get bigger in the end",
+    "useCases": "Longer text highlights in 3 lines.",
+    "ratio": "1:1",
+    "placeholders": [
+      {
+        "id": "title_line_1",
+        "desc": "placeholder for text up to 30 characters",
+        "type": "text",
+        "contentType": "string",
+        "color": "#primary",
+        "maxCharacterLength": 30
+      }
+    ],
+    "labels": ["atomic_template"],
+    "status": "Archived",
+    "createdAt": "2025-09-02T06:29:46.133Z",
+    "updatedAt": "2025-11-11T21:42:55.935Z",
+    "version": 8,
+    "category": "basic_fullscreen"
+  },
+  {
+    "name": "atomic_text_4",
+    "desc": "",
+    "useCases": "",
+    "ratio": "1:1",
+    "placeholders": [
+      {
+        "id": "title_line_1",
+        "desc": "placeholder for text up to 30 characters",
+        "type": "text",
+        "contentType": "string",
+        "color": "#primary",
+        "maxCharacterLength": 30
+      }
+    ],
+    "labels": ["atomic_template"],
+    "status": "Archived",
+    "createdAt": "2025-09-02T06:31:37.523Z",
+    "updatedAt": "2025-11-11T21:43:17.582Z",
+    "version": 9,
+    "category": "basic_fullscreen"
+  },
+  {
+    "name": "object_zoom",
+    "desc": "The object quickly scales up from small to full size, often with a brief overshoot.",
+    "useCases": "\t•\tEmphasizing moments of surprise, reaction, or excitement.\n\t•\tHighlighting a visual element that needs instant attention or comedic timing.",
+    "ratio": "1:1",
+    "placeholders": [
+      {
+        "id": "a_1",
+        "desc": "an object",
+        "type": "image",
+        "ratio": "1:1"
+      }
+    ],
+    "labels": ["atomic_template"],
+    "status": "Live",
+    "createdAt": "2025-09-04T08:24:16.298Z",
+    "updatedAt": "2025-11-11T20:23:56.224Z",
+    "version": 9,
+    "category": "basic_fullscreen"
+  },
+  {
+    "name": "object_turn_grey",
+    "desc": "The object desaturates gradually from full color to grayscale.",
+    "useCases": "\t•\tIndicating a visual shift in focus or relevance within the scene.\n\t•\tShowing contrast between active and inactive states or before-and-after moments.",
+    "ratio": "1:1",
+    "placeholders": [
+      {
+        "id": "a_1",
+        "desc": "an image turn into grey color",
+        "type": "image",
+        "ratio": "1:1"
+      }
+    ],
+    "labels": ["atomic_template"],
+    "status": "Live",
+    "createdAt": "2025-09-04T09:25:01.256Z",
+    "updatedAt": "2025-11-11T20:23:35.348Z",
+    "version": 8,
+    "category": "basic_fullscreen"
+  },
+  {
+    "name": "object_slow_rotate",
+    "desc": "The object gently rotates as it fades or slides into position, producing a smooth, fluid entry.",
+    "useCases": "\t•\tIntroducing visuals in a calm or elegant manner to convey polish or focus.\n\t•\tAdding subtle movement to static elements to maintain viewer engagement.",
+    "ratio": "1:1",
+    "placeholders": [
+      {
+        "id": "a_1",
+        "desc": "an image rotating slowly",
+        "type": "image",
+        "ratio": "1:1"
+      }
+    ],
+    "labels": ["atomic_template"],
+    "status": "Live",
+    "createdAt": "2025-09-04T09:29:39.859Z",
+    "updatedAt": "2025-11-11T20:22:55.247Z",
+    "version": 8,
+    "category": "basic_fullscreen"
+  },
+  {
+    "name": "object_slide_bottom",
+    "desc": "The object rises from below the frame, easing into its final position.",
+    "useCases": "\t•\tIntroducing visuals that feel like they’re “appearing” or “standing up” into view.\n\t•\tBringing focus to supporting visuals timed with upward gestures or tonal shifts.",
+    "ratio": "1:1",
+    "placeholders": [
+      {
+        "id": "a_1",
+        "desc": "object slide from bottom",
+        "type": "image",
+        "ratio": "1:1"
+      }
+    ],
+    "labels": ["atomic_template"],
+    "status": "Live",
+    "createdAt": "2025-09-05T01:06:33.907Z",
+    "updatedAt": "2025-11-11T20:21:04.827Z",
+    "version": 7,
+    "category": "basic_fullscreen"
+  },
+  {
+    "name": "object_camera_blur",
+    "desc": "The object starts blurred and progressively sharpens into full focus, mimicking a lens rack focus.",
+    "useCases": "\t•\tRevealing key visuals with a cinematic “coming into clarity” effect.\n\t•\tDirecting attention toward a new or important subject with visual depth.",
+    "ratio": "1:1",
+    "placeholders": [
+      {
+        "id": "a_1",
+        "desc": "object_camera_blur",
+        "type": "image",
+        "ratio": "1:1"
+      }
+    ],
+    "labels": ["atomic_template"],
+    "status": "Live",
+    "createdAt": "2025-09-05T01:07:28.945Z",
+    "updatedAt": "2025-11-11T20:20:47.645Z",
+    "version": 10,
+    "category": "basic_fullscreen"
+  },
+  {
+    "name": "object_slide_left",
+    "desc": "The object moves horizontally from the left edge of the frame, decelerating smoothly into place.",
+    "useCases": "\t•\tIntroducing a new visual element that appears to “enter” the conversation or scene.\n\t•\tDrawing attention from left to right to match typical reading flow or directional gaze.",
+    "ratio": "1:1",
+    "placeholders": [
+      {
+        "id": "a_1",
+        "desc": "reveal an object or people, slide from left",
+        "type": "image",
+        "ratio": "1:1"
+      }
+    ],
+    "labels": ["atomic_template"],
+    "status": "Live",
+    "createdAt": "2025-09-05T01:09:52.104Z",
+    "updatedAt": "2025-11-11T20:21:27.668Z",
+    "version": 7,
+    "category": "basic_fullscreen"
+  },
+  {
+    "name": "object_slide_right",
+    "desc": "The object glides in from the right edge toward the center, stopping with a natural ease-out.",
+    "useCases": "\t•\tPresenting a complementary visual or reaction opposite an existing subject.\n\t•\tCreating a balanced composition by bringing in a secondary element from the other side.",
+    "ratio": "1:1",
+    "placeholders": [
+      {
+        "id": "a_1",
+        "desc": "reveal an object or people, slide from right",
+        "type": "image",
+        "ratio": "1:1"
+      }
+    ],
+    "labels": ["atomic_template"],
+    "status": "Live",
+    "createdAt": "2025-09-05T01:10:41.605Z",
+    "updatedAt": "2025-11-11T20:21:53.651Z",
+    "version": 7,
+    "category": "basic_fullscreen"
+  },
+  {
+    "name": "object_slide_top",
+    "desc": "The object drops in from above, often with a slight bounce or settle at the end.",
+    "useCases": "\t•\tRevealing visuals that feel like they’re “entering” the scene from overhead.\n\t•\tAdding emphasis to introductions, titles, or new visual ideas that should appear sequentially.",
+    "ratio": "1:1",
+    "placeholders": [
+      {
+        "id": "a_1",
+        "desc": "reveal an object or people, slide from top",
+        "type": "image",
+        "ratio": "1:1"
+      }
+    ],
+    "labels": ["atomic_template"],
+    "status": "Live",
+    "createdAt": "2025-09-05T01:11:37.194Z",
+    "updatedAt": "2025-11-11T20:22:16.414Z",
+    "version": 7,
+    "category": "basic_fullscreen"
+  },
+  {
+    "name": "gram_1",
+    "desc": "A motion template featuring a pictogram with five human figures. Specific figures are highlighted dynamically to represent proportional data, such as percentages or people-based statistics. The animation is simple and clear, designed to communicate data visually at a glance.",
+    "labels": ["codegen_template"],
+    "category": "data_visualization_cards",
+    "placeholders": [
+      {
+        "id": "a_bg",
+        "type": "image",
+        "desc": "An image or video, do not use background images like infographics, illustrations or solid colors",
+        "ratio": "any"
+      },
+      {
+        "id": "prompt",
+        "type": "text",
+        "contentType": "string",
+        "desc": "The description of this shot, requires providing data information.",
+        "color": "#primary",
+        "backgroundColor": "#secondary"
+      }
+    ],
+    "ratio": "9:16",
+    "status": "Archived",
+    "useCases": "Best for infographics or explainers where proportions of people need to be shown (e.g., survey responses, demographic breakdowns, participation rates). Effective for representing percentages tied to audiences, groups, or behaviors. Classified as Informational + Minimal, emphasizing clarity and quick interpretation. Suggested pacing: under 2s for concise delivery.\nTags: informational, pictogram, people, percentage, infographic\nEmotion: professional, clear, trustworthy, efficient",
+    "createdAt": "2025-09-22T10:39:31.153Z",
+    "updatedAt": "2025-10-30T02:55:47.446Z",
+    "version": 14
+  },
+  {
+    "name": "number_slot",
+    "desc": "A bold year value fades or counts into view beneath a smaller subtitle, creating a clean time-stamp or historical reference effect.",
+    "labels": ["codegen_template"],
+    "category": "data_visualization_cards",
+    "placeholders": [
+      {
+        "id": "a_bg",
+        "type": "image",
+        "desc": "An image or video, do not use background images like infographics, illustrations or solid colors",
+        "ratio": "any"
+      },
+      {
+        "id": "prompt",
+        "type": "text",
+        "contentType": "string",
+        "desc": "The description of this shot, requires providing data information.",
+        "color": "#primary",
+        "backgroundColor": "#secondary"
+      }
+    ],
+    "ratio": "9:16",
+    "status": "Archived",
+    "useCases": "Comparing past vs. present data in price or trend videos.\n\n\nHistorical flashbacks or timeline sequences in storytelling content.\n\n\nIntro moments for retro or nostalgic topics highlighting a specific year.\n\n",
+    "createdAt": "2025-09-24T09:17:30.537Z",
+    "updatedAt": "2025-11-05T00:05:53.248Z",
+    "version": 10
+  },
+  {
+    "name": "counter_2",
+    "desc": "A motion template featuring a single animated counter. The number increases dynamically from zero to a target value, presented in a bold and minimalist style that ensures maximum focus on the statistic.",
+    "labels": ["codegen_template"],
+    "category": "data_visualization_cards",
+    "placeholders": [
+      {
+        "id": "a_bg",
+        "type": "image",
+        "desc": "An image or video, do not use background images like infographics, illustrations or solid colors",
+        "ratio": "any"
+      },
+      {
+        "id": "prompt",
+        "type": "text",
+        "contentType": "string",
+        "desc": "The description of this shot, requires providing data information."
+      }
+    ],
+    "ratio": "9:16",
+    "status": "Draft",
+    "useCases": "Best for highlighting one key metric or milestone, such as revenue, growth, or performance achievements. Works well in explainers, reports, or announcements where a single number carries the message. Classified as Informational + Minimal, optimized for clarity and impact. Suggested pacing: under 2s for concise delivery.\nTags: informational, counter, number-increase, single-metric, infographic\nEmotion: professional, bold, clear, impactful",
+    "createdAt": "2025-09-25T02:31:02.275Z",
+    "updatedAt": "2025-10-30T02:55:53.842Z",
+    "version": 11
+  },
+  {
+    "name": "waffle_chart",
+    "desc": "A motion template featuring a waffle chart visualization. A grid of squares fills dynamically to represent proportional data, such as percentages or shares. The pacing is smooth and concise, making the data easy to read at a glance.",
+    "labels": ["codegen_template"],
+    "category": "data_visualization_cards",
+    "placeholders": [
+      {
+        "id": "a_bg",
+        "type": "image",
+        "desc": "An image or video, do not use background images like infographics, illustrations or solid colors",
+        "ratio": "any"
+      },
+      {
+        "id": "prompt",
+        "type": "text",
+        "contentType": "string",
+        "desc": "The description of this shot, requires providing data information.",
+        "color": "#primary",
+        "backgroundColor": "#secondary"
+      }
+    ],
+    "ratio": "9:16",
+    "status": "Archived",
+    "useCases": "Ideal for infographics, reports, or explainers where proportions need to be communicated quickly. Works well for survey results, audience splits, or resource allocations. Classified as Informational + Minimal, designed for clarity and quick interpretation. Suggested pacing: under 2s for fast delivery.\nTags: informational, waffle-chart, grid, proportion, infographic\nEmotion: professional, clear, trustworthy, efficient",
+    "createdAt": "2025-09-25T04:27:04.479Z",
+    "updatedAt": "2025-10-30T02:55:57.197Z",
+    "version": 9
+  },
+  {
+    "name": "counters_08",
+    "desc": "A motion template featuring multiple animated social media counters. Icons such as likes, comments, and followers are paired with numbers that tick up dynamically, creating a lively and recognizable format for platform engagement metrics.",
+    "labels": ["codegen_template"],
+    "category": "data_visualization_cards",
+    "placeholders": [
+      {
+        "id": "a_bg",
+        "type": "image",
+        "desc": "An image or video, do not use background images like infographics, illustrations or solid colors",
+        "ratio": "any"
+      },
+      {
+        "id": "prompt",
+        "type": "text",
+        "contentType": "string",
+        "desc": "The description of this shot, requires providing data information.",
+        "color": "#primary",
+        "backgroundColor": "#secondary"
+      }
+    ],
+    "ratio": "9:16",
+    "status": "Archived",
+    "useCases": "Ideal for content that highlights social media growth or engagement. Works well for showcasing follower milestones, trending likes, comment activity, or share counts in a quick and engaging way. Classified as Informational + Minimal, designed for social platform metrics. Suggested pacing: under 2s for quick, energetic delivery.\nTags: informational, social-media, counters, engagement, likes, comments, followers\nEmotion: energetic, engaging, clear, professional\n",
+    "createdAt": "2025-09-25T05:05:51.023Z",
+    "updatedAt": "2025-10-30T02:56:00.314Z",
+    "version": 9
+  },
+  {
+    "name": "counter_06",
+    "desc": "A motion template with an animated counter effect. Numbers increase dynamically from zero to a target value, emphasizing key metrics with smooth and direct pacing. The design is minimalist, keeping full focus on the data.",
+    "labels": ["codegen_template"],
+    "category": "data_visualization_cards",
+    "placeholders": [
+      {
+        "id": "a_bg",
+        "type": "image",
+        "desc": "An image or video, do not use background images like infographics, illustrations or solid colors",
+        "ratio": "any"
+      },
+      {
+        "id": "prompt",
+        "type": "text",
+        "contentType": "string",
+        "desc": "The description of this shot, requires providing data information.",
+        "color": "#primary",
+        "backgroundColor": "#secondary"
+      }
+    ],
+    "ratio": "9:16",
+    "status": "Archived",
+    "useCases": "Ideal for infographics, reports, or explainers where standout statistics or milestones need quick emphasis. Works well for achievements, growth highlights, or numerical KPIs. Classified as Informational + Minimal, optimized for clarity and instant impact. Suggested pacing: under 2s for sharp delivery.\nTags: informational, counter, number-increase, data-driven, infographic\nEmotion: professional, clear, efficient, impactful",
+    "createdAt": "2025-09-25T05:17:24.728Z",
+    "updatedAt": "2025-10-30T02:56:03.407Z",
+    "version": 9
+  },
+  {
+    "name": "vs_bubble",
+    "desc": "the bubble chart that shows A vs B comparison",
+    "labels": ["codegen_template"],
+    "category": "data_visualization_cards",
+    "placeholders": [
+      {
+        "id": "a_bg",
+        "type": "image",
+        "desc": "An image or video, do not use background images like infographics, illustrations or solid colors",
+        "ratio": "any"
+      },
+      {
+        "id": "prompt",
+        "type": "text",
+        "contentType": "string",
+        "desc": "The description of this shot, requires providing data information.",
+        "color": "#primary",
+        "backgroundColor": "#secondary"
+      }
+    ],
+    "ratio": "9:16",
+    "status": "Archived",
+    "useCases": "the bubble chart that shows A vs B comparison",
+    "createdAt": "2025-09-25T18:20:51.822Z",
+    "updatedAt": "2025-10-30T02:56:06.590Z",
+    "version": 9
+  },
+  {
+    "name": "time_counter",
+    "desc": "",
+    "labels": ["codegen_template"],
+    "category": "data_visualization_cards",
+    "placeholders": [
+      {
+        "id": "a_bg",
+        "type": "image",
+        "desc": "An image or video, do not use background images like infographics, illustrations or solid colors",
+        "ratio": "any"
+      },
+      {
+        "id": "prompt",
+        "type": "text",
+        "contentType": "string",
+        "desc": "The description of this shot, requires providing data information.",
+        "color": "#primary",
+        "backgroundColor": "#secondary"
+      }
+    ],
+    "ratio": "9:16",
+    "status": "Draft",
+    "useCases": "",
+    "createdAt": "2025-09-25T18:34:10.926Z",
+    "updatedAt": "2025-10-30T02:56:09.633Z",
+    "version": 8
+  },
+  {
+    "name": "money_count",
+    "desc": "",
+    "labels": ["codegen_template"],
+    "category": "data_visualization_cards",
+    "placeholders": [
+      {
+        "id": "a_bg",
+        "type": "image",
+        "desc": "An image or video, do not use background images like infographics, illustrations or solid colors",
+        "ratio": "any"
+      },
+      {
+        "id": "prompt",
+        "type": "text",
+        "contentType": "string",
+        "color": "#primary",
+        "backgroundColor": "#secondary",
+        "desc": "The description of this shot, requires providing data information."
+      }
+    ],
+    "ratio": "9:16",
+    "status": "Draft",
+    "useCases": "",
+    "createdAt": "2025-09-29T23:13:32.464Z",
+    "updatedAt": "2025-10-30T02:56:12.597Z",
+    "version": 5
+  },
+  {
+    "name": "decrease_number",
+    "desc": "",
+    "labels": ["codegen_template"],
+    "category": "data_visualization_cards",
+    "placeholders": [
+      {
+        "id": "a_bg",
+        "type": "image",
+        "desc": "An image or video, do not use background images like infographics, illustrations or solid colors",
+        "ratio": "any"
+      },
+      {
+        "id": "prompt",
+        "type": "text",
+        "contentType": "string",
+        "color": "#primary",
+        "backgroundColor": "#secondary",
+        "desc": "The description of this shot, requires providing data information."
+      }
+    ],
+    "ratio": "9:16",
+    "status": "Archived",
+    "useCases": "",
+    "createdAt": "2025-09-29T23:39:26.882Z",
+    "updatedAt": "2025-11-11T00:57:36.943Z",
+    "version": 8
+  },
+  {
+    "name": "hightlight_bar",
+    "desc": "",
+    "labels": ["codegen_template"],
+    "category": "data_visualization_cards",
+    "placeholders": [
+      {
+        "id": "a_bg",
+        "type": "image",
+        "desc": "An image or video, do not use background images like infographics, illustrations or solid colors",
+        "ratio": "any"
+      },
+      {
+        "id": "prompt",
+        "type": "text",
+        "contentType": "string",
+        "color": "#primary",
+        "backgroundColor": "#secondary",
+        "desc": "The description of this shot, requires providing data information."
+      }
+    ],
+    "ratio": "9:16",
+    "status": "Draft",
+    "useCases": "",
+    "createdAt": "2025-09-30T22:33:11.321Z",
+    "updatedAt": "2025-10-30T02:56:18.458Z",
+    "version": 5
+  },
+  {
+    "name": "number_count_2",
+    "desc": "glass effect",
+    "labels": ["codegen_template"],
+    "category": "data_visualization_cards",
+    "placeholders": [
+      {
+        "id": "a_bg",
+        "type": "image",
+        "desc": "An image or video, do not use background images like infographics, illustrations or solid colors",
+        "ratio": "9:16"
+      },
+      {
+        "id": "prompt",
+        "type": "text",
+        "contentType": "string",
+        "color": "#primary",
+        "backgroundColor": "#secondary",
+        "desc": "The description of this shot, requires providing data information."
+      }
+    ],
+    "ratio": "9:16",
+    "status": "Draft",
+    "useCases": "glass effect",
+    "createdAt": "2025-09-30T23:15:45.039Z",
+    "updatedAt": "2025-10-30T02:56:21.070Z",
+    "version": 6
+  },
+  {
+    "name": "line_graph",
+    "desc": "",
+    "labels": ["codegen_template"],
+    "category": "data_visualization_cards",
+    "placeholders": [
+      {
+        "id": "a_bg",
+        "type": "image",
+        "desc": "An image or video, do not use background images like infographics, illustrations or solid colors",
+        "ratio": "any"
+      },
+      {
+        "id": "prompt",
+        "type": "text",
+        "contentType": "string",
+        "color": "#primary",
+        "backgroundColor": "#secondary",
+        "desc": "The description of this shot, requires providing data information."
+      }
+    ],
+    "ratio": "9:16",
+    "status": "Archived",
+    "useCases": "",
+    "createdAt": "2025-10-06T20:27:42.163Z",
+    "updatedAt": "2025-10-31T01:38:32.708Z",
+    "version": 6
+  },
+  {
+    "name": "bar_switching",
+    "desc": "",
+    "labels": ["codegen_template"],
+    "category": "data_visualization_cards",
+    "placeholders": [
+      {
+        "id": "a_bg",
+        "type": "image",
+        "desc": "An image or video, do not use background images like infographics, illustrations or solid colors",
+        "ratio": "any"
+      },
+      {
+        "id": "prompt",
+        "type": "text",
+        "contentType": "string",
+        "color": "#primary",
+        "backgroundColor": "#secondary",
+        "desc": "The description of this shot, requires providing data information."
+      }
+    ],
+    "ratio": "9:16",
+    "status": "Archived",
+    "useCases": "",
+    "createdAt": "2025-10-06T21:43:26.441Z",
+    "updatedAt": "2025-11-10T21:55:51.485Z",
+    "version": 6
+  },
+  {
+    "name": "bar_comparison",
+    "desc": "",
+    "labels": ["codegen_template"],
+    "category": "data_visualization_cards",
+    "placeholders": [
+      {
+        "id": "a_bg",
+        "type": "image",
+        "desc": "An image or video, do not use background images like infographics, illustrations or solid colors",
+        "ratio": "any"
+      },
+      {
+        "id": "prompt",
+        "type": "text",
+        "contentType": "string",
+        "color": "#primary",
+        "backgroundColor": "#secondary",
+        "desc": "The description of this shot, requires providing data information."
+      }
+    ],
+    "ratio": "9:16",
+    "status": "Archived",
+    "useCases": "",
+    "createdAt": "2025-10-06T21:49:12.279Z",
+    "updatedAt": "2025-11-10T21:55:52.774Z",
+    "version": 6
+  },
+  {
+    "name": "bar_switch",
+    "desc": "",
+    "labels": ["codegen_template"],
+    "category": "data_visualization_cards",
+    "placeholders": [
+      {
+        "id": "a_bg",
+        "type": "image",
+        "desc": "An image or video, do not use background images like infographics, illustrations or solid colors",
+        "ratio": "any"
+      },
+      {
+        "id": "prompt",
+        "type": "text",
+        "contentType": "string",
+        "color": "#primary",
+        "backgroundColor": "#secondary",
+        "desc": "The description of this shot, requires providing data information."
+      }
+    ],
+    "ratio": "9:16",
+    "status": "Archived",
+    "useCases": "",
+    "createdAt": "2025-10-06T23:41:39.607Z",
+    "updatedAt": "2025-11-10T21:55:54.262Z",
+    "version": 6
+  },
+  {
+    "name": "timeline",
+    "desc": "",
+    "labels": ["codegen_template"],
+    "category": "data_visualization_cards",
+    "placeholders": [
+      {
+        "id": "a_bg",
+        "type": "image",
+        "desc": "An image or video, do not use background images like infographics, illustrations or solid colors",
+        "ratio": "any"
+      },
+      {
+        "id": "prompt",
+        "type": "text",
+        "contentType": "string",
+        "color": "#primary",
+        "backgroundColor": "#secondary",
+        "desc": "The description of this shot, requires providing data information."
+      }
+    ],
+    "ratio": "9:16",
+    "status": "Archived",
+    "useCases": "",
+    "createdAt": "2025-10-07T18:06:01.281Z",
+    "updatedAt": "2025-10-31T01:42:20.377Z",
+    "version": 6
+  },
+  {
+    "name": "progress_bar",
+    "desc": "",
+    "labels": ["codegen_template"],
+    "category": "data_visualization_cards",
+    "placeholders": [
+      {
+        "id": "a_bg",
+        "type": "image",
+        "desc": "An image or video, do not use background images like infographics, illustrations or solid colors",
+        "ratio": "any"
+      },
+      {
+        "id": "prompt",
+        "type": "text",
+        "contentType": "string",
+        "color": "#primary",
+        "backgroundColor": "#secondary",
+        "desc": "The description of this shot, requires providing data information."
+      }
+    ],
+    "ratio": "9:16",
+    "status": "Archived",
+    "useCases": "",
+    "createdAt": "2025-10-07T21:25:17.655Z",
+    "updatedAt": "2025-10-30T02:56:43.887Z",
+    "version": 6
+  },
+  {
+    "name": "avatar_fastzoom_out",
+    "desc": "The image asset quickly zooms out, creating a fast paced transition or shift to the next scene. This effect is often used in short, high tempo Split View narration scenes, where each segment appears briefly to match the quick rhythm.",
+    "useCases": "• Avatar reveal at the start of a video or after a hook scene.\n• Transition effect between talking-head and contextual footage.",
+    "ratio": "9:16",
+    "placeholders": [
+      {
+        "id": "a_1",
+        "desc": "a image or video in 1:1 or 4:3 format",
+        "type": "image",
+        "ratio": "9:8"
+      },
+      {
+        "id": "avatar_1",
+        "desc": "Avatar in split view",
+        "type": "image",
+        "ratio": "9:8"
+      }
+    ],
+    "labels": [],
+    "category": "basic_avatar",
+    "templateDuration": "1.5",
+    "status": "Live",
+    "createdAt": "2025-10-15T07:02:19.780Z",
+    "updatedAt": "2025-11-10T21:52:12.705Z",
+    "version": 26
+  },
+  {
+    "name": "avatar_slowzoom_out",
+    "desc": "The image asset gradually zooms out, revealing more of the scene. Adding a slight zoom out motion instead of keeping the asset completely static makes the visuals feel more natural and engaging. In Split View layouts, image assets generally include this subtle zoom out effect to maintain depth and a continuous visual flow.",
+    "useCases": "Ideal for scenes with a slow pace, ending moments, or transitions that move from focus to a wider context in avatar or storytelling videos.",
+    "ratio": "9:16",
+    "placeholders": [
+      {
+        "id": "a_1",
+        "desc": "a image or video in 1:1 or 4:3 format",
+        "type": "image",
+        "ratio": "9:8"
+      },
+      {
+        "id": "avatar_1",
+        "desc": "Avatar in split view",
+        "type": "image",
+        "ratio": "9:8"
+      }
+    ],
+    "labels": [],
+    "category": "basic_avatar",
+    "templateDuration": "1.5",
+    "status": "Live",
+    "createdAt": "2025-10-15T07:03:35.609Z",
+    "updatedAt": "2025-11-10T21:52:45.890Z",
+    "version": 17
+  },
+  {
+    "name": "avatar_slowzoom_in",
+    "desc": "Objects or characters in the upper section of the image asset gradually zoom in, creating a sense of immersion and focus that draws the viewer in. This technique works best when emphasizing the emotion, message, or details within the image.",
+    "useCases": "Ideal for scenes with a slow pace, emphasizing key messages, or creating a sense of intimacy in avatar or storytelling videos.",
+    "ratio": "9:16",
+    "placeholders": [
+      {
+        "id": "a_1",
+        "desc": "a image or video in 1:1 or 4:3 format",
+        "type": "image",
+        "ratio": "9:8"
+      },
+      {
+        "id": "avatar_1",
+        "desc": "Avatar in split view",
+        "type": "image",
+        "ratio": "9:8"
+      }
+    ],
+    "labels": [],
+    "category": "basic_avatar",
+    "templateDuration": "1.5",
+    "status": "Live",
+    "createdAt": "2025-10-15T07:04:47.861Z",
+    "updatedAt": "2025-11-10T21:52:28.836Z",
+    "version": 23
+  },
+  {
+    "name": "nod_bar",
+    "desc": "",
+    "labels": ["codegen_template"],
+    "category": "data_visualization_cards",
+    "placeholders": [
+      {
+        "id": "a_bg",
+        "type": "image",
+        "desc": "An image or video, do not use background images like infographics, illustrations or solid colors",
+        "ratio": "any"
+      },
+      {
+        "id": "prompt",
+        "type": "text",
+        "contentType": "string",
+        "color": "#primary",
+        "backgroundColor": "#secondary",
+        "desc": "The description of this shot, requires providing data information."
+      }
+    ],
+    "ratio": "9:16",
+    "status": "Draft",
+    "useCases": "",
+    "createdAt": "2025-10-17T18:43:44.978Z",
+    "updatedAt": "2025-10-30T02:56:49.606Z",
+    "version": 5
+  },
+  {
+    "name": "search_definition",
+    "desc": "",
+    "labels": ["codegen_template"],
+    "category": "data_visualization_cards",
+    "placeholders": [
+      {
+        "id": "a_bg",
+        "type": "image",
+        "desc": "An image or video, do not use background images like infographics, illustrations or solid colors",
+        "ratio": "any"
+      },
+      {
+        "id": "prompt",
+        "type": "text",
+        "contentType": "string",
+        "color": "#primary",
+        "backgroundColor": "#secondary",
+        "desc": "The description of this shot, requires providing data information."
+      }
+    ],
+    "ratio": "9:16",
+    "status": "Draft",
+    "useCases": "",
+    "createdAt": "2025-10-21T00:32:11.497Z",
+    "updatedAt": "2025-10-30T02:56:52.432Z",
+    "version": 5
+  },
+  {
+    "name": "fullscreen_slow_zoom_in",
+    "desc": "A slow, smooth zoom-in that subtly draws the viewer closer to the subject. Adds gentle focus and depth to both images and video clips.",
+    "useCases": "\t•\tHighlighting a main subject or emotion\n\t•\tAdding motion to static visuals\n\t•\tCreating visual focus in storytelling moments\n\t•\tTransitioning into a key scene or reveal\n",
+    "ratio": "9:16",
+    "placeholders": [
+      {
+        "id": "a_1",
+        "desc": "an image or video",
+        "type": "image",
+        "ratio": "9:16"
+      }
+    ],
+    "labels": [],
+    "category": "fullscreen_motion_effects",
+    "templateDuration": "1.5",
+    "status": "Live",
+    "createdAt": "2025-10-22T08:39:47.371Z",
+    "updatedAt": "2025-11-17T21:22:16.868Z",
+    "version": 6
+  },
+  {
+    "name": "fullscreen_slow_zoom_out",
+    "desc": "A slow, steady zoom-out that gently moves away from the subject. Opens the frame and gives a calm, reflective feel.",
+    "useCases": "\t•\tRevealing more context or background\n\t•\tEasing out of emotional or close-up scenes\n\t•\tSignaling a transition or closure\n\t•\tCreating breathing space between visual beats",
+    "ratio": "9:16",
+    "placeholders": [
+      {
+        "id": "a_1",
+        "desc": "an image or video",
+        "type": "image",
+        "ratio": "9:16"
+      }
+    ],
+    "labels": [],
+    "category": "fullscreen_motion_effects",
+    "templateDuration": "1.5",
+    "status": "Live",
+    "createdAt": "2025-10-22T08:42:37.824Z",
+    "updatedAt": "2025-11-17T21:23:33.585Z",
+    "version": 5
+  },
+  {
+    "name": "fullscreen_fast_zoom_in",
+    "desc": "Begins with a quick zoom-in that slows down smoothly. Captures attention immediately, then settles for emphasis.",
+    "useCases": "\t•\tDrawing instant focus to a key subject\n\t•\tCreating a dynamic entry for storytelling shots\n\t•\tEmphasizing a reveal or key moment\n\t•\tAdding energy at the start of a sequence",
+    "ratio": "9:16",
+    "placeholders": [
+      {
+        "id": "a_1",
+        "desc": "an image or video",
+        "type": "image",
+        "ratio": "9:16"
+      }
+    ],
+    "labels": [],
+    "category": "fullscreen_motion_effects",
+    "templateDuration": "1.5",
+    "status": "Live",
+    "createdAt": "2025-10-22T08:45:17.732Z",
+    "updatedAt": "2025-11-17T20:51:05.501Z",
+    "version": 10
+  },
+  {
+    "name": "fullscreen_fast_zoom_out",
+    "desc": "Starts with a quick zoom-out, then eases into a slower pace. Feels energetic at first, then transitions into calm movement.",
+    "useCases": "\t•\tRevealing a full scene with impact\n\t•\tTransitioning out of focused shots\n\t•\tConnecting fast-paced visuals smoothly\n\t•\tShowing a change in perspective or scope",
+    "ratio": "9:16",
+    "placeholders": [
+      {
+        "id": "a_1",
+        "desc": "an image or video",
+        "type": "image",
+        "ratio": "9:16"
+      }
+    ],
+    "labels": [],
+    "category": "fullscreen_motion_effects",
+    "templateDuration": "1.5",
+    "status": "Live",
+    "createdAt": "2025-10-22T08:46:49.544Z",
+    "updatedAt": "2025-11-17T21:17:35.234Z",
+    "version": 6
+  },
+  {
+    "name": "fullscreen_fast_pan_square",
+    "desc": "A horizontal pan starting fast and slowing down, designed to display square assets naturally within a 9:16 frame. Keeps motion balanced while revealing content.",
+    "useCases": "\t•\tShowing square visuals fully in vertical layout\n\t•\tAdding gentle horizontal motion to static images\n\t•\tCreating smooth, directional visual flow\n\t•\tRevealing elements or subjects from one side",
+    "ratio": "9:16",
+    "placeholders": [
+      {
+        "id": "a_1",
+        "desc": "an image or video",
+        "type": "image",
+        "ratio": "1:1"
+      }
+    ],
+    "labels": [],
+    "category": "fullscreen_motion_effects",
+    "templateDuration": "1.5",
+    "status": "Archived",
+    "createdAt": "2025-10-22T08:50:56.805Z",
+    "updatedAt": "2025-11-05T02:54:55.353Z",
+    "version": 4
+  },
+  {
+    "name": "fullscreen_fast_pan_landscape",
+    "desc": "A wider pan that begins quickly and eases out, optimized for 16:9 landscape visuals in a vertical frame. Reveals more content across a wider scene.",
+    "useCases": "\t•\tAdapting wide visuals for vertical use\n\t•\tRevealing landscapes or wide product shots\n\t•\tMaintaining subject visibility in 9:16 edits\n\t•\tAdding cinematic motion across wide frames",
+    "ratio": "9:16",
+    "placeholders": [
+      {
+        "id": "a_1",
+        "desc": "an image or a video",
+        "type": "image",
+        "ratio": "16:9"
+      }
+    ],
+    "labels": [],
+    "category": "fullscreen_motion_effects",
+    "templateDuration": "1.5",
+    "status": "Archived",
+    "createdAt": "2025-10-22T08:52:52.931Z",
+    "updatedAt": "2025-11-05T02:54:56.650Z",
+    "version": 4
+  },
+  {
+    "name": "avatar_fullscreen",
+    "desc": "AI-generated full-screen avatar speaker with no overlays.",
+    "useCases": "- When the attention is on the speaker.\n- Transition effect between talking-head and contextual footage.\n- Use when making a conclusion\n- Use when topics/elements are abstract or conceptual (mood, metaphor, ambience)\n- Suitable for intros/outros/montages where ambiance is primary",
+    "ratio": "9:16",
+    "placeholders": [
+      {
+        "id": "avatar_1",
+        "desc": "an avatar, talking-head in full screen",
+        "type": "image",
+        "ratio": "9:16"
+      }
+    ],
+    "labels": [],
+    "category": "basic_avatar",
+    "templateDuration": "1.5",
+    "status": "Live",
+    "createdAt": "2025-10-23T06:47:49.412Z",
+    "updatedAt": "2025-11-10T21:53:18.191Z",
+    "version": 6
+  },
+  {
+    "name": "avatar_static",
+    "desc": "No motion applied to the top content, keeping the scene stable and focused.",
+    "useCases": "• Always use this when the top content is a video.\n• When showing clear, informational, or text-based content on top\n• For steady or explanatory moments that need focus stability",
+    "ratio": "9:16",
+    "placeholders": [
+      {
+        "id": "a_1",
+        "desc": "a image or video in 1:1 or 4:3 format",
+        "type": "image",
+        "ratio": "9:8"
+      },
+      {
+        "id": "avatar_1",
+        "desc": "Avatar in split view",
+        "type": "image",
+        "ratio": "9:8"
+      }
+    ],
+    "labels": [],
+    "category": "basic_avatar",
+    "templateDuration": "1.5",
+    "status": "Live",
+    "createdAt": "2025-10-23T08:59:00.851Z",
+    "updatedAt": "2025-11-10T21:53:02.414Z",
+    "version": 6
+  },
+  {
+    "name": "avatar_typography",
+    "desc": "Used as a secondary option when suitable image or video assets are unavailable.",
+    "useCases": "• Use only when appropriate image or video content cannot be found\n• Ideal for short titles or single keywords (maximum 12 characters)\n• Should be used sparingly to avoid repetitive visuals",
+    "ratio": "9:16",
+    "placeholders": [
+      {
+        "id": "title_line_1",
+        "desc": "one line of text up to 12 characters",
+        "type": "text",
+        "contentType": "string",
+        "color": "#primary",
+        "maxCharacterLength": 12
+      },
+      {
+        "id": "avatar_1",
+        "desc": "avatar in split view",
+        "type": "image",
+        "ratio": "9:8"
+      }
+    ],
+    "labels": [],
+    "category": "basic_avatar",
+    "templateDuration": "1.5",
+    "status": "Draft",
+    "createdAt": "2025-10-23T09:15:45.745Z",
+    "updatedAt": "2025-10-28T15:20:14.941Z",
+    "version": 7
+  },
+  {
+    "name": "multiscreen_camera_shutter",
+    "desc": "Displays up to three images in fast succession, each transitioning from blurred to sharp focus — mimicking a camera shutter effect.",
+    "useCases": "\t•\tQuickly showcasing multiple related visuals\n\t•\tCreating teaser or preview-style intros\n\t•\tAdding visual rhythm to highlight several assets\n\t•\tPresenting a short series of product or concept shots",
+    "ratio": "9:16",
+    "placeholders": [
+      {
+        "id": "a_1",
+        "desc": "an image or video",
+        "type": "image",
+        "ratio": "9:16"
+      },
+      {
+        "id": "a_2",
+        "desc": "an image or video",
+        "type": "image",
+        "ratio": "9:16"
+      },
+      {
+        "id": "a_3",
+        "desc": "an image or video",
+        "type": "image",
+        "ratio": "9:16"
+      }
+    ],
+    "labels": [],
+    "category": "fullscreen_motion_effects",
+    "templateDuration": "2",
+    "status": "Archived",
+    "createdAt": "2025-10-24T05:55:01.391Z",
+    "updatedAt": "2025-11-11T06:03:57.041Z",
+    "version": 5
+  },
+  {
+    "name": "multiscreen_carousel",
+    "desc": "A rotating carousel sequence that quickly cycles through up to four square images. Each image transitions smoothly, maintaining visual rhythm.",
+    "useCases": "\t•\tShowing product variations or design options\n\t•\tDemonstrating multiple examples within one theme\n\t•\tSupporting a central idea with visual “proof”\n\t•\tDisplaying related visuals in compact storytelling segments",
+    "ratio": "9:16",
+    "placeholders": [
+      {
+        "id": "a_1",
+        "desc": "an image or video",
+        "type": "image",
+        "ratio": "1:1"
+      },
+      {
+        "id": "a_2",
+        "desc": "an image or video",
+        "type": "image",
+        "ratio": "1:1"
+      },
+      {
+        "id": "a_3",
+        "desc": "an image or video",
+        "type": "image",
+        "ratio": "1:1"
+      },
+      {
+        "id": "a_4",
+        "desc": "an image or video",
+        "type": "image",
+        "ratio": "1:1"
+      }
+    ],
+    "labels": [],
+    "category": "fullscreen_motion_effects",
+    "templateDuration": "4",
+    "status": "Archived",
+    "createdAt": "2025-10-24T06:00:27.993Z",
+    "updatedAt": "2025-11-10T19:04:22.932Z",
+    "version": 4
+  },
+  {
+    "name": "multiscreen_split",
+    "desc": "A quick sequence that starts with the first image in full screen, transitions to a split-screen showing both assets, then ends on the second image full screen.",
+    "useCases": "\t•\tComparing two related visuals\n\t•\tShowing “before and after” differences\n\t•\tLinking two product states or themes\n\t•\tSmoothly transitioning between key shots",
+    "ratio": "9:16",
+    "placeholders": [
+      {
+        "id": "a_1",
+        "desc": "an image or video",
+        "type": "image",
+        "ratio": "9:16"
+      },
+      {
+        "id": "a_2",
+        "desc": "an image or video",
+        "type": "image",
+        "ratio": "9:16"
+      }
+    ],
+    "labels": [],
+    "category": "fullscreen_motion_effects",
+    "templateDuration": "2",
+    "status": "Draft",
+    "createdAt": "2025-10-24T06:02:52.445Z",
+    "updatedAt": "2025-11-10T21:55:45.848Z",
+    "version": 4
+  },
+  {
+    "name": "multiscreen_three",
+    "desc": "A continuous motion showing three assets — starts full screen, transitions to a brief split layout displaying all three, and ends on the final image.",
+    "useCases": "\t•\tDisplaying three related visuals in a short moment\n\t•\tShowing progression or range within one theme\n\t•\tHighlighting a trio of variations or features\n\t•\tCreating quick, flowing storytelling sequences",
+    "ratio": "9:16",
+    "placeholders": [
+      {
+        "id": "a_1",
+        "desc": "an image or video",
+        "type": "image",
+        "ratio": "9:16"
+      },
+      {
+        "id": "a_2",
+        "desc": "an image or video",
+        "type": "image",
+        "ratio": "9:16"
+      },
+      {
+        "id": "a_3",
+        "desc": "an image or video",
+        "type": "image",
+        "ratio": "9:16"
+      }
+    ],
+    "labels": [],
+    "category": "fullscreen_motion_effects",
+    "templateDuration": "2.5",
+    "status": "Draft",
+    "createdAt": "2025-10-24T08:40:35.047Z",
+    "updatedAt": "2025-11-10T21:55:41.547Z",
+    "version": 4
+  },
+  {
+    "name": "multiscreen_four",
+    "desc": "A fast, seamless transition showing four assets in one flow, with smooth overlapping motion. Each visual appears clearly while maintaining fluid continuity.",
+    "useCases": "\t•\tShowing four variations or designs in one motion\n\t•\tPresenting product families or visual collections\n\t•\tDemonstrating multiple supporting examples quickly\n\t•\tCreating compact highlight sequences with visual variety",
+    "ratio": "9:16",
+    "placeholders": [
+      {
+        "id": "a_1",
+        "desc": "an image or video",
+        "type": "image",
+        "ratio": "9:16"
+      },
+      {
+        "id": "a_2",
+        "desc": "an image or video",
+        "type": "image",
+        "ratio": "9:16"
+      },
+      {
+        "id": "a_3",
+        "desc": "an image or video",
+        "type": "image",
+        "ratio": "9:16"
+      },
+      {
+        "id": "a_4",
+        "desc": "an image or video",
+        "type": "image",
+        "ratio": "9:16"
+      }
+    ],
+    "labels": [],
+    "category": "fullscreen_motion_effects",
+    "templateDuration": "3.5",
+    "status": "Draft",
+    "createdAt": "2025-10-24T08:45:51.627Z",
+    "updatedAt": "2025-11-10T21:55:48.553Z",
+    "version": 4
+  },
+  {
+    "name": "fullscreen_camera_shutter",
+    "desc": "A quick camera shutter–style motion that reveals one image or video from a blurred start to full clarity. The effect mimics a lens focusing or a camera snapping open, adding a crisp, attention-grabbing entrance for a single visual.",
+    "useCases": "\t•\tIntroducing a main product or hero visual\n\t•\tCreating a clean, professional reveal moment\n\t•\tSimulating a camera capture or focus effect\n\t•\tAdding emphasis at the start of a scene or clip\n\t•\tHighlighting a key visual before transitioning to others",
+    "ratio": "9:16",
+    "placeholders": [
+      {
+        "id": "a_1",
+        "desc": "an image or video",
+        "type": "image",
+        "ratio": "9:16"
+      }
+    ],
+    "labels": [],
+    "category": "fullscreen_motion_effects",
+    "templateDuration": "1.5",
+    "status": "Live",
+    "createdAt": "2025-10-24T08:57:19.229Z",
+    "updatedAt": "2025-11-17T21:39:33.607Z",
+    "version": 8
+  },
+  {
+    "name": "info_charts_bar_1",
+    "desc": "Vertical bar chart animates upward as bars grow from zero to their final height, revealing comparative monthly values with smooth scaling motion.",
+    "labels": ["codegen_template"],
+    "category": "data_visualization_cards",
+    "placeholders": [
+      {
+        "id": "prompt",
+        "type": "text",
+        "contentType": "string",
+        "color": "#primary",
+        "backgroundColor": "#secondary",
+        "desc": "The description of this shot, requires providing data information."
+      },
+      {
+        "id": "a_bg",
+        "desc": "An image or video, do not use background images like infographics, illustrations or solid colors",
+        "type": "image",
+        "ratio": "9:16"
+      }
+    ],
+    "ratio": "9:16",
+    "status": "Live",
+    "useCases": "\t•\tDisplaying monthly or periodic data such as stock prices, revenue growth, or engagement trends.\n\t•\tHighlighting performance comparisons across time frames (e.g., quarterly results, weekly stats).\n\t•\tVisualizing value buildup or recovery, with animation pacing that feels steady and data-focused.",
+    "createdAt": "2025-10-27T07:26:40.141Z",
+    "updatedAt": "2025-10-30T02:56:55.205Z",
+    "version": 9
+  },
+  {
+    "name": "info_listicle_numbers",
+    "desc": "Three metric rows slide or fade in sequentially, each showing an animated number change with up/down arrows and color-coded growth indicators for quick visual comparison.",
+    "labels": ["codegen_template"],
+    "category": "data_visualization_cards",
+    "placeholders": [
+      {
+        "id": "prompt",
+        "type": "text",
+        "contentType": "string",
+        "color": "#primary",
+        "backgroundColor": "#secondary",
+        "desc": "The description of this shot, requires providing data information."
+      },
+      {
+        "id": "a_bg",
+        "desc": "an image or video",
+        "type": "image",
+        "ratio": "9:16"
+      }
+    ],
+    "ratio": "9:16",
+    "status": "Draft",
+    "useCases": "- Displaying performance dashboards highlighting gains or drops across multiple KPIs.\n- Marketing or business reports summarizing key metric shifts (e.g., engagement, revenue, conversion).\n- Short data recaps emphasizing improvement trends or performance breakdowns.",
+    "createdAt": "2025-10-27T17:12:21.419Z",
+    "updatedAt": "2025-11-14T00:06:47.215Z",
+    "version": 6,
+    "templateDuration": "1.5"
+  },
+  {
+    "name": "info_rank2",
+    "desc": "",
+    "labels": ["codegen_template"],
+    "category": "data_visualization_cards",
+    "placeholders": [
+      {
+        "id": "prompt",
+        "type": "text",
+        "contentType": "string",
+        "color": "#primary",
+        "backgroundColor": "#secondary",
+        "desc": "The description of this shot, requires providing data information."
+      }
+    ],
+    "ratio": "9:16",
+    "status": "Draft",
+    "useCases": "",
+    "createdAt": "2025-10-27T18:32:48.002Z",
+    "updatedAt": "2025-10-30T02:53:54.313Z",
+    "version": 3
+  },
+  {
+    "name": "info_number_2",
+    "desc": "Stacked numeric text scrolls vertically with the center value highlighted, creating a focus shift effect that draws attention to a key metric.",
+    "labels": ["codegen_template"],
+    "category": "data_visualization_cards",
+    "placeholders": [
+      {
+        "id": "prompt",
+        "type": "text",
+        "contentType": "string",
+        "color": "#primary",
+        "backgroundColor": "#secondary",
+        "desc": "The description of this shot, requires providing data information."
+      },
+      {
+        "id": "a_bg",
+        "desc": "An image or video, do not use background images like infographics, illustrations or solid colors",
+        "type": "image",
+        "ratio": "9:16"
+      }
+    ],
+    "ratio": "9:16",
+    "status": "Live",
+    "useCases": "\t•\tHighlighting a single important figure such as total views, revenue, or user count.\n\t•\tEmphasizing before-and-after metrics or milestones in performance recaps.\n\t•\tDrawing quick viewer attention to a core statistic in intros or data summaries.",
+    "createdAt": "2025-10-28T05:45:44.051Z",
+    "updatedAt": "2025-10-30T02:56:58.199Z",
+    "version": 7
+  },
+  {
+    "name": "info_charts_bar_2",
+    "desc": "Two vertical bars rise side by side from the baseline, animating upward to show a clear visual comparison between two values.",
+    "labels": ["codegen_template"],
+    "category": "data_visualization_cards",
+    "placeholders": [
+      {
+        "id": "prompt",
+        "type": "text",
+        "contentType": "string",
+        "color": "#primary",
+        "backgroundColor": "#secondary",
+        "desc": "The description of this shot, requires providing data information."
+      },
+      {
+        "id": "a_bg",
+        "desc": "An image or video, do not use background images like infographics, illustrations or solid colors",
+        "type": "image",
+        "ratio": "9:16"
+      }
+    ],
+    "ratio": "9:16",
+    "status": "Live",
+    "useCases": "\t•\tComparing two categories such as product types, demographics, or time periods.\n\t•\tShowing performance or composition differences (e.g., test results, ingredient ratios).\n\t•\tIdeal for illustrating simple, one-to-one comparisons with minimal visual clutter.\n\t•\tIf there is no data found or to be displayed, then DO NOT use this template.",
+    "createdAt": "2025-10-28T08:06:05.208Z",
+    "updatedAt": "2025-10-31T07:49:31.896Z",
+    "version": 10
+  },
+  {
+    "name": "info_graphs_multiline",
+    "desc": "Animated line chart where multiple country GDP lines grow upward from left to right, tracing historical data and revealing labels as lines separate — smooth, continuous motion emphasizing long-term growth comparison.",
+    "labels": ["codegen_template"],
+    "category": "data_visualization_cards",
+    "placeholders": [
+      {
+        "id": "prompt",
+        "type": "text",
+        "contentType": "string",
+        "color": "#primary",
+        "backgroundColor": "#secondary",
+        "desc": "The description of this shot, requires providing data information."
+      },
+      {
+        "id": "a_bg",
+        "desc": "image or video",
+        "type": "image",
+        "ratio": "any"
+      }
+    ],
+    "ratio": "9:16",
+    "status": "Live",
+    "useCases": "Ideal for visualizing economic trends, population growth, or performance metrics over time; effective when showing cumulative progress or comparing rates of change among multiple entities.",
+    "createdAt": "2025-10-28T22:47:22.835Z",
+    "updatedAt": "2025-11-14T21:47:09.090Z",
+    "version": 5
+  },
+  {
+    "name": "info_charts_unitgrid",
+    "desc": "A unit grid chart visualizes data through evenly spaced blocks, where each unit represents a fixed value. It’s ideal for showing scale, quantity, or comparison in a simple, tangible way.",
+    "labels": ["codegen_template"],
+    "category": "data_visualization_cards",
+    "placeholders": [
+      {
+        "id": "prompt",
+        "type": "text",
+        "contentType": "string",
+        "color": "#primary",
+        "backgroundColor": "#secondary",
+        "desc": "The description of this shot, requires providing data information."
+      },
+      {
+        "id": "a_bg",
+        "desc": "an image or video",
+        "type": "image",
+        "ratio": "9:16"
+      }
+    ],
+    "ratio": "9:16",
+    "status": "Live",
+    "useCases": "A unit grid chart visualizes data through evenly spaced blocks, where each unit represents a fixed value. It’s ideal for showing scale, quantity, or comparison in a simple, tangible way.",
+    "createdAt": "2025-10-28T23:05:40.459Z",
+    "updatedAt": "2025-10-31T06:09:27.678Z",
+    "version": 7
+  },
+  {
+    "name": "info_charts_pie_1",
+    "desc": "A circular progress ring animates clockwise to fill up to a target percentage, with a synchronized number counter increasing in the center.",
+    "labels": ["codegen_template"],
+    "category": "data_visualization_cards",
+    "placeholders": [
+      {
+        "id": "prompt",
+        "type": "text",
+        "contentType": "string",
+        "color": "#primary",
+        "backgroundColor": "#secondary",
+        "desc": "The description of this shot, requires providing data information."
+      },
+      {
+        "id": "a_bg",
+        "desc": "An image or video, do not use background images like infographics, illustrations or solid colors",
+        "type": "image",
+        "ratio": "9:16"
+      }
+    ],
+    "ratio": "9:16",
+    "status": "Live",
+    "useCases": "\t•\tDisplaying completion rates, performance scores, or loading progress.\n\t•\tShowing goal achievements such as funding reached, project progress, or test results.\n\t•\tIdeal for concise metric visualization in dashboards or milestone highlights.",
+    "createdAt": "2025-10-29T05:18:57.449Z",
+    "updatedAt": "2025-10-30T02:57:04.001Z",
+    "version": 9
+  },
+  {
+    "name": "info_number_1",
+    "desc": "A single bold number count animates upward or fades in at the center, paired with a brief caption below for immediate metric emphasis.",
+    "labels": ["codegen_template"],
+    "category": "data_visualization_cards",
+    "placeholders": [
+      {
+        "id": "prompt",
+        "type": "text",
+        "contentType": "string",
+        "color": "#primary",
+        "backgroundColor": "#secondary",
+        "desc": "The description of this shot, requires providing data information."
+      },
+      {
+        "id": "a_bg",
+        "desc": "An image or video, do not use background images like infographics, illustrations or solid colors",
+        "type": "image",
+        "ratio": "9:16"
+      }
+    ],
+    "ratio": "9:16",
+    "status": "Live",
+    "useCases": "\t•\tPresenting key statistics such as subscribers, followers, downloads, or sales milestones.\n\t•\tHighlighting achievement updates or performance snapshots in intros and outros.\n\t•\tWorks best for single-metric focus moments where clarity and impact are essential.",
+    "createdAt": "2025-10-29T05:50:39.888Z",
+    "updatedAt": "2025-10-30T02:57:06.914Z",
+    "version": 7
+  },
+  {
+    "name": "info_charts_tri_1",
+    "desc": "A funnel-shaped graphic animates with its fill level decreasing smoothly from top to bottom, visually representing a reduction or filtering process.",
+    "labels": ["codegen_template"],
+    "category": "data_visualization_cards",
+    "placeholders": [
+      {
+        "id": "prompt",
+        "type": "text",
+        "contentType": "string",
+        "color": "#primary",
+        "backgroundColor": "#secondary",
+        "desc": "The description of this shot, requires providing data information."
+      },
+      {
+        "id": "a_bg",
+        "desc": "An image or video, do not use background images like infographics, illustrations or solid colors",
+        "type": "image",
+        "ratio": "9:16"
+      }
+    ],
+    "ratio": "9:16",
+    "status": "Live",
+    "useCases": "\t•\tShowing decline in metrics such as conversion rate, audience retention, or sales volume.\n\t•\tVisualizing filtering or narrowing processes like data refinement or customer journey drop-off.\n\t•\tDemonstrating percentage-based reductions (e.g., cost savings, time reduction) with clear, measurable motion.",
+    "createdAt": "2025-10-29T06:23:12.846Z",
+    "updatedAt": "2025-10-30T02:57:09.792Z",
+    "version": 6
+  },
+  {
+    "name": "info_charts_pictograph",
+    "desc": "A row of human icons appears, with one icon highlighted while the rest remain dimmed, visually representing a ratio or proportion.",
+    "labels": ["codegen_template"],
+    "category": "data_visualization_cards",
+    "placeholders": [
+      {
+        "id": "prompt",
+        "type": "text",
+        "contentType": "string",
+        "color": "#primary",
+        "backgroundColor": "#secondary",
+        "desc": "The description of this shot, requires providing data information."
+      },
+      {
+        "id": "a_bg",
+        "desc": "An image or video, do not use background images like infographics, illustrations or solid colors",
+        "type": "image",
+        "ratio": "9:16"
+      }
+    ],
+    "ratio": "9:16",
+    "status": "Live",
+    "useCases": "\t•\tShowing population statistics or survey results.\n\t•\tIllustrating comparative group data such as demographics, habits, or behaviors.\n\t•\tEffective for quick, easy-to-grasp visuals in explainer videos or infographic segments.",
+    "createdAt": "2025-10-29T08:51:56.198Z",
+    "updatedAt": "2025-10-30T10:24:40.378Z",
+    "version": 7
+  },
+  {
+    "name": "info_comparison_scale",
+    "desc": "",
+    "labels": ["codegen_template"],
+    "category": "data_visualization_cards",
+    "placeholders": [
+      {
+        "id": "prompt",
+        "type": "text",
+        "contentType": "string",
+        "color": "#primary",
+        "backgroundColor": "#secondary",
+        "desc": "The description of this shot, requires providing data information."
+      }
+    ],
+    "ratio": "9:16",
+    "status": "Draft",
+    "useCases": "",
+    "createdAt": "2025-10-29T22:28:20.259Z",
+    "updatedAt": "2025-10-30T02:54:27.109Z",
+    "version": 3
+  },
+  {
+    "name": "info_charts_scale",
+    "desc": "",
+    "labels": ["codegen_template"],
+    "category": "data_visualization_cards",
+    "placeholders": [
+      {
+        "id": "prompt",
+        "type": "text",
+        "contentType": "string",
+        "color": "#primary",
+        "backgroundColor": "#secondary",
+        "desc": "The description of this shot, requires providing data information."
+      }
+    ],
+    "ratio": "9:16",
+    "status": "Draft",
+    "useCases": "",
+    "createdAt": "2025-10-29T22:27:10.103Z",
+    "updatedAt": "2025-10-30T02:54:30.458Z",
+    "version": 3
+  },
+  {
+    "name": "info_number_batterybar",
+    "desc": "A numeric value counts up while a bar chart fills or animates from left to right, visually emphasizing data growth or total accumulation.",
+    "labels": ["codegen_template"],
+    "category": "data_visualization_cards",
+    "placeholders": [
+      {
+        "id": "prompt",
+        "type": "text",
+        "contentType": "string",
+        "color": "#primary",
+        "backgroundColor": "#secondary",
+        "desc": "The description of this shot, requires providing data information."
+      }
+    ],
+    "ratio": "9:16",
+    "status": "Live",
+    "useCases": "Financial or analytics dashboards displaying metrics like revenue, spending, or engagement over time.\n\nPerformance summaries in campaign recaps or KPI updates.\n\nQuick visual highlights of progress toward a goal or milestone.",
+    "createdAt": "2025-10-29T22:34:18.558Z",
+    "updatedAt": "2025-11-14T21:47:16.521Z",
+    "version": 5
+  },
+  {
+    "name": "info_number_likes",
+    "desc": "A like counter animates upward as floating heart icons rise and fade, visually representing engagement or audience reaction.",
+    "labels": ["codegen_template"],
+    "category": "data_visualization_cards",
+    "placeholders": [
+      {
+        "id": "prompt",
+        "type": "text",
+        "contentType": "string",
+        "color": "#primary",
+        "backgroundColor": "#secondary",
+        "desc": "The description of this shot"
+      },
+      {
+        "id": "a_bg",
+        "type": "image",
+        "desc": "An image or video, do not use background images like infographics, illustrations or solid colors",
+        "ratio": "any"
+      }
+    ],
+    "ratio": "9:16",
+    "status": "Live",
+    "useCases": "\t•\tDisplaying live engagement metrics such as likes, favorites, or reactions.\n\t•\tHighlighting milestones or achievements (e.g., “10K likes reached”).\n\t•\tPerfect for social recap videos or creator highlight reels emphasizing audience interaction.",
+    "createdAt": "2025-10-30T06:17:50.585Z",
+    "updatedAt": "2025-10-30T10:25:46.511Z",
+    "version": 3,
+    "templateDuration": "1.5"
+  },
+  {
+    "name": "info_charts_pie_2",
+    "desc": "A circular pie chart animates as segments fill proportionally, accompanied by a matching legend and percentage labels that appear in sync.",
+    "labels": ["codegen_template"],
+    "category": "data_visualization_cards",
+    "placeholders": [
+      {
+        "id": "prompt",
+        "type": "text",
+        "contentType": "string",
+        "color": "#primary",
+        "backgroundColor": "#secondary",
+        "desc": "The description of this shot"
+      },
+      {
+        "id": "a_bg",
+        "type": "image",
+        "desc": "An image or video, do not use background images like infographics, illustrations or solid colors",
+        "ratio": "any"
+      }
+    ],
+    "ratio": "9:16",
+    "status": "Live",
+    "useCases": "\t•\tDisplaying category distributions such as market share, audience demographics, or platform usage.\n\t•\tComparing proportions in survey results, poll data, or report summaries.\n\t•\tIdeal for infographics or data-driven clips where clarity and proportional balance are key.",
+    "createdAt": "2025-10-30T06:33:35.533Z",
+    "updatedAt": "2025-11-12T21:41:09.221Z",
+    "version": 6,
+    "templateDuration": "1.5"
+  },
+  {
+    "name": "info_comparsion_bars_1",
+    "desc": "Two vertical bars rise side by side with contrasting colors and labels, clearly showing the difference between two values.",
+    "labels": ["codegen_template"],
+    "category": "data_visualization_cards",
+    "placeholders": [
+      {
+        "id": "prompt",
+        "type": "text",
+        "contentType": "string",
+        "color": "#primary",
+        "backgroundColor": "#secondary",
+        "desc": "The description of this shot"
+      },
+      {
+        "id": "a_bg",
+        "type": "image",
+        "desc": "An image or video, do not use background images like infographics, illustrations or solid colors",
+        "ratio": "any"
+      }
+    ],
+    "ratio": "9:16",
+    "status": "Live",
+    "useCases": "\t•\tComparing performance, user counts, or market share between two competitors or options.\n\t•\tVisualizing before-and-after results or growth gaps.\n\t•\tWorks well in tech, business, or analytics content where straightforward numeric contrast is needed.",
+    "createdAt": "2025-10-30T08:51:07.080Z",
+    "updatedAt": "2025-10-30T10:24:46.910Z",
+    "version": 3,
+    "templateDuration": "1.5"
+  },
+  {
+    "name": "info_charts_bar_3",
+    "desc": "A vertical bar chart animates from left to right, with each bar growing upward sequentially to display monthly or time-based data progression.",
+    "labels": ["codegen_template"],
+    "category": "data_visualization_cards",
+    "placeholders": [
+      {
+        "id": "prompt",
+        "type": "text",
+        "contentType": "string",
+        "color": "#primary",
+        "backgroundColor": "#secondary",
+        "desc": "The description of this shot"
+      },
+      {
+        "id": "a_bg",
+        "type": "image",
+        "desc": "An image or video, do not use background images like infographics, illustrations or solid colors",
+        "ratio": "any"
+      }
+    ],
+    "ratio": "9:16",
+    "status": "Live",
+    "useCases": "\t•\tShowing changes over time such as stock prices, sales, or revenue trends.\n\t•\tComparing performance or growth month-to-month or across periods.\n\t•\tIdeal for financial summaries, progress updates, or visualizing temporal data patterns.\n\t•\tIf there is no data found or to be displayed, then DO NOT use this template.",
+    "createdAt": "2025-10-30T09:23:25.601Z",
+    "updatedAt": "2025-10-31T07:49:41.723Z",
+    "version": 5,
+    "templateDuration": "1.5"
+  },
+  {
+    "name": "info_charts_waffle_2",
+    "desc": "A grid of circles fills sequentially, with a portion highlighted to visually represent a percentage value.",
+    "labels": ["codegen_template"],
+    "category": "data_visualization_cards",
+    "placeholders": [
+      {
+        "id": "prompt",
+        "type": "text",
+        "contentType": "string",
+        "color": "#primary",
+        "backgroundColor": "#secondary",
+        "desc": "The description of this shot"
+      },
+      {
+        "id": "a_bg",
+        "type": "image",
+        "desc": "An image or video, do not use background images like infographics, illustrations or solid colors",
+        "ratio": "any"
+      }
+    ],
+    "ratio": "9:16",
+    "status": "Live",
+    "useCases": "\t•\tDisplaying survey or poll results (e.g., “32% use LinkedIn for job search”).\n\t•\tIllustrating adoption rates, preferences, or proportions in audience data.\n\t•\tIdeal for simple, clean percentage visuals where clarity and visual balance matter.",
+    "createdAt": "2025-10-30T09:34:28.670Z",
+    "updatedAt": "2025-10-30T10:24:50.537Z",
+    "version": 3,
+    "templateDuration": "1.5"
+  },
+  {
+    "name": "info_listicle_ranking",
+    "desc": "Ranked list bars extend horizontally to visualize view counts, with streaming platform icons and movie titles appearing in sync for a clean leaderboard animation.",
+    "labels": ["codegen_template"],
+    "category": "data_visualization_cards",
+    "placeholders": [
+      {
+        "id": "prompt",
+        "type": "text",
+        "contentType": "string",
+        "color": "#primary",
+        "backgroundColor": "#secondary",
+        "desc": "The description of this shot"
+      },
+      {
+        "id": "a_bg",
+        "type": "image",
+        "desc": "An image or video, do not use background images like infographics, illustrations or solid colors",
+        "ratio": "any"
+      }
+    ],
+    "ratio": "9:16",
+    "status": "Live",
+    "useCases": "- Displaying trending or top-performing content such as movies, songs, or creators.\n- Social media recaps highlighting weekly rankings or platform comparisons.\n- Entertainment or data-driven posts summarizing streaming or watch-time stats.\n- Leaderboard or ranking visuals (e.g., most traded tokens, top apps, or best performers).\n- Category comparison showing proportional values (sales, usage, volume, etc.).\n- Highlight reels or recap slides summarizing top metrics in descending order.\n- Data-driven infographics where visual hierarchy and quick comparison are key.",
+    "createdAt": "2025-10-30T18:09:17.735Z",
+    "updatedAt": "2025-11-14T20:12:23.081Z",
+    "version": 7,
+    "templateDuration": "1.5"
+  },
+  {
+    "name": "info_graph_growth",
+    "desc": "A single upward-trending line graph animates across the frame, ending with a highlighted data point and percentage label that emphasizes overall growth.",
+    "labels": ["codegen_template"],
+    "category": "data_visualization_cards",
+    "placeholders": [
+      {
+        "id": "prompt",
+        "type": "text",
+        "contentType": "string",
+        "color": "#primary",
+        "backgroundColor": "#secondary",
+        "desc": "The description of this shot"
+      },
+      {
+        "id": "a_bg",
+        "type": "image",
+        "desc": "An image or video, do not use background images like infographics, illustrations or solid colors",
+        "ratio": "any"
+      }
+    ],
+    "ratio": "9:16",
+    "status": "Live",
+    "useCases": "- Revenue or sales performance updates showing percentage increase.\n- Quarterly or yearly progress tracking for KPIs or financial metrics.\n- Growth highlight animations in product or business reports.\n- Before-and-after performance comparisons in campaign recaps or investor decks.",
+    "createdAt": "2025-10-30T18:09:26.033Z",
+    "updatedAt": "2025-11-14T21:25:12.325Z",
+    "version": 6
+  },
+  {
+    "name": "info_number_scaleup",
+    "desc": "A large number animates upward from the bottom of the frame to the center while a vertical scale on the left scrolls in sync, creating the feel of a value rising on a meter.",
+    "labels": ["codegen_template"],
+    "category": "data_visualization_cards",
+    "placeholders": [
+      {
+        "id": "prompt",
+        "type": "text",
+        "contentType": "string",
+        "color": "#primary",
+        "backgroundColor": "#secondary",
+        "desc": "The description of this shot"
+      },
+      {
+        "id": "a_bg",
+        "type": "image",
+        "desc": "An image or video, do not use background images like infographics, illustrations or solid colors",
+        "ratio": "any"
+      }
+    ],
+    "ratio": "9:16",
+    "status": "Live",
+    "useCases": "\t•\tShowing milestones such as followers, revenue, sign-ups, or view counts increasing to a target number.\n\t•\tVisualizing growth trends in a simple, non-chart format (e.g., “scaling to 100K”).\n\t•\tHighlighting a metric reveal in progress recaps, achievement announcements, or KPI-driven videos.",
+    "createdAt": "2025-10-30T18:56:21.836Z",
+    "updatedAt": "2025-11-14T21:32:50.480Z",
+    "version": 6
+  },
+  {
+    "name": "info_number_counter_down",
+    "desc": "A numerical value fades or counts down into view with downward-pointing arrows beside it, paired with a labeled banner indicating a decline or loss metric.",
+    "labels": ["codegen_template"],
+    "category": "data_visualization_cards",
+    "placeholders": [
+      {
+        "id": "prompt",
+        "type": "text",
+        "contentType": "string",
+        "color": "#primary",
+        "backgroundColor": "#secondary",
+        "desc": "The description of this shot"
+      },
+      {
+        "id": "a_bg",
+        "type": "image",
+        "desc": "An image or video, do not use background images like infographics, illustrations or solid colors",
+        "ratio": "any"
+      }
+    ],
+    "ratio": "9:16",
+    "status": "Draft",
+    "useCases": "- Engagement drop visualization (e.g., decrease in followers or subscribers).\n- Performance reporting to highlight downturns or negative trends.\n- Comparison animations showing before-and-after metrics.\n- Data storytelling segments emphasizing areas needing improvement.",
+    "createdAt": "2025-10-30T18:58:13.216Z",
+    "updatedAt": "2025-11-11T00:54:02.978Z",
+    "version": 5,
+    "templateDuration": "1.5"
+  },
+  {
+    "name": "info_graph_double",
+    "desc": "Dual line graphs animate upward simultaneously, each tracing follower growth over time with endpoint labels highlighting percentage gains.",
+    "labels": ["codegen_template"],
+    "category": "data_visualization_cards",
+    "placeholders": [
+      {
+        "id": "prompt",
+        "type": "text",
+        "contentType": "string",
+        "color": "#primary",
+        "backgroundColor": "#secondary",
+        "desc": "The description of this shot"
+      },
+      {
+        "id": "a_bg",
+        "type": "image",
+        "desc": "An image or video, do not use background images like infographics, illustrations or solid colors",
+        "ratio": "any"
+      }
+    ],
+    "ratio": "9:16",
+    "status": "Live",
+    "useCases": "\t•\tComparing growth trends between two platforms, products, or campaigns.\n\t•\tVisualizing performance metrics such as engagement rate, revenue, or audience increase.\n\t•\tIdeal for monthly recaps or progress updates where contrast between entities is key.",
+    "createdAt": "2025-10-30T19:12:17.425Z",
+    "updatedAt": "2025-11-06T19:16:10.986Z",
+    "version": 8,
+    "templateDuration": "1.5"
+  },
+  {
+    "name": "info_curve_graph",
+    "desc": "import { AbsoluteFill, useCurrentFrame, useVideoConfig, spring, interpolate } from 'remotion';\r\nimport React, { useMemo, useRef, useState, useEffect, useCallback } from 'react';\r\nimport { loadFont } from '@remotion/google-fonts/Inter';\r\n\r\nconst { fontFamily } = loadFont();\r\n\r\nconst palette = {\r\n  background: 'transparent',\r\n  textPrimary: '#FFFFFF',\r\n  textSecondary: '#CCCCCC',\r\n  accent1: '#FFFFFF',\r\n  accent2: 'rgba(255, 255, 255, 0.6)',\r\n  axis: '#A0A0A0',\r\n};\r\n\r\nconst chartConfig = {\r\n  width: 850,\r\n  height: 950,\r\n  padding: { top: 100, right: 100, bottom: 150, left: 150 },\r\n  xMax: 100,\r\n  yMax: 220,\r\n  xTicks: [0, 10, 20, 30, 40, 50, 60, 70, 80, 90],\r\n  yTicks: [0, 50, 100, 150, 200],\r\n};\r\n\r\nconst generatePoints = (fn: (x: number) => number, startX: number, endX: number, steps: number) => {\r\n  const pts = [];\r\n  const step = (endX - startX) / steps;\r\n  for (let i = 0; i <= steps; i++) {\r\n    const x = startX + i * step;\r\n    pts.push({ x, y: fn(x) });\r\n  }\r\n  return pts;\r\n};\r\n\r\nconst m1UltraFn = (x: number) => 205 * Math.sqrt(x / 50);\r\nconst pcDesktopFn = (x: number) => 135 * Math.pow(x / 85, 0.7);\r\n\r\nconst m1UltraData = generatePoints(m1UltraFn, 10, 50, 50);\r\nconst pcDesktopData = generatePoints(pcDesktopFn, 22, 85, 50);\r\n\r\nconst buildPathMeta = (pts: { x: number; y: number }[]) => {\r\n  const segLens: number[] = [];\r\n  let total = 0;\r\n  for (let i = 1; i < pts.length; i++) {\r\n    const d = Math.hypot(pts[i].x - pts[i - 1].x, pts[i].y - pts[i - 1].y);\r\n    segLens.push(d);\r\n    total += d;\r\n  }\r\n  return { segLens, total };\r\n};\r\nconst pointAtProgress = (\r\n  pts: { x: number; y: number }[],\r\n  prog: number,\r\n  meta: { segLens: number[]; total: number }\r\n) => {\r\n  if (prog <= 0) return pts[0];\r\n  if (prog >= 1) return pts[pts.length - 1];\r\n  const target = meta.total * prog;\r\n  let acc = 0;\r\n  for (let i = 1; i < pts.length; i++) {\r\n    const seg = meta.segLens[i - 1];\r\n    if (acc + seg >= target) {\r\n      const t = (target - acc) / seg;\r\n      return {\r\n        x: pts[i - 1].x + (pts[i].x - pts[i - 1].x) * t,\r\n        y: pts[i - 1].y + (pts[i].y - pts[i - 1].y) * t,\r\n      };\r\n    }\r\n    acc += seg;\r\n  }\r\n  return pts[pts.length - 1];\r\n};\r\n\r\nconst Axis: React.FC<{ progress: number }> = ({ progress }) => {\r\n  const { width, height, padding, xTicks, yTicks, xMax, yMax } = chartConfig;\r\n  const innerWidth = width - padding.left - padding.right;\r\n  const innerHeight = height - padding.top - padding.bottom;\r\n\r\n  const xScale = useCallback((x: number) => padding.left + (x / xMax) * innerWidth,\r\n    [innerWidth, padding.left, xMax]);\r\n  const yScale = useCallback((y: number) => height - padding.bottom - (y / yMax) * innerHeight,\r\n    [height, innerHeight, padding.bottom, yMax]);\r\n\r\n  const axisProgress = interpolate(progress, [0, 0.6], [0, 1], { extrapolateRight: 'clamp' });\r\n  const labelsOpacity = interpolate(progress, [0.5, 1], [0, 1], { extrapolateRight: 'clamp' });\r\n\r\n  return (\r\n    <g>\r\n      <line x1={padding.left} y1={height - padding.bottom}\r\n        x2={padding.left + innerWidth * axisProgress} y2={height - padding.bottom}\r\n        stroke={palette.axis} strokeWidth={3} />\r\n      <line x1={padding.left} y1={height - padding.bottom}\r\n        x2={padding.left} y2={height - padding.bottom - innerHeight * axisProgress}\r\n        stroke={palette.axis} strokeWidth={3} />\r\n\r\n      {xTicks.map((tick) => tick === 0 ? null : (\r\n        <g key={`x-${tick}`} opacity={labelsOpacity}>\r\n          <text x={xScale(tick)} y={height - padding.bottom + 55}\r\n            textAnchor=\"middle\" fill={palette.textSecondary}\r\n            fontSize={30} fontFamily={fontFamily}>{tick}</text>\r\n        </g>\r\n      ))}\r\n      {yTicks.map((tick) => tick === 0 ? null : (\r\n        <g key={`y-${tick}`} opacity={labelsOpacity}>\r\n          <text x={padding.left - 40} y={yScale(tick) + 10}\r\n            textAnchor=\"end\" fill={palette.textSecondary}\r\n            fontSize={30} fontFamily={fontFamily}>{tick}</text>\r\n        </g>\r\n      ))}\r\n      <g opacity={labelsOpacity}>\r\n        <text x={padding.left - 20} y={yScale(0) + 10}\r\n          textAnchor=\"end\" fill={palette.textSecondary}\r\n          fontSize={30} fontFamily={fontFamily}>O</text>\r\n      </g>\r\n    </g>\r\n  );\r\n};\r\n\r\nconst AnimatedPath: React.FC<{\r\n  points: { x: number; y: number }[];\r\n  progress: number;\r\n  stroke: string;\r\n}> = ({ points, progress, stroke }) => {\r\n  const { width, height, padding, xMax, yMax } = chartConfig;\r\n  const innerWidth = width - padding.left - padding.right;\r\n  const innerHeight = height - padding.top - padding.bottom;\r\n  const pathRef = useRef<SVGPathElement>(null);\r\n  const [length, setLength] = useState(0);\r\n\r\n  const xScale = useCallback((x: number) => padding.left + (x / xMax) * innerWidth,\r\n    [innerWidth, padding.left, xMax]);\r\n  const yScale = useCallback((y: number) => height - padding.bottom - (y / yMax) * innerHeight,\r\n    [height, innerHeight, padding.bottom, yMax]);\r\n\r\n  const d = useMemo(() => {\r\n    if (!points.length) return '';\r\n    const [first, ...rest] = points;\r\n    return `M ${xScale(first.x)} ${yScale(first.y)} ` +\r\n      rest.map(p => `L ${xScale(p.x)} ${yScale(p.y)}`).join(' ');\r\n  }, [points, xScale, yScale]);\r\n\r\n  useEffect(() => {\r\n    if (pathRef.current) setLength(pathRef.current.getTotalLength());\r\n  }, [d]);\r\n\r\n  return (\r\n    <path ref={pathRef} d={d} fill=\"none\" stroke={stroke} strokeWidth={6}\r\n      strokeLinecap=\"round\" strokeDasharray={length}\r\n      strokeDashoffset={length * (1 - progress)} />\r\n  );\r\n};\r\n\r\nconst Curve_graph: React.FC = () => {\r\n  const frame = useCurrentFrame();\r\n  const { fps } = useVideoConfig();\r\n  const animationConfig = { stiffness: 30, damping: 200 };\r\n\r\n  const titleProgress = spring({ frame, fps, config: animationConfig, durationInFrames: 20 });\r\n  const chartProgress = spring({ frame: frame - 10, fps, config: animationConfig, durationInFrames: 30 });\r\n  const curve1Progress = spring({ frame: frame - 25, fps, config: animationConfig, durationInFrames: 30 });\r\n  const curve2Progress = spring({ frame: frame - 35, fps, config: animationConfig, durationInFrames: 30 });\r\n\r\n  const m1LabelProgress = interpolate(\r\n    curve1Progress,\r\n    [0.8, 1],\r\n    [0, 1],\r\n    { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' }\r\n  );\r\n\r\n  const pcLabelProgress = interpolate(\r\n    curve2Progress,\r\n    [0.8, 1],\r\n    [0, 1],\r\n    { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' }\r\n  );\r\n\r\n  const { width, height, padding, xMax, yMax } = chartConfig;\r\n  const innerWidth = width - padding.left - padding.right;\r\n  const innerHeight = height - padding.top - padding.bottom;\r\n\r\n  const xScale = useCallback((x: number) => padding.left + (x / xMax) * innerWidth,\r\n    [innerWidth, padding.left, xMax]);\r\n  const yScale = useCallback((y: number) => height - padding.bottom - (y / yMax) * innerHeight,\r\n    [height, innerHeight, padding.bottom, yMax]);\r\n\r\n  const xAxisTitleX = padding.left + innerWidth / 2;\r\n  const yAxisTitleY = padding.top + innerHeight / 2;\r\n\r\n  const m1Meta = useMemo(() => buildPathMeta(m1UltraData), []);\r\n  const pcMeta = useMemo(() => buildPathMeta(pcDesktopData), []);\r\n  const m1Current = pointAtProgress(m1UltraData, Math.min(curve1Progress, 1), m1Meta);\r\n  const pcCurrent = pointAtProgress(pcDesktopData, Math.min(curve2Progress, 1), pcMeta);\r\n\r\n  return (\r\n    <AbsoluteFill style={{\r\n      fontFamily,\r\n      backgroundColor: palette.background,\r\n      display: 'flex',\r\n      flexDirection: 'column',\r\n      alignItems: 'center',\r\n      justifyContent: 'flex-start',\r\n      paddingTop: 250,\r\n    }}>\r\n      <div style={{\r\n        color: palette.textPrimary, fontSize: 64, fontWeight: 'bold',\r\n        opacity: titleProgress,\r\n        transform: `scale(${titleProgress}) translateY(${(1 - titleProgress) * 20}px)`,\r\n        width: '70%', textAlign: 'center'\r\n      }}>\r\n        CPU performance vs power\r\n      </div>\r\n\r\n      <div style={{ position: 'relative', width: chartConfig.width, height: chartConfig.height, marginTop: 30 }}>\r\n        <div style={{\r\n          position: 'absolute', left: -80, top: yAxisTitleY,\r\n          transform: 'translateY(-50%) rotate(-90deg)',\r\n          color: palette.textSecondary, fontSize: 34, opacity: chartProgress,\r\n        }}>\r\n          performance\r\n        </div>\r\n        <div style={{\r\n          position: 'absolute', bottom: -10, left: xAxisTitleX,\r\n          transform: 'translateX(-50%)',\r\n          color: palette.textSecondary, fontSize: 34, opacity: chartProgress,\r\n        }}>\r\n          power consumption (watts)\r\n        </div>\r\n\r\n        <svg width={chartConfig.width} height={chartConfig.height}\r\n          viewBox={`0 0 ${chartConfig.width} ${chartConfig.height}`}>\r\n          <Axis progress={chartProgress} />\r\n          <AnimatedPath points={m1UltraData} progress={curve1Progress} stroke={palette.accent1} />\r\n          <AnimatedPath points={pcDesktopData} progress={curve2Progress} stroke={palette.accent2} />\r\n        </svg>\r\n\r\n        <div style={{\r\n          position: 'absolute',\r\n          left: xScale(m1Current.x) + 25,\r\n          top: yScale(m1Current.y) - 20,\r\n          color: palette.textPrimary, fontSize: 34, fontWeight: 'bold',\r\n          opacity: m1LabelProgress, transform: `translateY(${(1 - m1LabelProgress) * 10}px)`,\r\n          width: 150\r\n        }}>\r\n          M1 Ultra\r\n        </div>\r\n\r\n        <div style={{\r\n          position: 'absolute',\r\n          left: xScale(pcCurrent.x) + 25,\r\n          top: yScale(pcCurrent.y) - 50,\r\n          color: palette.accent2, fontSize: 34, fontWeight: 'bold',\r\n          lineHeight: 1.2, textAlign: 'left',\r\n          opacity: pcLabelProgress, \r\n          transform: `translateY(${(1 - pcLabelProgress) * 10}px)`,\r\n          width: 300\r\n        }}>\r\n          16-core <br/> PC desktop\r\n        </div>\r\n      </div>\r\n    </AbsoluteFill>\r\n  );\r\n};\r\n\r\nexport default Curve_graph;",
+    "labels": ["codegen_template"],
+    "category": "data_visualization_cards",
+    "placeholders": [
+      {
+        "id": "prompt",
+        "type": "text",
+        "contentType": "string",
+        "color": "#primary",
+        "backgroundColor": "#secondary",
+        "desc": "The description of this shot"
+      },
+      {
+        "id": "a_bg",
+        "type": "image",
+        "desc": "An image or video, do not use background images like infographics, illustrations or solid colors",
+        "ratio": "any"
+      }
+    ],
+    "ratio": "9:16",
+    "status": "Archived",
+    "useCases": "import { AbsoluteFill, useCurrentFrame, useVideoConfig, spring, interpolate } from 'remotion';\r\nimport React, { useMemo, useRef, useState, useEffect, useCallback } from 'react';\r\nimport { loadFont } from '@remotion/google-fonts/Inter';\r\n\r\nconst { fontFamily } = loadFont();\r\n\r\nconst palette = {\r\n  background: 'transparent',\r\n  textPrimary: '#FFFFFF',\r\n  textSecondary: '#CCCCCC',\r\n  accent1: '#FFFFFF',\r\n  accent2: 'rgba(255, 255, 255, 0.6)',\r\n  axis: '#A0A0A0',\r\n};\r\n\r\nconst chartConfig = {\r\n  width: 850,\r\n  height: 950,\r\n  padding: { top: 100, right: 100, bottom: 150, left: 150 },\r\n  xMax: 100,\r\n  yMax: 220,\r\n  xTicks: [0, 10, 20, 30, 40, 50, 60, 70, 80, 90],\r\n  yTicks: [0, 50, 100, 150, 200],\r\n};\r\n\r\nconst generatePoints = (fn: (x: number) => number, startX: number, endX: number, steps: number) => {\r\n  const pts = [];\r\n  const step = (endX - startX) / steps;\r\n  for (let i = 0; i <= steps; i++) {\r\n    const x = startX + i * step;\r\n    pts.push({ x, y: fn(x) });\r\n  }\r\n  return pts;\r\n};\r\n\r\nconst m1UltraFn = (x: number) => 205 * Math.sqrt(x / 50);\r\nconst pcDesktopFn = (x: number) => 135 * Math.pow(x / 85, 0.7);\r\n\r\nconst m1UltraData = generatePoints(m1UltraFn, 10, 50, 50);\r\nconst pcDesktopData = generatePoints(pcDesktopFn, 22, 85, 50);\r\n\r\nconst buildPathMeta = (pts: { x: number; y: number }[]) => {\r\n  const segLens: number[] = [];\r\n  let total = 0;\r\n  for (let i = 1; i < pts.length; i++) {\r\n    const d = Math.hypot(pts[i].x - pts[i - 1].x, pts[i].y - pts[i - 1].y);\r\n    segLens.push(d);\r\n    total += d;\r\n  }\r\n  return { segLens, total };\r\n};\r\nconst pointAtProgress = (\r\n  pts: { x: number; y: number }[],\r\n  prog: number,\r\n  meta: { segLens: number[]; total: number }\r\n) => {\r\n  if (prog <= 0) return pts[0];\r\n  if (prog >= 1) return pts[pts.length - 1];\r\n  const target = meta.total * prog;\r\n  let acc = 0;\r\n  for (let i = 1; i < pts.length; i++) {\r\n    const seg = meta.segLens[i - 1];\r\n    if (acc + seg >= target) {\r\n      const t = (target - acc) / seg;\r\n      return {\r\n        x: pts[i - 1].x + (pts[i].x - pts[i - 1].x) * t,\r\n        y: pts[i - 1].y + (pts[i].y - pts[i - 1].y) * t,\r\n      };\r\n    }\r\n    acc += seg;\r\n  }\r\n  return pts[pts.length - 1];\r\n};\r\n\r\nconst Axis: React.FC<{ progress: number }> = ({ progress }) => {\r\n  const { width, height, padding, xTicks, yTicks, xMax, yMax } = chartConfig;\r\n  const innerWidth = width - padding.left - padding.right;\r\n  const innerHeight = height - padding.top - padding.bottom;\r\n\r\n  const xScale = useCallback((x: number) => padding.left + (x / xMax) * innerWidth,\r\n    [innerWidth, padding.left, xMax]);\r\n  const yScale = useCallback((y: number) => height - padding.bottom - (y / yMax) * innerHeight,\r\n    [height, innerHeight, padding.bottom, yMax]);\r\n\r\n  const axisProgress = interpolate(progress, [0, 0.6], [0, 1], { extrapolateRight: 'clamp' });\r\n  const labelsOpacity = interpolate(progress, [0.5, 1], [0, 1], { extrapolateRight: 'clamp' });\r\n\r\n  return (\r\n    <g>\r\n      <line x1={padding.left} y1={height - padding.bottom}\r\n        x2={padding.left + innerWidth * axisProgress} y2={height - padding.bottom}\r\n        stroke={palette.axis} strokeWidth={3} />\r\n      <line x1={padding.left} y1={height - padding.bottom}\r\n        x2={padding.left} y2={height - padding.bottom - innerHeight * axisProgress}\r\n        stroke={palette.axis} strokeWidth={3} />\r\n\r\n      {xTicks.map((tick) => tick === 0 ? null : (\r\n        <g key={`x-${tick}`} opacity={labelsOpacity}>\r\n          <text x={xScale(tick)} y={height - padding.bottom + 55}\r\n            textAnchor=\"middle\" fill={palette.textSecondary}\r\n            fontSize={30} fontFamily={fontFamily}>{tick}</text>\r\n        </g>\r\n      ))}\r\n      {yTicks.map((tick) => tick === 0 ? null : (\r\n        <g key={`y-${tick}`} opacity={labelsOpacity}>\r\n          <text x={padding.left - 40} y={yScale(tick) + 10}\r\n            textAnchor=\"end\" fill={palette.textSecondary}\r\n            fontSize={30} fontFamily={fontFamily}>{tick}</text>\r\n        </g>\r\n      ))}\r\n      <g opacity={labelsOpacity}>\r\n        <text x={padding.left - 20} y={yScale(0) + 10}\r\n          textAnchor=\"end\" fill={palette.textSecondary}\r\n          fontSize={30} fontFamily={fontFamily}>O</text>\r\n      </g>\r\n    </g>\r\n  );\r\n};\r\n\r\nconst AnimatedPath: React.FC<{\r\n  points: { x: number; y: number }[];\r\n  progress: number;\r\n  stroke: string;\r\n}> = ({ points, progress, stroke }) => {\r\n  const { width, height, padding, xMax, yMax } = chartConfig;\r\n  const innerWidth = width - padding.left - padding.right;\r\n  const innerHeight = height - padding.top - padding.bottom;\r\n  const pathRef = useRef<SVGPathElement>(null);\r\n  const [length, setLength] = useState(0);\r\n\r\n  const xScale = useCallback((x: number) => padding.left + (x / xMax) * innerWidth,\r\n    [innerWidth, padding.left, xMax]);\r\n  const yScale = useCallback((y: number) => height - padding.bottom - (y / yMax) * innerHeight,\r\n    [height, innerHeight, padding.bottom, yMax]);\r\n\r\n  const d = useMemo(() => {\r\n    if (!points.length) return '';\r\n    const [first, ...rest] = points;\r\n    return `M ${xScale(first.x)} ${yScale(first.y)} ` +\r\n      rest.map(p => `L ${xScale(p.x)} ${yScale(p.y)}`).join(' ');\r\n  }, [points, xScale, yScale]);\r\n\r\n  useEffect(() => {\r\n    if (pathRef.current) setLength(pathRef.current.getTotalLength());\r\n  }, [d]);\r\n\r\n  return (\r\n    <path ref={pathRef} d={d} fill=\"none\" stroke={stroke} strokeWidth={6}\r\n      strokeLinecap=\"round\" strokeDasharray={length}\r\n      strokeDashoffset={length * (1 - progress)} />\r\n  );\r\n};\r\n\r\nconst Curve_graph: React.FC = () => {\r\n  const frame = useCurrentFrame();\r\n  const { fps } = useVideoConfig();\r\n  const animationConfig = { stiffness: 30, damping: 200 };\r\n\r\n  const titleProgress = spring({ frame, fps, config: animationConfig, durationInFrames: 20 });\r\n  const chartProgress = spring({ frame: frame - 10, fps, config: animationConfig, durationInFrames: 30 });\r\n  const curve1Progress = spring({ frame: frame - 25, fps, config: animationConfig, durationInFrames: 30 });\r\n  const curve2Progress = spring({ frame: frame - 35, fps, config: animationConfig, durationInFrames: 30 });\r\n\r\n  const m1LabelProgress = interpolate(\r\n    curve1Progress,\r\n    [0.8, 1],\r\n    [0, 1],\r\n    { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' }\r\n  );\r\n\r\n  const pcLabelProgress = interpolate(\r\n    curve2Progress,\r\n    [0.8, 1],\r\n    [0, 1],\r\n    { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' }\r\n  );\r\n\r\n  const { width, height, padding, xMax, yMax } = chartConfig;\r\n  const innerWidth = width - padding.left - padding.right;\r\n  const innerHeight = height - padding.top - padding.bottom;\r\n\r\n  const xScale = useCallback((x: number) => padding.left + (x / xMax) * innerWidth,\r\n    [innerWidth, padding.left, xMax]);\r\n  const yScale = useCallback((y: number) => height - padding.bottom - (y / yMax) * innerHeight,\r\n    [height, innerHeight, padding.bottom, yMax]);\r\n\r\n  const xAxisTitleX = padding.left + innerWidth / 2;\r\n  const yAxisTitleY = padding.top + innerHeight / 2;\r\n\r\n  const m1Meta = useMemo(() => buildPathMeta(m1UltraData), []);\r\n  const pcMeta = useMemo(() => buildPathMeta(pcDesktopData), []);\r\n  const m1Current = pointAtProgress(m1UltraData, Math.min(curve1Progress, 1), m1Meta);\r\n  const pcCurrent = pointAtProgress(pcDesktopData, Math.min(curve2Progress, 1), pcMeta);\r\n\r\n  return (\r\n    <AbsoluteFill style={{\r\n      fontFamily,\r\n      backgroundColor: palette.background,\r\n      display: 'flex',\r\n      flexDirection: 'column',\r\n      alignItems: 'center',\r\n      justifyContent: 'flex-start',\r\n      paddingTop: 250,\r\n    }}>\r\n      <div style={{\r\n        color: palette.textPrimary, fontSize: 64, fontWeight: 'bold',\r\n        opacity: titleProgress,\r\n        transform: `scale(${titleProgress}) translateY(${(1 - titleProgress) * 20}px)`,\r\n        width: '70%', textAlign: 'center'\r\n      }}>\r\n        CPU performance vs power\r\n      </div>\r\n\r\n      <div style={{ position: 'relative', width: chartConfig.width, height: chartConfig.height, marginTop: 30 }}>\r\n        <div style={{\r\n          position: 'absolute', left: -80, top: yAxisTitleY,\r\n          transform: 'translateY(-50%) rotate(-90deg)',\r\n          color: palette.textSecondary, fontSize: 34, opacity: chartProgress,\r\n        }}>\r\n          performance\r\n        </div>\r\n        <div style={{\r\n          position: 'absolute', bottom: -10, left: xAxisTitleX,\r\n          transform: 'translateX(-50%)',\r\n          color: palette.textSecondary, fontSize: 34, opacity: chartProgress,\r\n        }}>\r\n          power consumption (watts)\r\n        </div>\r\n\r\n        <svg width={chartConfig.width} height={chartConfig.height}\r\n          viewBox={`0 0 ${chartConfig.width} ${chartConfig.height}`}>\r\n          <Axis progress={chartProgress} />\r\n          <AnimatedPath points={m1UltraData} progress={curve1Progress} stroke={palette.accent1} />\r\n          <AnimatedPath points={pcDesktopData} progress={curve2Progress} stroke={palette.accent2} />\r\n        </svg>\r\n\r\n        <div style={{\r\n          position: 'absolute',\r\n          left: xScale(m1Current.x) + 25,\r\n          top: yScale(m1Current.y) - 20,\r\n          color: palette.textPrimary, fontSize: 34, fontWeight: 'bold',\r\n          opacity: m1LabelProgress, transform: `translateY(${(1 - m1LabelProgress) * 10}px)`,\r\n          width: 150\r\n        }}>\r\n          M1 Ultra\r\n        </div>\r\n\r\n        <div style={{\r\n          position: 'absolute',\r\n          left: xScale(pcCurrent.x) + 25,\r\n          top: yScale(pcCurrent.y) - 50,\r\n          color: palette.accent2, fontSize: 34, fontWeight: 'bold',\r\n          lineHeight: 1.2, textAlign: 'left',\r\n          opacity: pcLabelProgress, \r\n          transform: `translateY(${(1 - pcLabelProgress) * 10}px)`,\r\n          width: 300\r\n        }}>\r\n          16-core <br/> PC desktop\r\n        </div>\r\n      </div>\r\n    </AbsoluteFill>\r\n  );\r\n};\r\n\r\nexport default Curve_graph;",
+    "createdAt": "2025-10-30T19:19:00.163Z",
+    "updatedAt": "2025-10-30T23:47:09.458Z",
+    "version": 6
+  },
+  {
+    "name": "templatecreatorinfo_comparison_scale2",
+    "desc": "import React from 'react';\r\nimport {\r\n  AbsoluteFill,\r\n  useCurrentFrame,\r\n  useVideoConfig,\r\n  interpolate,\r\n  spring,\r\n} from 'remotion';\r\nimport { loadFont } from '@remotion/google-fonts/DMSans';\r\n\r\nconst { fontFamily } = loadFont();\r\n\r\nconst palette = {\r\n  textColor: '#FFFFFF',\r\n  scaleColor: '#FFFFFF',\r\n  fulcrumColor: '#FFFFFF',\r\n};\r\n\r\nconst data = {\r\n  titleLine1: '1 Sugar Cube vs',\r\n  titleLine2: '1 Can of Coke',\r\n  itemA: { value: 4, description: '1 Sugar Cube' },\r\n  itemB: { value: 39, description: '1 Can of Coke' },\r\n};\r\n\r\nconst AnimatedInteger: React.FC<{ value: number; startFrame: number; durationInFrames: number; }> = ({ value, startFrame, durationInFrames }) => {\r\n  const frame = useCurrentFrame();\r\n  const { fps } = useVideoConfig();\r\n\r\n  const animatedValue = spring({\r\n    frame,\r\n    fps,\r\n    from: 0,\r\n    to: value,\r\n    startFrame,\r\n    durationInFrames,\r\n    config: { damping: 20, stiffness: 100 },\r\n  });\r\n\r\n  return <span>{Math.round(animatedValue)}</span>;\r\n};\r\n\r\nexport const Info_comparison_scale: React.FC = () => {\r\n  const frame = useCurrentFrame();\r\n  const { fps } = useVideoConfig();\r\n\r\n  // Animation Timing (in frames for a ~1.5s total animation at 30fps)\r\n  const TITLE_APPEAR_START = 5;\r\n  const SCALE_APPEAR_START = 10;\r\n  const ITEMS_APPEAR_START = 18;\r\n  const TILT_START = 30;\r\n  const NUMBER_ANIM_START = 32;\r\n\r\n  // Geometry\r\n  const boxWidth = 380;\r\n  const boxHeight = 300;\r\n  const beamWidth = 910;\r\n  const beamHeight = 15;\r\n  const fulcrumWidth = 100;\r\n  const fulcrumHeight = 80;\r\n  const scaleCenterY = 1100;\r\n\r\n  // --- Animations ---\r\n\r\n  const titleProgress = spring({ frame, fps, from: 0, to: 1, startFrame: TITLE_APPEAR_START, durationInFrames: 20 });\r\n  const titleY = interpolate(titleProgress, [0, 1], [-20, 0]);\r\n\r\n  const scaleProgress = spring({ frame, fps, from: 0, to: 1, startFrame: SCALE_APPEAR_START, durationInFrames: 25, config: { damping: 30, stiffness: 200 } });\r\n  \r\n  const itemsOpacity = spring({ frame, fps, from: 0, to: 1, startFrame: ITEMS_APPEAR_START, durationInFrames: 20 });\r\n  const itemsY = spring({ frame, fps, from: -400, to: 0, startFrame: ITEMS_APPEAR_START, durationInFrames: 25, config: { damping: 20, stiffness: 150 } });\r\n\r\n  // --- Rotation: keep FLAT, then tilt ---\r\n  const rotationFactor = 0.25;\r\n  const delta = data.itemB.value - data.itemA.value;\r\n  const targetRotation = delta * rotationFactor;\r\n\r\n  const tiltProgress =\r\n    frame < TILT_START\r\n      ? 0\r\n      : spring({\r\n          frame: frame - TILT_START,\r\n          fps,\r\n          from: 0,\r\n          to: 1,\r\n          durationInFrames: 25,\r\n          config: { damping: 20, stiffness: 120 },\r\n        });\r\n\r\n  const scaleRotationDeg = targetRotation * tiltProgress;\r\n\r\n  // --- Styles ---\r\n\r\n  const titleStyle: React.CSSProperties = {\r\n    fontFamily,\r\n    fontSize: 70,\r\n    fontWeight: '700',\r\n    color: palette.textColor,\r\n    textAlign: 'center',\r\n    position: 'absolute',\r\n    width: '100%',\r\n    left: '50%',\r\n    transform: `translateX(-50%) translateY(${titleY}px)`,\r\n    top: 280,\r\n    opacity: titleProgress,\r\n    display: 'flex',\r\n    flexDirection: 'column',\r\n    alignItems: 'center',\r\n    lineHeight: 1.1,\r\n  };\r\n\r\n  const fulcrumStyle: React.CSSProperties = {\r\n    position: 'absolute',\r\n    top: scaleCenterY,\r\n    left: '50%',\r\n    width: 0,\r\n    height: 0,\r\n    borderLeft: `${fulcrumWidth / 2}px solid transparent`,\r\n    borderRight: `${fulcrumWidth / 2}px solid transparent`,\r\n    borderBottom: `${fulcrumHeight}px solid ${palette.fulcrumColor}`,\r\n    transform: `translateX(-50%) scale(${scaleProgress})`,\r\n    transformOrigin: 'center top',\r\n    opacity: scaleProgress,\r\n  };\r\n\r\n  const rotatingContainerHeight = 400;\r\n  const rotatingContainerStyle: React.CSSProperties = {\r\n    position: 'absolute',\r\n    width: beamWidth,\r\n    height: rotatingContainerHeight,\r\n    left: '50%',\r\n    top: scaleCenterY - rotatingContainerHeight / 2,\r\n    marginLeft: -beamWidth / 2,\r\n    transform: `rotate(${scaleRotationDeg}deg)`,\r\n    transformOrigin: 'center center',\r\n  };\r\n\r\n  const beamStyle: React.CSSProperties = {\r\n    position: 'absolute',\r\n    top: '50%',\r\n    left: '50%',\r\n    transform: `translate(-50%, -50%) scaleX(${scaleProgress})`,\r\n    width: '100%',\r\n    height: beamHeight,\r\n    backgroundColor: palette.scaleColor,\r\n    borderRadius: beamHeight / 2,\r\n    opacity: scaleProgress,\r\n  };\r\n\r\n  const valueBoxBase: React.CSSProperties = {\r\n    position: 'absolute',\r\n    width: boxWidth,\r\n    height: boxHeight,\r\n    backgroundColor: 'rgba(255, 255, 255, 0.1)',\r\n    backdropFilter: 'blur(10px)',\r\n    WebkitBackdropFilter: 'blur(10px)',\r\n    borderRadius: 12,\r\n    display: 'flex',\r\n    justifyContent: 'center',\r\n    alignItems: 'center',\r\n    color: palette.textColor,\r\n    fontFamily,\r\n    padding: '30px',\r\n    textAlign: 'center',\r\n    boxSizing: 'border-box',\r\n    opacity: itemsOpacity,\r\n    bottom: `calc(50% + ${beamHeight / 2}px + 10px)`,\r\n    transform: `translateY(${itemsY}px)`,\r\n  };\r\n\r\n  const valueBoxContentStyle: React.CSSProperties = {\r\n    display: 'flex',\r\n    flexDirection: 'column',\r\n    alignItems: 'center',\r\n    gap: 16,\r\n    lineHeight: 1.1,\r\n  };\r\n\r\n  return (\r\n    <AbsoluteFill style={{ backgroundColor: 'transparent' }}>\r\n      <div style={titleStyle}>\r\n        <div>{data.titleLine1}</div>\r\n        <div>{data.titleLine2}</div>\r\n      </div>\r\n\r\n      <AbsoluteFill>\r\n        <div style={fulcrumStyle} />\r\n        <div style={rotatingContainerStyle}>\r\n          <div style={beamStyle} />\r\n\r\n          <div style={{ ...valueBoxBase, left: 30 }}>\r\n            <div style={valueBoxContentStyle}>\r\n              <div style={{ fontSize: 80, fontWeight: '700' }}>\r\n                <AnimatedInteger value={data.itemA.value} startFrame={NUMBER_ANIM_START} durationInFrames={20} />g\r\n              </div>\r\n              <div style={{ fontSize: 32, fontWeight: '500' }}>Sugar</div>\r\n              <div style={{ fontSize: 48, fontWeight: '600' }}>{data.itemA.description}</div>\r\n            </div>\r\n          </div>\r\n\r\n          <div style={{ ...valueBoxBase, right: 30 }}>\r\n            <div style={valueBoxContentStyle}>\r\n               <div style={{ fontSize: 80, fontWeight: '700' }}>\r\n                <AnimatedInteger value={data.itemB.value} startFrame={NUMBER_ANIM_START} durationInFrames={20} />g\r\n              </div>\r\n              <div style={{ fontSize: 32, fontWeight: '500' }}>Sugar</div>\r\n              <div style={{ fontSize: 48, fontWeight: '600' }}>{data.itemB.description}</div>\r\n            </div>\r\n          </div>\r\n        </div>\r\n      </AbsoluteFill>\r\n    </AbsoluteFill>\r\n  );\r\n};\r\n\r\nexport default Info_comparison_scale;",
+    "labels": ["codegen_template"],
+    "category": "data_visualization_cards",
+    "placeholders": [
+      {
+        "id": "prompt",
+        "type": "text",
+        "contentType": "string",
+        "color": "#primary",
+        "backgroundColor": "#secondary",
+        "desc": "The description of this shot"
+      },
+      {
+        "id": "a_bg",
+        "type": "image",
+        "desc": "An image or video, do not use background images like infographics, illustrations or solid colors",
+        "ratio": "any"
+      }
+    ],
+    "ratio": "9:16",
+    "status": "Archived",
+    "useCases": "import React from 'react';\r\nimport {\r\n  AbsoluteFill,\r\n  useCurrentFrame,\r\n  useVideoConfig,\r\n  interpolate,\r\n  spring,\r\n} from 'remotion';\r\nimport { loadFont } from '@remotion/google-fonts/DMSans';\r\n\r\nconst { fontFamily } = loadFont();\r\n\r\nconst palette = {\r\n  textColor: '#FFFFFF',\r\n  scaleColor: '#FFFFFF',\r\n  fulcrumColor: '#FFFFFF',\r\n};\r\n\r\nconst data = {\r\n  titleLine1: '1 Sugar Cube vs',\r\n  titleLine2: '1 Can of Coke',\r\n  itemA: { value: 4, description: '1 Sugar Cube' },\r\n  itemB: { value: 39, description: '1 Can of Coke' },\r\n};\r\n\r\nconst AnimatedInteger: React.FC<{ value: number; startFrame: number; durationInFrames: number; }> = ({ value, startFrame, durationInFrames }) => {\r\n  const frame = useCurrentFrame();\r\n  const { fps } = useVideoConfig();\r\n\r\n  const animatedValue = spring({\r\n    frame,\r\n    fps,\r\n    from: 0,\r\n    to: value,\r\n    startFrame,\r\n    durationInFrames,\r\n    config: { damping: 20, stiffness: 100 },\r\n  });\r\n\r\n  return <span>{Math.round(animatedValue)}</span>;\r\n};\r\n\r\nexport const Info_comparison_scale: React.FC = () => {\r\n  const frame = useCurrentFrame();\r\n  const { fps } = useVideoConfig();\r\n\r\n  // Animation Timing (in frames for a ~1.5s total animation at 30fps)\r\n  const TITLE_APPEAR_START = 5;\r\n  const SCALE_APPEAR_START = 10;\r\n  const ITEMS_APPEAR_START = 18;\r\n  const TILT_START = 30;\r\n  const NUMBER_ANIM_START = 32;\r\n\r\n  // Geometry\r\n  const boxWidth = 380;\r\n  const boxHeight = 300;\r\n  const beamWidth = 910;\r\n  const beamHeight = 15;\r\n  const fulcrumWidth = 100;\r\n  const fulcrumHeight = 80;\r\n  const scaleCenterY = 1100;\r\n\r\n  // --- Animations ---\r\n\r\n  const titleProgress = spring({ frame, fps, from: 0, to: 1, startFrame: TITLE_APPEAR_START, durationInFrames: 20 });\r\n  const titleY = interpolate(titleProgress, [0, 1], [-20, 0]);\r\n\r\n  const scaleProgress = spring({ frame, fps, from: 0, to: 1, startFrame: SCALE_APPEAR_START, durationInFrames: 25, config: { damping: 30, stiffness: 200 } });\r\n  \r\n  const itemsOpacity = spring({ frame, fps, from: 0, to: 1, startFrame: ITEMS_APPEAR_START, durationInFrames: 20 });\r\n  const itemsY = spring({ frame, fps, from: -400, to: 0, startFrame: ITEMS_APPEAR_START, durationInFrames: 25, config: { damping: 20, stiffness: 150 } });\r\n\r\n  // --- Rotation: keep FLAT, then tilt ---\r\n  const rotationFactor = 0.25;\r\n  const delta = data.itemB.value - data.itemA.value;\r\n  const targetRotation = delta * rotationFactor;\r\n\r\n  const tiltProgress =\r\n    frame < TILT_START\r\n      ? 0\r\n      : spring({\r\n          frame: frame - TILT_START,\r\n          fps,\r\n          from: 0,\r\n          to: 1,\r\n          durationInFrames: 25,\r\n          config: { damping: 20, stiffness: 120 },\r\n        });\r\n\r\n  const scaleRotationDeg = targetRotation * tiltProgress;\r\n\r\n  // --- Styles ---\r\n\r\n  const titleStyle: React.CSSProperties = {\r\n    fontFamily,\r\n    fontSize: 70,\r\n    fontWeight: '700',\r\n    color: palette.textColor,\r\n    textAlign: 'center',\r\n    position: 'absolute',\r\n    width: '100%',\r\n    left: '50%',\r\n    transform: `translateX(-50%) translateY(${titleY}px)`,\r\n    top: 280,\r\n    opacity: titleProgress,\r\n    display: 'flex',\r\n    flexDirection: 'column',\r\n    alignItems: 'center',\r\n    lineHeight: 1.1,\r\n  };\r\n\r\n  const fulcrumStyle: React.CSSProperties = {\r\n    position: 'absolute',\r\n    top: scaleCenterY,\r\n    left: '50%',\r\n    width: 0,\r\n    height: 0,\r\n    borderLeft: `${fulcrumWidth / 2}px solid transparent`,\r\n    borderRight: `${fulcrumWidth / 2}px solid transparent`,\r\n    borderBottom: `${fulcrumHeight}px solid ${palette.fulcrumColor}`,\r\n    transform: `translateX(-50%) scale(${scaleProgress})`,\r\n    transformOrigin: 'center top',\r\n    opacity: scaleProgress,\r\n  };\r\n\r\n  const rotatingContainerHeight = 400;\r\n  const rotatingContainerStyle: React.CSSProperties = {\r\n    position: 'absolute',\r\n    width: beamWidth,\r\n    height: rotatingContainerHeight,\r\n    left: '50%',\r\n    top: scaleCenterY - rotatingContainerHeight / 2,\r\n    marginLeft: -beamWidth / 2,\r\n    transform: `rotate(${scaleRotationDeg}deg)`,\r\n    transformOrigin: 'center center',\r\n  };\r\n\r\n  const beamStyle: React.CSSProperties = {\r\n    position: 'absolute',\r\n    top: '50%',\r\n    left: '50%',\r\n    transform: `translate(-50%, -50%) scaleX(${scaleProgress})`,\r\n    width: '100%',\r\n    height: beamHeight,\r\n    backgroundColor: palette.scaleColor,\r\n    borderRadius: beamHeight / 2,\r\n    opacity: scaleProgress,\r\n  };\r\n\r\n  const valueBoxBase: React.CSSProperties = {\r\n    position: 'absolute',\r\n    width: boxWidth,\r\n    height: boxHeight,\r\n    backgroundColor: 'rgba(255, 255, 255, 0.1)',\r\n    backdropFilter: 'blur(10px)',\r\n    WebkitBackdropFilter: 'blur(10px)',\r\n    borderRadius: 12,\r\n    display: 'flex',\r\n    justifyContent: 'center',\r\n    alignItems: 'center',\r\n    color: palette.textColor,\r\n    fontFamily,\r\n    padding: '30px',\r\n    textAlign: 'center',\r\n    boxSizing: 'border-box',\r\n    opacity: itemsOpacity,\r\n    bottom: `calc(50% + ${beamHeight / 2}px + 10px)`,\r\n    transform: `translateY(${itemsY}px)`,\r\n  };\r\n\r\n  const valueBoxContentStyle: React.CSSProperties = {\r\n    display: 'flex',\r\n    flexDirection: 'column',\r\n    alignItems: 'center',\r\n    gap: 16,\r\n    lineHeight: 1.1,\r\n  };\r\n\r\n  return (\r\n    <AbsoluteFill style={{ backgroundColor: 'transparent' }}>\r\n      <div style={titleStyle}>\r\n        <div>{data.titleLine1}</div>\r\n        <div>{data.titleLine2}</div>\r\n      </div>\r\n\r\n      <AbsoluteFill>\r\n        <div style={fulcrumStyle} />\r\n        <div style={rotatingContainerStyle}>\r\n          <div style={beamStyle} />\r\n\r\n          <div style={{ ...valueBoxBase, left: 30 }}>\r\n            <div style={valueBoxContentStyle}>\r\n              <div style={{ fontSize: 80, fontWeight: '700' }}>\r\n                <AnimatedInteger value={data.itemA.value} startFrame={NUMBER_ANIM_START} durationInFrames={20} />g\r\n              </div>\r\n              <div style={{ fontSize: 32, fontWeight: '500' }}>Sugar</div>\r\n              <div style={{ fontSize: 48, fontWeight: '600' }}>{data.itemA.description}</div>\r\n            </div>\r\n          </div>\r\n\r\n          <div style={{ ...valueBoxBase, right: 30 }}>\r\n            <div style={valueBoxContentStyle}>\r\n               <div style={{ fontSize: 80, fontWeight: '700' }}>\r\n                <AnimatedInteger value={data.itemB.value} startFrame={NUMBER_ANIM_START} durationInFrames={20} />g\r\n              </div>\r\n              <div style={{ fontSize: 32, fontWeight: '500' }}>Sugar</div>\r\n              <div style={{ fontSize: 48, fontWeight: '600' }}>{data.itemB.description}</div>\r\n            </div>\r\n          </div>\r\n        </div>\r\n      </AbsoluteFill>\r\n    </AbsoluteFill>\r\n  );\r\n};\r\n\r\nexport default Info_comparison_scale;",
+    "createdAt": "2025-10-30T19:24:36.297Z",
+    "updatedAt": "2025-10-31T04:12:57.231Z",
+    "version": 4
+  },
+  {
+    "name": "info_comparison_beforeafter",
+    "desc": "Two labeled statistic cards transition side by side, connected by an arrow to show a “before and after” comparison.",
+    "labels": ["codegen_template"],
+    "category": "data_visualization_cards",
+    "placeholders": [
+      {
+        "id": "prompt",
+        "type": "text",
+        "contentType": "string",
+        "color": "#primary",
+        "backgroundColor": "#secondary",
+        "desc": "The description of this shot"
+      },
+      {
+        "id": "a_bg",
+        "type": "image",
+        "desc": "An image or video, do not use background images like infographics, illustrations or solid colors",
+        "ratio": "any"
+      }
+    ],
+    "ratio": "9:16",
+    "status": "Live",
+    "useCases": "\t•\tDemonstrating changes in metrics such as odds, prices, or scores.\n\t•\tVisualizing impact or outcome shifts caused by key events or decisions.\n\t•\tIdeal for sports updates, market comparisons, or trend visualizations showing contrast over time.",
+    "createdAt": "2025-10-30T22:36:27.777Z",
+    "updatedAt": "2025-11-06T19:21:15.595Z",
+    "version": 6,
+    "templateDuration": "1.5"
+  },
+  {
+    "name": "info_number_counter_up",
+    "desc": "A bold numerical figure animates into view, paired with ascending arrow icons and a label below to emphasize growth or upward performance metrics.",
+    "labels": ["codegen_template"],
+    "category": "data_visualization_cards",
+    "placeholders": [
+      {
+        "id": "prompt",
+        "type": "text",
+        "contentType": "string",
+        "color": "#primary",
+        "backgroundColor": "#secondary",
+        "desc": "The description of this shot"
+      },
+      {
+        "id": "a_bg",
+        "type": "image",
+        "desc": "An image or video, do not use background images like infographics, illustrations or solid colors",
+        "ratio": "any"
+      }
+    ],
+    "ratio": "9:16",
+    "status": "Live",
+    "useCases": "- Social growth highlights (e.g., follower or subscriber increase).\n- Marketing performance metrics showing campaign success.\n- Quarterly or monthly reports visualizing user acquisition or engagement boosts.\n- Achievement reveal slides in creator or business analytics videos.",
+    "createdAt": "2025-10-30T22:48:57.114Z",
+    "updatedAt": "2025-11-14T21:45:51.397Z",
+    "version": 6,
+    "templateDuration": "1.5"
+  },
+  {
+    "name": "info_graph_curve",
+    "desc": "A line chart animates as a curve grows smoothly from left to right, revealing the relationship between two variables over time or scale.",
+    "labels": ["codegen_template"],
+    "category": "data_visualization_cards",
+    "placeholders": [
+      {
+        "id": "prompt",
+        "type": "text",
+        "contentType": "string",
+        "color": "#primary",
+        "backgroundColor": "#secondary",
+        "desc": "The description of this shot"
+      },
+      {
+        "id": "a_bg",
+        "type": "image",
+        "desc": "An image or video, do not use background images like infographics, illustrations or solid colors",
+        "ratio": "any"
+      }
+    ],
+    "ratio": "9:16",
+    "status": "Live",
+    "useCases": "\t•\tVisualizing trends or correlations such as accuracy vs. dataset size, revenue vs. time, or performance scaling.\n\t•\tDemonstrating growth patterns, learning curves, or predictive models.\n\t•\tIdeal for analytical or scientific visuals that focus on progression and comparison between series.",
+    "createdAt": "2025-10-30T23:09:35.964Z",
+    "updatedAt": "2025-11-06T04:38:55.303Z",
+    "version": 8,
+    "templateDuration": "1.5"
+  },
+  {
+    "name": "info_number_arrow_up",
+    "desc": "",
+    "labels": ["codegen_template"],
+    "category": "data_visualization_cards",
+    "placeholders": [
+      {
+        "id": "prompt",
+        "type": "text",
+        "contentType": "string",
+        "color": "#primary",
+        "backgroundColor": "#secondary",
+        "desc": "The description of this shot"
+      },
+      {
+        "id": "a_bg",
+        "type": "image",
+        "desc": "An image or video, do not use background images like infographics, illustrations or solid colors",
+        "ratio": "any"
+      }
+    ],
+    "ratio": "9:16",
+    "status": "Live",
+    "useCases": "",
+    "createdAt": "2025-10-30T23:11:36.448Z",
+    "updatedAt": "2025-11-14T21:46:08.889Z",
+    "version": 3,
+    "templateDuration": "1.5"
+  },
+  {
+    "name": "info_charts_battery",
+    "desc": "A horizontal bar indicator fills proportionally to a percentage value, paired with a large numeric figure and supporting sentence that contextualizes the statistic.",
+    "labels": ["codegen_template"],
+    "category": "data_visualization_cards",
+    "placeholders": [
+      {
+        "id": "prompt",
+        "type": "text",
+        "contentType": "string",
+        "color": "#primary",
+        "backgroundColor": "#secondary",
+        "desc": "The description of this shot"
+      },
+      {
+        "id": "a_bg",
+        "type": "image",
+        "desc": "An image or video, do not use background images like infographics, illustrations or solid colors",
+        "ratio": "any"
+      }
+    ],
+    "ratio": "9:16",
+    "status": "Live",
+    "useCases": "- Survey or poll results showing proportions or percentages.\n- Demographic statistics in education, health, or lifestyle reports.\n- Data storytelling in infographic-style short videos.\n- Awareness visuals where visualized ratios (e.g., 1 in 5, 20%) reinforce comprehension.\n\n",
+    "createdAt": "2025-10-30T23:36:49.748Z",
+    "updatedAt": "2025-11-14T21:25:32.132Z",
+    "version": 7,
+    "templateDuration": "1.5"
+  },
+  {
+    "name": "info_comparsion_scale_equal",
+    "desc": "Two currency values appear on opposite sides of a balanced scale, with icons above each number and a central fulcrum emphasizing visual equality or value comparison.",
+    "labels": ["codegen_template"],
+    "category": "data_visualization_cards",
+    "placeholders": [
+      {
+        "id": "prompt",
+        "type": "text",
+        "contentType": "string",
+        "color": "#primary",
+        "backgroundColor": "#secondary",
+        "desc": "The description of this shot"
+      },
+      {
+        "id": "a_bg",
+        "type": "image",
+        "desc": "An image or video, do not use background images like infographics, illustrations or solid colors",
+        "ratio": "any"
+      }
+    ],
+    "ratio": "9:16",
+    "status": "Draft",
+    "useCases": "- Exchange rate visualization (e.g., showing currency conversion equivalents).\n- Purchasing power comparison between countries or time periods.\n- Product value demonstration (e.g., “$92 here equals $1K elsewhere”).\n- Economic parity or cost-efficiency explainer in finance, business, or global market videos.",
+    "createdAt": "2025-10-31T00:45:12.062Z",
+    "updatedAt": "2025-11-10T21:35:46.325Z",
+    "version": 8,
+    "templateDuration": "1.5"
+  },
+  {
+    "name": "info_graph_line",
+    "desc": "An area graph animates upward from left to right, filling with color to show cumulative growth over time, ending with a percentage value and year markers for context.",
+    "labels": ["codegen_template"],
+    "category": "data_visualization_cards",
+    "placeholders": [
+      {
+        "id": "prompt",
+        "type": "text",
+        "contentType": "string",
+        "color": "#primary",
+        "backgroundColor": "#secondary",
+        "desc": "The description of this shot"
+      },
+      {
+        "id": "a_bg",
+        "type": "image",
+        "desc": "An image or video, do not use background images like infographics, illustrations or solid colors",
+        "ratio": "any"
+      }
+    ],
+    "ratio": "9:16",
+    "status": "Live",
+    "useCases": "- Year-over-year growth visualization for metrics like API usage, revenue, or adoption rate.\n- Product or feature performance highlights after a launch or update.\n- Cumulative progress charts in reports or investor updates.\n- Campaign results visualization showing growth acceleration or impact.",
+    "createdAt": "2025-10-31T00:48:59.873Z",
+    "updatedAt": "2025-11-14T21:25:23.889Z",
+    "version": 4,
+    "templateDuration": "1.5"
+  },
+  {
+    "name": "info_timeline1",
+    "desc": "A horizontal timeline scrolls from left to right, revealing year markers and points sequentially as if moving through history or events.",
+    "labels": ["codegen_template"],
+    "category": "data_visualization_cards",
+    "placeholders": [
+      {
+        "id": "prompt",
+        "type": "text",
+        "contentType": "string",
+        "color": "#primary",
+        "backgroundColor": "#secondary",
+        "desc": "The description of this shot"
+      },
+      {
+        "id": "a_bg",
+        "type": "image",
+        "desc": "An image or video, do not use background images like infographics, illustrations or solid colors",
+        "ratio": "any"
+      }
+    ],
+    "ratio": "9:16",
+    "status": "Live",
+    "useCases": "\t•\tShowing chronological progress such as historical milestones, company growth, or product evolution.\n\t•\tVisualizing sequences of events (e.g., “1985 → 1990 → …”) in documentaries, explainers, and retrospectives.\n\t•\tIdeal when you want to set a clear sense of time flow or show how something has changed across eras.",
+    "createdAt": "2025-10-31T01:42:30.619Z",
+    "updatedAt": "2025-11-14T19:52:03.645Z",
+    "version": 5,
+    "templateDuration": "1.5"
+  },
+  {
+    "name": "info_timeline2",
+    "desc": "A vertical timeline animates downward, with each year marker and milestone card appearing in sequence as the line extends.",
+    "labels": ["codegen_template"],
+    "category": "data_visualization_cards",
+    "placeholders": [
+      {
+        "id": "prompt",
+        "type": "text",
+        "contentType": "string",
+        "color": "#primary",
+        "backgroundColor": "#secondary",
+        "desc": "The description of this shot"
+      },
+      {
+        "id": "a_bg",
+        "type": "image",
+        "desc": "An image or video, do not use background images like infographics, illustrations or solid colors",
+        "ratio": "any"
+      }
+    ],
+    "ratio": "9:16",
+    "status": "Live",
+    "useCases": "\t•\tPresenting project roadmaps, company history, or product evolution step-by-step.\n\t•\tHighlighting major achievements or phases in an organized, easy-to-follow format.\n\t•\tIdeal for storytelling segments where chronological structure and clarity are essential.",
+    "createdAt": "2025-10-31T01:44:51.328Z",
+    "updatedAt": "2025-11-14T19:58:37.463Z",
+    "version": 4,
+    "templateDuration": "1.5"
+  },
+  {
+    "name": "info_charts_waffle_3",
+    "desc": "A horizontal row of bars fills partially, with a fraction highlighted to represent a percentage value.",
+    "labels": ["codegen_template"],
+    "category": "data_visualization_cards",
+    "placeholders": [
+      {
+        "id": "prompt",
+        "type": "text",
+        "contentType": "string",
+        "color": "#primary",
+        "backgroundColor": "#secondary",
+        "desc": "The description of this shot"
+      },
+      {
+        "id": "a_bg",
+        "type": "image",
+        "desc": "An image or video, do not use background images like infographics, illustrations or solid colors",
+        "ratio": "any"
+      }
+    ],
+    "ratio": "9:16",
+    "status": "Live",
+    "useCases": "\t•\tShowing proportions in survey or poll data (e.g., “36% use LinkedIn for job search”).\n\t•\tVisualizing simple ratios or completion rates in a compact, linear format.\n\t•\tEffective for quick, minimalist percentage visuals where clarity and precision matter.",
+    "createdAt": "2025-10-31T08:18:13.875Z",
+    "updatedAt": "2025-10-31T10:31:07.453Z",
+    "version": 3,
+    "templateDuration": "1.5"
+  },
+  {
+    "name": "info_charts_bar_6",
+    "desc": "Stacked horizontal bars slide in one by one from the side, each representing a percentage share with bold numeric emphasis and labeled categories.",
+    "labels": ["codegen_template"],
+    "category": "data_visualization_cards",
+    "placeholders": [
+      {
+        "id": "prompt",
+        "type": "text",
+        "contentType": "string",
+        "color": "#primary",
+        "backgroundColor": "#secondary",
+        "desc": "The description of this shot"
+      },
+      {
+        "id": "a_bg",
+        "type": "image",
+        "desc": "An image or video, do not use background images like infographics, illustrations or solid colors",
+        "ratio": "any"
+      }
+    ],
+    "ratio": "9:16",
+    "status": "Live",
+    "useCases": "\t•\tShowing ranked or proportional data like spending breakdowns, budget allocation, or category comparisons.\n\t•\tUseful for summarizing survey results or composition visuals where hierarchy matters.\n\t•\tFits well in reports, financial overviews, or lifestyle data visualizations.",
+    "createdAt": "2025-10-31T09:05:36.898Z",
+    "updatedAt": "2025-10-31T10:31:14.226Z",
+    "version": 3,
+    "templateDuration": "1.5"
+  },
+  {
+    "name": "info_charts_pie_3",
+    "desc": "A pie chart segment expands or highlights while a label and percentage appear below, visually emphasizing one category within the whole.",
+    "labels": ["codegen_template"],
+    "category": "data_visualization_cards",
+    "placeholders": [
+      {
+        "id": "prompt",
+        "type": "text",
+        "contentType": "string",
+        "color": "#primary",
+        "backgroundColor": "#secondary",
+        "desc": "The description of this shot"
+      },
+      {
+        "id": "a_bg",
+        "type": "image",
+        "desc": "An image or video, do not use background images like infographics, illustrations or solid colors",
+        "ratio": "any"
+      }
+    ],
+    "ratio": "9:16",
+    "status": "Live",
+    "useCases": "\t•\tHighlighting a dominant portion in market share, survey, or distribution data.\n\t•\tDrawing focus to one key category while maintaining overall context.\n\t•\tIdeal for spotlighting leading metrics or visual comparisons in reports and summaries.",
+    "createdAt": "2025-10-31T09:56:52.280Z",
+    "updatedAt": "2025-11-04T07:03:57.037Z",
+    "version": 5,
+    "templateDuration": "1.5"
+  },
+  {
+    "name": "info_callout_yt_subscribers",
+    "desc": "A YouTube logo fades or scales in at the center, followed by a numerical counter that animates upward to display the live or total subscriber count, with a “subscribers” label beneath.",
+    "labels": ["codegen_template"],
+    "category": "data_visualization_cards",
+    "placeholders": [
+      {
+        "id": "prompt",
+        "type": "text",
+        "contentType": "string",
+        "color": "#primary",
+        "backgroundColor": "#secondary",
+        "desc": "The description of this shot"
+      },
+      {
+        "id": "a_bg",
+        "type": "image",
+        "desc": "An image or video, do not use background images like infographics, illustrations or solid colors",
+        "ratio": "any"
+      }
+    ],
+    "ratio": "9:16",
+    "status": "Live",
+    "useCases": "- Channel growth animations for showcasing real-time subscriber milestones.\n- End screen elements highlighting channel success or audience size.\n- Progress visuals for creator performance recaps or social dashboards.\n- Milestone celebrations (e.g., reaching 100K, 1M subscribers) in short-form promo videos.",
+    "createdAt": "2025-11-03T20:01:22.697Z",
+    "updatedAt": "2025-11-14T21:28:31.692Z",
+    "version": 3,
+    "templateDuration": "1.5"
+  },
+  {
+    "name": "info_listicle_steps",
+    "desc": "A vertical list of labeled steps (A, B, C, D) appears one by one with smooth fade or slide transitions, emphasizing sequential information.",
+    "labels": ["codegen_template"],
+    "category": "data_visualization_cards",
+    "placeholders": [
+      {
+        "id": "prompt",
+        "type": "text",
+        "contentType": "string",
+        "color": "#primary",
+        "backgroundColor": "#secondary",
+        "desc": "The description of this shot"
+      },
+      {
+        "id": "a_bg",
+        "type": "image",
+        "desc": "An image or video, do not use background images like infographics, illustrations or solid colors",
+        "ratio": "any"
+      }
+    ],
+    "ratio": "9:16",
+    "status": "Live",
+    "useCases": "\t•\tPresenting instructions, workflows, or how-to processes in educational or tutorial content.\n\t•\tStructuring multi-step guides like setup walkthroughs, onboarding sequences, or app usage tips.\n\t•\tIdeal for explainer videos that require clear, step-by-step visual hierarchy.",
+    "createdAt": "2025-11-03T20:01:26.155Z",
+    "updatedAt": "2025-11-06T19:19:46.747Z",
+    "version": 4,
+    "templateDuration": "1.5"
+  },
+  {
+    "name": "info_callout_search",
+    "desc": "A search bar slides smoothly upward into frame and settles with a soft ease-out, as the query text fades in cleanly from left to right.",
+    "labels": ["codegen_template"],
+    "category": "data_visualization_cards",
+    "placeholders": [
+      {
+        "id": "prompt",
+        "type": "text",
+        "contentType": "string",
+        "color": "#primary",
+        "backgroundColor": "#secondary",
+        "desc": "The description of this shot"
+      },
+      {
+        "id": "a_bg",
+        "type": "image",
+        "desc": "An image or video, do not use background images like infographics, illustrations or solid colors",
+        "ratio": "any"
+      }
+    ],
+    "ratio": "9:16",
+    "status": "Live",
+    "useCases": "\t•\tIntroducing a topic by visually “posing” a question as if typed into a search bar.\n\t•\tHighlighting a tutorial or explainer intro where the content answers a common query.\n\t•\tSetting up a hook by framing the clip around what viewers would search for (e.g., “how to…,” “what is…,” “best way to…”).",
+    "createdAt": "2025-11-03T20:01:33.472Z",
+    "updatedAt": "2025-11-14T20:10:24.992Z",
+    "version": 7,
+    "templateDuration": "1.5"
+  },
+  {
+    "name": "info_callout_yt_subscribe",
+    "desc": "The YouTube logo scales up slightly with a bounce before the handle and “Subscribe” button fade in sequentially, mimicking a call-to-action pop-up.",
+    "labels": ["codegen_template"],
+    "category": "data_visualization_cards",
+    "placeholders": [
+      {
+        "id": "prompt",
+        "type": "text",
+        "contentType": "string",
+        "color": "#primary",
+        "backgroundColor": "#secondary",
+        "desc": "The description of this shot"
+      },
+      {
+        "id": "a_bg",
+        "type": "image",
+        "desc": "An image or video, do not use background images like infographics, illustrations or solid colors",
+        "ratio": "any"
+      }
+    ],
+    "ratio": "9:16",
+    "status": "Live",
+    "useCases": "- End cards encouraging viewers to follow a YouTube channel or creator account.\n- Short-form clips or trailers that highlight a social handle visually.\n- Promotional edits needing a clean, fast intro or outro to reinforce brand presence.\n",
+    "createdAt": "2025-11-03T22:37:37.645Z",
+    "updatedAt": "2025-11-14T20:07:29.652Z",
+    "version": 8,
+    "templateDuration": "1.5"
+  },
+  {
+    "name": "info_comparsion_bubble_3",
+    "desc": "Three smaller circles orbit around a central labeled circle in smooth, continuous motion, suggesting connected categories or components.",
+    "labels": ["codegen_template"],
+    "category": "data_visualization_cards",
+    "placeholders": [
+      {
+        "id": "prompt",
+        "type": "text",
+        "contentType": "string",
+        "color": "#primary",
+        "backgroundColor": "#secondary",
+        "desc": "The description of this shot"
+      },
+      {
+        "id": "a_bg",
+        "type": "image",
+        "desc": "An image or video, do not use background images like infographics, illustrations or solid colors",
+        "ratio": "any"
+      }
+    ],
+    "ratio": "9:16",
+    "status": "Live",
+    "useCases": "\t•\tVisualizing budget or resource allocation where surrounding elements represent subcategories (e.g., Marketing, Sales, R&D).\n\t•\tShowing ecosystem relationships, like key partners orbiting a brand or platform.\n\t•\tRepresenting a core metric (e.g., revenue, conversions) with influencing factors rotating around it.",
+    "createdAt": "2025-11-03T22:57:11.507Z",
+    "updatedAt": "2025-11-06T04:36:42.594Z",
+    "version": 4,
+    "templateDuration": "1.5"
+  },
+  {
+    "name": "info_comparsion_table_1",
+    "desc": "A grid-based table layout animates into view, often with cell-by-cell highlights or data reveals, used to present structured comparisons or accuracy metrics clearly.",
+    "labels": ["codegen_template"],
+    "category": "data_visualization_cards",
+    "placeholders": [
+      {
+        "id": "prompt",
+        "type": "text",
+        "contentType": "string",
+        "color": "#primary",
+        "backgroundColor": "#secondary",
+        "desc": "The description of this shot"
+      },
+      {
+        "id": "a_bg",
+        "type": "image",
+        "desc": "An image or video, do not use background images like infographics, illustrations or solid colors",
+        "ratio": "any"
+      }
+    ],
+    "ratio": "9:16",
+    "status": "Live",
+    "useCases": "- Benchmark or model comparison visuals (e.g., reasoning or accuracy tables).\n- Performance metric breakdowns across categories or timeframes.\n- Leaderboard or ranking displays with multiple data points.\n- Structured data summaries for research, analytics, or progress reporting.",
+    "createdAt": "2025-11-04T00:07:56.111Z",
+    "updatedAt": "2025-11-17T19:14:56.460Z",
+    "version": 4,
+    "templateDuration": "1.5"
+  },
+  {
+    "name": "info_charts_waffle_1",
+    "desc": "A grid of dots animates as a selected portion lights up in white, visually isolating a percentage while the numeric value fades in below.",
+    "labels": ["codegen_template"],
+    "category": "data_visualization_cards",
+    "placeholders": [
+      {
+        "id": "prompt",
+        "type": "text",
+        "contentType": "string",
+        "color": "#primary",
+        "backgroundColor": "#secondary",
+        "desc": "The description of this shot"
+      },
+      {
+        "id": "a_bg",
+        "type": "image",
+        "desc": "An image or video, do not use background images like infographics, illustrations or solid colors",
+        "ratio": "any"
+      }
+    ],
+    "ratio": "9:16",
+    "status": "Live",
+    "useCases": "\t•\tHighlighting survey results by showing a clear visual fraction (e.g., “20%,” “1 in 5”).\n\t•\tPresenting quick statistics in interviews, case studies, or data-backed claims.\n\t•\tShowing proportions in a simple, icon-based way when charts or graphs would feel too heavy for short-form video.",
+    "createdAt": "2025-11-04T01:51:24.004Z",
+    "updatedAt": "2025-11-14T21:28:36.487Z",
+    "version": 3
+  },
+  {
+    "name": "info_comparsion_bubble_1",
+    "desc": "Two circles scale into view side by side, each labeled with company names and numerical values to represent a clear size comparison between two entities.",
+    "labels": ["codegen_template"],
+    "category": "data_visualization_cards",
+    "placeholders": [
+      {
+        "id": "prompt",
+        "type": "text",
+        "contentType": "string",
+        "color": "#primary",
+        "backgroundColor": "#secondary",
+        "desc": "The description of this shot"
+      },
+      {
+        "id": "a_bg",
+        "type": "image",
+        "desc": "An image or video, do not use background images like infographics, illustrations or solid colors",
+        "ratio": "any"
+      }
+    ],
+    "ratio": "9:16",
+    "status": "Live",
+    "useCases": "- Market share or production comparison between competitors (e.g., “BYD vs Tesla sales”).\n- Audience or user base visualization showing magnitude differences.\n- Brand growth comparison across time or regions.\n- Visualizing scale disparity in data-driven presentations or short-form explainers.",
+    "createdAt": "2025-11-05T16:25:47.859Z",
+    "updatedAt": "2025-11-14T21:28:57.803Z",
+    "version": 4,
+    "templateDuration": "1.5"
+  },
+  {
+    "name": "info_comparsion_bars_2",
+    "desc": "A two-bar vertical chart animates upward to compare two data points (e.g., years), with a clear percentage label and concise title showing the relative change between them.",
+    "labels": ["codegen_template"],
+    "category": "data_visualization_cards",
+    "placeholders": [
+      {
+        "id": "prompt",
+        "type": "text",
+        "contentType": "string",
+        "color": "#primary",
+        "backgroundColor": "#secondary",
+        "desc": "The description of this shot"
+      },
+      {
+        "id": "a_bg",
+        "type": "image",
+        "desc": "An image or video, do not use background images like infographics, illustrations or solid colors",
+        "ratio": "any"
+      }
+    ],
+    "ratio": "9:16",
+    "status": "Live",
+    "useCases": "- Year-over-year comparisons for metrics like sales, revenue, or engagement.\n- Monthly performance visuals (e.g., “Aug Sales +49.5%”).\n- Pre/post launch comparisons for product or feature impact.\n- Quick visual summaries of growth or performance improvements in reports or reels.",
+    "createdAt": "2025-11-05T16:58:01.999Z",
+    "updatedAt": "2025-11-14T21:24:26.119Z",
+    "version": 3,
+    "templateDuration": "1.5"
+  },
+  {
+    "name": "info_listicle_cards",
+    "desc": "Three stacked metric cards slide or fade in sequentially, each displaying an icon, title, and subtext — representing key social or app performance statistics.",
+    "labels": ["codegen_template"],
+    "category": "data_visualization_cards",
+    "placeholders": [
+      {
+        "id": "prompt",
+        "type": "text",
+        "contentType": "string",
+        "color": "#primary",
+        "backgroundColor": "#secondary",
+        "desc": "The description of this shot"
+      },
+      {
+        "id": "a_bg",
+        "type": "image",
+        "desc": "An image or video, do not use background images like infographics, illustrations or solid colors",
+        "ratio": "any"
+      }
+    ],
+    "ratio": "9:16",
+    "status": "Draft",
+    "useCases": "- Dashboard-style summaries in short-form analytics or recap videos.\n- Monthly performance highlights (e.g., new users, likes, impressions).\n- Social media growth breakdowns across multiple metrics.\n- Product or platform update visuals summarizing user engagement data.",
+    "createdAt": "2025-11-10T22:05:59.838Z",
+    "updatedAt": "2025-11-14T00:07:40.561Z",
+    "version": 4,
+    "templateDuration": "1.5"
+  },
+  {
+    "name": "info_comparsion_bubble_2",
+    "desc": "",
+    "labels": ["codegen_template"],
+    "category": "data_visualization_cards",
+    "placeholders": [
+      {
+        "id": "prompt",
+        "type": "text",
+        "contentType": "string",
+        "color": "#primary",
+        "backgroundColor": "#secondary",
+        "desc": "The description of this shot"
+      },
+      {
+        "id": "a_bg",
+        "type": "image",
+        "desc": "An image or video, do not use background images like infographics, illustrations or solid colors",
+        "ratio": "any"
+      }
+    ],
+    "ratio": "9:16",
+    "status": "Live",
+    "useCases": "",
+    "createdAt": "2025-11-11T00:42:21.333Z",
+    "updatedAt": "2025-11-14T21:29:05.483Z",
+    "version": 2
+  },
+  {
+    "name": "info_number_5",
+    "desc": "A large bold number appears with a horizontal label bar overlay (e.g., “CO₂ OFFSET” or “FOLLOWERS”), creating a clean, modular data-highlight format that emphasizes the metric and its context.",
+    "labels": ["codegen_template"],
+    "category": "data_visualization_cards",
+    "placeholders": [
+      {
+        "id": "prompt",
+        "type": "text",
+        "contentType": "string",
+        "color": "#primary",
+        "backgroundColor": "#secondary",
+        "desc": "The description of this shot"
+      },
+      {
+        "id": "a_bg",
+        "type": "image",
+        "desc": "An image or video, do not use background images like infographics, illustrations or solid colors",
+        "ratio": "any"
+      }
+    ],
+    "ratio": "9:16",
+    "status": "Live",
+    "useCases": "- Metric highlight cards for stats like followers, revenue, or growth totals.\n- Report or summary visuals where a main figure needs a clear label.\n- Dashboard-style data moments in performance or recap videos.\n- Intro or outro callouts to emphasize key achievements or comparisons.",
+    "createdAt": "2025-11-11T00:55:57.469Z",
+    "updatedAt": "2025-11-14T21:25:38.574Z",
+    "version": 4,
+    "templateDuration": "1.5"
+  },
+  {
+    "name": "info_number_3",
+    "desc": "",
+    "labels": ["codegen_template"],
+    "category": "data_visualization_cards",
+    "placeholders": [
+      {
+        "id": "prompt",
+        "type": "text",
+        "contentType": "string",
+        "color": "#primary",
+        "backgroundColor": "#secondary",
+        "desc": "The description of this shot"
+      },
+      {
+        "id": "a_bg",
+        "type": "image",
+        "desc": "An image or video, do not use background images like infographics, illustrations or solid colors",
+        "ratio": "any"
+      }
+    ],
+    "ratio": "9:16",
+    "status": "Draft",
+    "useCases": "",
+    "createdAt": "2025-11-11T01:06:42.004Z",
+    "updatedAt": "2025-11-11T01:06:42.004Z",
+    "version": 1
+  },
+  {
+    "name": "info_number_simple_decrease",
+    "desc": "A bold downward arrow appears beside a percentage figure, visually emphasizing a decrease, with supporting text below describing the context of the reduction.",
+    "labels": ["codegen_template"],
+    "category": "data_visualization_cards",
+    "placeholders": [
+      {
+        "id": "prompt",
+        "type": "text",
+        "contentType": "string",
+        "color": "#primary",
+        "backgroundColor": "#secondary",
+        "desc": "The description of this shot"
+      },
+      {
+        "id": "a_bg",
+        "type": "image",
+        "desc": "An image or video, do not use background images like infographics, illustrations or solid colors",
+        "ratio": "any"
+      }
+    ],
+    "ratio": "9:16",
+    "status": "Live",
+    "useCases": "- Price or cost decrease visuals for market or sales updates.\n- Performance drop representation (e.g., engagement, production, or sales).\n- Before-and-after comparisons showing decline between time periods or datasets.\n- Highlighting downward economic trends in reports or financial explainers.",
+    "createdAt": "2025-11-11T00:58:42.246Z",
+    "updatedAt": "2025-11-14T21:25:49.754Z",
+    "version": 5,
+    "templateDuration": "1.5"
+  },
+  {
+    "name": "info_number_count_down",
+    "desc": "A digital-style countdown timer animates in real-time, displaying hours, minutes, and seconds within boxed segments that flip or update dynamically.",
+    "labels": ["codegen_template"],
+    "category": "data_visualization_cards",
+    "placeholders": [
+      {
+        "id": "prompt",
+        "type": "text",
+        "contentType": "string",
+        "color": "#primary",
+        "backgroundColor": "#secondary",
+        "desc": "The description of this shot"
+      },
+      {
+        "id": "a_bg",
+        "type": "image",
+        "desc": "An image or video, do not use background images like infographics, illustrations or solid colors",
+        "ratio": "any"
+      }
+    ],
+    "ratio": "9:16",
+    "status": "Live",
+    "useCases": "- Event countdowns for launches, premieres, or live sessions.\n- Timer visuals in product reveals or campaign teasers.\n- Deadline or challenge countdowns in short-form videos.\n- Interactive visual anchors for limited-time offers or end-of-sale reminders.",
+    "createdAt": "2025-11-11T01:01:54.301Z",
+    "updatedAt": "2025-11-14T21:45:22.819Z",
+    "version": 3,
+    "templateDuration": "1.5"
+  },
+  {
+    "name": "info_number_in_context_2",
+    "desc": "A centered rectangular card fades or slides in, displaying a bold title and percentage value (+17%) to highlight a key economic or statistical change.",
+    "labels": ["codegen_template"],
+    "category": "data_visualization_cards",
+    "placeholders": [
+      {
+        "id": "prompt",
+        "type": "text",
+        "contentType": "string",
+        "color": "#primary",
+        "backgroundColor": "#secondary",
+        "desc": "The description of this shot"
+      },
+      {
+        "id": "a_bg",
+        "type": "image",
+        "desc": "An image or video, do not use background images like infographics, illustrations or solid colors",
+        "ratio": "any"
+      }
+    ],
+    "ratio": "9:16",
+    "status": "Draft",
+    "useCases": "- Financial or economic updates showing inflation or cost changes.\n- Market summary visuals for reports or news-style videos.\n- Infographic callouts emphasizing growth or increase metrics.\n- Quick data snapshots in macroeconomic explainers or presentations.",
+    "createdAt": "2025-11-11T01:02:19.645Z",
+    "updatedAt": "2025-11-11T01:29:34.277Z",
+    "version": 2,
+    "templateDuration": "1.5"
+  },
+  {
+    "name": "hook_fastcut_moderate",
+    "desc": "This hook is a high-energy, rhythm-driven visual sequence designed to grab the viewer’s attention within seconds. It features 8 RWAs (images) that flash rapidly in sequence. The pacing, transitions, and rhythm are intentionally quick to create a burst of visual impact, making it perfect for intros that need to stop the scroll within the first second.",
+    "useCases": "• Captures attention instantly through rapid movement and visual rhythm.\n• Works well when introducing a bold statement, provocative question, or trending topic.\n• Commonly used in attention-grabbing, curiosity-building, or surprise-driven hooks.",
+    "ratio": "9:16",
+    "placeholders": [
+      {
+        "id": "a_1",
+        "desc": "a image in 9:16 format",
+        "type": "image",
+        "ratio": "9:16"
+      },
+      {
+        "id": "a_2",
+        "desc": "a image in 9:16 format",
+        "type": "image",
+        "ratio": "9:16"
+      },
+      {
+        "id": "a_3",
+        "desc": "a image in 9:16 format",
+        "type": "image",
+        "ratio": "9:16"
+      },
+      {
+        "id": "a_4",
+        "desc": "a image in 9:16 format",
+        "type": "image",
+        "ratio": "9:16"
+      },
+      {
+        "id": "a_5",
+        "desc": "a image in 9:16 format",
+        "type": "image",
+        "ratio": "9:16"
+      },
+      {
+        "id": "a_6",
+        "desc": "a image in 9:16 format",
+        "type": "image",
+        "ratio": "9:16"
+      },
+      {
+        "id": "a_7",
+        "desc": "a image in 9:16 format",
+        "type": "image",
+        "ratio": "9:16"
+      },
+      {
+        "id": "a_8",
+        "desc": "a image in 9:16 format",
+        "type": "image",
+        "ratio": "9:16"
+      }
+    ],
+    "labels": ["hook_template"],
+    "category": "hook_fast_cut",
+    "templateDuration": "2",
+    "status": "Live",
+    "createdAt": "2025-11-12T17:10:46.030Z",
+    "updatedAt": "2025-11-17T22:16:57.288Z",
+    "version": 37
+  },
+  {
+    "name": "hook_typography_grid",
+    "desc": "Please recreate the typography animation style exactly based on the uploaded reference video (Input.mp4).\r\n\r\nFocus on these characteristics extracted from the reference:\r\n\r\n1. Layout\r\n- Text appears in a clean grid-based composition\r\n- Each text block stays aligned to a consistent margin system\r\n- Bold sans-serif typography similar to the reference\r\n- Vertical 1080×1920 format\r\n\r\n2. Animation Timing\r\n- Match the exact pacing of the reference\r\n- Text elements pop in quickly with snappy, spring-like motion\r\n- Use staggered timing: each word/block enters 0.08–0.15s apart\r\n- Keep the short, fast rhythm seen in the reference\r\n\r\n3. Motion Style\r\n- Use scale-up or slide-in animations with slight overshoot\r\n- Smooth easing such as `spring` or cubic-bezier back easing\r\n- Elements fade or scale out at the same speed as the reference\r\n\r\n4. Visual Style\r\n- High contrast typography (white on dark or similar)\r\n- Minimalistic modern motion-graphics aesthetic\r\n- Maintain spacing and proportions similar to the reference\r\n\r\n5. Implementation Requirements\r\n- Build a reusable component named <TypographyGrid />\r\n- Accept dynamic text inputs through props\r\n- Use Remotion’s `spring`, `interpolate`, and composition layout best practices\r\n- Structure code with a separate TextCell component for each text block\r\n\r\n6. Goal\r\n- Reproduce the animation as closely as possible to Input.mp4 including timing, easing, spacing, and motion behavior.",
+    "labels": ["codegen_template"],
+    "category": "data_visualization_cards",
+    "placeholders": [
+      {
+        "id": "prompt",
+        "type": "text",
+        "contentType": "string",
+        "color": "#primary",
+        "backgroundColor": "#secondary",
+        "desc": "The description of this shot"
+      },
+      {
+        "id": "a_bg",
+        "type": "image",
+        "desc": "An image or video, do not use background images like infographics, illustrations or solid colors",
+        "ratio": "any"
+      }
+    ],
+    "ratio": "9:16",
+    "status": "Draft",
+    "useCases": "Please recreate the typography animation style exactly based on the uploaded reference video (Input.mp4).\r\n\r\nFocus on these characteristics extracted from the reference:\r\n\r\n1. Layout\r\n- Text appears in a clean grid-based composition\r\n- Each text block stays aligned to a consistent margin system\r\n- Bold sans-serif typography similar to the reference\r\n- Vertical 1080×1920 format\r\n\r\n2. Animation Timing\r\n- Match the exact pacing of the reference\r\n- Text elements pop in quickly with snappy, spring-like motion\r\n- Use staggered timing: each word/block enters 0.08–0.15s apart\r\n- Keep the short, fast rhythm seen in the reference\r\n\r\n3. Motion Style\r\n- Use scale-up or slide-in animations with slight overshoot\r\n- Smooth easing such as `spring` or cubic-bezier back easing\r\n- Elements fade or scale out at the same speed as the reference\r\n\r\n4. Visual Style\r\n- High contrast typography (white on dark or similar)\r\n- Minimalistic modern motion-graphics aesthetic\r\n- Maintain spacing and proportions similar to the reference\r\n\r\n5. Implementation Requirements\r\n- Build a reusable component named <TypographyGrid />\r\n- Accept dynamic text inputs through props\r\n- Use Remotion’s `spring`, `interpolate`, and composition layout best practices\r\n- Structure code with a separate TextCell component for each text block\r\n\r\n6. Goal\r\n- Reproduce the animation as closely as possible to Input.mp4 including timing, easing, spacing, and motion behavior.",
+    "createdAt": "2025-11-13T03:12:36.167Z",
+    "updatedAt": "2025-11-13T03:12:36.167Z",
+    "version": 1
+  },
+  {
+    "name": "vertical_three_shutter",
+    "desc": "A vertical-format motion template with three shutter-style transitions. Each asset is revealed in sequence with a sharp sliding motion, creating a structured and impactful rhythm. The style is minimalist, ensuring the focus stays on the assets.",
+    "useCases": "Ideal for explainers, product showcases, or highlight reels where multiple assets need to be presented clearly with bold motion. Works well for section dividers or storytelling that benefits from a strong, segmented flow. Classified as Dynamic + Minimal, it emphasizes clarity and structure through sharp transitions. Unlike Cinematic (slow, dramatic, emotional) or Playful (bouncy, casual, fun), this template delivers a professional, impactful style. Tags: vertical, shutter, three-assets, structured, minimalist, dynamic. Emotion: energetic, clear, professional, impactful.",
+    "ratio": "9:16",
+    "placeholders": [
+      {
+        "id": "a_1",
+        "desc": "first image or video in 9:16 format",
+        "type": "image",
+        "ratio": "9:16"
+      },
+      {
+        "id": "a_2",
+        "desc": "second image or video in 9:16 format",
+        "type": "image",
+        "ratio": "9:16"
+      },
+      {
+        "id": "a_3",
+        "desc": "third image or video in 9:16 format",
+        "type": "image",
+        "ratio": "9:16"
+      }
+    ],
+    "labels": [],
+    "category": "fullscreen_motion_effects",
+    "templateDuration": "1.5",
+    "status": "Archived",
+    "createdAt": "2025-11-13T08:45:08.599Z",
+    "updatedAt": "2025-11-13T09:08:43.316Z",
+    "version": 2
+  },
+  {
+    "name": "hook_fastcut_wipe",
+    "desc": "This hook is a high-energy visual sequence that uses rapid directional wipes to create momentum and impact. It features 6 RWAs (images) shown in quick succession, with bold transitions that add movement and surprise. The fast pacing delivers an immediate burst of visual intensity, making it ideal for attention-grabbing intros.",
+    "useCases": "• Creates instant energy through continuous motion and quick transitions.\n• Works well for teaser openings, mystery-driven intros, or building fast anticipation.\n• Suitable for curiosity-based or surprise-driven hooks that rely on rapid pacing to pull viewers in.",
+    "ratio": "9:16",
+    "placeholders": [
+      {
+        "id": "a_1",
+        "desc": "a image in 9:16 format",
+        "type": "image",
+        "ratio": "9:16"
+      },
+      {
+        "id": "a_2",
+        "desc": "a image in 9:16 format",
+        "type": "image",
+        "ratio": "9:16"
+      },
+      {
+        "id": "a_3",
+        "desc": "a image in 9:16 format",
+        "type": "image",
+        "ratio": "9:16"
+      },
+      {
+        "id": "a_4",
+        "desc": "a image in 9:16 format",
+        "type": "image",
+        "ratio": "9:16"
+      },
+      {
+        "id": "a_5",
+        "desc": "a image in 9:16 format",
+        "type": "image",
+        "ratio": "9:16"
+      },
+      {
+        "id": "a_6",
+        "desc": "a image in 9:16 format",
+        "type": "image",
+        "ratio": "9:16"
+      }
+    ],
+    "labels": ["hook_template"],
+    "category": "hook_fast_cut",
+    "templateDuration": "2.5",
+    "status": "Live",
+    "createdAt": "2025-11-13T22:02:36.059Z",
+    "updatedAt": "2025-11-16T21:50:53.399Z",
+    "version": 40
+  },
+  {
+    "name": "hook_slidecut_linear",
+    "desc": "This hook delivers a clean, structured visual flow using horizontal slide transitions. It features 5 RWAs (images) presented in a smooth, linear sequence, keeping movement steady while allowing each visual to read clearly. Its simple and organized pacing makes it ideal for communicating information with clarity.",
+    "useCases": "• Useful for step-by-step explanations, feature highlights, or ordered storytelling.\n• Effective when presenting clear concepts, lists, or structured insights that benefit from an organized visual layout.\n• Best suited for hooks that aim for clarity, logic, and readability rather than fast-paced excitement.",
+    "ratio": "9:16",
+    "placeholders": [
+      {
+        "id": "a_1",
+        "desc": "a image in 9:16 format",
+        "type": "image",
+        "ratio": "9:16"
+      },
+      {
+        "id": "a_2",
+        "desc": "a image in 9:16 format",
+        "type": "image",
+        "ratio": "9:16"
+      },
+      {
+        "id": "a_3",
+        "desc": "a image in 9:16 format",
+        "type": "image",
+        "ratio": "9:16"
+      },
+      {
+        "id": "a_4",
+        "desc": "a image in 9:16 format",
+        "type": "image",
+        "ratio": "9:16"
+      },
+      {
+        "id": "a_5",
+        "desc": "a image in 9:16 format",
+        "type": "image",
+        "ratio": "9:16"
+      }
+    ],
+    "labels": ["hook_template"],
+    "category": "hook_slide",
+    "templateDuration": "2.5",
+    "status": "Live",
+    "createdAt": "2025-11-13T22:39:04.743Z",
+    "updatedAt": "2025-11-17T18:17:22.991Z",
+    "version": 14
+  },
+  {
+    "name": "hook_layout_glide",
+    "desc": "This hook uses smooth, flowing layout transitions to guide the viewer through a sequence of 7 RWAs (images). Its motion is gentle and continuous, creating a polished, story-like presentation. Rather than relying on speed or surprise, this hook emphasizes structured movement and visual clarity, making the transitions feel intentional and cohesive.",
+    "useCases": "• Ideal for story-driven intros, chapter transitions, or moments where you want to present visuals in a calm, organized flow.\n• Works well for highlighting key points, themes, or narrative progressions.\n• Best suited for hooks that aim for a clean, professional, and smooth storytelling tone rather than fast-paced impact.",
+    "ratio": "9:16",
+    "placeholders": [
+      {
+        "id": "a_1",
+        "desc": "a image in 9:16 format",
+        "type": "image",
+        "ratio": "9:16"
+      },
+      {
+        "id": "a_2",
+        "desc": "a image in 9:16 format",
+        "type": "image",
+        "ratio": "9:16"
+      },
+      {
+        "id": "a_3",
+        "desc": "a image in 9:16 format",
+        "type": "image",
+        "ratio": "9:16"
+      },
+      {
+        "id": "a_4",
+        "desc": "a image in 9:16 format",
+        "type": "image",
+        "ratio": "9:16"
+      },
+      {
+        "id": "a_5",
+        "desc": "a image in 9:16 format",
+        "type": "image",
+        "ratio": "9:16"
+      },
+      {
+        "id": "a_6",
+        "desc": "a image in 9:16 format",
+        "type": "image",
+        "ratio": "9:16"
+      },
+      {
+        "id": "a_7",
+        "desc": "a image in 9:16 format",
+        "type": "image",
+        "ratio": "9:16"
+      }
+    ],
+    "labels": ["hook_template"],
+    "category": "hook_layout_grid",
+    "templateDuration": "2.5",
+    "status": "Live",
+    "createdAt": "2025-11-14T00:40:39.375Z",
+    "updatedAt": "2025-11-17T18:17:08.155Z",
+    "version": 6
+  },
+  {
+    "name": "hook_slidecut_down",
+    "desc": "This hook uses vertical downward slide transitions to move through 5 RWAs (images) in a smooth, sequential flow. The motion naturally guides the viewer’s eye from top to bottom, creating a sense of progression. Its clean, structured pacing makes it suitable for presenting information in a clear and digestible way.",
+    "useCases": "• Great for breaking down steps, listing key points, or showing progression in a simple, linear format.\n• Effective when explaining ordered concepts, feature summaries, or content that benefits from a guided downward flow.\n• Best for hooks that rely on clarity, structure, and easy comprehension, rather than speed or surprise.",
+    "ratio": "9:16",
+    "placeholders": [
+      {
+        "id": "a_1",
+        "desc": "a image in 9:16 format",
+        "type": "image",
+        "ratio": "9:16"
+      },
+      {
+        "id": "a_2",
+        "desc": "a image in 9:16 format",
+        "type": "image",
+        "ratio": "9:16"
+      },
+      {
+        "id": "a_3",
+        "desc": "a image in 9:16 format",
+        "type": "image",
+        "ratio": "9:16"
+      },
+      {
+        "id": "a_4",
+        "desc": "a image in 9:16 format",
+        "type": "image",
+        "ratio": "9:16"
+      },
+      {
+        "id": "a_5",
+        "desc": "a image in 9:16 format",
+        "type": "image",
+        "ratio": "9:16"
+      }
+    ],
+    "labels": ["hook_template"],
+    "category": "hook_slide",
+    "templateDuration": "2.5",
+    "status": "Live",
+    "createdAt": "2025-11-14T03:36:16.239Z",
+    "updatedAt": "2025-11-17T19:05:18.164Z",
+    "version": 11
+  },
+  {
+    "name": "hook_slidecut_left",
+    "desc": "This hook uses horizontal leftward slide transitions to present 5 RWAs (images) in a clean, continuous sequence. Each image slides out and the next slides in from the right, creating a smooth side-scroll effect. The pacing is steady and structured, making it easy for viewers to follow the visual flow without overwhelming them.",
+    "useCases": "• Ideal for comparisons, side-by-side ideas, or content that progresses logically from one point to the next.\n• Works well for highlighting key points, features, or concepts that benefit from horizontal continuity.\n• Best for hooks that aim for clarity, organization, and visual readability, rather than fast-paced excitement or surprise.",
+    "ratio": "9:16",
+    "placeholders": [
+      {
+        "id": "a_1",
+        "desc": "a image in 9:16 format",
+        "type": "image",
+        "ratio": "9:16"
+      },
+      {
+        "id": "a_2",
+        "desc": "a image in 9:16 format",
+        "type": "image",
+        "ratio": "9:16"
+      },
+      {
+        "id": "a_3",
+        "desc": "a image in 9:16 format",
+        "type": "image",
+        "ratio": "9:16"
+      },
+      {
+        "id": "a_4",
+        "desc": "a image in 9:16 format",
+        "type": "image",
+        "ratio": "9:16"
+      },
+      {
+        "id": "a_5",
+        "desc": "a image in 9:16 format",
+        "type": "image",
+        "ratio": "9:16"
+      }
+    ],
+    "labels": ["hook_template"],
+    "category": "hook_slide",
+    "templateDuration": "2.5",
+    "status": "Live",
+    "createdAt": "2025-11-14T07:41:17.775Z",
+    "updatedAt": "2025-11-17T18:17:18.487Z",
+    "version": 13
+  },
+  {
+    "name": "hook_layout_grid",
+    "desc": "This hook arranges 4 RWAs (images) into a structured grid layout that animates with clean, minimal transitions. The motion is subtle and organized, giving each image equal visual weight while maintaining a polished, balanced composition. Its calm and measured pacing makes it suitable for moments that need clarity and visual structure.",
+    "useCases": "• Great for showcasing multiple related visuals at once, such as themes, examples, or grouped ideas.\n• Works well for overview-style hooks, mood boards, or visually driven introductions.\n• Ideal when the hook needs a clean, organized, and aesthetically balanced presentation rather than speed or dramatic movement.",
+    "ratio": "9:16",
+    "placeholders": [
+      {
+        "id": "a_1",
+        "desc": "a image in 9:16 format",
+        "type": "image",
+        "ratio": "9:16"
+      },
+      {
+        "id": "a_2",
+        "desc": "a image in 9:16 format",
+        "type": "image",
+        "ratio": "9:16"
+      },
+      {
+        "id": "a_3",
+        "desc": "a image in 9:16 format",
+        "type": "image",
+        "ratio": "9:16"
+      },
+      {
+        "id": "a_4",
+        "desc": "a image in 9:16 format",
+        "type": "image",
+        "ratio": "9:16"
+      }
+    ],
+    "labels": ["hook_template"],
+    "category": "hook_layout_grid",
+    "templateDuration": "2.5",
+    "status": "Live",
+    "createdAt": "2025-11-14T09:00:40.654Z",
+    "updatedAt": "2025-11-17T18:17:28.913Z",
+    "version": 8
+  },
+  {
+    "name": "square_fast_zoom_out",
+    "desc": "For 1:1 squared asset only, starts with a quick zoom-out, then eases into a slower pace. Feels energetic at first, then transitions into calm movement.",
+    "useCases": "- Revealing a full scene with impact\n- Transitioning out of focused shots\n- Connecting fast-paced visuals smoothly\n- Showing a change in perspective or scope",
+    "ratio": "9:16",
+    "placeholders": [
+      {
+        "id": "a_1",
+        "desc": "an image or video",
+        "type": "image",
+        "ratio": "1:1"
+      }
+    ],
+    "labels": [],
+    "category": "fullscreen_motion_effects",
+    "templateDuration": "1.5",
+    "status": "Draft",
+    "createdAt": "2025-11-14T23:36:25.228Z",
+    "updatedAt": "2025-11-15T00:14:11.906Z",
+    "version": 2
+  },
+  {
+    "name": "landscape_fast_zoom_out",
+    "desc": "For 16:9 asset only, starts with a quick zoom-out, then eases into a slower pace. Feels energetic at first, then transitions into calm movement.",
+    "useCases": "- Revealing a full scene with impact\n- Transitioning out of focused shots\n- Connecting fast-paced visuals smoothly\n- Showing a change in perspective or scope",
+    "ratio": "9:16",
+    "placeholders": [
+      {
+        "id": "a_1",
+        "desc": "an image or video",
+        "type": "image",
+        "ratio": "16:9"
+      }
+    ],
+    "labels": [],
+    "category": "fullscreen_motion_effects",
+    "templateDuration": "1.5",
+    "status": "Draft",
+    "createdAt": "2025-11-15T00:09:35.817Z",
+    "updatedAt": "2025-11-15T00:14:19.305Z",
+    "version": 3
+  },
+  {
+    "name": "test",
+    "desc": "",
+    "labels": ["codegen_template"],
+    "category": "data_visualization_cards",
+    "placeholders": [
+      {
+        "id": "prompt",
+        "type": "text",
+        "contentType": "string",
+        "color": "#primary",
+        "backgroundColor": "#secondary",
+        "desc": "The description of this shot"
+      },
+      {
+        "id": "a_bg",
+        "type": "image",
+        "desc": "An image or video, do not use background images like infographics, illustrations or solid colors",
+        "ratio": "any"
+      }
+    ],
+    "ratio": "9:16",
+    "status": "Draft",
+    "useCases": "",
+    "createdAt": "2025-11-15T05:45:21.156Z",
+    "updatedAt": "2025-11-15T05:45:21.156Z",
+    "version": 1
+  },
+  {
+    "name": "hook_test",
+    "desc": "test",
+    "useCases": "test",
+    "ratio": "9:16",
+    "placeholders": [
+      {
+        "id": "a_1",
+        "desc": "a image in 9:16 format",
+        "type": "image",
+        "ratio": "9:16"
+      },
+      {
+        "id": "a_2",
+        "desc": "a image in 9:16 format",
+        "type": "image",
+        "ratio": "9:16"
+      },
+      {
+        "id": "a_3",
+        "desc": "a image in 9:16 format",
+        "type": "image",
+        "ratio": "9:16"
+      },
+      {
+        "id": "a_4",
+        "desc": "a image in 9:16 format",
+        "type": "image",
+        "ratio": "9:16"
+      },
+      {
+        "id": "a_5",
+        "desc": "a image in 9:16 format",
+        "type": "image",
+        "ratio": "9:16"
+      },
+      {
+        "id": "a_6",
+        "desc": "a image in 9:16 format",
+        "type": "image",
+        "ratio": "9:16"
+      },
+      {
+        "id": "a_7",
+        "desc": "a image in 9:16 format",
+        "type": "image",
+        "ratio": "9:16"
+      },
+      {
+        "id": "a_8",
+        "desc": "a image in 9:16 format",
+        "type": "image",
+        "ratio": "9:16"
+      }
+    ],
+    "labels": ["hook_template"],
+    "category": "hook_fast_cut",
+    "templateDuration": "2.5",
+    "status": "Archived",
+    "createdAt": "2025-11-15T07:02:08.754Z",
+    "updatedAt": "2025-11-17T21:30:24.684Z",
+    "version": 35
+  },
+  {
+    "name": "fullscreen_static",
+    "desc": "static template for video assets only",
+    "useCases": "Only used to display a video asset.",
+    "ratio": "9:16",
+    "placeholders": [
+      {
+        "id": "a_1",
+        "desc": "a video only",
+        "type": "image",
+        "ratio": "9:16"
+      }
+    ],
+    "labels": [],
+    "category": "fullscreen_motion_effects",
+    "templateDuration": "1.5",
+    "status": "Draft",
+    "createdAt": "2025-11-18T04:27:46.639Z",
+    "updatedAt": "2025-11-18T04:27:46.639Z",
+    "version": 1
+  }
+]

@@ -1,0 +1,3 @@
+export const MAX_LOOP_STEPS = 10
+export const PLANNER_CALL_TIMEOUT_MS = 60_000
+export const REVIEW_AUTO_CONTINUE_DELAY_MS = 5 * 60 * 1000

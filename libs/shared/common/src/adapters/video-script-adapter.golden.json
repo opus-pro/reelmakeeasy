@@ -1,0 +1,499 @@
+{
+  "track": {
+    "id": "track-14",
+    "segments": [
+      {
+        "content": {
+          "id": "content-9",
+          "textElements": [
+            {
+              "color": 0,
+              "text": "Honey",
+              "id": "text-1",
+              "duration": {
+                "sO": 120,
+                "eO": 400
+              },
+              "timeline": {
+                "in": 120,
+                "out": 400
+              }
+            },
+            {
+              "color": 0,
+              "text": "never",
+              "id": "text-2",
+              "duration": {
+                "sO": 450,
+                "eO": 700
+              },
+              "timeline": {
+                "in": 450,
+                "out": 700
+              }
+            },
+            {
+              "color": 0,
+              "text": "spoils,",
+              "id": "text-3",
+              "duration": {
+                "sO": 750,
+                "eO": 1100
+              },
+              "timeline": {
+                "in": 750,
+                "out": 1100
+              }
+            },
+            {
+              "color": 0,
+              "text": "even",
+              "id": "text-4",
+              "duration": {
+                "sO": 1150,
+                "eO": 1300
+              },
+              "timeline": {
+                "in": 1150,
+                "out": 1300
+              }
+            },
+            {
+              "color": 0,
+              "text": "after",
+              "id": "text-5",
+              "duration": {
+                "sO": 1320,
+                "eO": 1600
+              },
+              "timeline": {
+                "in": 1320,
+                "out": 1600
+              }
+            },
+            {
+              "color": 0,
+              "text": "three",
+              "id": "text-6",
+              "duration": {
+                "sO": 1620,
+                "eO": 1900
+              },
+              "timeline": {
+                "in": 1620,
+                "out": 1900
+              }
+            },
+            {
+              "color": 0,
+              "text": "thousand",
+              "id": "text-7",
+              "duration": {
+                "sO": 1920,
+                "eO": 2100
+              },
+              "timeline": {
+                "in": 1920,
+                "out": 2100
+              }
+            },
+            {
+              "color": 0,
+              "text": "years.",
+              "id": "text-8",
+              "duration": {
+                "sO": 2120,
+                "eO": 2400
+              },
+              "timeline": {
+                "in": 2120,
+                "out": 2400
+              }
+            }
+          ],
+          "duration": {
+            "sO": 120,
+            "eO": 2400
+          },
+          "timeline": {
+            "in": 120,
+            "out": 2400
+          }
+        },
+        "id": "segment-10",
+        "duration": {
+          "sO": 120,
+          "eO": 2400
+        },
+        "timeline": {
+          "in": 120,
+          "out": 2400
+        }
+      },
+      {
+        "content": {
+          "id": "content-12",
+          "textElements": [
+            {
+              "color": 0,
+              "text": "Ever.",
+              "id": "text-11",
+              "duration": {
+                "sO": 3000,
+                "eO": 3410
+              },
+              "timeline": {
+                "in": 3000,
+                "out": 3410
+              }
+            }
+          ],
+          "duration": {
+            "sO": 3000,
+            "eO": 3410
+          },
+          "timeline": {
+            "in": 3000,
+            "out": 3410
+          }
+        },
+        "id": "segment-13",
+        "duration": {
+          "sO": 3000,
+          "eO": 3410
+        },
+        "timeline": {
+          "in": 3000,
+          "out": 3410
+        }
+      }
+    ],
+    "type": "caption"
+  },
+  "forced": [
+    {
+      "id": "#CaptionTrack",
+      "type": "t",
+      "segs": [
+        {
+          "id": "15",
+          "position": [0, -0.6172],
+          "scale": [1, 1],
+          "uri": "caption-preset://word-level_karaoke_fill-pop",
+          "vAlign": "b",
+          "type": "t",
+          "assetType": 4,
+          "autoScale": true,
+          "lineCount": 1,
+          "style": {
+            "fontId": "",
+            "fontWeight": 900,
+            "fontColor": "#ffffff",
+            "fontFamily": "Montserrat",
+            "strokeColor": "#000000",
+            "strokeWidth": 8,
+            "underline": false,
+            "italic": false,
+            "fontSize": 35,
+            "animationColor": "#04f827",
+            "shadowColor": "#000000",
+            "shadowOffsetX": 2,
+            "shadowOffsetY": 2,
+            "shadowBlur": 2
+          },
+          "in": 120,
+          "out": 2400,
+          "texts": [
+            {
+              "t": "HONEY",
+              "in": 0,
+              "out": 280
+            },
+            {
+              "t": "NEVER",
+              "in": 330,
+              "out": 580
+            },
+            {
+              "t": "SPOILS,",
+              "in": 630,
+              "out": 980
+            },
+            {
+              "t": "EVEN",
+              "in": 1030,
+              "out": 1180
+            },
+            {
+              "t": "AFTER",
+              "in": 1200,
+              "out": 1480
+            },
+            {
+              "t": "THREE",
+              "in": 1500,
+              "out": 1780
+            },
+            {
+              "t": "THOUSAND",
+              "in": 1800,
+              "out": 1980
+            },
+            {
+              "t": "YEARS.",
+              "in": 2000,
+              "out": 2280
+            }
+          ]
+        },
+        {
+          "id": "16",
+          "position": [0, -0.6172],
+          "scale": [1, 1],
+          "uri": "caption-preset://word-level_karaoke_fill-pop",
+          "vAlign": "b",
+          "type": "t",
+          "assetType": 4,
+          "autoScale": true,
+          "lineCount": 1,
+          "style": {
+            "fontId": "",
+            "fontWeight": 900,
+            "fontColor": "#ffffff",
+            "fontFamily": "Montserrat",
+            "strokeColor": "#000000",
+            "strokeWidth": 8,
+            "underline": false,
+            "italic": false,
+            "fontSize": 35,
+            "animationColor": "#04f827",
+            "shadowColor": "#000000",
+            "shadowOffsetX": 2,
+            "shadowOffsetY": 2,
+            "shadowBlur": 2
+          },
+          "in": 3000,
+          "out": 3410,
+          "texts": [
+            {
+              "t": "EVER.",
+              "in": 0,
+              "out": 410
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "unforced": [
+    {
+      "id": "#CaptionBgTrack-3",
+      "segs": [
+        {
+          "id": "segment-caption-bg-17",
+          "uri": "media/semi-transparent-caption-cover.png",
+          "anchor": [0, 0],
+          "assetType": 1,
+          "loop": 1,
+          "opacity": 1,
+          "rotate": 0,
+          "speed": 1,
+          "type": "v",
+          "volume": 0,
+          "cropPosition": [
+            {
+              "ft": 0,
+              "mode": 1,
+              "v": [0, 0]
+            }
+          ],
+          "cropSize": [
+            {
+              "ft": 0,
+              "mode": 1,
+              "v": [1, 1]
+            }
+          ],
+          "position": [
+            {
+              "ft": 0,
+              "mode": 1,
+              "v": [0, 0]
+            }
+          ],
+          "scale": [
+            {
+              "ft": 0,
+              "mode": 1,
+              "v": [1, 1]
+            }
+          ],
+          "in": 120,
+          "out": 2400,
+          "trimEnd": 3000,
+          "trimStart": 0,
+          "effects": []
+        },
+        {
+          "id": "segment-caption-bg-18",
+          "uri": "media/semi-transparent-caption-cover.png",
+          "anchor": [0, 0],
+          "assetType": 1,
+          "loop": 1,
+          "opacity": 1,
+          "rotate": 0,
+          "speed": 1,
+          "type": "v",
+          "volume": 0,
+          "cropPosition": [
+            {
+              "ft": 0,
+              "mode": 1,
+              "v": [0, 0]
+            }
+          ],
+          "cropSize": [
+            {
+              "ft": 0,
+              "mode": 1,
+              "v": [1, 1]
+            }
+          ],
+          "position": [
+            {
+              "ft": 0,
+              "mode": 1,
+              "v": [0, 0]
+            }
+          ],
+          "scale": [
+            {
+              "ft": 0,
+              "mode": 1,
+              "v": [1, 1]
+            }
+          ],
+          "in": 3000,
+          "out": 3410,
+          "trimEnd": 3000,
+          "trimStart": 0,
+          "effects": []
+        }
+      ],
+      "type": "v"
+    },
+    {
+      "id": "#CaptionTrack",
+      "type": "t",
+      "segs": [
+        {
+          "id": "17",
+          "position": [0, -0.6172],
+          "scale": [1, 1],
+          "uri": "caption-preset://word-level_karaoke_fill-pop",
+          "vAlign": "b",
+          "type": "t",
+          "assetType": 4,
+          "autoScale": true,
+          "lineCount": 1,
+          "style": {
+            "fontId": "",
+            "fontWeight": 900,
+            "fontColor": "#ffffff",
+            "fontFamily": "Montserrat",
+            "strokeColor": "#000000",
+            "strokeWidth": 8,
+            "underline": false,
+            "italic": false,
+            "fontSize": 35,
+            "animationColor": "#04f827",
+            "shadowColor": "#000000",
+            "shadowOffsetX": 2,
+            "shadowOffsetY": 2,
+            "shadowBlur": 2
+          },
+          "in": 120,
+          "out": 2400,
+          "texts": [
+            {
+              "t": "HONEY",
+              "in": 0,
+              "out": 280
+            },
+            {
+              "t": "NEVER",
+              "in": 330,
+              "out": 580
+            },
+            {
+              "t": "SPOILS,",
+              "in": 630,
+              "out": 980
+            },
+            {
+              "t": "EVEN",
+              "in": 1030,
+              "out": 1180
+            },
+            {
+              "t": "AFTER",
+              "in": 1200,
+              "out": 1480
+            },
+            {
+              "t": "THREE",
+              "in": 1500,
+              "out": 1780
+            },
+            {
+              "t": "THOUSAND",
+              "in": 1800,
+              "out": 1980
+            },
+            {
+              "t": "YEARS.",
+              "in": 2000,
+              "out": 2280
+            }
+          ]
+        },
+        {
+          "id": "18",
+          "position": [0, -0.6172],
+          "scale": [1, 1],
+          "uri": "caption-preset://word-level_karaoke_fill-pop",
+          "vAlign": "b",
+          "type": "t",
+          "assetType": 4,
+          "autoScale": true,
+          "lineCount": 1,
+          "style": {
+            "fontId": "",
+            "fontWeight": 900,
+            "fontColor": "#ffffff",
+            "fontFamily": "Montserrat",
+            "strokeColor": "#000000",
+            "strokeWidth": 8,
+            "underline": false,
+            "italic": false,
+            "fontSize": 35,
+            "animationColor": "#04f827",
+            "shadowColor": "#000000",
+            "shadowOffsetX": 2,
+            "shadowOffsetY": 2,
+            "shadowBlur": 2
+          },
+          "in": 3000,
+          "out": 3410,
+          "texts": [
+            {
+              "t": "EVER.",
+              "in": 0,
+              "out": 410
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

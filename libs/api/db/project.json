@@ -1,0 +1,41 @@
+{
+  "name": "api/db",
+  "$schema": "../../../schemas/nx-project.schema.json",
+  "sourceRoot": "libs/api/db/src",
+  "projectType": "library",
+  "tags": ["scope:api", "type:library"],
+  "targets": {
+    "build": {
+      "executor": "nx:run-commands",
+      "dependsOn": ["generate"],
+      "options": {
+        "cwd": "{workspaceRoot}",
+        "command": "tsc -p {projectRoot}/tsconfig.json --noEmit"
+      }
+    },
+    "clean": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "rm -rf src/generated",
+        "cwd": "{projectRoot}"
+      }
+    },
+    "generate": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "npx prisma generate --schema=prisma/schema.prisma --no-hints",
+        "cwd": "{projectRoot}",
+        "env": {
+          "PRISMA_HIDE_UPDATE_MESSAGE": "true"
+        }
+      }
+    },
+    "generate-for-dirty-deps": {
+      "executor": "nx:run-commands",
+      "dependsOn": ["generate"],
+      "options": {
+        "command": "echo 'For temporary dirty dependencies rely on api/db:generate'"
+      }
+    }
+  }
+}

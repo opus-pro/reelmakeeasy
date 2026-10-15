@@ -1,0 +1,7 @@
+{
+  "extends": "../../tsconfig.node.json",
+  "compilerOptions": {
+    "outDir": "./dist/lib-llm"
+  },
+  "include": ["src/**/*.ts"]
+}

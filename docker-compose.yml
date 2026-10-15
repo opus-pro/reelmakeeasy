@@ -1,0 +1,30 @@
+# MongoDB for ReelMakeEasy, as a single-node replica set (which Prisma needs).
+#   docker compose up -d
+# then set in .env:
+#   DATABASE_URL=mongodb://127.0.0.1:27017/reelmakeeasy?replicaSet=rs0&directConnection=true
+# The database has no password, so it is published on this computer (127.0.0.1) only.
+# Before making it reachable from other machines, turn on MongoDB authentication
+# (a root user and a replica-set keyfile) and put the user and password in DATABASE_URL.
+services:
+  mongo:
+    image: mongo:7
+    # --bind_ip_all applies inside the container; the port mapping below keeps it local.
+    command: ['--replSet', 'rs0', '--bind_ip_all']
+    ports:
+      - '127.0.0.1:27017:27017'
+    volumes:
+      - mongo-data:/data/db
+    healthcheck:
+      # Initiates the replica set on first boot, then reports healthy once it has a primary.
+      test:
+        - CMD
+        - mongosh
+        - --quiet
+        - --eval
+        - "try { rs.status().ok } catch (e) { rs.initiate({ _id: 'rs0', members: [{ _id: 0, host: '127.0.0.1:27017' }] }).ok }"
+      interval: 5s
+      timeout: 10s
+      retries: 30
+
+volumes:
+  mongo-data:
