@@ -170,7 +170,7 @@ ReelMakeEasy is built to be driven by AI coding agents. Agent mode runs your own
 | Know every setting and its default | [`.env.example`](.env.example) |
 | Change which model does which job | [`reelmakeeasy.models.json`](reelmakeeasy.models.json), with alternatives in [`reelmakeeasy.models.example.json`](reelmakeeasy.models.example.json) |
 | Make or post a video | [`skills/`](skills) |
-| Change the code or open a pull request | [`CONTRIBUTING.md`](CONTRIBUTING.md) and the [rules for agents](AGENTS.md#rules-for-agents-working-in-this-repo) |
+| Change the code | [`CONTRIBUTING.md`](CONTRIBUTING.md) and the [rules for agents](AGENTS.md#rules-for-agents-working-in-this-repo) |
 | Run the free local voices | [`tools/local-tts/README.md`](tools/local-tts/README.md) |
 | Understand the preset pack (styles, fonts, editor engine) | [`presets/README.md`](presets/README.md) |
 | Report a vulnerability | [`SECURITY.md`](SECURITY.md) |
@@ -276,13 +276,13 @@ pnpm exec nx run-many -t test
 pnpm exec nx run api:build
 ```
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) before opening a pull request.
+See [CONTRIBUTING.md](CONTRIBUTING.md) before you change the code.
 
 ## Community
 
-- Bugs and feature requests: [GitHub Issues](https://github.com/opus-pro/reelmakeeasy/issues)
+- Bugs, ideas and questions: [GitHub Discussions](https://github.com/opus-pro/reelmakeeasy/discussions)
 - Security reports: [SECURITY.md](SECURITY.md)
-- Contributions: [CONTRIBUTING.md](CONTRIBUTING.md) and the [Code of Conduct](CODE_OF_CONDUCT.md)
+- Contributions: we're not taking pull requests from outside the team yet; suggest changes in Discussions. See [CONTRIBUTING.md](CONTRIBUTING.md) and the [Code of Conduct](CODE_OF_CONDUCT.md)
 
 ## License
 

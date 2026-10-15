@@ -1,5 +1,8 @@
 blank_issues_enabled: false
 contact_links:
+  - name: Bugs, ideas and questions
+    url: https://github.com/opus-pro/reelmakeeasy/discussions
+    about: Start a thread in GitHub Discussions.
   - name: Security issue
     url: https://github.com/opus-pro/reelmakeeasy/security/advisories/new
     about: Report vulnerabilities privately. See SECURITY.md.
