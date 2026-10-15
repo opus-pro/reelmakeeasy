@@ -2,6 +2,10 @@
 
 Thanks for helping out. This guide covers what a good change looks like here.
 
+## Outside contributions
+
+We're not taking pull requests from outside the team yet. To report a bug, suggest a feature or ask a question, start a thread in [GitHub Discussions](https://github.com/opus-pro/reelmakeeasy/discussions). For a security problem, follow [SECURITY.md](SECURITY.md) instead. The rest of this guide is for the team, and for anyone changing their own copy.
+
 ## Getting set up
 
 Follow the [quick start](README.md#quick-start). You need Node.js 22+, pnpm and FFmpeg. Provider keys are only needed to exercise generation end to end.
