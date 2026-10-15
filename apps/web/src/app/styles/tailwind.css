@@ -170,6 +170,24 @@
     outline: 2px solid var(--ring);
     outline-offset: -2px;
   }
+  /* Except where you type: a browser treats a click into a text field as keyboard focus,
+     so the line would show on every click, and the blinking cursor already marks the
+     focus. Fields that want more draw their own `ring-*`, which this leaves alone. */
+  textarea:focus-visible,
+  [contenteditable]:not([contenteditable='false']):focus-visible,
+  input:not(
+      [type='button'],
+      [type='checkbox'],
+      [type='color'],
+      [type='file'],
+      [type='image'],
+      [type='radio'],
+      [type='range'],
+      [type='reset'],
+      [type='submit']
+    ):focus-visible {
+    outline: none;
+  }
   html {
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
