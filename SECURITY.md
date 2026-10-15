@@ -2,7 +2,7 @@
 
 ## Reporting a vulnerability
 
-Please report security issues privately with **Report a vulnerability** on this repository's **Security** tab, or by email to [SECURITY_CONTACT_EMAIL]. Don't open a public issue.
+Please report security issues privately with **Report a vulnerability** on this repository's **Security** tab, or by email to [hanson.han@opus.pro](mailto:hanson.han@opus.pro). Don't open a public issue.
 
 Include what you found, how to reproduce it and what an attacker could do with it. We'll acknowledge the report within three business days and keep you updated until it's resolved.
 
