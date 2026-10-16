@@ -194,12 +194,25 @@ export function useSubmission(deps: SubmissionDeps) {
       committedStoryModeStyle?.styleName?.trim() ||
       (customStyle ? createAutoSavedStyleBaseName(styleText, styleInputMode) : undefined)
     const styleThumbnailUrl = committedStoryModeStyle?.styleThumbnailUrl?.trim()
+    // A saved image style's picture guides every frame; the server looks it up by id.
+    const savedStyleId = isSavedStyle
+      ? committedStoryModeStyle?.savedStyleId?.trim() || undefined
+      : undefined
     const voice =
       !hasAudioAttachment && selectedVoice
         ? convertVoiceOptionToApiFormat(selectedVoice, defaultVoiceId)
         : undefined
     const voiceId = voice?.voiceId
-    return { customStyle, isSavedStyle, styleName, styleText, styleThumbnailUrl, voice, voiceId }
+    return {
+      customStyle,
+      isSavedStyle,
+      savedStyleId,
+      styleName,
+      styleText,
+      styleThumbnailUrl,
+      voice,
+      voiceId,
+    }
   }
 
   const resolveStoryModeReferencedImagesOrNotify = (userPrompt: string): Attachment[] | null => {

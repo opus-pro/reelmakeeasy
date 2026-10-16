@@ -1,6 +1,7 @@
 import { toast } from '@shared/ui'
 import { useCallback, useState } from 'react'
 
+import { useApi } from '@/hooks/useApi'
 import {
   useGenerateStyleName,
   useGenerateStylePreview,
@@ -16,10 +17,13 @@ import {
   readFileAsDataUrl,
 } from './omni-chat-box-helpers'
 import { compressStylePreviewForSave } from './story-mode-style-image'
+import { requestStyleTextFromImage } from './use-omni-chat-box-style-image'
 
 export interface StyleApplyDeps {
   clearRemixAttribution?: () => void
   longTakeCustomStyle: string
+  /** The user's style picture (compressed data URL), in image mode. */
+  longTakeStyleImageDataUrl: null | string
   longTakeStyleInputMode: 'image' | 'none' | 'text'
   longTakeStyleName: string
   promptDirtySincePreview: boolean
@@ -36,6 +40,7 @@ export function useStyleApply(deps: StyleApplyDeps) {
   const {
     clearRemixAttribution,
     longTakeCustomStyle,
+    longTakeStyleImageDataUrl,
     longTakeStyleInputMode,
     longTakeStyleName,
     promptDirtySincePreview,
@@ -48,13 +53,90 @@ export function useStyleApply(deps: StyleApplyDeps) {
     userSavedStyles,
   } = deps
 
+  const { fetchApiDomain } = useApi()
+
   const saveUserStyleMutation = useSaveUserStyle()
   const generateStylePreviewMutation = useGenerateStylePreview()
   const generateStyleNameMutation = useGenerateStyleName()
   const updateStyleThumbnailMutation = useUpdateStyleThumbnail()
   const [isLongTakeStyleApplying, setIsLongTakeStyleApplying] = useState(false)
 
+  const finishSave = useCallback(
+    (savedId: string) => {
+      setStoryModeStyleId(savedId)
+      setAppliedCustomStoryStyle(null)
+      clearRemixAttribution?.()
+      setLongTakeStyleDialogOpen(false)
+      resetLongTakeStyleDraft()
+      toast.success('Style saved')
+    },
+    [
+      clearRemixAttribution,
+      resetLongTakeStyleDraft,
+      setAppliedCustomStoryStyle,
+      setLongTakeStyleDialogOpen,
+      setStoryModeStyleId,
+    ],
+  )
+
+  // An image style: the user's own picture is the style. It is saved as is (thumbnail and
+  // original), and a video made with it sends it to the image model as a reference. The
+  // name and description are the user's, or the AI's for whichever field was left empty.
+  const applyImageStyle = useCallback(async (): Promise<boolean> => {
+    if (!longTakeStyleImageDataUrl) {
+      return false
+    }
+    let styleText = longTakeCustomStyle.trim()
+    let preferredName = longTakeStyleName.trim()
+    if (!styleText || !preferredName) {
+      try {
+        const written = await requestStyleTextFromImage(fetchApiDomain, longTakeStyleImageDataUrl)
+        styleText = styleText || written.styleText
+        preferredName = preferredName || written.styleName
+      } catch (err) {
+        if (!styleText) {
+          toast.error(getErrorMessage(err, "Couldn't describe the image. Write a description."))
+          return false
+        }
+      }
+    }
+    const existingNamesLower = new Set(userSavedStyles.map((s) => s.name.trim().toLowerCase()))
+    const name = buildUniqueStyleName(
+      preferredName || createAutoSavedStyleBaseName(styleText, 'image'),
+      existingNamesLower,
+    )
+    try {
+      const saved = await saveUserStyleMutation.mutateAsync({
+        imageDataUrl: longTakeStyleImageDataUrl,
+        name,
+        styleInputMode: 'image',
+        styleText,
+      })
+      finishSave(saved.id)
+      return true
+    } catch (err) {
+      toast.error(getErrorMessage(err, 'Failed to save style'))
+      return false
+    }
+  }, [
+    fetchApiDomain,
+    finishSave,
+    longTakeCustomStyle,
+    longTakeStyleImageDataUrl,
+    longTakeStyleName,
+    saveUserStyleMutation,
+    userSavedStyles,
+  ])
+
   const handleLongTakeStyleApply = useCallback(async () => {
+    if (longTakeStyleInputMode === 'image') {
+      setIsLongTakeStyleApplying(true)
+      try {
+        return await applyImageStyle()
+      } finally {
+        setIsLongTakeStyleApplying(false)
+      }
+    }
     if (!longTakeCustomStyle.trim()) {
       return false
     }
@@ -63,7 +145,8 @@ export function useStyleApply(deps: StyleApplyDeps) {
     try {
       const styleText = longTakeCustomStyle.trim()
       const existingNamesLower = new Set(userSavedStyles.map((s) => s.name.trim().toLowerCase()))
-      const inputMode = longTakeStyleInputMode === 'image' ? 'image' : 'text'
+      // Image styles take applyImageStyle above; this path saves a typed (text) style.
+      const inputMode = 'text'
       let preferredName = longTakeStyleName.trim()
       let imageDataUrlToSave: string | undefined
 
@@ -95,28 +178,16 @@ export function useStyleApply(deps: StyleApplyDeps) {
       const baseName = preferredName || createAutoSavedStyleBaseName(styleText, inputMode)
       const name = buildUniqueStyleName(baseName, existingNamesLower)
 
-      // Image mode requires imageDataUrl server-side. If we don't have one
-      // (dirty prompt after preview, failed preview, or remix-CDN path that
-      // was short-circuited), downgrade to text mode so the save succeeds and
-      // Phase 2 can regenerate a thumbnail later. Preserves the pre-refactor
-      // guard while keeping the payload honest for every other path.
-      const effectiveInputMode = inputMode === 'image' && !imageDataUrlToSave ? 'text' : inputMode
-
       let savedId: string | undefined
       try {
         const saved = await saveUserStyleMutation.mutateAsync({
           imageDataUrl: imageDataUrlToSave,
           name,
-          styleInputMode: effectiveInputMode,
+          styleInputMode: inputMode,
           styleText,
         })
         savedId = saved.id
-        setStoryModeStyleId(saved.id)
-        setAppliedCustomStoryStyle(null)
-        clearRemixAttribution?.()
-        setLongTakeStyleDialogOpen(false)
-        resetLongTakeStyleDraft()
-        toast.success('Style saved')
+        finishSave(saved.id)
         didApply = true
       } catch (err) {
         const errorMessage = getErrorMessage(err, 'Failed to save style')
@@ -150,18 +221,15 @@ export function useStyleApply(deps: StyleApplyDeps) {
     }
     return didApply
   }, [
-    clearRemixAttribution,
+    applyImageStyle,
+    finishSave,
     generateStyleNameMutation,
     generateStylePreviewMutation,
     longTakeCustomStyle,
     longTakeStyleInputMode,
     longTakeStyleName,
     promptDirtySincePreview,
-    resetLongTakeStyleDraft,
     saveUserStyleMutation,
-    setAppliedCustomStoryStyle,
-    setLongTakeStyleDialogOpen,
-    setStoryModeStyleId,
     stylePreviewBaseImageUrl,
     stylePreviewImageUrl,
     updateStyleThumbnailMutation,

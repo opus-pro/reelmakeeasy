@@ -1,4 +1,5 @@
 import type { Content } from '@reelmakeeasy/common/llm'
+import { buildStyleReferenceContents } from '@reelmakeeasy/common/long-take/style-reference'
 import type { LongTakeHumanPresence } from '@reelmakeeasy/common/long-take/types'
 
 import type { LongTakePromptRoute } from '../../long-take-prompt-router'
@@ -18,7 +19,9 @@ import { buildLongTakeKeyframePrompt, type LongTakeKeyframeGlobalContext } from 
  * place. `promptRoute` threads through to the routed-prompt builder.
  * `improvedVisualScriptEnabled` is still accepted for caller compatibility,
  * but USER_FILE Prop keyframe prompts intentionally match the legacy/gate-off
- * anchor behavior.
+ * anchor behavior. `styleReferenceUris` (the project's style reference image, from a
+ * saved image style) go after the anchors, with an instruction saying they set the look
+ * and are not content.
  */
 export function buildLongTakeKeyframeShotInputs(opts: {
   anchorLookup: Map<string, LongTakeAnchorMeta>
@@ -29,13 +32,14 @@ export function buildLongTakeKeyframeShotInputs(opts: {
   keyframePromptReworkEnabled?: boolean
   promptRoute?: LongTakePromptRoute
   styleName?: string
+  styleReferenceUris?: string[]
   styleText?: string
   usedAssetIds?: string[]
 }): {
   promptPayload: ReturnType<typeof buildLongTakeKeyframePrompt>
   shotContents: Content[]
 } {
-  const shotContents = opts.usedAssetIds?.length
+  const anchorContents = opts.usedAssetIds?.length
     ? buildLongTakeAnchorContents(opts.usedAssetIds, opts.anchorLookup)
     : []
   const promptPayload = buildLongTakeKeyframePrompt({
@@ -49,8 +53,12 @@ export function buildLongTakeKeyframeShotInputs(opts: {
     ...getLongTakeKeyframeAnchorParams(
       opts.usedAssetIds,
       opts.anchorLookup,
-      shotContents.length > 0,
+      anchorContents.length > 0,
     ),
   })
+  const shotContents = [
+    ...anchorContents,
+    ...buildStyleReferenceContents(opts.styleReferenceUris ?? []),
+  ]
   return { promptPayload, shotContents }
 }

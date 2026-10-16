@@ -1,5 +1,6 @@
 import path from 'node:path/posix'
 
+import { BadRequestException } from '@nestjs/common'
 import { readCaptionStyleSettings } from '@reelmakeeasy/common/adapters/caption/caption-style'
 import { ProjectStore } from '@reelmakeeasy/common/agent-v2/storage/project-store'
 import { projectPathResolver } from '@reelmakeeasy/common/agent-v2/util/project-path-resolver'
@@ -16,9 +17,8 @@ import {
 import { STORY_MODE_STANDALONE_TASK_QUEUE } from '@reelmakeeasy/common/long-take/story-mode-routing-constants'
 import type { AspectRatio, GenerationResolution } from '@reelmakeeasy/common/media/types'
 import { parseModelSelectorAnalyticsTier } from '@reelmakeeasy/common/model-config/model-selector-analytics-tier'
-import type { UserInfo } from '@reelmakeeasy/common/types/user'
 import { asStoreUri, isStoreUri, toSavedAddress } from '@reelmakeeasy/common/storage/address'
-import { ensureError } from '@reelmakeeasy/common/utils/error-handler'
+import { fileStore } from '@reelmakeeasy/common/storage/file-store'
 import {
   copyStoredFile,
   keyIsUnder,
@@ -27,13 +27,14 @@ import {
   storeKeyOf,
   uploadBufferToStore,
 } from '@reelmakeeasy/common/storage/stored-files'
+import type { UserInfo } from '@reelmakeeasy/common/types/user'
+import { ensureError } from '@reelmakeeasy/common/utils/error-handler'
 import { resolveTaskQueueForClient } from '@reelmakeeasy/common/workflow/task-queue'
 import {
   buildImageDescriptionPrompt,
   type ImageDescriptionFilename,
   imageDescriptionSchema,
 } from '@reelmakeeasy/uip-planner-runtime/tools/describe-uploaded-images'
-import { BadRequestException } from '@nestjs/common'
 import type {
   LongTakeRenderSettings,
   LongTakeScriptGeneratorPath,
@@ -57,7 +58,6 @@ import type {
   LongTakeUserAssetCatalogItem,
   WorkflowDeps,
 } from './types'
-import { fileStore } from '@reelmakeeasy/common/storage/file-store'
 
 export { extractAudioScriptFromAsr } from './extract-audio-script-from-asr'
 export type { LongTakeUserAssetCatalogItem } from './types'
@@ -299,6 +299,8 @@ export function buildLongTakeWorkflowArgs(params: {
   scriptGeneratorPath?: LongTakeScriptGeneratorPath
   source?: 'mcp' | 'web'
   styleName?: string
+  /** The project's style reference images (a saved image style's picture), already in the project. */
+  styleReferenceImageUrls?: string[]
   styleThumbnailUrl?: string
   targetDurationSeconds?: number
   transitionVideoModel?: string
@@ -331,16 +333,17 @@ export function buildLongTakeWorkflowArgs(params: {
     scriptGeneratorPath,
     source,
     styleName,
-    styleThumbnailUrl,
+    styleReferenceImageUrls: preparedStyleReferenceImageUrls,
     targetDurationSeconds,
     transitionVideoModel,
     user,
     userAssetCatalog,
   } = params
 
-  // Only pass HTTPS URLs - base64 data URLs are not accessible by the LLM
-  const styleReferenceImageUrls = styleThumbnailUrl?.startsWith('https://')
-    ? [styleThumbnailUrl]
+  // The style analysis reads these (store:// addresses work); the keyframe and anchor
+  // steps read the same images from the project's style reference file.
+  const styleReferenceImageUrls = preparedStyleReferenceImageUrls?.length
+    ? preparedStyleReferenceImageUrls
     : undefined
 
   return {
@@ -780,10 +783,10 @@ export async function validateAudioPathForProject(
   deps: {
     copyStoredFile: (src: string, dest: string) => Promise<unknown>
     extractVideoAudioToMp3: (sourceStoreUri: string, destMp3Uri: string) => Promise<void>
-    projectPathResolver: { getUserUploadedPath: (name: string) => string }
     isVideoExtension: (ext: string) => boolean
     logger: Logger
     parseStoreUri: (uri: string) => string
+    projectPathResolver: { getUserUploadedPath: (name: string) => string }
   },
   ProjectStoreCtor: new (projectId: string) => {
     getFullPath: (path: string) => string

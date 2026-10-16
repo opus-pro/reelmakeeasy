@@ -464,6 +464,7 @@ const MobileOmniChatBoxInputImpl = (
           isLongTakeStyleDialogOpen={sd.longTakeStyleDialogOpen}
           isLongTakeStyleGeneratePreviewEnabled={sd.isLongTakeStyleGeneratePreviewEnabled}
           isLongTakeStylePreviewGenerating={sd.isStylePreviewGenerating}
+          isLongTakeStyleWritingWithAi={sd.isLongTakeStyleWritingWithAi}
           longTakeStyleCustom={sd.longTakeCustomStyle}
           longTakeStyleImageError={sd.longTakeStyleImageError}
           longTakeStyleImageValue={sd.longTakeStyleImageValue}
@@ -477,6 +478,7 @@ const MobileOmniChatBoxInputImpl = (
           onLongTakeStyleImageSelect={sd.handleLongTakeStyleImageSelect}
           onLongTakeStyleNameChange={sd.setLongTakeStyleName}
           onLongTakeStyleTextClear={sd.handleLongTakeCustomStyleClear}
+          onLongTakeStyleWriteWithAi={sd.handleLongTakeStyleWriteWithAi}
           setIsLongTakeStyleDialogOpen={sd.handleLongTakeStyleDialogOpenChange}
         />
 

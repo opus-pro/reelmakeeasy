@@ -39,6 +39,8 @@ export function useStartLongTakeWorkflow() {
       prompt?: string
       ratio?: AspectRatio
       remixProjectId?: string
+      /** The saved style picked; an image style's picture guides every frame. */
+      savedStyleId?: string
       script: string
       scriptGeneratorPath?: LongTakeScriptGeneratorPath
       styleName?: string

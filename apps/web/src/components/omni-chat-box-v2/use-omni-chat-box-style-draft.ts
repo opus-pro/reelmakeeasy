@@ -2,12 +2,14 @@ import { toast } from '@shared/ui'
 import { useAtom } from 'jotai'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
+import { useApi } from '@/hooks/useApi'
 import type { StoryModeStyleOption } from '@/hooks/useStoryModeConfig'
 import {
   useGenerateStylePreview,
   type UserSavedStyle,
   useUpdateStyleThumbnailFromUrl,
 } from '@/hooks/useUserSavedStyles'
+import { getErrorMessage } from '@/util/error-message'
 
 import type { BrandBriefStyleRef } from './brand/brand-briefs-client'
 import { getIsChooseStylePopupOpenAtom } from './state/atoms/domain/runtime'
@@ -17,7 +19,7 @@ import type { CommittedCustomStoryStyle } from './omni-chat-box.types'
 import { STORY_MODE_EMPTY_STYLE_ID } from './omni-chat-box-helpers'
 import { STORY_MODE_CUSTOM_STYLE_ID } from './omni-chat-box-render-helpers'
 import { useStyleApply } from './use-omni-chat-box-style-apply'
-import { useStyleImageProcessing } from './use-omni-chat-box-style-image'
+import { requestStyleTextFromImage, useStyleImageProcessing } from './use-omni-chat-box-style-image'
 
 export interface StyleDraftDeps {
   allPanelStyleOptions: StoryModeStyleOption[]
@@ -58,6 +60,12 @@ export function useStyleDraftState(deps: StyleDraftDeps) {
   )
   const [longTakeStyleImageError, setLongTakeStyleImageError] = useState<null | string>(null)
   const [isLongTakeStyleImageProcessing, setIsLongTakeStyleImageProcessing] = useState(false)
+  // The uploaded style picture, shrunk under the request limit: saved as the style and,
+  // in "Write with AI", sent to the vision model for a name and description.
+  const [longTakeStyleImageDataUrl, setLongTakeStyleImageDataUrl] = useState<null | string>(null)
+  const [isLongTakeStyleWritingWithAi, setIsLongTakeStyleWritingWithAi] = useState(false)
+  const styleWriteWithAiCounterRef = useRef(0)
+  const { fetchApiDomain } = useApi()
   const [storyModeStyleId, setStoryModeStyleId] = useState<string>(STORY_MODE_EMPTY_STYLE_ID)
   const [appliedCustomStoryStyle, setAppliedCustomStoryStyle] =
     useState<CommittedCustomStoryStyle | null>(null)
@@ -275,8 +283,11 @@ export function useStyleDraftState(deps: StyleDraftDeps) {
     }
     setLongTakeStyleImageFile(null)
     setLongTakeStyleImagePreviewUrl(null)
+    setLongTakeStyleImageDataUrl(null)
     setLongTakeStyleImageError(null)
     setIsLongTakeStyleImageProcessing(false)
+    styleWriteWithAiCounterRef.current += 1
+    setIsLongTakeStyleWritingWithAi(false)
   }, [longTakeStyleImagePreviewUrl])
 
   const resetLongTakeStyleDraft = useCallback(() => {
@@ -374,16 +385,63 @@ export function useStyleDraftState(deps: StyleDraftDeps) {
 
   const isLongTakeStyleGeneratePreviewEnabled =
     promptDirtySincePreview && longTakeCustomStyle.trim().length > 0
+  // An image style needs only the picture: an empty name or description is written by the AI.
   const isLongTakeStyleApplyEnabled =
-    longTakeCustomStyle.trim().length > 0 &&
-    Boolean(stylePreviewImageUrl) &&
-    !promptDirtySincePreview
+    longTakeStyleInputMode === 'image'
+      ? Boolean(longTakeStyleImageDataUrl) &&
+        !isLongTakeStyleImageProcessing &&
+        !isLongTakeStyleWritingWithAi
+      : longTakeCustomStyle.trim().length > 0 &&
+        Boolean(stylePreviewImageUrl) &&
+        !promptDirtySincePreview
+
+  // "Write with AI": fills whichever of name and description is empty from the picture,
+  // or rewrites both when both are filled (asking again means "give me another take").
+  const handleLongTakeStyleWriteWithAi = useCallback(async () => {
+    if (!longTakeStyleImageDataUrl) {
+      return
+    }
+    styleWriteWithAiCounterRef.current += 1
+    const requestId = styleWriteWithAiCounterRef.current
+    const hasText = longTakeCustomStyle.trim().length > 0
+    const hasName = longTakeStyleName.trim().length > 0
+    const rewriteBoth = hasText && hasName
+    setIsLongTakeStyleWritingWithAi(true)
+    try {
+      const written = await requestStyleTextFromImage(fetchApiDomain, longTakeStyleImageDataUrl)
+      if (requestId !== styleWriteWithAiCounterRef.current) {
+        return
+      }
+      if (rewriteBoth || !hasText) {
+        setLongTakeCustomStyle(written.styleText)
+      }
+      if ((rewriteBoth || !hasName) && written.styleName) {
+        setLongTakeStyleName(written.styleName)
+      }
+    } catch (err) {
+      if (requestId === styleWriteWithAiCounterRef.current) {
+        toast.error(getErrorMessage(err, "Couldn't describe the image. Try again."))
+      }
+    } finally {
+      if (requestId === styleWriteWithAiCounterRef.current) {
+        setIsLongTakeStyleWritingWithAi(false)
+      }
+    }
+  }, [
+    fetchApiDomain,
+    longTakeCustomStyle,
+    longTakeStyleImageDataUrl,
+    longTakeStyleName,
+    setLongTakeCustomStyle,
+    setLongTakeStyleName,
+  ])
 
   // --- Style apply & image processing hooks ---
   const { handleLongTakeStyleApply, isLongTakeStyleApplying, saveUserStyleMutation } =
     useStyleApply({
       clearRemixAttribution,
       longTakeCustomStyle,
+      longTakeStyleImageDataUrl,
       longTakeStyleInputMode,
       longTakeStyleName,
       promptDirtySincePreview,
@@ -397,18 +455,15 @@ export function useStyleDraftState(deps: StyleDraftDeps) {
     })
   const { handleLongTakeStyleImageSelect, styleImageSelectCounterRef } = useStyleImageProcessing({
     clearStyleImage,
-    generateStylePreviewMutation,
     setIsLongTakeStyleImageProcessing,
     setLongTakeCustomStyle,
+    setLongTakeStyleImageDataUrl,
     setLongTakeStyleImageError,
     setLongTakeStyleImageFile,
     setLongTakeStyleImagePreviewUrl,
     setLongTakeStyleInputMode,
-    setLongTakeStyleName,
     setPromptDirtySincePreview,
     setStylePreviewImageUrl,
-    stylePreviewBaseImageUrl,
-    stylePreviewGenCounterRef,
   })
 
   // --- Dialog open/close ---
@@ -526,6 +581,7 @@ export function useStyleDraftState(deps: StyleDraftDeps) {
     handleLongTakeStyleDialogOpenChange,
     handleLongTakeStyleImageClear,
     handleLongTakeStyleImageSelect,
+    handleLongTakeStyleWriteWithAi,
     handleStoryModeAddStyleInternal,
     handleStoryModeStyleClear,
     handleStoryModeStyleSelectInternal,
@@ -537,6 +593,7 @@ export function useStyleDraftState(deps: StyleDraftDeps) {
     isLongTakeStyleApplying,
     isLongTakeStyleGeneratePreviewEnabled,
     isLongTakeStyleImageProcessing,
+    isLongTakeStyleWritingWithAi,
     isStylePreviewGenerating,
     longTakeCustomStyle,
     longTakeStyleDialogOpen,

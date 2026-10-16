@@ -1,10 +1,8 @@
 import { ensureError } from '@reelmakeeasy/common/utils/error-handler'
 import { toast } from '@shared/ui'
-import React, { useCallback, useRef } from 'react'
+import { useCallback, useRef } from 'react'
 
-import { useApi } from '@/hooks/useApi'
-import { useGenerateStylePreview } from '@/hooks/useUserSavedStyles'
-import { isApiError } from '@/lib/api-error'
+import type { useApi } from '@/hooks/useApi'
 import { getErrorMessage } from '@/util/error-message'
 
 import { readFileAsDataUrl } from './omni-chat-box-helpers'
@@ -17,82 +15,85 @@ import {
   type StoryModeImageCompressionFailureReason,
 } from './story-mode-style-image'
 
+/** The AI's name and description for a style image (the vision call behind "Write with AI"). */
 export interface StyleImageDeps {
   clearStyleImage: () => void
-  generateStylePreviewMutation: ReturnType<typeof useGenerateStylePreview>
   setIsLongTakeStyleImageProcessing: (v: boolean) => void
   setLongTakeCustomStyle: (v: string) => void
+  setLongTakeStyleImageDataUrl: (v: null | string) => void
   setLongTakeStyleImageError: (v: null | string) => void
   setLongTakeStyleImageFile: (v: File | null) => void
   setLongTakeStyleImagePreviewUrl: (v: null | string) => void
   setLongTakeStyleInputMode: (v: 'image' | 'none' | 'text') => void
-  setLongTakeStyleName: (v: string) => void
   setPromptDirtySincePreview: (v: boolean) => void
   setStylePreviewImageUrl: (v: null | string) => void
-  stylePreviewBaseImageUrl: string
-  stylePreviewGenCounterRef: React.MutableRefObject<number>
 }
 
+export type StyleTextFromImage = { styleName: string; styleText: string }
+
+export async function requestStyleTextFromImage(
+  fetchApiDomain: ReturnType<typeof useApi>['fetchApiDomain'],
+  imageDataUrl: string,
+): Promise<StyleTextFromImage> {
+  const response = await fetchApiDomain<{ styleName: string; styleText: string }>(
+    '/api/media/generate-style-text',
+    {
+      data: { imageDataUrl },
+      headers: { 'Content-Type': 'application/json' },
+      method: 'POST',
+    },
+  )
+  if (!response.ok) {
+    throw new Error(response.error || 'Failed to describe the style')
+  }
+  const styleText = response.data?.styleText?.trim() || ''
+  if (!styleText) {
+    throw new Error('The AI returned an empty description')
+  }
+  return { styleName: response.data?.styleName?.trim() ?? '', styleText }
+}
+
+/**
+ * Takes the user's style image: checks the type, shrinks it under the request limit and
+ * keeps it as a data URL. The image itself is the style (it is saved and sent to the
+ * image model as a reference), so nothing is generated here; the user writes the name and
+ * description, or asks the AI for them ("Write with AI", or on Apply when left empty).
+ */
 export function useStyleImageProcessing(deps: StyleImageDeps) {
   const {
     clearStyleImage,
-    generateStylePreviewMutation,
     setIsLongTakeStyleImageProcessing,
     setLongTakeCustomStyle,
+    setLongTakeStyleImageDataUrl,
     setLongTakeStyleImageError,
     setLongTakeStyleImageFile,
     setLongTakeStyleImagePreviewUrl,
     setLongTakeStyleInputMode,
-    setLongTakeStyleName,
     setPromptDirtySincePreview,
     setStylePreviewImageUrl,
-    stylePreviewBaseImageUrl,
-    stylePreviewGenCounterRef,
   } = deps
 
-  const { fetchApiDomain } = useApi()
   const styleImageSelectCounterRef = useRef(0)
 
   const runStyleImageCompression = useCallback(
     async (
       file: File,
     ): Promise<
-      | {
-          blob: Blob
-          compressedSize: number
-          compressionFallback: 'unsupported' | null
-          compressionRan: boolean
-        }
-      | { failed: true; reason: StoryModeImageCompressionFailureReason }
+      { blob: Blob } | { failed: true; reason: StoryModeImageCompressionFailureReason }
     > => {
       if (file.size <= CLOUDFLARE_SAFE_BLOB_BYTES) {
-        return {
-          blob: file,
-          compressionFallback: null,
-          compressionRan: false,
-          compressedSize: file.size,
-        }
+        return { blob: file }
       }
       const result = await compressImageForApiRequest(file)
       if (result.ok) {
-        return {
-          blob: result.blob,
-          compressionFallback: null,
-          compressionRan: true,
-          compressedSize: result.blob.size,
-        }
+        return { blob: result.blob }
       }
       if (result.reason === 'unsupported' && canSendUncompressedStoryModeStyleImage(file.size)) {
-        return {
-          blob: file,
-          compressionFallback: 'unsupported',
-          compressionRan: true,
-          compressedSize: file.size,
-        }
+        return { blob: file }
       }
       return { failed: true, reason: result.reason }
     },
-    [canSendUncompressedStoryModeStyleImage],
+    [],
   )
 
   const handleLongTakeStyleImageSelect = useCallback(
@@ -105,9 +106,12 @@ export function useStyleImageProcessing(deps: StyleImageDeps) {
       styleImageSelectCounterRef.current += 1
       const selectId = styleImageSelectCounterRef.current
       clearStyleImage()
+      // A new picture: the old description was about the old one.
       setLongTakeCustomStyle('')
       setLongTakeStyleInputMode('image')
       setLongTakeStyleImageError(null)
+      setStylePreviewImageUrl(null)
+      setPromptDirtySincePreview(false)
 
       const previewUrl = URL.createObjectURL(file)
       setLongTakeStyleImageFile(file)
@@ -116,81 +120,24 @@ export function useStyleImageProcessing(deps: StyleImageDeps) {
 
       try {
         const compression = await runStyleImageCompression(file)
-        if ('failed' in compression && compression.failed) {
-          setLongTakeStyleImageError(STORY_MODE_STYLE_IMAGE_ERROR_MESSAGE)
-          return
-        }
-
-        type Success = {
-          blob: Blob
-          compressedSize: number
-          compressionFallback: 'unsupported' | null
-          compressionRan: boolean
-        }
-        const success = compression as Success
-        const imageDataUrl = await readFileAsDataUrl(success.blob)
-        const response = await fetchApiDomain<{ styleName: string; styleText: string }>(
-          '/api/media/generate-style-text',
-          {
-            data: { imageDataUrl },
-            headers: { 'Content-Type': 'application/json' },
-            method: 'POST',
-          },
-        )
-        if (!response.ok) {
-          throw new Error(response.error || 'Failed to generate style text')
-        }
         if (selectId !== styleImageSelectCounterRef.current) {
           return
         }
-        const styleText = response.data?.styleText?.trim() || ''
-        if (!styleText) {
-          throw new Error('Generated style text is empty')
+        if ('failed' in compression) {
+          setLongTakeStyleImageError(STORY_MODE_STYLE_IMAGE_ERROR_MESSAGE)
+          return
         }
-        const styleName = response.data?.styleName?.trim() ?? ''
-        // Generate preview first, then set name + prompt + preview together
-        stylePreviewGenCounterRef.current += 1
-        const previewGenId = stylePreviewGenCounterRef.current
-        try {
-          const previewResult = await generateStylePreviewMutation.mutateAsync({
-            baseImageUrl: stylePreviewBaseImageUrl,
-            styleText,
-          })
-          if (
-            selectId !== styleImageSelectCounterRef.current ||
-            previewGenId !== stylePreviewGenCounterRef.current
-          ) {
-            return
-          }
-          const previewDataUrl = `data:image/png;base64,${previewResult.previewImageBase64}`
-          setLongTakeStyleName(styleName)
-          setLongTakeCustomStyle(styleText)
-          setStylePreviewImageUrl(previewDataUrl)
-          setPromptDirtySincePreview(false)
-        } catch {
-          if (
-            selectId !== styleImageSelectCounterRef.current ||
-            previewGenId !== stylePreviewGenCounterRef.current
-          ) {
-            return
-          }
-          setLongTakeStyleName(styleName)
-          setLongTakeCustomStyle(styleText)
-          setStylePreviewImageUrl(null)
-          setPromptDirtySincePreview(true)
+        const imageDataUrl = await readFileAsDataUrl(compression.blob)
+        if (selectId !== styleImageSelectCounterRef.current) {
+          return
         }
+        setLongTakeStyleImageDataUrl(imageDataUrl)
       } catch (err) {
         if (selectId !== styleImageSelectCounterRef.current) {
           return
         }
-        const error = ensureError(err)
-        if (isApiError(error) && error.status === 413) {
-          setLongTakeStyleImageError(STORY_MODE_STYLE_IMAGE_ERROR_MESSAGE)
-          return
-        }
-        const errorMessage = getErrorMessage(error, 'Failed to generate style text')
+        const errorMessage = getErrorMessage(ensureError(err), STORY_MODE_STYLE_IMAGE_ERROR_MESSAGE)
         setLongTakeStyleImageError(errorMessage)
-        toast.error(errorMessage)
       } finally {
         if (selectId === styleImageSelectCounterRef.current) {
           setIsLongTakeStyleImageProcessing(false)
@@ -199,19 +146,16 @@ export function useStyleImageProcessing(deps: StyleImageDeps) {
     },
     [
       clearStyleImage,
-      fetchApiDomain,
-      generateStylePreviewMutation,
       runStyleImageCompression,
+      setIsLongTakeStyleImageProcessing,
       setLongTakeCustomStyle,
+      setLongTakeStyleImageDataUrl,
       setLongTakeStyleImageError,
       setLongTakeStyleImageFile,
       setLongTakeStyleImagePreviewUrl,
       setLongTakeStyleInputMode,
-      setLongTakeStyleName,
       setPromptDirtySincePreview,
       setStylePreviewImageUrl,
-      stylePreviewBaseImageUrl,
-      stylePreviewGenCounterRef,
     ],
   )
 

@@ -1,14 +1,3 @@
-import { Logger } from '@reelmakeeasy/common/logger'
-import type { CameraStyle } from '@reelmakeeasy/common/long-take/camera-craft'
-import {
-  MUSIC_TRACK_ID_MAX_LENGTH,
-  sanitizeMusicSource,
-} from '@reelmakeeasy/common/long-take/music-craft'
-import type { AspectRatio, GenerationResolution } from '@reelmakeeasy/common/media/types'
-import type { ReimagineModelSelectorTier } from '@reelmakeeasy/common/model-config/reimagine-model-tier'
-import { toSavedAddressesInText } from '@reelmakeeasy/common/storage/address'
-import { UserInfo } from '@reelmakeeasy/common/types/user'
-import { getReqContext } from '@reelmakeeasy/common/utils/req-ctx'
 import {
   BadRequestException,
   Body,
@@ -21,6 +10,17 @@ import {
   Sse,
   UnauthorizedException,
 } from '@nestjs/common'
+import { Logger } from '@reelmakeeasy/common/logger'
+import type { CameraStyle } from '@reelmakeeasy/common/long-take/camera-craft'
+import {
+  MUSIC_TRACK_ID_MAX_LENGTH,
+  sanitizeMusicSource,
+} from '@reelmakeeasy/common/long-take/music-craft'
+import type { AspectRatio, GenerationResolution } from '@reelmakeeasy/common/media/types'
+import type { ReimagineModelSelectorTier } from '@reelmakeeasy/common/model-config/reimagine-model-tier'
+import { toSavedAddressesInText } from '@reelmakeeasy/common/storage/address'
+import { UserInfo } from '@reelmakeeasy/common/types/user'
+import { getReqContext } from '@reelmakeeasy/common/utils/req-ctx'
 import type {
   LongTakeBgmSettingsReadResponse,
   LongTakeBgmSettingsRequest,
@@ -419,6 +419,8 @@ export class LongTakeController {
       prompt?: string
       ratio?: AspectRatio
       remixProjectId?: string
+      /** The user's saved style id; an image style's picture guides every picture. */
+      savedStyleId?: string
       script?: string
       scriptGeneratorPath?: LongTakeScriptGeneratorPath
       styleName?: string
@@ -493,6 +495,7 @@ export class LongTakeController {
                   .slice(0, MUSIC_TRACK_ID_MAX_LENGTH) || null,
             }),
       },
+      typeof body.savedStyleId === 'string' ? body.savedStyleId : undefined,
     )
     return { ...result, videoId: result.projectId }
   }

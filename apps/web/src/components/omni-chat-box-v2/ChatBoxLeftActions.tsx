@@ -47,6 +47,7 @@ export type ChatBoxLeftActionsProps = {
   /** Enable state for Generate preview button in Add Style dialog */
   isLongTakeStyleGeneratePreviewEnabled?: boolean
   isLongTakeStylePreviewGenerating?: boolean
+  isLongTakeStyleWritingWithAi?: boolean
   isVoiceDialogOpen?: boolean
   layout?: 'default' | 'story'
   longTakeEnabled: boolean
@@ -67,6 +68,7 @@ export type ChatBoxLeftActionsProps = {
   onLongTakeStyleImageSelect?: (file: File) => void
   onLongTakeStyleNameChange: (value: string) => void
   onLongTakeStyleTextClear?: () => void
+  onLongTakeStyleWriteWithAi?: () => void
   onLongTakeTargetDurationSecondsChange?: (durationSeconds: null | number) => void
   /** Callback when aspect ratio changes (for copy-motion workflows) */
   onRatioChange?: (ratio: AspectRatio) => void
@@ -102,11 +104,13 @@ const ChatBoxLeftActionsComponent: React.FC<ChatBoxLeftActionsProps> = ({
   isLongTakeStyleApplyEnabled = false,
   isLongTakeStyleApplySaving = false,
   isLongTakeStyleGeneratePreviewEnabled = false,
+  isLongTakeStyleWritingWithAi = false,
   isLongTakeStylePreviewGenerating = false,
   longTakeStylePreviewImageUrl = null,
   onLongTakeStyleApply,
   onLongTakeStyleCustomChange,
   onLongTakeStyleGeneratePreview,
+  onLongTakeStyleWriteWithAi,
   onLongTakeStyleImageClear,
   onLongTakeStyleImageSelect,
   onLongTakeStyleNameChange,
@@ -383,6 +387,7 @@ const ChatBoxLeftActionsComponent: React.FC<ChatBoxLeftActionsProps> = ({
       isLongTakeStyleDialogOpen={isLongTakeStyleDialogOpen}
       isLongTakeStyleGeneratePreviewEnabled={isLongTakeStyleGeneratePreviewEnabled}
       isLongTakeStylePreviewGenerating={isLongTakeStylePreviewGenerating}
+      isLongTakeStyleWritingWithAi={isLongTakeStyleWritingWithAi}
       isVoiceDialogOpen={isVoiceDialogOpen}
       longTakeStyleCustom={longTakeStyleCustom}
       longTakeStyleImageError={longTakeStyleImageError}
@@ -397,6 +402,7 @@ const ChatBoxLeftActionsComponent: React.FC<ChatBoxLeftActionsProps> = ({
       onLongTakeStyleImageSelect={onLongTakeStyleImageSelect}
       onLongTakeStyleNameChange={onLongTakeStyleNameChange}
       onLongTakeStyleTextClear={onLongTakeStyleTextClear}
+      onLongTakeStyleWriteWithAi={onLongTakeStyleWriteWithAi}
       setIsLongTakeStyleDialogOpen={setIsLongTakeStyleDialogOpen}
       setIsVoiceDialogOpen={setIsVoiceDialogOpen}
     />

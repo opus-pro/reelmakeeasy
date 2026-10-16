@@ -19,6 +19,7 @@ export type ChatBoxLeftActionsDialogsProps = {
   isLongTakeStyleDialogOpen: boolean
   isLongTakeStyleGeneratePreviewEnabled?: boolean
   isLongTakeStylePreviewGenerating?: boolean
+  isLongTakeStyleWritingWithAi?: boolean
   isVoiceDialogOpen: boolean
   longTakeStyleCustom: string
   longTakeStyleImageError?: null | string
@@ -33,6 +34,7 @@ export type ChatBoxLeftActionsDialogsProps = {
   onLongTakeStyleImageSelect?: (file: File) => void
   onLongTakeStyleNameChange: (value: string) => void
   onLongTakeStyleTextClear?: () => void
+  onLongTakeStyleWriteWithAi?: () => void
   setIsLongTakeStyleDialogOpen: (open: boolean) => void
   setIsVoiceDialogOpen: (open: boolean) => void
 }
@@ -53,10 +55,12 @@ export const ChatBoxLeftActionsDialogs: React.FC<ChatBoxLeftActionsDialogsProps>
   isLongTakeStyleApplyEnabled = false,
   isLongTakeStyleApplySaving = false,
   isLongTakeStyleGeneratePreviewEnabled = false,
+  isLongTakeStyleWritingWithAi = false,
   isLongTakeStylePreviewGenerating = false,
   onLongTakeStyleApply,
   onLongTakeStyleCustomChange,
   onLongTakeStyleGeneratePreview,
+  onLongTakeStyleWriteWithAi,
   onLongTakeStyleImageClear,
   onLongTakeStyleImageSelect,
   onLongTakeStyleNameChange,
@@ -73,6 +77,7 @@ export const ChatBoxLeftActionsDialogs: React.FC<ChatBoxLeftActionsDialogsProps>
         isLongTakeStyleDialogOpen={isLongTakeStyleDialogOpen}
         isLongTakeStyleGeneratePreviewEnabled={isLongTakeStyleGeneratePreviewEnabled}
         isLongTakeStylePreviewGenerating={isLongTakeStylePreviewGenerating}
+        isLongTakeStyleWritingWithAi={isLongTakeStyleWritingWithAi}
         longTakeStyleCustom={longTakeStyleCustom}
         longTakeStyleImageError={longTakeStyleImageError}
         longTakeStyleImageValue={longTakeStyleImageValue}
@@ -86,6 +91,7 @@ export const ChatBoxLeftActionsDialogs: React.FC<ChatBoxLeftActionsDialogsProps>
         onLongTakeStyleImageSelect={onLongTakeStyleImageSelect}
         onLongTakeStyleNameChange={onLongTakeStyleNameChange}
         onLongTakeStyleTextClear={onLongTakeStyleTextClear}
+        onLongTakeStyleWriteWithAi={onLongTakeStyleWriteWithAi}
         setIsLongTakeStyleDialogOpen={setIsLongTakeStyleDialogOpen}
       />
 

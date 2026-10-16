@@ -1,5 +1,8 @@
 import { type CameraStyle, sanitizeCameraStyle } from '@reelmakeeasy/common/long-take/camera-craft'
-import { resolveMusicRequest, sanitizeMusicRequest } from '@reelmakeeasy/common/long-take/music-craft'
+import {
+  resolveMusicRequest,
+  sanitizeMusicRequest,
+} from '@reelmakeeasy/common/long-take/music-craft'
 import { AspectRatio } from '@reelmakeeasy/common/media/types'
 import { countWords } from '@reelmakeeasy/common/utils/text'
 import {
@@ -47,6 +50,7 @@ export interface ScriptPreviewDeps {
   buildStoryModeStartStyleOptions: (hasAudioAttachment: boolean) => {
     customStyle: boolean
     isSavedStyle: boolean
+    savedStyleId?: string
     styleName?: string
     styleText: string
     styleThumbnailUrl?: string
@@ -98,6 +102,7 @@ export interface ScriptPreviewDeps {
     prompt?: string
     ratio?: AspectRatio
     remixProjectId?: string
+    savedStyleId?: string
     script: string
     scriptGeneratorPath?: LongTakeScriptGeneratorPath
     styleName?: string
@@ -579,6 +584,7 @@ export function useScriptPreview(deps: ScriptPreviewDeps) {
         }),
         customStyle: styleOptions.customStyle,
         isSavedStyle: styleOptions.isSavedStyle,
+        ...(styleOptions.savedStyleId ? { savedStyleId: styleOptions.savedStyleId } : {}),
         ...(styleOptions.styleText ? { styleText: styleOptions.styleText } : {}),
         ...(styleOptions.styleName ? { styleName: styleOptions.styleName } : {}),
         ...(styleOptions.styleThumbnailUrl

@@ -3,6 +3,10 @@ import * as os from 'node:os'
 import * as path from 'node:path'
 
 import type { Content } from '@reelmakeeasy/common/llm'
+import {
+  buildStyleReferenceContents,
+  readLongTakeStyleReferenceUris,
+} from '@reelmakeeasy/common/long-take/style-reference'
 import type { AspectRatio } from '@reelmakeeasy/common/media/types'
 import { z } from 'zod'
 
@@ -153,6 +157,11 @@ export async function generateLongTakeAnchorAssets(
       await storage.ensureDir(LONG_TAKE_ANCHOR_RAW_DIR)
       await storage.ensureDir(LONG_TAKE_ANCHOR_STYLED_DIR)
       await storage.ensureDir(LONG_TAKE_EXPERTS_DIR)
+      // The saved image style's picture, when the user picked one. Styled anchors (and raw
+      // ones drawn straight in the style) get it so characters and props carry its look.
+      const styleReferenceContents = buildStyleReferenceContents(
+        await readLongTakeStyleReferenceUris(storage),
+      )
 
       // Short-circuit when UIP has already produced the anchor indices at
       // confirm time. Re-running raw/styled generation here would overwrite
@@ -242,12 +251,15 @@ export async function generateLongTakeAnchorAssets(
               }
             }
 
-            const contents: Content[] = getAnchorTaskReferenceImageUris(assetTask, storage).map(
-              (uri) => ({
-                type: 'image_url',
-                imageUrl: uri,
-              }),
-            )
+            const contents: Content[] = [
+              ...getAnchorTaskReferenceImageUris(assetTask, storage).map(
+                (uri): Content => ({
+                  type: 'image_url',
+                  imageUrl: uri,
+                }),
+              ),
+              ...(styleText?.trim() ? styleReferenceContents : []),
+            ]
             const safeFileName = toLongTakeSafeFileName(assetTask.asset_id)
             const outputPath = path.join(rawLocalDir, `${safeFileName}.png`)
             const anchorPath = `${LONG_TAKE_ANCHOR_RAW_DIR}/${safeFileName}.png`
@@ -357,7 +369,10 @@ export async function generateLongTakeAnchorAssets(
               try {
                 await runImageGenerationWithRecord({
                   aspectRatio: '2:3' as AspectRatio,
-                  contents: [{ type: 'image_url', imageUrl: item.anchor_uri }],
+                  contents: [
+                    { type: 'image_url', imageUrl: item.anchor_uri },
+                    ...styleReferenceContents,
+                  ],
                   customModel,
                   imageSize,
                   outputPath,
@@ -484,6 +499,10 @@ export async function generateLongTakeSingleRawAnchorAsset(
 
       const storage = createLongTakeStorage(projectId)
       await storage.ensureDir(LONG_TAKE_ANCHOR_RAW_DIR)
+      // Drawn straight in the style (styleText set): add the saved image style's picture too.
+      const styleReferenceContents = styleText?.trim()
+        ? buildStyleReferenceContents(await readLongTakeStyleReferenceUris(storage))
+        : []
 
       const safeFileName = toLongTakeSafeFileName(assetTask.asset_id)
       const localDir = await fs.promises.mkdtemp(
@@ -492,12 +511,15 @@ export async function generateLongTakeSingleRawAnchorAsset(
       const outputPath = path.join(localDir, `${safeFileName}.png`)
       const anchorPath = `${LONG_TAKE_ANCHOR_RAW_DIR}/${safeFileName}.png`
       const anchorUri = storage.getFullPath(anchorPath)
-      const contents: Content[] = getAnchorTaskReferenceImageUris(assetTask, storage).map(
-        (uri) => ({
-          type: 'image_url',
-          imageUrl: uri,
-        }),
-      )
+      const contents: Content[] = [
+        ...getAnchorTaskReferenceImageUris(assetTask, storage).map(
+          (uri): Content => ({
+            type: 'image_url',
+            imageUrl: uri,
+          }),
+        ),
+        ...styleReferenceContents,
+      ]
       const prompt = buildAnchorRawPrompt(assetTask, styleText)
       // Per-project image size tier: API value > default.
       const imageSize = resolveGenerationResolution({
