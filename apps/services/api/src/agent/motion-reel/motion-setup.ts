@@ -45,6 +45,7 @@ export function parseMotionSetup(body: unknown): MotionReelSetup {
   const music = body['music']
   let parsedMusic: MotionReelSetup['music']
   if (!isRecord(music) || music['source'] === 'none') parsedMusic = { source: 'none' }
+  else if (music['source'] === 'agent') parsedMusic = { source: 'agent' }
   else if (
     music['source'] === 'library' &&
     typeof music['id'] === 'string' &&

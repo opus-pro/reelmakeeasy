@@ -975,6 +975,14 @@ export class AgentSessionService implements OnModuleDestroy {
     return this.store.update(id, { chatModel: choice ?? undefined }, { touch: false })
   }
 
+  /** A Motion Reel's setup changed after it started (the agent composed its music): saved, and
+   *  the setup card shows the new length, tempo and track. */
+  updateMotionReel(id: string, setup: AgentMotionSetupView): void {
+    if (this.getSession(id).mode !== 'motion') return
+    this.store.update(id, { motionReel: setup }, { touch: false })
+    this.emit(id, { setup, type: 'motion_setup' })
+  }
+
   /** Shows (or ends) the working state while the autonomous flow works outside a Codex turn
    *  (writing the script, starting the video). A turn already running (a Free chat's
    *  card answered mid-turn) keeps the state as its own: the flow neither claims it nor ends

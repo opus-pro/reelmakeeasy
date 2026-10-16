@@ -44,6 +44,9 @@ export type ReelMusicSource = { bpm?: number; file: string; title: string }
  */
 export async function prepareReelProject(o: {
   music: null | ReelMusicSource
+  /** Only the music changes (the agent composed a track): the template, links and style card
+   *  stay as they are, so nothing the agent wrote is touched. */
+  musicOnly?: boolean
   setup: MotionReelSetup
   workspace: string
 }): Promise<PreparedReel> {
@@ -51,9 +54,11 @@ export async function prepareReelProject(o: {
   const style = motionReelStyle(o.setup.styleId)
   if (!style) throw new Error(`Unknown Motion Reel style: ${o.setup.styleId}`)
 
-  copyTemplate(projectDir)
-  linkRuntime(projectDir)
-  linkSfx(projectDir)
+  if (!o.musicOnly) {
+    copyTemplate(projectDir)
+    linkRuntime(projectDir)
+    linkSfx(projectDir)
+  }
 
   let grid: BeatGrid | null = null
   let fit: null | ReelFit = null
@@ -94,12 +99,14 @@ export async function prepareReelProject(o: {
     musicFile: o.music ? 'music.wav' : null,
     ratio: o.setup.ratio,
     subject: o.setup.subject,
+    // A reel without music still pulses at the style's own pace.
+    fallbackBpm: Math.round((style.tempo.min + style.tempo.max) / 2),
   })
   fs.writeFileSync(
     path.join(projectDir, 'public', 'reel.json'),
     `${JSON.stringify(reel, null, 1)}\n`,
   )
-  fs.writeFileSync(path.join(projectDir, 'style.md'), `${renderStyleCard(style)}\n`)
+  if (!o.musicOnly) fs.writeFileSync(path.join(projectDir, 'style.md'), `${renderStyleCard(style)}\n`)
   fs.writeFileSync(path.join(projectDir, 'brief.md'), renderBrief(o.setup, reel, o.music))
   return { grid, projectDir, reel }
 }
@@ -113,7 +120,9 @@ export function renderBrief(
   const style = motionReelStyle(setup.styleId)
   const musicLine = music
     ? `"${music.title}", trimmed to the reel and fading out over the last ${reel.fadeOutSec} s`
-    : `none (a silent reel on a steady ${reel.bpm} BPM grid; sound effects still work)`
+    : setup.music.source === 'agent'
+      ? `none yet: compose it with motion_music before you plan (the grid below is a placeholder at ${reel.bpm} BPM until then)`
+      : `none (a silent reel on a steady ${reel.bpm} BPM grid; sound effects still work)`
   const referenceKind =
     setup.reference?.kind === 'youtube'
       ? 'a video; take its look and rhythm, never its content'

@@ -24,6 +24,7 @@ export type MotionReelSetupCardProps = {
 }
 
 type MusicPick =
+  | { kind: 'agent' }
   | { kind: 'library'; trackId: string }
   | { kind: 'none' }
   | { kind: 'upload'; name: string; title: string }
@@ -57,7 +58,11 @@ function ChosenSetup({ setup }: { setup: AgentMotionSetupView }) {
     setup.styleLabel,
     `${Math.round(setup.reelSec)} s · ${setup.bars} bars at ${Math.round(setup.bpm)} BPM`,
     setup.ratio,
-    setup.musicTitle ? `♪ ${setup.musicTitle}` : 'No music',
+    setup.musicTitle
+      ? `♪ ${setup.musicTitle}`
+      : setup.music.source === 'agent'
+        ? '♪ Composing its own music'
+        : 'No music',
     ...(setup.reference
       ? [setup.reference.kind === 'youtube' ? 'Video reference' : 'Website reference']
       : []),
@@ -153,7 +158,9 @@ function SetupForm({
           ? { id: music.trackId, source: 'library' }
           : music.kind === 'upload'
             ? { id: music.name, source: 'upload' }
-            : { source: 'none' },
+            : music.kind === 'agent'
+              ? { source: 'agent' }
+              : { source: 'none' },
       ratio,
       ...(referenceKind === 'none'
         ? {}
@@ -347,6 +354,7 @@ function MusicPicker({
           onChange={(e) => {
             const value = e.target.value
             if (value === 'none') onPick({ kind: 'none' })
+            else if (value === 'agent') onPick({ kind: 'agent' })
             else if (value !== 'upload') onPick({ kind: 'library', trackId: value })
           }}
           value={music.kind === 'library' ? music.trackId : music.kind}
@@ -357,6 +365,7 @@ function MusicPicker({
             </option>
           ))}
           {music.kind === 'upload' && <option value="upload">{music.title}</option>}
+          <option value="agent">Let the agent compose it</option>
           <option value="none">No music</option>
         </select>
         <Button
@@ -378,6 +387,12 @@ function MusicPicker({
           type="file"
         />
       </div>
+      {music.kind === 'agent' && (
+        <p className="text-xs text-secondary">
+          The agent writes a track for this reel with your music model (one paid generation), then
+          builds the reel on its beat.
+        </p>
+      )}
       {selectedTrack && <TrackPreview src={selectedTrack.previewUrl} />}
       {uploadError && <p className="text-xs text-amber-400">{uploadError}</p>}
     </div>

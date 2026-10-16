@@ -512,9 +512,11 @@ const handleMotionSetup = (
   next: Transcript,
   event: EventOf<'motion_setup'>,
 ): Transcript => {
-  const openIndex = state.entries.findLastIndex(
-    (e) => e.kind === 'motion_setup' && e.state === 'open',
-  )
+  // The open card turns into the chosen one; a later setup (the agent composed the music)
+  // updates the chosen card in place.
+  const open = state.entries.findLastIndex((e) => e.kind === 'motion_setup' && e.state === 'open')
+  const openIndex =
+    open === -1 ? state.entries.findLastIndex((e) => e.kind === 'motion_setup') : open
   const chosen: TranscriptEntry = {
     id:
       openIndex === -1

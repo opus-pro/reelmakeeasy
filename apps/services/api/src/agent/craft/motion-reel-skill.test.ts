@@ -5,6 +5,7 @@ import { SFX_NAMES } from '@reelmakeeasy/common/motion-reel/sfx'
 import { MOTION_REEL_STYLES } from '@reelmakeeasy/common/motion-reel/styles'
 
 import {
+  MOTION_MUSIC_TOOL,
   MOTION_REEL_SKILL_NAME,
   MOTION_RENDER_TOOL,
   MOTION_STILL_TOOL,
@@ -25,9 +26,10 @@ describe('renderMotionReelSkill', () => {
     expect(description.slice('description: '.length)).not.toMatch(/: | #/)
   })
 
-  it('names both render tools, every sound effect and every style', () => {
+  it('names the music and render tools, every sound effect and every style', () => {
     expect(skill).toContain(MOTION_STILL_TOOL)
     expect(skill).toContain(MOTION_RENDER_TOOL)
+    expect(skill).toContain(MOTION_MUSIC_TOOL)
     for (const name of SFX_NAMES) expect(skill).toContain(`\`${name}\``)
     for (const style of MOTION_REEL_STYLES) expect(skill).toContain(`\`${style.id}\``)
   })

@@ -6,6 +6,7 @@ export type AgentToolName =
   | 'generate_image'
   | 'make_beat_loop'
   | 'make_video'
+  | 'motion_music'
   | 'motion_render'
   | 'motion_still'
   | 'ranking_add_clip'
@@ -114,6 +115,30 @@ export const AGENT_TOOLS: Record<AgentToolName, DynamicToolSpec> = {
       type: 'object',
     },
     name: 'make_video',
+  },
+  motion_music: {
+    description:
+      "Compose the Motion Reel's own music with the music model the user set up (a paid generation, about a minute), instead of the library track. ReelMakeEasy measures its beat, keeps the most energetic whole bars, and rewrites reel/public/music.wav and reel/public/reel.json, so scenes timed with beat() and bar() follow it. Use it when the user asks for different or original music, or chose to have you compose it. The reply gives the new length, tempo and strongest hits.",
+    inputSchema: {
+      additionalProperties: false,
+      properties: {
+        bpm: {
+          description:
+            'Optional: the tempo to ask for (the grid follows what the model actually plays).',
+          maximum: 180,
+          minimum: 60,
+          type: 'integer',
+        },
+        prompt: {
+          description:
+            'The music, as the music model reads it: genre, mood, instruments, energy, and its shape in bars (e.g. "4-bar intro with a riser, big drop at bar 5, hits on the downbeats"). Instrumental.',
+          type: 'string',
+        },
+      },
+      required: ['prompt'],
+      type: 'object',
+    },
+    name: 'motion_music',
   },
   motion_render: {
     description:
@@ -509,7 +534,8 @@ export function toolsForSession(
       (n) => AGENT_TOOLS[n],
     )
   if (session.mode === 'autonomous') return session.editing ? withImage(EDIT_TOOLS) : []
-  if (session.mode === 'motion') return [AGENT_TOOLS.motion_still, AGENT_TOOLS.motion_render]
+  if (session.mode === 'motion')
+    return [AGENT_TOOLS.motion_music, AGENT_TOOLS.motion_still, AGENT_TOOLS.motion_render]
   if (isRankingMode(session.mode)) return RANKING_TOOLS.map((n) => AGENT_TOOLS[n])
   if (session.mode !== 'free') return []
   return withImage(['make_video', 'make_beat_loop', ...EDIT_TOOLS, ...RANKING_TOOLS])
@@ -527,6 +553,7 @@ export function toolSummary(tool: string, args: unknown): string {
   if (tool === 'use_image_as_keyframe')
     return `Putting the new picture in as keyframe ${String(a.keyframe ?? '')}`.trim()
   if (tool === 'generate_image') return 'Making a preview image'
+  if (tool === 'motion_music') return 'Composing the music'
   if (tool === 'motion_still') return 'Looking at frames of the reel'
   if (tool === 'motion_render') return 'Rendering the reel'
   if (tool === 'ranking_list') return 'Looking at your rankings and sounds'

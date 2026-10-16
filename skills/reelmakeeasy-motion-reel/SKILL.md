@@ -37,6 +37,10 @@ Remotion is installed. Its own skills (`remotion-best-practices`, `remotion-mark
 - `grid.strongHits` (via `hitFrames()`) are the music's accents: put impacts there.
 - The last bar holds the end card while the music fades (`<Music />` fades it for you).
 
+## Music
+
+The music is the reel's clock. It comes from the library, the user, or you: `motion_music` composes a track with the user's music model (a paid generation; one per request, never to try things). Write its prompt for this reel: genre, mood, instruments and energy that suit the style and subject, a tempo in the style card's range, and its shape in bars (an intro that builds, a riser into a drop where the biggest moment goes, hits on the downbeats, an ending that resolves). For a launch or a showreel, make it exciting: punchy drums, a clear hook, a real drop. Then read `public/reel.json` again (the bars, tempo and hits change) and re-check timing that assumed the old grid.
+
 ## Sound effects
 
 Place them with `<Sfx name="…" at={beat(n)} />`: one per cut or impact, never more than two on one frame, volume 0.4 to 0.8 under the music. A `riser` peaks on its frame (it starts two seconds earlier), so put it on the drop. The pack:
