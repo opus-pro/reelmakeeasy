@@ -376,7 +376,7 @@ describe('ClaudeAppServer', () => {
 })
 
 describe('ClaudeAppServer review fixes', () => {
-  it('loads no MCP servers but its own, and gives chats with a shell the camera and loop skills', async () => {
+  it('loads no MCP servers but its own, and gives chats with a shell the camera, loop and Motion Reel skills', async () => {
     const q = fakeQuery(async function* () {
       yield result()
     })
@@ -385,10 +385,14 @@ describe('ClaudeAppServer review fixes', () => {
     await turn(s)
     await tick()
     const options = q.calls[0]?.options
-    expect(options).toMatchObject({
-      skills: ['reelmakeeasy:reelmakeeasy-camera', 'reelmakeeasy:reelmakeeasy-beat-loop'],
-      strictMcpConfig: true,
-    })
+    expect(options).toMatchObject({ strictMcpConfig: true })
+    // ReelMakeEasy's own skills first; Remotion's follow once its runtime has downloaded them.
+    expect((options.skills as string[]).slice(0, 3)).toEqual([
+      'reelmakeeasy:reelmakeeasy-camera',
+      'reelmakeeasy:reelmakeeasy-beat-loop',
+      'reelmakeeasy:reelmakeeasy-motion-reel',
+    ])
+    for (const skill of (options.skills as string[]).slice(3)) expect(skill).toMatch(/^reelmakeeasy:remotion-/)
     expect(options.tools).toContain('Skill')
     const signal = new AbortController().signal
     for (const skill of options.skills as string[])

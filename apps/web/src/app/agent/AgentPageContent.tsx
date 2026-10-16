@@ -15,6 +15,7 @@ import { AgentSessionSidebar } from '@/components/agent/AgentSessionSidebar'
 import { ProjectProgressProvider } from '@/components/agent/ProjectProgressProvider'
 import { useSidebarProjectActions } from '@/components/agent/SidebarProjectActions'
 import { START_EASY_PARAM, startsEasy, useStartEasyOnce } from '@/components/agent/start-easy'
+import { MotionReelPanel } from '@/components/agent/motion/MotionReelPanel'
 import { StoryboardPanel } from '@/components/agent/StoryboardPanel'
 import { useAgentSession } from '@/components/agent/useAgentSession'
 import { useAgentSessions, useRefreshAgentSessions } from '@/components/agent/useAgentSessions'
@@ -242,7 +243,11 @@ function AgentWorkspace({
           />
         </div>
         <div className="min-h-0 min-w-0 flex-1">
-          <StoryboardPanel mode={mode} sessionId={sessionId} transcript={agent.transcript} />
+          {mode === 'motion' ? (
+            <MotionReelPanel transcript={agent.transcript} />
+          ) : (
+            <StoryboardPanel mode={mode} sessionId={sessionId} transcript={agent.transcript} />
+          )}
         </div>
       </div>
     </ProjectProgressProvider>

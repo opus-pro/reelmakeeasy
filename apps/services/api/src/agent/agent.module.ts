@@ -27,6 +27,7 @@ import {
   makeLlmResolver,
 } from './codex-llm/codex-projects'
 import { AgentEditService } from './edit/agent-edit.service'
+import { MotionReelService } from './motion-reel/motion-reel.service'
 import { AgentController } from './agent.controller'
 import { AgentSessionService } from './agent-session.service'
 import { ChatModelService } from './chat-model.service'
@@ -45,6 +46,7 @@ import { ChatModelService } from './chat-model.service'
       useFactory: (refs: ModuleRef, chatModels: ChatModelService) => {
         const flow = () => refs.get(AutonomousService, { strict: true })
         const edit = () => refs.get(AgentEditService, { strict: true })
+        const motion = () => refs.get(MotionReelService, { strict: true })
         return new AgentSessionService({
           autonomous: {
             cancel: (id) => flow().cancel(id),
@@ -52,9 +54,16 @@ import { ChatModelService } from './chat-model.service'
             resumeAction: (id) => flow().resumeAction(id),
             start: (id) => flow().start(id),
           },
-          chatModels,
-          // Codex's ReelMakeEasy tools, answered by the edit service (resolved lazily, like the flow).
-          onToolCall: (id, tool, args) => edit().callTool(id, tool, args),
+          chatModels: {
+            choiceFor: (harness, chat) => chatModels.choiceFor(harness, chat),
+            motionChoiceFor: (harness, chat) => chatModels.motionChoiceFor(harness, chat),
+          },
+          // Codex's ReelMakeEasy tools, answered by the edit service, a Motion Reel's by the
+          // Motion Reel service (both resolved lazily, like the flow).
+          onToolCall: (id, tool, args) =>
+            tool.startsWith('motion_')
+              ? motion().callTool(id, tool, args)
+              : edit().callTool(id, tool, args),
         })
       },
     },
@@ -85,6 +94,11 @@ import { ChatModelService } from './chat-model.service'
         autonomous: AutonomousService,
         music: MusicService,
       ) => new AgentEditService({ autonomous, longTake, music, projects, sessions }),
+    },
+    {
+      inject: [AgentSessionService],
+      provide: MotionReelService,
+      useFactory: (sessions: AgentSessionService) => new MotionReelService(sessions),
     },
     CodexLlmService,
     ClaudeLlmService,

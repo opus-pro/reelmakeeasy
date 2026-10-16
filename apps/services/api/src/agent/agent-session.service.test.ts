@@ -28,6 +28,7 @@ import {
   HarnessNotReadyError,
   InvalidAnswerError,
   ModeAlreadyChosenError,
+  MotionSetupPendingError,
   ModeNotChattableError,
   NotResumableError,
   QuestionNotOpenError,
@@ -447,6 +448,39 @@ describe('AgentSessionService', () => {
       )
       for (const mode of ['free', undefined] as const)
         expect(appServerArgsForMode(mode)).toEqual(buildAppServerArgs({ webSearch: false }))
+    })
+
+    it('motion: emits mode and the setup card, refuses messages until the setup is in, then starts the agent', async () => {
+      const svc = makeService(root)
+      const session = await svc.createSession()
+      const events: AgentUiEvent[] = []
+      svc.subscribe(session.id, 0, (e) => events.push(e))
+
+      await svc.chooseMode(session.id, 'motion')
+      expect(events.map((e) => e.type)).toEqual(['mode', 'motion_setup_request'])
+      expect(svc.isRunning(session.id)).toBe(false)
+      await expect(svc.sendMessage(session.id, 'hi')).rejects.toBeInstanceOf(MotionSetupPendingError)
+
+      const setup = {
+        bars: 8,
+        bpm: 128,
+        lengthSec: 15,
+        music: { source: 'none' as const },
+        musicTitle: null,
+        ratio: '16:9' as const,
+        reelSec: 15,
+        styleId: 'hud-showreel',
+        styleLabel: 'HUD Showreel',
+        subject: 'A launch reel',
+      }
+      svc.startMotionReel(session.id, setup, '[ReelMakeEasy] go')
+      expect(svc.getSession(session.id).motionReel).toEqual(setup)
+      expect(svc.getSession(session.id).title).toBe('A launch reel')
+      await waitFor(() => events.some((e) => e.type === 'message'))
+      await waitFor(() => svc.getSession(session.id).status === 'idle')
+      expect(events.find((e) => e.type === 'motion_setup')).toMatchObject({ setup })
+      expect(() => svc.startMotionReel(session.id, setup, 'again')).toThrow(ModeAlreadyChosenError)
+      expect(spawnOpts.at(-1)?.mode).toBe('motion')
     })
 
     it('throws ModeAlreadyChosenError for a second chooseMode call', async () => {

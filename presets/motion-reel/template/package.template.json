@@ -1,0 +1,10 @@
+{
+  "name": "motion-reel",
+  "private": true,
+  "version": "1.0.0",
+  "description": "A ReelMakeEasy Motion Reel: a Remotion project. node_modules links to ReelMakeEasy's shared Motion Reel runtime.",
+  "scripts": {
+    "still": "remotion still src/index.ts Reel",
+    "render": "remotion render src/index.ts Reel out/reel.mp4"
+  }
+}

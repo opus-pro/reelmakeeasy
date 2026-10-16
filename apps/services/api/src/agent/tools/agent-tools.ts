@@ -6,6 +6,9 @@ export type AgentToolName =
   | 'generate_image'
   | 'make_beat_loop'
   | 'make_video'
+  | 'motion_music'
+  | 'motion_render'
+  | 'motion_still'
   | 'regenerate_clip'
   | 'render_video'
   | 'set_music'
@@ -97,6 +100,52 @@ export const AGENT_TOOLS: Record<AgentToolName, DynamicToolSpec> = {
       type: 'object',
     },
     name: 'make_video',
+  },
+  motion_music: {
+    description:
+      "Compose the Motion Reel's own music with the music model the user set up (a paid generation, about a minute), instead of the library track. ReelMakeEasy measures its beat, keeps the most energetic whole bars, and rewrites reel/public/music.wav and reel/public/reel.json, so scenes timed with beat() and bar() follow it. Use it when the user asks for different or original music, or chose to have you compose it. The reply gives the new length, tempo and strongest hits.",
+    inputSchema: {
+      additionalProperties: false,
+      properties: {
+        bpm: {
+          description:
+            'Optional: the tempo to ask for (the grid follows what the model actually plays).',
+          maximum: 180,
+          minimum: 60,
+          type: 'integer',
+        },
+        prompt: {
+          description:
+            'The music, as the music model reads it: genre, mood, instruments, energy, and its shape in bars (e.g. "4-bar intro with a riser, big drop at bar 5, hits on the downbeats"). Instrumental.',
+          type: 'string',
+        },
+      },
+      required: ['prompt'],
+      type: 'object',
+    },
+    name: 'motion_music',
+  },
+  motion_render: {
+    description:
+      'Render the Motion Reel in reel/ to a video (free, about a minute): type-checks it, renders it with its music, evens out the loudness, shows it to the user in the chat and reports how many cuts land on the beat grid. Call it when the stills look right, and again after each change the user asks for.',
+    inputSchema: { additionalProperties: false, properties: {}, type: 'object' },
+    name: 'motion_render',
+  },
+  motion_still: {
+    description:
+      'Render single frames of the Motion Reel in reel/ (free, a few seconds) and get them back as pictures to look at. Pass the moments as beats (e.g. "0, 4, 8.5, 16": beat numbers from the reel\'s first beat, as grid.ts counts them). Look at each one and fix what is cut off, too small, crowded or off-style before rendering. The user sees them too.',
+    inputSchema: {
+      additionalProperties: false,
+      properties: {
+        beats: {
+          description: 'Comma-separated beat numbers (fractions allowed), at most 6.',
+          type: 'string',
+        },
+      },
+      required: ['beats'],
+      type: 'object',
+    },
+    name: 'motion_still',
   },
   regenerate_clip: {
     description:
@@ -206,7 +255,7 @@ const EDIT_TOOLS: AgentToolName[] = [
 ]
 
 /** Easy sessions get the edit tools only once editing; Free chat declares make_video,
- *  make_beat_loop and the edit tools. Claude (which has no image tool of its own) gets
+ *  make_beat_loop and the edit tools; a Motion Reel chat, its two render tools. Claude (which has no image tool of its own) gets
  *  generate_image wherever it chats with the user, editing included: it fixes a keyframe. */
 export function toolsForSession(
   session: { editing?: boolean; mode?: AgentMode },
@@ -217,6 +266,8 @@ export function toolsForSession(
       (n) => AGENT_TOOLS[n],
     )
   if (session.mode === 'autonomous') return session.editing ? withImage(EDIT_TOOLS) : []
+  if (session.mode === 'motion')
+    return [AGENT_TOOLS.motion_music, AGENT_TOOLS.motion_still, AGENT_TOOLS.motion_render]
   if (session.mode !== 'free') return []
   return withImage(['make_video', 'make_beat_loop', ...EDIT_TOOLS])
 }
@@ -233,6 +284,9 @@ export function toolSummary(tool: string, args: unknown): string {
   if (tool === 'use_image_as_keyframe')
     return `Putting the new picture in as keyframe ${String(a.keyframe ?? '')}`.trim()
   if (tool === 'generate_image') return 'Making a preview image'
+  if (tool === 'motion_music') return 'Composing the music'
+  if (tool === 'motion_still') return 'Looking at frames of the reel'
+  if (tool === 'motion_render') return 'Rendering the reel'
   if (tool === 'make_video')
     return `Starting the video: ${String(a.title ?? '')}`.trim().replace(/:$/, '')
   if (tool === 'make_beat_loop')
