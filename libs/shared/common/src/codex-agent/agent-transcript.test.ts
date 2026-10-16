@@ -809,3 +809,63 @@ describe('user messages with attachments', () => {
     ])
   })
 })
+
+describe('Motion Reel events', () => {
+  const setup = {
+    bars: 8,
+    bpm: 128,
+    lengthSec: 15,
+    music: { id: 'pulse-drive', source: 'library' as const },
+    musicTitle: 'Pulse Drive',
+    ratio: '16:9' as const,
+    reelSec: 15,
+    styleId: 'hud-showreel',
+    styleLabel: 'HUD Showreel',
+    subject: 'A launch reel',
+  }
+
+  it('opens the setup card, then shows what was chosen in its place', () => {
+    const open = run([{ id: 1, type: 'motion_setup_request' }])
+    expect(open.entries).toEqual([{ id: 'motion-setup-1', kind: 'motion_setup', state: 'open' }])
+    const chosen = run([
+      { id: 1, type: 'motion_setup_request' },
+      { id: 2, setup, type: 'motion_setup' },
+    ])
+    expect(chosen.entries).toEqual([
+      { id: 'motion-setup-1', kind: 'motion_setup', setup, state: 'chosen' },
+    ])
+  })
+
+  it('keeps one card when a failed setup asks again, under a new id so it starts over', () => {
+    const t = run([
+      { id: 1, type: 'motion_setup_request' },
+      { id: 2, text: "Couldn't set up the reel: no network", type: 'notice' },
+      { id: 3, type: 'motion_setup_request' },
+    ])
+    expect(t.entries.filter((e) => e.kind === 'motion_setup')).toEqual([
+      { id: 'motion-setup-3', kind: 'motion_setup', state: 'open' },
+    ])
+  })
+
+  it('adds each rendered reel as a video entry', () => {
+    const t = run([
+      {
+        id: 4,
+        itemId: 'motion-1',
+        posterUrl: 'http://x/p.jpg',
+        report: '8 cuts: 8 on a beat, none off the grid.',
+        type: 'motion_video',
+        videoUrl: 'http://x/r.mp4',
+      },
+    ])
+    expect(t.entries).toEqual([
+      {
+        id: 'motion-1',
+        kind: 'motion_video',
+        posterUrl: 'http://x/p.jpg',
+        report: '8 cuts: 8 on a beat, none off the grid.',
+        videoUrl: 'http://x/r.mp4',
+      },
+    ])
+  })
+})

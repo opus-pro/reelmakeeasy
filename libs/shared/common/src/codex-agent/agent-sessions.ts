@@ -15,6 +15,7 @@ export const PROJECT_CREATED_VIA_AGENT = 'agent'
 export const AGENT_MODE_LABEL: Record<AgentMode, string> = {
   autonomous: 'Easy',
   free: 'Advanced',
+  motion: 'Motion Reel',
 }
 
 export type SessionRowMenu = {
@@ -42,7 +43,7 @@ export type SessionRowStatus =
  *  with it keeps its history and carries on as Free chat. Anything else unknown is no mode. */
 export function agentModeFromStored(mode: unknown): AgentMode | undefined {
   if (mode === 'guided') return 'free'
-  return mode === 'autonomous' || mode === 'free' ? mode : undefined
+  return mode === 'autonomous' || mode === 'free' || mode === 'motion' ? mode : undefined
 }
 
 /** Titles that mean "not named yet": the default, and the one chats got before it. */

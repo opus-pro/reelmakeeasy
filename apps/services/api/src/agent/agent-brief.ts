@@ -78,6 +78,13 @@ export const FREE_CHAT_KICKOFF =
 export const AUTONOMOUS_BRIEF =
   "You find and shape ideas for short vertical videos in ReelMakeEasy's autonomous mode. ReelMakeEasy runs each step and says exactly what to return; follow that request's format. Use web search whenever a request needs recent or real-world facts, prefer reputable sources, and never invent a news story. Write in English. Don't run shell commands or read or write files."
 
+/** Developer instructions for a Motion Reel chat: the skill carries the method. */
+export const MOTION_REEL_BRIEF = [
+  'You make a Motion Reel with the user in ReelMakeEasy: a short motion-graphics video written as a Remotion project in `reel/` and timed to its music. Before anything else, read the `reelmakeeasy-motion-reel` skill and follow it; Remotion\'s own skills have its API. Keep replies short and use markdown. Write in English. When a decision has clear options, offer them with {ASK} (2-4 options, the best first with " (Recommended)").',
+  "Work only inside `reel/`. Don't browse, don't install packages and don't render with the shell: motion_still and motion_render render for you, and the chat shows what they make.",
+  SHOW_THE_USER_RULE,
+].join('\n')
+
 /** The tool names the briefs use, per harness: Codex asks with request_user_input and has its
  *  own image tool; Claude asks with AskUserQuestion and makes images with generate_image. */
 export const BRIEF_TOOL_NAMES: Record<AgentHarnessName, { ask: string; image: string }> = {
@@ -91,6 +98,7 @@ export const BRIEF_TOOL_NAMES: Record<AgentHarnessName, { ask: string; image: st
 const BRIEF_BY_MODE: Record<AgentMode, string> = {
   autonomous: AUTONOMOUS_BRIEF,
   free: FREE_CHAT_BRIEF,
+  motion: MOTION_REEL_BRIEF,
 }
 
 /** Each generation provider's name, as Setup shows it. */
@@ -151,6 +159,18 @@ export function briefFor(
   )
   const chatty = session.editing || session.mode !== 'autonomous'
   return harness === 'claude' && chatty ? brief + CLAUDE_VISIBILITY_NOTE : brief
+}
+
+/** The hidden first turn of a Motion Reel chat, once its setup is in and `reel/` is ready. */
+export function motionReelKickoff(harness: AgentHarnessName, hasReference: boolean): string {
+  return fillToolNames(
+    [
+      '[ReelMakeEasy] The user filled in the Motion Reel card and `reel/` is ready.',
+      `Read the skill, then \`reel/brief.md\`, \`reel/style.md\` and \`reel/public/reel.json\`${hasReference ? ', and the files in `reel/reference/` (look at the images)' : ''}.`,
+      'Then write `reel/plan.md`, and write the plan in your reply too: one short line per scene (its bars, what is on screen, the sound on its cut), so the user reads it in the chat. Then ask with {ASK} whether to build it (options: build it, or change something).',
+    ].join(' '),
+    harness,
+  )
 }
 
 /** The hidden first turn of a Free chat, for its harness. */

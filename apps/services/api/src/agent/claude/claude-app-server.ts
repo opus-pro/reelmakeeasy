@@ -14,7 +14,7 @@ import { ensureError } from '@reelmakeeasy/common/utils/error-handler'
 import type { AgentMode } from '@shared/types/api/agent'
 
 import { modelImageType } from '../agent-attachments'
-import { AGENT_SKILL_NAMES } from '../codex/codex-home'
+import { agentSkillNames } from '../codex/codex-home'
 import type { RpcId, ServerRequestHandler } from '../codex/codex-rpc'
 import type { DynamicToolSpec } from '../tools/agent-tools'
 
@@ -77,7 +77,7 @@ type Running = {
 const SHELL_TOOLS = ['AskUserQuestion', 'Bash', 'Glob', 'Grep', 'Read', 'Skill', 'TodoWrite']
 /** The skills the briefs name (`reelmakeeasy-camera`, `reelmakeeasy-beat-loop`), as Claude knows
  *  them in ReelMakeEasy's plugin (named `reelmakeeasy`, claude-plugin.ts). */
-const PLUGIN_SKILLS = AGENT_SKILL_NAMES.map((name) => `reelmakeeasy:${name}`)
+const pluginSkills = () => agentSkillNames().map((name) => `reelmakeeasy:${name}`)
 const DEFAULT_INTERRUPT_GRACE_MS = 10_000
 const WEB_TOOLS = ['WebFetch', 'WebSearch']
 const REELMAKEEASY_PREFIX = 'mcp__reelmakeeasy__'
@@ -356,7 +356,7 @@ export class ClaudeAppServer implements AgentAppServer {
     }
     if (policy.builtIn.includes('Bash'))
       options.sandbox = { allowUnsandboxedCommands: false, enabled: true }
-    if (policy.builtIn.includes('Skill')) options.skills = [...PLUGIN_SKILLS]
+    if (policy.builtIn.includes('Skill')) options.skills = pluginSkills()
     if (typeof p['effort'] === 'string') options.effort = p['effort'] as Options['effort']
     const outputSchema = schemaOf(p)
     if (outputSchema)

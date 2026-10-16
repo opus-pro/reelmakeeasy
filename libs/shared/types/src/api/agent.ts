@@ -1,10 +1,56 @@
 /** Question id -> the chosen option labels and/or typed text. */
 export type AgentAnswers = Record<string, string[]>
 
-/** How a session's chat is driven: an autonomous run (Easy) or free chat (Advanced). Chosen
- *  once, right after the session is created. A third mode, 'guided', was removed: chats saved
- *  with it load as 'free' (`agentModeFromStored`). */
-export type AgentMode = 'autonomous' | 'free'
+/** How a session's chat is driven: an autonomous run (Easy), free chat (Advanced), or a Motion
+ *  Reel (a setup card, then a chat that builds a motion-graphics reel in Remotion). Chosen once,
+ *  right after the session is created. A third mode, 'guided', was removed: chats saved with it
+ *  load as 'free' (`agentModeFromStored`). */
+export type AgentMode = 'autonomous' | 'free' | 'motion'
+
+/** What the Motion Reel setup card sends (`POST /api/agent/sessions/:id/motion-reel`). */
+export type AgentMotionSetup = {
+  /** About this long, in seconds; the reel is whole bars of its music. */
+  lengthSec: number
+  /** A library track's id, an attachment's name (`upload`), or no music. */
+  music: { id: string; source: 'library' | 'upload' } | { source: 'none' }
+  ratio: '1:1' | '9:16' | '16:9'
+  /** A video or web page to take the look from (never the content). */
+  reference?: { kind: 'website' | 'youtube'; url: string }
+  styleId: string
+  /** What the reel is about: the words and facts it may use. */
+  subject: string
+}
+
+/** `GET /api/agent/motion-reel/options`: what the Motion Reel setup card offers. */
+export type AgentMotionOptions = {
+  defaultLengthSec: number
+  defaultRatio: AgentMotionSetup['ratio']
+  lengths: number[]
+  ratios: AgentMotionSetup['ratio'][]
+  styles: {
+    /** The track the card picks with this style. */
+    defaultTrackId: null | string
+    description: string
+    id: string
+    label: string
+    /** Background first, then text, then accents (hex). */
+    palette: string[]
+    ratios: AgentMotionSetup['ratio'][]
+    /** A frame of the style (null until the preset pack has one). */
+    thumbnailUrl: null | string
+  }[]
+  tracks: { bpm: number; id: string; previewUrl: string; styles: string[]; title: string }[]
+}
+
+/** The setup a Motion Reel chat settled on, as its card shows it once chosen. */
+export type AgentMotionSetupView = AgentMotionSetup & {
+  /** The reel's real length (whole bars), its tempo and the music's title. */
+  bars: number
+  bpm: number
+  musicTitle: null | string
+  reelSec: number
+  styleLabel: string
+}
 
 export type AgentPlanStep = { status: 'completed' | 'inProgress' | 'pending'; step: string }
 
@@ -213,6 +259,8 @@ export interface AgentSession {
    *  user stopped it, its video started, it failed). */
   interrupted?: boolean
   mode?: AgentMode
+  /** A Motion Reel chat's setup, once its card was sent (the chat opens then). */
+  motionReel?: AgentMotionSetupView
   /** The project an autonomous session started its video in. */
   projectId: null | string
   /** Only in the API's view of a chat that can pick up where it left off
@@ -315,6 +363,12 @@ export type AgentUiEvent = { id?: number } & (
   | { type: 'flow_cancelled' }
   /** Autonomous mode wants the user to pick a style (the inline style picker). */
   | { type: 'style_request' }
+  /** A Motion Reel chat wants its setup (the inline setup card). */
+  | { type: 'motion_setup_request' }
+  /** The Motion Reel setup was sent and its project is ready. */
+  | { setup: AgentMotionSetupView; type: 'motion_setup' }
+  /** A rendered Motion Reel. `report`: how its cuts sit on the beat grid, in one line. */
+  | { itemId: string; posterUrl?: string; report?: string; type: 'motion_video'; videoUrl: string }
 )
 
 /** One line of a loop short, as the storyboard panel lists it: what is said, and the fact stamp
