@@ -3,15 +3,61 @@ export type AgentAnswers = Record<string, string[]>
 
 /** How a session's chat is driven, per tool: a short video's autonomous run (Easy) or free chat
  *  (Advanced); a ranking short's guided chat (Easy: one question at a time, then the agent builds
- *  it) or free chat (Advanced), both in the Ranking Builder. Chosen once, right after the session
- *  is created. A former mode, 'guided', was removed: chats saved with it load as 'free'
+ *  it) or free chat (Advanced), both in the Ranking Builder; a Motion Reel (a setup card, then a
+ *  chat that builds a motion-graphics reel in Remotion). Chosen once, right after the session is
+ *  created. A former mode, 'guided', was removed: chats saved with it load as 'free'
  *  (`agentModeFromStored`). */
-export type AgentMode = 'autonomous' | 'free' | 'ranking' | 'ranking_easy'
+export type AgentMode = 'autonomous' | 'free' | 'motion' | 'ranking' | 'ranking_easy'
+
+/** What the Motion Reel setup card sends (`POST /api/agent/sessions/:id/motion-reel`). */
+export type AgentMotionSetup = {
+  /** About this long, in seconds; the reel is whole bars of its music. */
+  lengthSec: number
+  /** A library track's id, an attachment's name (`upload`), or no music. */
+  music: { id: string; source: 'library' | 'upload' } | { source: 'none' }
+  ratio: '1:1' | '9:16' | '16:9'
+  /** A video or web page to take the look from (never the content). */
+  reference?: { kind: 'website' | 'youtube'; url: string }
+  styleId: string
+  /** What the reel is about: the words and facts it may use. */
+  subject: string
+}
+
+/** `GET /api/agent/motion-reel/options`: what the Motion Reel setup card offers. */
+export type AgentMotionOptions = {
+  defaultLengthSec: number
+  defaultRatio: AgentMotionSetup['ratio']
+  lengths: number[]
+  ratios: AgentMotionSetup['ratio'][]
+  styles: {
+    /** The track the card picks with this style. */
+    defaultTrackId: null | string
+    description: string
+    id: string
+    label: string
+    /** Background first, then text, then accents (hex). */
+    palette: string[]
+    ratios: AgentMotionSetup['ratio'][]
+    /** A frame of the style (null until the preset pack has one). */
+    thumbnailUrl: null | string
+  }[]
+  tracks: { bpm: number; id: string; previewUrl: string; styles: string[]; title: string }[]
+}
+
+/** The setup a Motion Reel chat settled on, as its card shows it once chosen. */
+export type AgentMotionSetupView = AgentMotionSetup & {
+  /** The reel's real length (whole bars), its tempo and the music's title. */
+  bars: number
+  bpm: number
+  musicTitle: null | string
+  reelSec: number
+  styleLabel: string
+}
 
 export type AgentPlanStep = { status: 'completed' | 'inProgress' | 'pending'; step: string }
 
-/** What a chat makes: a tool, each with an Easy and an Advanced mode. */
-export type AgentTool = 'ranking' | 'short'
+/** What a chat makes: a tool, each with an Easy mode and (most) an Advanced one. */
+export type AgentTool = 'motion' | 'ranking' | 'short'
 
 /** A short silent clip that shows what an option looks like (ReelMakeEasy's own cards only). The
  *  chat's transcript keeps their addresses; the browser gets the URLs. */
@@ -218,6 +264,8 @@ export interface AgentSession {
    *  user stopped it, its video started, it failed). */
   interrupted?: boolean
   mode?: AgentMode
+  /** A Motion Reel chat's setup, once its card was sent (the chat opens then). */
+  motionReel?: AgentMotionSetupView
   /** The project an autonomous session started its video in. */
   projectId: null | string
   /** A Ranking chat's ranking (the one its tools last read or changed, or the one it was opened
@@ -325,6 +373,12 @@ export type AgentUiEvent = { id?: number } & (
   | { type: 'flow_cancelled' }
   /** Autonomous mode wants the user to pick a style (the inline style picker). */
   | { type: 'style_request' }
+  /** A Motion Reel chat wants its setup (the inline setup card). */
+  | { type: 'motion_setup_request' }
+  /** The Motion Reel setup was sent and its project is ready. */
+  | { setup: AgentMotionSetupView; type: 'motion_setup' }
+  /** A rendered Motion Reel. `report`: how its cuts sit on the beat grid, in one line. */
+  | { itemId: string; posterUrl?: string; report?: string; type: 'motion_video'; videoUrl: string }
 )
 
 /** One line of a loop short, as the storyboard panel lists it: what is said, and the fact stamp
@@ -436,14 +490,17 @@ export interface BeatLoopStoryboard {
   voice?: string
 }
 
-/** Each tool's modes: Easy (guided) first, then Advanced (free chat). */
-export const AGENT_TOOL_MODES: Record<AgentTool, { advanced: AgentMode; easy: AgentMode }> = {
+/** Each tool's modes: Easy (guided) first, then Advanced (free chat). Motion Reel has only its
+ *  guided one (a setup card, then the plan and the build). */
+export const AGENT_TOOL_MODES = {
+  motion: { easy: 'motion' },
   ranking: { advanced: 'ranking', easy: 'ranking_easy' },
   short: { advanced: 'free', easy: 'autonomous' },
-}
+} as const satisfies Record<AgentTool, { advanced?: AgentMode; easy: AgentMode }>
 
 /** The tool a mode belongs to. */
 export function toolOfMode(mode: AgentMode): AgentTool {
+  if (mode === 'motion') return 'motion'
   return mode === 'ranking' || mode === 'ranking_easy' ? 'ranking' : 'short'
 }
 

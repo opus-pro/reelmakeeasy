@@ -23,6 +23,7 @@ import {
   toolOf,
   useStartEasyOnce,
 } from '@/components/agent/start-easy'
+import { MotionReelPanel } from '@/components/agent/motion/MotionReelPanel'
 import { StoryboardPanel } from '@/components/agent/StoryboardPanel'
 import { useAgentSession } from '@/components/agent/useAgentSession'
 import { useAgentSessions, useRefreshAgentSessions } from '@/components/agent/useAgentSessions'
@@ -262,7 +263,9 @@ function AgentWorkspace({
           />
         </div>
         <div className="min-h-0 min-w-0 flex-1">
-          {isRankingMode(mode) ? (
+          {mode === 'motion' ? (
+            <MotionReelPanel transcript={agent.transcript} />
+          ) : isRankingMode(mode) ? (
             <RankingChatPanel
               easy={mode === 'ranking_easy'}
               rankingId={agent.transcript.ranking?.id ?? agent.session?.rankingId ?? null}

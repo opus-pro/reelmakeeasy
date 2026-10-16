@@ -6,6 +6,8 @@ export type AgentToolName =
   | 'generate_image'
   | 'make_beat_loop'
   | 'make_video'
+  | 'motion_render'
+  | 'motion_still'
   | 'ranking_add_clip'
   | 'ranking_add_sound'
   | 'ranking_add_sticker_image'
@@ -112,6 +114,28 @@ export const AGENT_TOOLS: Record<AgentToolName, DynamicToolSpec> = {
       type: 'object',
     },
     name: 'make_video',
+  },
+  motion_render: {
+    description:
+      'Render the Motion Reel in reel/ to a video (free, about a minute): type-checks it, renders it with its music, evens out the loudness, shows it to the user in the chat and reports how many cuts land on the beat grid. Call it when the stills look right, and again after each change the user asks for.',
+    inputSchema: { additionalProperties: false, properties: {}, type: 'object' },
+    name: 'motion_render',
+  },
+  motion_still: {
+    description:
+      'Render single frames of the Motion Reel in reel/ (free, a few seconds) and get them back as pictures to look at. Pass the moments as beats (e.g. "0, 4, 8.5, 16": beat numbers from the reel\'s first beat, as grid.ts counts them). Look at each one and fix what is cut off, too small, crowded or off-style before rendering. The user sees them too.',
+    inputSchema: {
+      additionalProperties: false,
+      properties: {
+        beats: {
+          description: 'Comma-separated beat numbers (fractions allowed), at most 6.',
+          type: 'string',
+        },
+      },
+      required: ['beats'],
+      type: 'object',
+    },
+    name: 'motion_still',
   },
   ranking_add_clip: {
     description:
@@ -474,7 +498,7 @@ const EDIT_TOOLS: AgentToolName[] = [
 ]
 
 /** Easy sessions get the edit tools only once editing; Free chat declares make_video,
- *  make_beat_loop and the edit tools. Claude (which has no image tool of its own) gets
+ *  make_beat_loop and the edit tools; a Motion Reel chat, its two render tools. Claude (which has no image tool of its own) gets
  *  generate_image wherever it chats with the user, editing included: it fixes a keyframe. */
 export function toolsForSession(
   session: { editing?: boolean; mode?: AgentMode },
@@ -485,6 +509,7 @@ export function toolsForSession(
       (n) => AGENT_TOOLS[n],
     )
   if (session.mode === 'autonomous') return session.editing ? withImage(EDIT_TOOLS) : []
+  if (session.mode === 'motion') return [AGENT_TOOLS.motion_still, AGENT_TOOLS.motion_render]
   if (isRankingMode(session.mode)) return RANKING_TOOLS.map((n) => AGENT_TOOLS[n])
   if (session.mode !== 'free') return []
   return withImage(['make_video', 'make_beat_loop', ...EDIT_TOOLS, ...RANKING_TOOLS])
@@ -502,6 +527,8 @@ export function toolSummary(tool: string, args: unknown): string {
   if (tool === 'use_image_as_keyframe')
     return `Putting the new picture in as keyframe ${String(a.keyframe ?? '')}`.trim()
   if (tool === 'generate_image') return 'Making a preview image'
+  if (tool === 'motion_still') return 'Looking at frames of the reel'
+  if (tool === 'motion_render') return 'Rendering the reel'
   if (tool === 'ranking_list') return 'Looking at your rankings and sounds'
   if (tool === 'ranking_create') return `Starting a ranking: ${String(a.name ?? '')}`.trim()
   if (tool === 'ranking_get') return 'Reading the ranking'

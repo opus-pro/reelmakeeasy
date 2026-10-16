@@ -4,6 +4,7 @@ import path from 'node:path'
 
 import { BEAT_LOOP_SKILL_NAME, renderBeatLoopSkill } from '../craft/beat-loop-skill'
 import { CAMERA_SKILL_NAME, renderCameraSkill } from '../craft/camera-skill'
+import { MOTION_REEL_SKILL_NAME, renderMotionReelSkill } from '../craft/motion-reel-skill'
 import { RANKING_SKILL_NAME } from '../craft/ranking-skill'
 
 import {
@@ -91,11 +92,18 @@ describe('ensureAgentCodexHome', () => {
     expect(fs.readFileSync(file, 'utf8')).toBe(renderCameraSkill())
   })
 
-  it('writes the reelmakeeasy-beat-loop skill too, and names both skills it ships', () => {
+  it('writes the beat-loop and Motion Reel skills too, and names every skill it ships', () => {
     ensureAgentCodexHome({ home, userHome })
     const file = path.join(home, 'skills', BEAT_LOOP_SKILL_NAME, 'SKILL.md')
     expect(fs.readFileSync(file, 'utf8')).toBe(renderBeatLoopSkill())
-    expect(AGENT_SKILL_NAMES).toEqual([CAMERA_SKILL_NAME, BEAT_LOOP_SKILL_NAME, RANKING_SKILL_NAME])
+    const motion = path.join(home, 'skills', MOTION_REEL_SKILL_NAME, 'SKILL.md')
+    expect(fs.readFileSync(motion, 'utf8')).toBe(renderMotionReelSkill())
+    expect(AGENT_SKILL_NAMES).toEqual([
+      CAMERA_SKILL_NAME,
+      BEAT_LOOP_SKILL_NAME,
+      RANKING_SKILL_NAME,
+      MOTION_REEL_SKILL_NAME,
+    ])
   })
 
   it('removes retired reelmakeeasy skills and leaves other skills alone', () => {

@@ -9,7 +9,15 @@ import {
   toolOfMode,
 } from '@shared/types/api/agent'
 import { cn } from '@shared/ui'
-import { ArrowRight, Check, Film, ListOrdered, MessagesSquare, WandSparkles } from 'lucide-react'
+import {
+  ArrowRight,
+  Check,
+  Clapperboard,
+  Film,
+  ListOrdered,
+  MessagesSquare,
+  WandSparkles,
+} from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 
 import { HARNESS_LABEL, HARNESS_SHORT, harnessChoices, initialHarness } from './agent-harness'
@@ -43,7 +51,8 @@ type ToolOption = {
   icon: React.ComponentType<{ className?: string }>
   key: AgentTool
   label: string
-  modes: [ModeOption, ModeOption]
+  /** Easy first; Advanced when the tool has one. */
+  modes: [ModeOption, ...ModeOption[]]
 }
 
 const SHORT_VIDEO: ToolOption = {
@@ -67,7 +76,7 @@ const SHORT_VIDEO: ToolOption = {
   ],
 }
 
-/** The tools, each with its Easy (guided) and Advanced (free chat) mode. */
+/** The tools, each with its Easy (guided) mode and, most, an Advanced (free chat) one. */
 const TOOLS: ToolOption[] = [
   SHORT_VIDEO,
   {
@@ -88,6 +97,20 @@ const TOOLS: ToolOption[] = [
         label: 'Advanced (Free chat)',
         mode: AGENT_TOOL_MODES.ranking.advanced,
         recommended: false,
+      },
+    ],
+  },
+  {
+    icon: Clapperboard,
+    key: 'motion',
+    label: 'Motion Reel',
+    modes: [
+      {
+        description: (agent) =>
+          `Motion graphics on the beat: a launch, a showreel, a website demo. Pick a style and the music, and ${agent} plans it and builds it in Remotion, on this computer. Needs Claude Opus or GPT Astra.`,
+        label: 'Guided',
+        mode: AGENT_TOOL_MODES.motion.easy,
+        recommended: true,
       },
     ],
   },

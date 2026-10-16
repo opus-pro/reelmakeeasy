@@ -14,6 +14,13 @@ is distributed under its own license, found in its package under node_modules
 after installation. Most are open source; @anthropic-ai/claude-agent-sdk is
 under Anthropic's own terms (see its README).
 
+Motion Reels download more software on first use, into the data folder, never
+shipped in this repo: Remotion and its packages (under the Remotion License:
+free for individuals and companies of up to 3 people, a company license
+otherwise; https://www.remotion.dev/license), Remotion's agent skills
+(github.com/remotion-dev/skills) and, for video references, yt-dlp (Unlicense)
+when it is not already installed.
+
 ## Third-party code in this repo
 
 These files are copied or adapted from MIT-licensed projects. The MIT License
