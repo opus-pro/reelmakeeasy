@@ -32,6 +32,7 @@ import type { ToolCallResult } from '../tools/agent-tools'
 import { prepareReelProject, REEL_DIR, type ReelMusicSource } from './motion-project'
 import { readReference, REFERENCE_DIR } from './motion-reference'
 import {
+  beatAt,
   frameOfBeat,
   MAX_STILLS,
   readReelJson,
@@ -40,6 +41,7 @@ import {
   typeCheck,
 } from './motion-render'
 import { ensureMotionReelRuntime } from './motion-runtime'
+import { composeMusic, parseComposeRequest } from './motion-music'
 import { MotionSetupError, parseMotionSetup, parseStillBeats } from './motion-setup'
 
 const logger = new Logger('MotionReelService')
@@ -68,6 +70,7 @@ export interface MotionReelSessions {
   getSession(id: string): AgentSession
   setFlowWorking(id: string, working: boolean): void
   startMotionReel(id: string, setup: AgentMotionSetupView, prompt: string): void
+  updateMotionReel(id: string, setup: AgentMotionSetupView): void
   workingDir(id: string): string
 }
 
@@ -104,6 +107,7 @@ export class MotionReelService {
       const errors = await typeCheck(projectDir)
       if (errors)
         return { success: false, text: `The reel doesn't type-check; fix these first:\n${errors}` }
+      if (tool === 'motion_music') return await this.compose(id, session, projectDir, args)
       if (tool === 'motion_still') return await this.stills(id, projectDir, args)
       if (tool === 'motion_render') return await this.render(id, projectDir)
       return { success: false, text: `Unknown tool ${tool}.` }
@@ -160,7 +164,8 @@ export class MotionReelService {
   }
 
   private musicFor(id: string, setup: MotionReelSetup): null | ReelMusicSource {
-    if (setup.music.source === 'none') return null
+    // No music, or the agent composes it first (`motion_music`).
+    if (setup.music.source === 'none' || setup.music.source === 'agent') return null
     if (setup.music.source === 'library') {
       const track = motionReelTrack(setup.music.id)
       if (!track) throw new MotionSetupError("That music isn't available.")
@@ -215,13 +220,62 @@ export class MotionReelService {
       this.sessions.startMotionReel(
         id,
         view,
-        motionReelKickoff(session.harness ?? 'codex', !!referenceNote),
+        motionReelKickoff(
+          session.harness ?? 'codex',
+          !!referenceNote,
+          setup.music.source === 'agent',
+        ),
       )
     } catch (error) {
       logger.warn(`Motion Reel setup for ${id} failed: ${ensureError(error).message}`)
       this.sessions.setFlowWorking(id, false)
       warn(`Couldn't set up the reel: ${ensureError(error).message.split('\n')[0]?.slice(0, 300)}`)
       this.sessions.emitAutonomousEvent(id, { type: 'motion_setup_request' })
+    }
+  }
+
+  /** The agent composed its own music: made by Setup's music model, then fitted to whole bars;
+   *  the grid (reel.json) follows the new track, so beat-timed scenes follow it too. */
+  private async compose(
+    id: string,
+    session: AgentSession,
+    projectDir: string,
+    args: unknown,
+  ): Promise<ToolCallResult> {
+    const request = parseComposeRequest(args)
+    if (typeof request === 'string') return { success: false, text: request }
+    const view = session.motionReel as AgentMotionSetupView
+    const composed = await composeMusic(request, view.lengthSec, path.join(projectDir, 'music'))
+    const title = `Composed: ${request.prompt.replace(/\s+/g, ' ').slice(0, 48)}`
+    const prepared = await prepareReelProject({
+      music: { file: composed.file, title },
+      musicOnly: true,
+      setup: setupFrom(view),
+      workspace: this.sessions.workingDir(id),
+    })
+    const { reel } = prepared
+    this.sessions.updateMotionReel(id, {
+      ...view,
+      bars: reel.bars,
+      bpm: reel.bpm,
+      musicTitle: title,
+      reelSec: reel.lengthSec,
+    })
+    const hits = reel.strongHits.map((t) => beatAt(reel, t)).slice(0, 8)
+    const tempoNote =
+      request.bpm && Math.abs(reel.bpm - request.bpm) > 2
+        ? ` (asked for ${request.bpm}; the model played ${reel.bpm}, and the grid follows what it played)`
+        : ''
+    return {
+      success: true,
+      text: [
+        `Composed and fitted (${composed.model}). The reel is now ${reel.lengthSec} s: ${reel.bars} bars of ${reel.beatsPerBar} at ${reel.bpm} BPM${tempoNote}.`,
+        `public/music.wav and public/reel.json are rewritten; scenes timed with beat() and bar() follow the new grid. Re-check anything that assumed the old bar count (${view.bars}).`,
+        hits.length
+          ? `Its strongest hits are at beats ${hits.join(', ')}.`
+          : 'It has no stand-out hits: put impacts on bar starts.',
+        'Compose again only if the user wants different music: each one is a paid generation.',
+      ].join(' '),
     }
   }
 
@@ -263,6 +317,18 @@ export class MotionReelService {
       success: true,
       text: `Rendered ${files.length} stills (the user sees them too). Open each file and look at it:\n${lines.join('\n')}`,
     }
+  }
+}
+
+/** The setup card's choices back out of the chat's saved setup. */
+function setupFrom(view: AgentMotionSetupView): MotionReelSetup {
+  return {
+    lengthSec: view.lengthSec as MotionReelSetup['lengthSec'],
+    music: view.music,
+    ratio: view.ratio,
+    ...(view.reference ? { reference: view.reference } : {}),
+    styleId: view.styleId as MotionReelSetup['styleId'],
+    subject: view.subject,
   }
 }
 

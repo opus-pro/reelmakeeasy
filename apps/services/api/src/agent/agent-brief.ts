@@ -162,11 +162,20 @@ export function briefFor(
 }
 
 /** The hidden first turn of a Motion Reel chat, once its setup is in and `reel/` is ready. */
-export function motionReelKickoff(harness: AgentHarnessName, hasReference: boolean): string {
+export function motionReelKickoff(
+  harness: AgentHarnessName,
+  hasReference: boolean,
+  composeMusic = false,
+): string {
   return fillToolNames(
     [
       '[ReelMakeEasy] The user filled in the Motion Reel card and `reel/` is ready.',
-      `Read the skill, then \`reel/brief.md\`, \`reel/style.md\` and \`reel/public/reel.json\`${hasReference ? ', and the files in `reel/reference/` (look at the images)' : ''}.`,
+      `Read the skill, then \`reel/brief.md\`, \`reel/style.md\` and \`reel/public/reel.json\`${hasReference ? ', and the files in `reel/public/reference/` (look at the images)' : ''}.`,
+      ...(composeMusic
+        ? [
+            "The user asked you to make the music: before planning, compose it with motion_music (one description written for this reel, its style and subject, at a tempo in the style card's range), then read `reel/public/reel.json` again: the grid is the new track's.",
+          ]
+        : []),
       'Then write `reel/plan.md`, and write the plan in your reply too: one short line per scene (its bars, what is on screen, the sound on its cut), so the user reads it in the chat. Then ask with {ASK} whether to build it (options: build it, or change something).',
     ].join(' '),
     harness,

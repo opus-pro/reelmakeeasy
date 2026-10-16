@@ -21,8 +21,12 @@ export const MOTION_REEL_FPS = 30
 /** The longest subject the setup card takes. */
 export const MOTION_REEL_SUBJECT_MAX = 600
 
-/** Where the reel's music comes from: a library track, or one of the user's own tracks. */
-export type MotionReelMusic = { id: string; source: 'library' | 'upload' } | { source: 'none' }
+/** Where the reel's music comes from: a library track, one of the user's own tracks, none, or
+ *  composed by the agent (`motion_music`) before it plans. */
+export type MotionReelMusic =
+  | { id: string; source: 'library' | 'upload' }
+  | { source: 'agent' }
+  | { source: 'none' }
 
 /** A reference the agent learns the look from (style only, never the content). */
 export type MotionReelReference = { kind: 'website' | 'youtube'; url: string }

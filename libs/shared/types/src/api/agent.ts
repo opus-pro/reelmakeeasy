@@ -11,8 +11,9 @@ export type AgentMode = 'autonomous' | 'free' | 'motion'
 export type AgentMotionSetup = {
   /** About this long, in seconds; the reel is whole bars of its music. */
   lengthSec: number
-  /** A library track's id, an attachment's name (`upload`), or no music. */
-  music: { id: string; source: 'library' | 'upload' } | { source: 'none' }
+  /** A library track's id, an attachment's name (`upload`), no music, or composed by the
+   *  agent (`agent`). */
+  music: { id: string; source: 'library' | 'upload' } | { source: 'agent' } | { source: 'none' }
   ratio: '1:1' | '9:16' | '16:9'
   /** A video or web page to take the look from (never the content). */
   reference?: { kind: 'website' | 'youtube'; url: string }

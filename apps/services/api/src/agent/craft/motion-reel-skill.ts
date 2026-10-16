@@ -6,6 +6,7 @@ export const MOTION_REEL_SKILL_NAME = 'reelmakeeasy-motion-reel'
 /** The tools a Motion Reel chat has (agent-tools.ts implements them). */
 export const MOTION_STILL_TOOL = 'motion_still'
 export const MOTION_RENDER_TOOL = 'motion_render'
+export const MOTION_MUSIC_TOOL = 'motion_music'
 
 /**
  * The `reelmakeeasy-motion-reel` skill: how a Motion Reel is planned and built, on the music's beat
@@ -52,6 +53,10 @@ export function renderMotionReelSkill(): string {
     '- Hold any text for at least one beat; two beats for six words or more; the end card for the whole last bar.',
     "- `grid.strongHits` (via `hitFrames()`) are the music's accents: put impacts there.",
     '- The last bar holds the end card while the music fades (`<Music />` fades it for you).',
+    '',
+    '## Music',
+    '',
+    `The music is the reel's clock. It comes from the library, the user, or you: \`${MOTION_MUSIC_TOOL}\` composes a track with the user's music model (a paid generation; one per request, never to try things). Write its prompt for this reel: genre, mood, instruments and energy that suit the style and subject, a tempo in the style card's range, and its shape in bars (an intro that builds, a riser into a drop where the biggest moment goes, hits on the downbeats, an ending that resolves). For a launch or a showreel, make it exciting: punchy drums, a clear hook, a real drop. Then read \`public/reel.json\` again (the bars, tempo and hits change) and re-check timing that assumed the old grid.`,
     '',
     '## Sound effects',
     '',

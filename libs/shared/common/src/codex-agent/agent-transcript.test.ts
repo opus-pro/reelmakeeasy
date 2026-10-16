@@ -836,6 +836,18 @@ describe('Motion Reel events', () => {
     ])
   })
 
+  it('updates the chosen card when the setup changes later (the agent composed the music)', () => {
+    const later = { ...setup, bpm: 132, musicTitle: 'Composed: launch anthem' }
+    const t = run([
+      { id: 1, type: 'motion_setup_request' },
+      { id: 2, setup, type: 'motion_setup' },
+      { id: 3, setup: later, type: 'motion_setup' },
+    ])
+    expect(t.entries).toEqual([
+      { id: 'motion-setup-1', kind: 'motion_setup', setup: later, state: 'chosen' },
+    ])
+  })
+
   it('keeps one card when a failed setup asks again, under a new id so it starts over', () => {
     const t = run([
       { id: 1, type: 'motion_setup_request' },
