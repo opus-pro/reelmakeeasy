@@ -33,6 +33,7 @@ export function MotionReelPanel({ transcript }: { transcript: Transcript }) {
         </a>
       </div>
       <AgentVideoPlayer
+        poster={latest.posterUrl}
         aspectRatio="auto"
         key={latest.id}
         src={latest.videoUrl}

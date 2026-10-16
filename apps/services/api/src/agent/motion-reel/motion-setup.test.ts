@@ -52,8 +52,8 @@ describe('parseMotionSetup', () => {
       url: 'https://youtu.be/abc',
     })
     expect(
-      parseMotionSetup({ ...base, reference: { kind: 'website', url: 'opus.pro' } }).reference?.url,
-    ).toBe('https://opus.pro/')
+      parseMotionSetup({ ...base, reference: { kind: 'website', url: 'example.com' } }).reference?.url,
+    ).toBe('https://example.com/')
     expect(() =>
       parseMotionSetup({ ...base, reference: { kind: 'youtube', url: 'https://evil.example/v' } }),
     ).toThrow(MotionSetupError)
