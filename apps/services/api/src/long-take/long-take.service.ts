@@ -1,12 +1,20 @@
 import { createHash } from 'node:crypto'
 
+import {
+  BadRequestException,
+  ConflictException,
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+  UnauthorizedException,
+} from '@nestjs/common'
 import type { InputJsonValue } from '@reelmakeeasy/api-db'
 import { readCaptionStyleSettings } from '@reelmakeeasy/common/adapters/caption/caption-style'
 import { createStorage } from '@reelmakeeasy/common/agent-v2/storage/storage'
-import { readInpaintState } from '@reelmakeeasy/common/inpaint/state-store'
 import { InpaintHistory } from '@reelmakeeasy/common/inpaint/history'
 import { countInFlightGenerations } from '@reelmakeeasy/common/inpaint/selectors'
 import type { InpaintGlobalState } from '@reelmakeeasy/common/inpaint/state'
+import { readInpaintState } from '@reelmakeeasy/common/inpaint/state-store'
 import type { InpaintHistoryData } from '@reelmakeeasy/common/inpaint/types'
 import { KvStore } from '@reelmakeeasy/common/kv/store'
 import { Logger } from '@reelmakeeasy/common/logger'
@@ -26,11 +34,11 @@ import { ASSET_PROGRESS_QUERY_NAME, getAssetSSEChannelKey } from '@reelmakeeasy/
 import type { AspectRatio, GenerationResolution } from '@reelmakeeasy/common/media/types'
 import { sanitizeGenerationResolution } from '@reelmakeeasy/common/model-config/story-mode-generation-resolution-config.zod'
 import { SSEFactory } from '@reelmakeeasy/common/sse/factory'
+import { asStoreUri, toSavedAddress } from '@reelmakeeasy/common/storage/address'
+import { storedFileUrl, storeKeyOf } from '@reelmakeeasy/common/storage/stored-files'
 import { getStoryModeUserLimits } from '@reelmakeeasy/common/story-mode/user-limits'
 import { UserInfo } from '@reelmakeeasy/common/types/user'
-import { asStoreUri, toSavedAddress } from '@reelmakeeasy/common/storage/address'
 import { ensureError } from '@reelmakeeasy/common/utils/error-handler'
-import { storedFileUrl, storeKeyOf } from '@reelmakeeasy/common/storage/stored-files'
 import { hexToUuidV4 } from '@reelmakeeasy/common/utils/uuid'
 import { createClient } from '@reelmakeeasy/common/workflow/client'
 import { resolveTaskQueueForClient } from '@reelmakeeasy/common/workflow/task-queue'
@@ -38,14 +46,6 @@ import { getWorkflowId } from '@reelmakeeasy/common/workflow/workflow-id'
 import { generationNotReadyMessage, generationProviderReady } from '@reelmakeeasy/llm/registry'
 import { WorkflowIdConflictPolicy } from '@reelmakeeasy/workflow-engine/client'
 import { WorkflowNotFoundError } from '@reelmakeeasy/workflow-engine/common'
-import {
-  BadRequestException,
-  ConflictException,
-  ForbiddenException,
-  Injectable,
-  NotFoundException,
-  UnauthorizedException,
-} from '@nestjs/common'
 import type { CaptionStyleSettings } from '@shared/types/api/caption-style'
 import type {
   BgmRemuxOutcome,
@@ -126,6 +126,7 @@ import { generateLongTakeScriptPreview } from './long-take-script'
 import { validateTargetDurationSeconds } from './long-take-script-helpers'
 import { handleStoryModeStartWorkflowFailure } from './long-take-start-failure'
 import { buildLongTakeStatus, STATUS_CACHE_PREFIX } from './long-take-status.util'
+import { prepareLongTakeStyleReference } from './long-take-style-reference.util'
 import { resolveLongTakeRequestVoice } from './long-take-voice-guard.util'
 import {
   analyzeImages as analyzeImagesUtil,
@@ -1262,6 +1263,9 @@ export class LongTakeService {
       bgmSource?: MusicSource | null
       bgmTrackId?: null | string
     },
+    // The user's saved style, when they picked one; an image style's picture becomes
+    // the project's style reference (looked up for this user, never a client path).
+    savedStyleId?: string,
   ): Promise<{ projectId: string; workflowId: string }> {
     // Neither fal nor Gemini can make it (no key, or the provider chosen in Setup lost its key):
     // refuse before anything is created, with why.
@@ -1386,6 +1390,16 @@ export class LongTakeService {
         resolvedProjectId,
       )
       const bgmTrack = await this.resolveStartBgmTrack(projectWorkflowFlags, user.userId)
+      // A missing or unreadable style picture must not stop the video: it falls back to the style text.
+      const styleReferenceImageUrls = await prepareLongTakeStyleReference(
+        { prisma: this.prisma },
+        { projectId: resolvedProjectId, savedStyleId, userId: user.sub },
+      ).catch((error: unknown) => {
+        this.logger.warn(
+          `[long-take] Style reference not set: ${ensureError(error).message} projectId=${resolvedProjectId}`,
+        )
+        return [] as string[]
+      })
       const workflowArgs = buildLongTakeWorkflowArgs({
         bgmEnabled: projectWorkflowFlags.bgmEnabled,
         bgmNote: projectWorkflowFlags.bgmNote,
@@ -1406,6 +1420,7 @@ export class LongTakeService {
         scriptGeneratorPath: resolvedAudioPath ? 'audio_upload' : scriptGeneratorPath,
         source,
         styleName,
+        styleReferenceImageUrls,
         styleThumbnailUrl,
         targetDurationSeconds,
         // Execute with the RESOLVED model -- never the raw client selection.

@@ -3,6 +3,7 @@ import * as path from 'node:path'
 
 import { JobContext } from '@reelmakeeasy/common/job-context'
 import type { Content } from '@reelmakeeasy/common/llm'
+import { readLongTakeStyleReferenceUris } from '@reelmakeeasy/common/long-take/style-reference'
 import type { LongTakeAdmissionTier } from '@reelmakeeasy/common/long-take/types'
 import type { ImageSizeTier } from '@reelmakeeasy/common/media/types'
 import type { JudgeContext } from '@reelmakeeasy/story-mode-judges'
@@ -180,6 +181,8 @@ export async function generateLongTakeKeyframe(
         ? resolveArticlePhotoPassthroughUri(usedAssetIds, anchorLookup)
         : null
       const globalContext = await getLongTakeKeyframeGlobalContext(storage, projectId)
+      // The saved image style's picture, when the user picked one: the model copies its look.
+      const styleReferenceUris = await readLongTakeStyleReferenceUris(storage)
       const { promptPayload, shotContents } = buildLongTakeKeyframeShotInputs({
         anchorLookup,
         basePrompt: prompt,
@@ -192,6 +195,7 @@ export async function generateLongTakeKeyframe(
         // keyframe prompt, null the per-shot styleText so the "Stylize with ..."
         // suffix and the routed "Visual style:" no-op -- avoids double-applying style.
         styleText: stylizeKeyframes ? undefined : styleText,
+        styleReferenceUris,
         usedAssetIds,
       })
 
@@ -211,6 +215,7 @@ export async function generateLongTakeKeyframe(
           globalContextFieldsUsed: promptPayload.fieldsUsed,
           keyEntitiesCount: promptPayload.keyEntitiesCount,
           anchorRefCount: shotContents.length,
+          styleReferenceCount: styleReferenceUris.length,
           crowdScene: promptPayload.crowdScene,
           withTitle: promptPayload.withTitle,
         })}`,

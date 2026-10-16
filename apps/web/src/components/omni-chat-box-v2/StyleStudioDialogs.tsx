@@ -17,6 +17,7 @@ export type StyleStudioDialogsProps = {
   isLongTakeStyleDialogOpen: boolean
   isLongTakeStyleGeneratePreviewEnabled?: boolean
   isLongTakeStylePreviewGenerating?: boolean
+  isLongTakeStyleWritingWithAi?: boolean
   longTakeStyleCustom: string
   longTakeStyleImageError?: null | string
   longTakeStyleImageValue?: null | ReferenceUploadButtonValue
@@ -30,6 +31,7 @@ export type StyleStudioDialogsProps = {
   onLongTakeStyleImageSelect?: (file: File) => void
   onLongTakeStyleNameChange: (value: string) => void
   onLongTakeStyleTextClear?: () => void
+  onLongTakeStyleWriteWithAi?: () => void
   setIsLongTakeStyleDialogOpen: (open: boolean) => void
 }
 
@@ -45,6 +47,7 @@ export const StyleStudioDialogs: React.FC<StyleStudioDialogsProps> = ({
   isLongTakeStyleApplySaving = false,
   isLongTakeStyleDialogOpen,
   isLongTakeStyleGeneratePreviewEnabled = false,
+  isLongTakeStyleWritingWithAi = false,
   isLongTakeStylePreviewGenerating = false,
   longTakeStyleCustom,
   longTakeStyleImageError,
@@ -55,6 +58,7 @@ export const StyleStudioDialogs: React.FC<StyleStudioDialogsProps> = ({
   onLongTakeStyleApply,
   onLongTakeStyleCustomChange,
   onLongTakeStyleGeneratePreview,
+  onLongTakeStyleWriteWithAi,
   onLongTakeStyleImageClear,
   onLongTakeStyleImageSelect,
   onLongTakeStyleNameChange,
@@ -193,7 +197,7 @@ export const StyleStudioDialogs: React.FC<StyleStudioDialogsProps> = ({
                       enter custom style text
                     </>
                   ) : (
-                    'Upload a style image or enter custom style text to generate your own style'
+                    'Upload an image to use as your style, or describe a style in words'
                   )}
                 </p>
               </div>
@@ -214,6 +218,7 @@ export const StyleStudioDialogs: React.FC<StyleStudioDialogsProps> = ({
                 isApplySaving={isLongTakeStyleApplySaving}
                 isGeneratePreviewEnabled={isLongTakeStyleGeneratePreviewEnabled}
                 isPreviewGenerating={isLongTakeStylePreviewGenerating}
+                isWritingWithAi={isLongTakeStyleWritingWithAi}
                 onApply={onLongTakeStyleApply}
                 onBrowseClick={() => styleFileInputRef.current?.click()}
                 onClose={() => setIsLongTakeStyleDialogOpen(false)}
@@ -223,6 +228,7 @@ export const StyleStudioDialogs: React.FC<StyleStudioDialogsProps> = ({
                 onStyleImageClear={onLongTakeStyleImageClear}
                 onStyleImageSelect={onLongTakeStyleImageSelect}
                 onStyleNameChange={onLongTakeStyleNameChange}
+                onWriteWithAi={onLongTakeStyleWriteWithAi}
                 previewImageUrl={longTakeStylePreviewImageUrl}
                 styleImageError={longTakeStyleImageError}
                 styleImageValue={longTakeStyleImageValue}

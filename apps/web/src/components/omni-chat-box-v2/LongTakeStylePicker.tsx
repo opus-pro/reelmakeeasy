@@ -3,7 +3,7 @@
 import { Button, cn, Textarea } from '@shared/ui'
 import React from 'react'
 
-import { Image, Loading } from '@/components/icons/core'
+import { Image, Loading, Sparkle } from '@/components/icons/core'
 import { useIsMobile } from '@/util/browserUtils'
 
 import { type ReferenceUploadButtonValue } from './ReferenceUploadButton'
@@ -15,6 +15,8 @@ export type LongTakeStylePickerProps = {
   isApplySaving?: boolean
   isGeneratePreviewEnabled?: boolean
   isPreviewGenerating?: boolean
+  /** The AI is writing the title and description from the uploaded image. */
+  isWritingWithAi?: boolean
   onApply?: () => void
   onBrowseClick?: () => void
   onClose?: () => void
@@ -24,6 +26,8 @@ export type LongTakeStylePickerProps = {
   onStyleImageClear?: () => void
   onStyleImageSelect?: (file: File) => void
   onStyleNameChange: (value: string) => void
+  /** Fills the empty title/description from the uploaded image (or rewrites both when filled). */
+  onWriteWithAi?: () => void
   previewImageUrl?: null | string
   styleImageError?: null | string
   styleImageValue?: null | ReferenceUploadButtonValue
@@ -94,6 +98,7 @@ export const LongTakeStylePicker: React.FC<LongTakeStylePickerProps> = ({
   isApplySaving = false,
   isGeneratePreviewEnabled = false,
   isPreviewGenerating = false,
+  isWritingWithAi = false,
   onApply,
   onBrowseClick,
   onClose,
@@ -103,6 +108,7 @@ export const LongTakeStylePicker: React.FC<LongTakeStylePickerProps> = ({
   onStyleImageClear,
   onStyleImageSelect,
   onStyleNameChange,
+  onWriteWithAi,
   previewImageUrl = null,
   styleImageError,
   styleImageValue,
@@ -114,7 +120,11 @@ export const LongTakeStylePicker: React.FC<LongTakeStylePickerProps> = ({
   const isMobile = useIsMobile()
   const hasImage = styleInputMode === 'image' && Boolean(styleImageValue?.file)
   const isProcessingImage = styleInputMode === 'image' && Boolean(styleImageValue?.isProcessing)
-  const isLocked = isPreviewGenerating || isApplySaving || isProcessingImage
+  const isLocked = isPreviewGenerating || isApplySaving || isProcessingImage || isWritingWithAi
+  // An image style is the user's own picture: show it, and let them name and describe it
+  // themselves or have the AI write both.
+  const isImageStyle = hasImage
+  const panelImageUrl = isImageStyle ? (styleImageValue?.previewUrl ?? null) : previewImageUrl
 
   const showUploadArea = !hasImage
   const showUploadedBlock = hasImage
@@ -128,7 +138,7 @@ export const LongTakeStylePicker: React.FC<LongTakeStylePickerProps> = ({
           <PreviewPanel
             isPreviewGenerating={isPreviewGenerating}
             isProcessingImage={isProcessingImage}
-            previewImageUrl={previewImageUrl}
+            previewImageUrl={panelImageUrl}
           />
         </div>
 
@@ -147,59 +157,38 @@ export const LongTakeStylePicker: React.FC<LongTakeStylePickerProps> = ({
           {styleImageError && <p className="text-xs text-red-400">{styleImageError}</p>}
           {!isMobile && <InstructionText />}
 
-          {/* Textarea + style name */}
-          <div className="flex min-h-0 flex-1 flex-col gap-2">
-            <div className="relative flex min-h-0 flex-1 flex-col">
-              <Textarea
-                className={cn(
-                  'min-h-[76px] flex-1 w-full resize-none rounded-sm border border-tertiary bg-black/15 px-3 py-2 text-sm leading-[22px] text-white placeholder:text-white/25 caret-white hover:border-secondary focus-visible:ring-1 focus-visible:ring-ring focus-visible:ring-offset-0 focus-visible:border-ring focus:ring-0 focus:outline-none transition-colors max-sm:text-base',
-                  isProcessingImage &&
-                    'pointer-events-none placeholder:animate-pulse placeholder:text-white/40',
-                  isLocked && 'pointer-events-none opacity-50',
-                )}
-                disabled={isLocked}
-                onChange={(value) => onCustomStyleChange(value)}
-                placeholder={
-                  isProcessingImage
-                    ? ''
-                    : 'Fast-paced cinematic edit, bold captions, punchy zooms, dramatic lighting…'
-                }
-                value={isProcessingImage ? '' : customStyle}
-              />
-              {isProcessingImage && (
-                <div className="pointer-events-none absolute inset-x-0 top-0 flex items-start pt-2 pl-3">
-                  <span className="text-sm leading-[22px] text-white/50 animate-pulse">
-                    Analyzing image...
-                  </span>
-                </div>
-              )}
-            </div>
-            <input
-              className={cn(
-                'h-9.5 w-full rounded-sm border border-tertiary bg-black/15 px-2.5 py-2 text-sm text-white placeholder:text-white/25 caret-white hover:border-secondary focus:border-secondary focus:ring-0 focus:outline-none focus-visible:border-ring focus-visible:ring-1 focus-visible:ring-ring transition-colors max-sm:text-base',
-                isLocked && 'pointer-events-none opacity-50',
-              )}
-              disabled={isLocked}
-              onChange={(e) => onStyleNameChange(e.target.value)}
-              placeholder="Style name"
-              value={styleName}
-            />
-          </div>
+          <StyleDetailsFields
+            customStyle={customStyle}
+            isImageStyle={isImageStyle}
+            isLocked={isLocked}
+            isProcessingImage={isProcessingImage}
+            isWritingWithAi={isWritingWithAi}
+            onCustomStyleChange={onCustomStyleChange}
+            onStyleNameChange={onStyleNameChange}
+            styleName={styleName}
+          />
         </div>
       </div>
 
       {/* Footer: swaps between Apply and Generate based on whether current preview is up-to-date */}
       <div className="flex gap-3 items-center pt-4 shrink-0 max-sm:gap-4">
+        {isImageStyle && onWriteWithAi ? (
+          <WriteWithAiButton
+            isLocked={isLocked}
+            isWritingWithAi={isWritingWithAi}
+            onClick={onWriteWithAi}
+          />
+        ) : null}
         <div className="flex-1 max-sm:hidden" />
         {isApplyEnabled ? (
           <Button
             className={cn(
               'h-9.5 rounded-sm px-2.5 text-sm font-medium leading-[17px] max-sm:flex-1 disabled:opacity-100',
-              isApplySaving || isPreviewGenerating
+              isApplySaving || isPreviewGenerating || isWritingWithAi
                 ? 'bg-fill-secondary text-white/25'
                 : 'bg-white text-black hover:bg-white/90',
             )}
-            disabled={isApplySaving || isPreviewGenerating}
+            disabled={isApplySaving || isPreviewGenerating || isWritingWithAi}
             loading={isApplySaving}
             onClick={onApply}
             type="button"
@@ -228,6 +217,90 @@ export const LongTakeStylePicker: React.FC<LongTakeStylePickerProps> = ({
     </div>
   )
 }
+
+/** The style's description (textarea) and name, with the AI's in-progress state over them. */
+const StyleDetailsFields: React.FC<{
+  customStyle: string
+  isImageStyle: boolean
+  isLocked: boolean
+  isProcessingImage: boolean
+  isWritingWithAi: boolean
+  onCustomStyleChange: (value: string) => void
+  onStyleNameChange: (value: string) => void
+  styleName: string
+}> = ({
+  customStyle,
+  isImageStyle,
+  isLocked,
+  isProcessingImage,
+  isWritingWithAi,
+  onCustomStyleChange,
+  onStyleNameChange,
+  styleName,
+}) => {
+  const isBusyWriting = isProcessingImage || isWritingWithAi
+  // Typed text stays visible while the AI works; the status shows only over an empty field.
+  const showWritingStatus = isProcessingImage || (isWritingWithAi && !customStyle.trim())
+  const descriptionPlaceholder = isImageStyle
+    ? 'Describe the style, or leave it empty and the AI writes it from your image'
+    : 'Fast-paced cinematic edit, bold captions, punchy zooms, dramatic lighting…'
+  return (
+    // Textarea + style name
+    <div className="flex min-h-0 flex-1 flex-col gap-2">
+      <div className="relative flex min-h-0 flex-1 flex-col">
+        <Textarea
+          aria-label="Style description"
+          className={cn(
+            'min-h-[76px] flex-1 w-full resize-none rounded-sm border border-tertiary bg-black/15 px-3 py-2 text-sm leading-[22px] text-white placeholder:text-white/25 caret-white hover:border-secondary focus-visible:ring-1 focus-visible:ring-ring focus-visible:ring-offset-0 focus-visible:border-ring focus:ring-0 focus:outline-none transition-colors max-sm:text-base',
+            isBusyWriting &&
+              'pointer-events-none placeholder:animate-pulse placeholder:text-white/40',
+            isLocked && 'pointer-events-none opacity-50',
+          )}
+          disabled={isLocked}
+          onChange={(value) => onCustomStyleChange(value)}
+          placeholder={showWritingStatus ? '' : descriptionPlaceholder}
+          value={isProcessingImage ? '' : customStyle}
+        />
+        {showWritingStatus && (
+          <div className="pointer-events-none absolute inset-x-0 top-0 flex items-start pt-2 pl-3">
+            <span className="text-sm leading-[22px] text-white/50 animate-pulse">
+              {isWritingWithAi ? 'Writing from your image...' : 'Analyzing image...'}
+            </span>
+          </div>
+        )}
+      </div>
+      <input
+        aria-label="Style name"
+        className={cn(
+          'h-9.5 w-full rounded-sm border border-tertiary bg-black/15 px-2.5 py-2 text-sm text-white placeholder:text-white/25 caret-white hover:border-secondary focus:border-secondary focus:ring-0 focus:outline-none focus-visible:border-ring focus-visible:ring-1 focus-visible:ring-ring transition-colors max-sm:text-base',
+          isLocked && 'pointer-events-none opacity-50',
+        )}
+        disabled={isLocked}
+        onChange={(e) => onStyleNameChange(e.target.value)}
+        placeholder={isImageStyle ? 'Style name (optional, the AI can name it)' : 'Style name'}
+        value={styleName}
+      />
+    </div>
+  )
+}
+
+const WriteWithAiButton: React.FC<{
+  isLocked: boolean
+  isWritingWithAi: boolean
+  onClick: () => void
+}> = ({ isLocked, isWritingWithAi, onClick }) => (
+  <Button
+    className="h-9.5 gap-1.5 rounded-sm px-2.5 text-sm font-medium leading-[17px] text-white max-sm:flex-1"
+    disabled={isLocked}
+    loading={isWritingWithAi}
+    onClick={onClick}
+    type="button"
+    variant="default"
+  >
+    {isWritingWithAi ? null : <Sparkle className="size-4" />}
+    Write with AI
+  </Button>
+)
 
 /* Desktop: centered vertical layout. Mobile: horizontal row (text left + button right) per Figma */
 const UploadZone: React.FC<{ isLocked?: boolean; onBrowseClick?: () => void }> = ({
