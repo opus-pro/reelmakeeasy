@@ -60,10 +60,13 @@ const InstructionText = React.memo(function InstructionText() {
 })
 
 const PreviewPanel = React.memo(function PreviewPanel({
+  fitWholeImage = false,
   isPreviewGenerating,
   isProcessingImage,
   previewImageUrl,
 }: {
+  /** The user's own picture: show all of it (letterboxed) rather than crop it to the tall box. */
+  fitWholeImage?: boolean
   isPreviewGenerating: boolean
   isProcessingImage: boolean
   previewImageUrl: null | string
@@ -79,7 +82,7 @@ const PreviewPanel = React.memo(function PreviewPanel({
     return (
       <img
         alt="Style preview"
-        className="size-full object-cover object-center"
+        className={cn('size-full object-center', fitWholeImage ? 'object-contain' : 'object-cover')}
         src={previewImageUrl}
       />
     )
@@ -136,6 +139,7 @@ export const LongTakeStylePicker: React.FC<LongTakeStylePickerProps> = ({
         {/* Preview container: desktop 200x356, mobile 100x178 centered */}
         <div className="flex h-[356px] w-[200px] shrink-0 flex-col items-center justify-center overflow-hidden rounded-sm border border-tertiary max-sm:h-[178px] max-sm:w-[100px] max-sm:self-center max-sm:px-2">
           <PreviewPanel
+            fitWholeImage={isImageStyle}
             isPreviewGenerating={isPreviewGenerating}
             isProcessingImage={isProcessingImage}
             previewImageUrl={panelImageUrl}
