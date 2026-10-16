@@ -251,7 +251,9 @@ export class MotionReelService {
     const reel = readReelJson(projectDir)
     const beats = parseStillBeats(args, MAX_STILLS)
     const frames = beats.map((beat) => frameOfBeat(reel, beat))
-    const files = await renderStills(projectDir, frames, path.join(projectDir, 'out', 'stills'))
+    // A folder per call: the chat keeps showing earlier stills after the next look.
+    const outDir = path.join(projectDir, 'out', 'stills', String(Date.now()))
+    const files = await renderStills(projectDir, frames, outDir)
     for (const file of files) this.sessions.emitImage(id, file)
     const lines = beats.map(
       (beat, i) =>

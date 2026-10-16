@@ -106,7 +106,7 @@ export type ReelRender = {
   report: string
 }
 
-/** Renders the stills of `frames` into `outDir` (cleared first); returns their files in order. */
+/** Renders the stills of `frames` into `outDir` (made fresh); returns their files in order. */
 export async function renderStills(
   projectDir: string,
   frames: number[],

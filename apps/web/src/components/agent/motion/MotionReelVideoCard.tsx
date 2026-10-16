@@ -14,6 +14,7 @@ export function MotionReelVideoCard({
     <div className="flex w-full max-w-2xl flex-col gap-2">
       <AgentVideoPlayer
         aspectRatio="auto"
+        poster={entry.posterUrl}
         src={entry.videoUrl}
         videoClassName="max-h-[60vh] w-auto"
       />
