@@ -23,10 +23,16 @@ const run = promisify(execFile)
 /** The weight a picker sample shows: Punch's and Classic's, snapped to one the family has. */
 const SAMPLE_WEIGHT = 900
 
-/** Every face file of the pack families, the only names the pack route serves. */
-const PACK_FONT_FILES: ReadonlySet<string> = new Set(
-  Object.values(CAPTION_PACK_FONTS).flatMap((font) => font.faces.map((face) => face.file)),
-)
+/** Montserrat's heavy faces, from the same pack: the default caption font, which the Ranking
+ *  Builder draws its titles, numbers and labels in. */
+const MONTSERRAT_FACES = ['Montserrat-ExtraBold.ttf', 'Montserrat-Black.ttf']
+
+/** Every face file of the pack families (and Montserrat's heavy faces), the only names the pack
+ *  route serves. */
+const PACK_FONT_FILES: ReadonlySet<string> = new Set([
+  ...Object.values(CAPTION_PACK_FONTS).flatMap((font) => font.faces.map((face) => face.file)),
+  ...MONTSERRAT_FACES,
+])
 
 /**
  * The caption fonts the app offers, and their faces for the browser's picker samples. The faces

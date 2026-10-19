@@ -1,0 +1,182 @@
+import type { RankingProject, RankingTitleWord } from '@shared/types/api/ranking'
+
+import { RANKING_HEIGHT, RANKING_WIDTH } from './ranking-project'
+
+/**
+ * The ranking short's overlay, drawn on a 2D canvas: the title band and the rank list. The same
+ * function draws the studio's live preview and the PNG each rendered segment is overlaid with,
+ * so what the studio shows is what renders. Works with a browser canvas or node-canvas: only the
+ * calls below are used.
+ */
+export interface RankingCanvas {
+  clearRect(x: number, y: number, w: number, h: number): void
+  fillRect(x: number, y: number, w: number, h: number): void
+  fillStyle: unknown
+  fillText(text: string, x: number, y: number): void
+  font: string
+  lineJoin: string
+  lineWidth: number
+  measureText(text: string): { width: number }
+  miterLimit: number
+  restore(): void
+  save(): void
+  strokeStyle: unknown
+  strokeText(text: string, x: number, y: number): void
+  textAlign: string
+  textBaseline: string
+}
+
+/** The font families the overlay draws with (loaded by the caller). */
+export type RankingFonts = { label: string; number: string; title: string }
+
+/** The heavy sans the trend uses, with system fallbacks. */
+export const RANKING_FONT_FAMILY = 'Montserrat'
+export const DEFAULT_RANKING_FONTS: RankingFonts = {
+  label: `${RANKING_FONT_FAMILY}, "Arial Black", sans-serif`,
+  number: `${RANKING_FONT_FAMILY}, "Arial Black", sans-serif`,
+  title: `${RANKING_FONT_FAMILY}, "Arial Black", sans-serif`,
+}
+
+const W = RANKING_WIDTH
+const H = RANKING_HEIGHT
+const SIDE = 44
+const TITLE_MAX_SIZE = 86
+const TITLE_MIN_SIZE = 40
+const BAND_PAD = 42
+const BAND_MIN = 220
+const LIST_LEFT = 64
+const ROW_MAX_GAP = 178
+const NUMBER_MAX_SIZE = 86
+const WORD_GAP = 0.28
+
+export type RankingLayout = {
+  bandHeight: number
+  /** Where each rank's row sits (its text's middle), by rank. */
+  rowY: Map<number, number>
+  numberSize: number
+  titleLineHeight: number
+  titleSize: number
+}
+
+const fontOf = (size: number, family: string, weight = 800) => `${weight} ${size}px ${family}`
+
+function lineWidth(ctx: RankingCanvas, line: RankingTitleWord[], size: number, family: string): number {
+  ctx.font = fontOf(size, family)
+  const words = line.filter((w) => w.text.trim())
+  const gap = size * WORD_GAP
+  return words.reduce((sum, w) => sum + ctx.measureText(w.text.trim()).width, 0) + gap * Math.max(0, words.length - 1)
+}
+
+/** Sizes and positions for a project: the title shrinks to fit the width, rows spread to fit. */
+export function rankingLayout(
+  ctx: RankingCanvas,
+  project: RankingProject,
+  fonts: RankingFonts = DEFAULT_RANKING_FONTS,
+): RankingLayout {
+  const lines = project.title.lines.filter((line) => line.some((w) => w.text.trim()))
+  let titleSize = TITLE_MAX_SIZE
+  while (
+    titleSize > TITLE_MIN_SIZE &&
+    lines.some((line) => lineWidth(ctx, line, titleSize, fonts.title) > W - SIDE * 2)
+  )
+    titleSize -= 2
+  const titleLineHeight = Math.round(titleSize * 1.16)
+  const bandHeight = Math.max(BAND_MIN, BAND_PAD * 2 + titleLineHeight * Math.max(1, lines.length))
+
+  const count = project.items.length
+  const area = H - bandHeight
+  const top = bandHeight + area * 0.24
+  const span = area * 0.6
+  const gap = count > 1 ? Math.min(ROW_MAX_GAP, span / (count - 1)) : 0
+  const numberSize = Math.round(Math.min(NUMBER_MAX_SIZE, gap ? gap * 0.6 : NUMBER_MAX_SIZE))
+  const rowY = new Map<number, number>()
+  const ranks = project.items.map((item) => item.rank).toSorted((a, b) => a - b)
+  ranks.forEach((rank, i) => rowY.set(rank, Math.round(top + gap * i)))
+  return { bandHeight, numberSize, rowY, titleLineHeight, titleSize }
+}
+
+function outlined(ctx: RankingCanvas, text: string, x: number, y: number, fill: string, outline: string, size: number) {
+  ctx.lineJoin = 'round'
+  ctx.miterLimit = 2
+  ctx.lineWidth = Math.max(4, size * 0.16)
+  ctx.strokeStyle = outline
+  ctx.strokeText(text, x, y)
+  ctx.fillStyle = fill
+  ctx.fillText(text, x, y)
+}
+
+/** A label that fits the space after its number: shrunk down to 70%, then cut with an ellipsis. */
+function fitLabel(ctx: RankingCanvas, text: string, size: number, family: string, room: number) {
+  let s = size
+  ctx.font = fontOf(s, family)
+  while (ctx.measureText(text).width > room && s > size * 0.7) {
+    s -= 2
+    ctx.font = fontOf(s, family)
+  }
+  let out = text
+  while (out.length > 1 && ctx.measureText(out).width > room) {
+    out = out.slice(0, -2).trimEnd() + '…'
+    if (out === '…') break
+  }
+  return { size: s, text: out }
+}
+
+/**
+ * Draws the overlay for a moment of the short: the band and title, every rank number, and the
+ * labels of `revealed` ranks. The rest of the frame stays clear (the clip shows through), unless
+ * `background` paints it (the studio's empty preview).
+ */
+export function drawRankingOverlay(
+  ctx: RankingCanvas,
+  project: RankingProject,
+  revealed: ReadonlySet<number> | readonly number[],
+  opts: { background?: string; fonts?: RankingFonts } = {},
+): RankingLayout {
+  const fonts = opts.fonts ?? DEFAULT_RANKING_FONTS
+  const shown = new Set(revealed)
+  const layout = rankingLayout(ctx, project, fonts)
+  ctx.save()
+  ctx.clearRect(0, 0, W, H)
+  if (opts.background) {
+    ctx.fillStyle = opts.background
+    ctx.fillRect(0, 0, W, H)
+  }
+
+  // The title band, each line centred, word by word in its own colour.
+  ctx.fillStyle = project.title.band
+  ctx.fillRect(0, 0, W, layout.bandHeight)
+  const lines = project.title.lines.filter((line) => line.some((w) => w.text.trim()))
+  const blockTop = (layout.bandHeight - layout.titleLineHeight * lines.length) / 2
+  ctx.textBaseline = 'middle'
+  ctx.textAlign = 'left'
+  lines.forEach((line, i) => {
+    const words = line.filter((w) => w.text.trim())
+    const width = lineWidth(ctx, words, layout.titleSize, fonts.title)
+    let x = (W - width) / 2
+    const y = blockTop + layout.titleLineHeight * (i + 0.5)
+    ctx.font = fontOf(layout.titleSize, fonts.title)
+    for (const word of words) {
+      ctx.fillStyle = word.color
+      ctx.fillText(word.text.trim(), x, y)
+      x += ctx.measureText(word.text.trim()).width + layout.titleSize * WORD_GAP
+    }
+  })
+
+  // The ranks: every number, and the labels revealed so far.
+  const [c1, c2, c3, rest] = project.style.numberColors
+  const numberColor = (rank: number) => (rank === 1 ? c1 : rank === 2 ? c2 : rank === 3 ? c3 : rest)
+  for (const item of project.items) {
+    const y = layout.rowY.get(item.rank)
+    if (y === undefined) continue
+    ctx.font = fontOf(layout.numberSize, fonts.number, 900)
+    const number = `${item.rank}.`
+    outlined(ctx, number, LIST_LEFT, y, numberColor(item.rank), project.style.outlineColor, layout.numberSize)
+    if (!shown.has(item.rank) || !item.label.trim()) continue
+    const labelX = LIST_LEFT + ctx.measureText(number).width + layout.numberSize * 0.12
+    const label = fitLabel(ctx, item.label.trim(), Math.round(layout.numberSize * 0.8), fonts.label, W - labelX - SIDE)
+    ctx.font = fontOf(label.size, fonts.label)
+    outlined(ctx, label.text, labelX, y, project.style.labelColor, project.style.outlineColor, label.size)
+  }
+  ctx.restore()
+  return layout
+}

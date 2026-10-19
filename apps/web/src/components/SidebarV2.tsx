@@ -3,6 +3,7 @@ import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import React, { memo, useMemo, useState } from 'react'
 
 import {
+  ClipsVertical,
   Compass,
   Cross as X,
   LearningCenter,
@@ -75,6 +76,15 @@ const NAV_ITEMS: NavConfigItem[] = [
     key: 'projects',
     label: 'My projects',
     path: '/projects',
+    section: 'main',
+  },
+  {
+    contexts: ['desktop', 'mobile'],
+    icon: ClipsVertical,
+    isActive: (pathname) => pathname.startsWith('/ranking'),
+    key: 'ranking',
+    label: 'Ranking Builder',
+    path: '/ranking',
     section: 'main',
   },
   {
