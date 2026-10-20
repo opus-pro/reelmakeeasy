@@ -2,7 +2,7 @@
 
 import { useAtomValue } from 'jotai'
 import { useSearchParams } from 'next/navigation'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 import { apiOriginAtom } from '@/atom/apiOrigin'
 
@@ -21,21 +21,26 @@ export function RankingHeadlessRender() {
   const apiOrigin = useAtomValue(apiOriginAtom)
   const [result, setResult] = useState<{ error?: string; renderId?: string }>({})
 
+  // One render per page: an effect that runs twice (React's development check) shares the first
+  // start, rather than asking again and reporting "already rendering".
+  const started = useRef<null | Promise<{ error?: string; renderId?: string }>>(null)
+
   useEffect(() => {
     if (!id) return
     let live = true
-    void (async () => {
+    started.current ??= (async () => {
       try {
         const project = await api.get(id)
         await loadRankingFonts(apiOrigin)
         await document.fonts.ready
         const { bandHeight, overlays, stickers } = await drawOverlays(project)
         const status = await api.render(id, bandHeight, overlays, stickers)
-        if (live) setResult({ renderId: status.renderId })
+        return { renderId: status.renderId }
       } catch (error) {
-        if (live) setResult({ error: error instanceof Error ? error.message : String(error) })
+        return { error: error instanceof Error ? error.message : String(error) }
       }
     })()
+    void started.current.then((next) => live && setResult(next))
     return () => {
       live = false
     }
