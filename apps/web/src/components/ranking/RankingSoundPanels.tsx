@@ -11,7 +11,7 @@ import type { RankingSounds, RankingTransition } from '@shared/types/api/ranking
 import type { LibrarySound } from '@shared/types/api/sound-library'
 import { cn } from '@shared/ui'
 
-import { previewSound } from './SoundLibraryPanel'
+import { previewSound } from './sound-player'
 
 const SECTION = 'flex flex-col gap-2 rounded-xl border border-white/10 bg-fill-secondary/40 p-3'
 const HEADING = 'text-xs font-semibold tracking-wide text-secondary uppercase'
@@ -53,7 +53,7 @@ export function SoundPicker({
         disabled={!chosen}
         onClick={(e) => {
           e.preventDefault()
-          if (chosen) previewSound(chosen.url)
+          if (chosen) previewSound(chosen)
         }}
         type="button"
       >

@@ -4,7 +4,13 @@ import path from 'node:path'
 
 import { keyIsUnder, parseStoreUri, storeUri, toSavedAddress } from '@reelmakeeasy/common/storage/address'
 import { dataDir, filePath, fileStore } from '@reelmakeeasy/common/storage/file-store'
-import type { LibrarySound, LibrarySoundPatch } from '@shared/types/api/sound-library'
+import {
+  type LibrarySound,
+  type LibrarySoundPatch,
+  soundPlayback,
+} from '@shared/types/api/sound-library'
+
+import type { SoundFile } from '../ranking/ranking-render'
 
 import { run } from '../ranking/ranking-render'
 
@@ -64,6 +70,12 @@ export class SoundLibraryService {
     return filePath(this.get(id).url)
   }
 
+  /** What the render plays for a sound: its file, the part and the level. */
+  playback(id: string): SoundFile {
+    const sound = this.get(id)
+    return { file: filePath(sound.url), ...soundPlayback(sound) }
+  }
+
   /** Adds an upload (`store://tmp/...` from a signed upload) to the library. */
   async add(upload: unknown, name: unknown): Promise<LibrarySound> {
     const source = typeof upload === 'string' ? toSavedAddress(upload) : ''
@@ -115,6 +127,21 @@ export class SoundLibraryService {
       if (name) sound.name = name
     }
     if (patch.favorite !== undefined) sound.favorite = patch.favorite === true
+    if (patch.volume !== undefined) {
+      const volume = Number(patch.volume)
+      if (!Number.isFinite(volume) || volume < 0 || volume > 2)
+        throw new SoundInputError('The volume is from 0 to 200%.')
+      sound.volume = Math.round(volume * 100) / 100
+    }
+    if (patch.trimStartSec !== undefined || patch.trimEndSec !== undefined) {
+      const start = Number(patch.trimStartSec ?? sound.trimStartSec ?? 0)
+      const rawEnd = patch.trimEndSec === undefined ? sound.trimEndSec : patch.trimEndSec
+      const end = rawEnd === null || rawEnd === undefined ? sound.durationSec : Number(rawEnd)
+      if (!Number.isFinite(start) || !Number.isFinite(end) || start < 0 || end > sound.durationSec + 0.05 || end - start < 0.1)
+        throw new SoundInputError(`Trim it inside its ${sound.durationSec.toFixed(1)} s (at least 0.1 s).`)
+      sound.trimStartSec = Math.round(start * 100) / 100
+      sound.trimEndSec = end >= sound.durationSec - 0.01 ? null : Math.round(end * 100) / 100
+    }
     this.write(sounds)
     return sound
   }

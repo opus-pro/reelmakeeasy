@@ -15,6 +15,7 @@ import { Button, cn } from '@shared/ui'
 import { useEffect, useMemo, useRef, useState } from 'react'
 
 import { STUDIO_RANKING_FONTS } from './ranking-fonts'
+import { type PlayingSound, playSoundPart } from './sound-player'
 
 export type RankingPreviewProps = {
   /** Redraw once the fonts arrive. */
@@ -23,16 +24,6 @@ export type RankingPreviewProps = {
   focusRank: null | number
   project: RankingProject
   sounds: LibrarySound[]
-}
-
-/** Plays a library sound once (or loops it), at a level; returns it to stop later. */
-function playSound(url: string | undefined, opts: { loop?: boolean; volume?: number } = {}): HTMLAudioElement | null {
-  if (!url) return null
-  const audio = new Audio(url)
-  audio.loop = !!opts.loop
-  audio.volume = Math.max(0, Math.min(1, opts.volume ?? 1))
-  void audio.play().catch(() => undefined)
-  return audio
 }
 
 /**
@@ -44,7 +35,7 @@ function playSound(url: string | undefined, opts: { loop?: boolean; volume?: num
 export function RankingPreview({ focusRank, fontsReady, project, sounds }: RankingPreviewProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const videoRef = useRef<HTMLVideoElement>(null)
-  const musicRef = useRef<HTMLAudioElement | null>(null)
+  const musicRef = useRef<null | PlayingSound>(null)
   const timeline = useMemo(() => rankingTimeline(project), [project])
   const [playing, setPlaying] = useState<null | number>(null)
   const [bandHeight, setBandHeight] = useState(240)
@@ -58,7 +49,10 @@ export function RankingPreview({ focusRank, fontsReady, project, sounds }: Ranki
     () => (segment ? segment.revealed : project.items.map((item) => item.rank)),
     [project.items, segment],
   )
-  const soundUrl = (id: null | string) => sounds.find((s) => s.id === id)?.url
+  const play = (id: null | string, opts: { level?: number; loop?: boolean } = {}) => {
+    const sound = sounds.find((s) => s.id === id)
+    return sound ? playSoundPart(sound, opts) : null
+  }
 
   // Draw the overlay, or the transition slide while one plays.
   useEffect(() => {
@@ -75,11 +69,11 @@ export function RankingPreview({ focusRank, fontsReady, project, sounds }: Ranki
   useEffect(() => {
     if (!part) return undefined
     if (part.kind === 'transition') {
-      playSound(soundUrl(transitionOf(project).sound))
+      play(transitionOf(project).sound)
       const timer = setTimeout(() => advance(), part.durSec * 1000)
       return () => clearTimeout(timer)
     }
-    playSound(soundUrl(soundsOf(project).reveal))
+    play(soundsOf(project).reveal)
     return undefined
     // Only when the playing part changes.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -88,16 +82,16 @@ export function RankingPreview({ focusRank, fontsReady, project, sounds }: Ranki
   // The music bed runs from Play to the end (or Stop).
   useEffect(() => {
     if (playing === null) {
-      musicRef.current?.pause()
+      musicRef.current?.stop()
       musicRef.current = null
       return
     }
     if (musicRef.current) return
     const music = soundsOf(project)
-    musicRef.current = playSound(soundUrl(music.music), { loop: true, volume: music.musicVolume })
+    musicRef.current = play(music.music, { level: music.musicVolume, loop: true })
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [playing])
-  useEffect(() => () => musicRef.current?.pause(), [])
+  useEffect(() => () => musicRef.current?.stop(), [])
 
   // A clip (or a new trim): start it at its trim.
   useEffect(() => {

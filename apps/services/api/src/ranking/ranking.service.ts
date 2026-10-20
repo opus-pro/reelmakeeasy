@@ -25,7 +25,7 @@ import type {
 import type { SoundLibraryService } from '../sound-library/sound-library.service'
 
 import { applyRankingPatch } from './ranking-patch'
-import { probeClip, type RenderPart, renderRanking } from './ranking-render'
+import { probeClip, type RenderPart, renderRanking, type SoundFile } from './ranking-render'
 
 const logger = new Logger('RankingService')
 
@@ -52,7 +52,7 @@ export class RankingService {
   private readonly jobs = new Map<string, RenderJob>()
 
   constructor(
-    private readonly sounds: null | Pick<SoundLibraryService, 'has' | 'localFile' | 'recordUse'> = null,
+    private readonly sounds: null | Pick<SoundLibraryService, 'has' | 'playback' | 'recordUse'> = null,
     private readonly root: string = path.join(dataDir(), 'ranking'),
   ) {
     fs.mkdirSync(this.root, { recursive: true })
@@ -186,10 +186,10 @@ export class RankingService {
       const transition = transitionOf(project)
       const used = new Set<string>()
       // A sound that's gone from the library is skipped, not an error: the short still renders.
-      const soundFile = (id: null | string): string | undefined => {
+      const soundFile = (id: null | string): SoundFile | undefined => {
         if (!id || !this.sounds?.has(id)) return undefined
         used.add(id)
-        return this.sounds.localFile(id)
+        return this.sounds.playback(id)
       }
       const parts: RenderPart[] = timeline.map((part, i) => {
         const png = path.join(workDir, `overlay-${i}.png`)
@@ -210,7 +210,7 @@ export class RankingService {
       const out = path.join(workDir, 'ranking.mp4')
       await renderRanking({
         bandHeight,
-        ...(musicFile ? { music: { file: musicFile, volume: sounds.musicVolume } } : {}),
+        ...(musicFile ? { music: { level: sounds.musicVolume, sound: musicFile } } : {}),
         onProgress: (p) => {
           job.progress = Math.round(p * 100) / 100
         },

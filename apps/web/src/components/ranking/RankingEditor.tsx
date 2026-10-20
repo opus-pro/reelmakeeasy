@@ -216,6 +216,11 @@ function TitleEditor({ onChange, title }: { onChange: (title: RankingTitle) => v
 
 /** The ranks, top first: each one's label, its clip (upload, trim) and its place in the list. */
 function RankRows({ focusRank, onChange, onFocusRank, onUploadClip, project, uploading }: RankingEditorProps) {
+  // Which row is being dragged, and where it would land (before row `target`).
+  const [drag, setDrag] = useState<{ dragging: null | number; target: null | number }>({
+    dragging: null,
+    target: null,
+  })
   const setItems = (items: RankingItem[]) => {
     const ranked = items.map((item, i) => ({ ...item, rank: i + 1 }))
     const order =
@@ -235,10 +240,35 @@ function RankRows({ focusRank, onChange, onFocusRank, onUploadClip, project, upl
     <section className={SECTION}>
       <div className="flex items-center justify-between">
         <span className={HEADING}>Ranks</span>
-        <span className="text-xs text-secondary">1 is the top</span>
+        <span className="text-xs text-secondary">1 is the top · drag ⠿ to reorder</span>
       </div>
       {project.items.map((item, i) => (
         <RankRow
+          drag={{
+            dragging: drag.dragging === i,
+            line: drag.dragging !== null && drag.target === i ? 'before' : drag.dragging !== null && drag.target === i + 1 && i === project.items.length - 1 ? 'after' : null,
+            onDragEnd: () => setDrag({ dragging: null, target: null }),
+            onDragOver: (e) => {
+              if (drag.dragging === null) return
+              e.preventDefault()
+              e.dataTransfer.dropEffect = 'move'
+              const box = e.currentTarget.getBoundingClientRect()
+              const target = e.clientY < box.top + box.height / 2 ? i : i + 1
+              if (target !== drag.target) setDrag({ ...drag, target })
+            },
+            onDragStart: (e) => {
+              e.dataTransfer.effectAllowed = 'move'
+              e.dataTransfer.setData('text/plain', item.id)
+              setDrag({ dragging: i, target: null })
+            },
+            onDrop: (e) => {
+              e.preventDefault()
+              const { dragging, target } = drag
+              if (dragging !== null && target !== null && target !== dragging && target !== dragging + 1)
+                setItems(moveItem(project.items, dragging, target))
+              setDrag({ dragging: null, target: null })
+            },
+          }}
           focused={item.rank === focusRank}
           item={item}
           key={item.id}
@@ -269,7 +299,18 @@ function RankRows({ focusRank, onChange, onFocusRank, onUploadClip, project, upl
   )
 }
 
+type RowDrag = {
+  dragging: boolean
+  /** A bar above (or, on the last row, below) where the dragged row would land. */
+  line: 'after' | 'before' | null
+  onDragEnd: () => void
+  onDragOver: (e: React.DragEvent<HTMLDivElement>) => void
+  onDragStart: (e: React.DragEvent<HTMLDivElement>) => void
+  onDrop: (e: React.DragEvent<HTMLDivElement>) => void
+}
+
 function RankRow({
+  drag,
   focused,
   item,
   onChange,
@@ -280,6 +321,7 @@ function RankRow({
   onUpload,
   uploading,
 }: {
+  drag: RowDrag
   focused: boolean
   item: RankingItem
   onChange: (item: RankingItem) => void
@@ -293,11 +335,37 @@ function RankRow({
   const fileRef = useRef<HTMLInputElement>(null)
   return (
     <div
-      className={cn('flex flex-col gap-1.5 rounded-lg border p-2', focused ? 'border-white/40 bg-white/5' : 'border-white/10')}
+      className={cn(
+        'relative flex flex-col gap-1.5 rounded-lg border p-2',
+        focused ? 'border-white/40 bg-white/5' : 'border-white/10',
+        drag.dragging && 'opacity-40',
+      )}
+      data-rank-row
+      onDragEnd={drag.onDragEnd}
+      onDragOver={drag.onDragOver}
+      onDrop={drag.onDrop}
       onFocusCapture={onFocus}
       onPointerDown={onFocus}
     >
+      {drag.line === 'before' && <span className="absolute inset-x-0 -top-1.5 h-0.5 rounded bg-white" />}
+      {drag.line === 'after' && <span className="absolute inset-x-0 -bottom-1.5 h-0.5 rounded bg-white" />}
       <div className="flex items-center gap-2">
+        <span
+          aria-label={`Drag rank ${item.rank}`}
+          className="cursor-grab px-0.5 text-secondary select-none hover:text-primary active:cursor-grabbing"
+          draggable
+          onDragStart={(e) => {
+            // The whole row is what moves: show it as the drag image.
+            const row = e.currentTarget.closest('[data-rank-row]')
+            if (row instanceof HTMLElement) e.dataTransfer.setDragImage(row, 16, 16)
+            drag.onDragStart(e as unknown as React.DragEvent<HTMLDivElement>)
+          }}
+          role="button"
+          tabIndex={-1}
+          title="Drag to reorder"
+        >
+          ⠿
+        </span>
         <span className="w-7 text-lg font-black text-primary tabular-nums">{item.rank}.</span>
         <input
           aria-label={`Rank ${item.rank} label`}
@@ -319,7 +387,7 @@ function RankRow({
           </IconButton>
         </div>
       </div>
-      <div className="flex flex-wrap items-center gap-2 pl-9">
+      <div className="flex flex-wrap items-center gap-2 pl-12">
         <Button disabled={uploading} onClick={() => fileRef.current?.click()} size="sm" variant="secondary">
           {uploading ? 'Uploading…' : item.clip ? 'Replace clip' : 'Add clip'}
         </Button>

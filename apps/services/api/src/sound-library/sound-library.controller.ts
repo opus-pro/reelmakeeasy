@@ -10,7 +10,7 @@ import {
   Post,
   Put,
 } from '@nestjs/common'
-import type { LibrarySound } from '@shared/types/api/sound-library'
+import type { LibrarySound, LibrarySoundPatch } from '@shared/types/api/sound-library'
 
 import { SoundInputError, SoundLibraryService, SoundNotFoundError } from './sound-library.service'
 
@@ -41,8 +41,16 @@ export class SoundLibraryController {
   }
 
   @Put(':id')
-  update(@Param('id') id: string, @Body() body: { favorite?: boolean; name?: string }): Promise<LibrarySound> {
-    return answer(() => this.sounds.update(id, { favorite: body?.favorite, name: body?.name }))
+  update(@Param('id') id: string, @Body() body: LibrarySoundPatch): Promise<LibrarySound> {
+    return answer(() =>
+      this.sounds.update(id, {
+        favorite: body?.favorite,
+        name: body?.name,
+        trimEndSec: body?.trimEndSec,
+        trimStartSec: body?.trimStartSec,
+        volume: body?.volume,
+      }),
+    )
   }
 
   @Delete(':id')

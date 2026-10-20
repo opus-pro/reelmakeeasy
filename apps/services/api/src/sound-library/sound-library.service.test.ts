@@ -42,6 +42,20 @@ describe('SoundLibraryService', () => {
     expect(lib.get(ID(1)).lastUsedAt).not.toBeNull()
   })
 
+  it('keeps a trim inside the sound and a volume from 0 to 200%', () => {
+    const lib = library([sound(1, { durationSec: 4 })])
+    expect(lib.update(ID(1), { trimEndSec: 2.5, trimStartSec: 0.5, volume: 1.4 })).toMatchObject({
+      trimEndSec: 2.5,
+      trimStartSec: 0.5,
+      volume: 1.4,
+    })
+    expect(lib.playback(ID(1))).toMatchObject({ endSec: 2.5, startSec: 0.5, volume: 1.4 })
+    // To the end again.
+    expect(lib.update(ID(1), { trimEndSec: null }).trimEndSec).toBeNull()
+    expect(() => lib.update(ID(1), { trimEndSec: 9 })).toThrow(/inside its 4.0 s/)
+    expect(() => lib.update(ID(1), { volume: 3 })).toThrow(/200%/)
+  })
+
   it('knows its own sounds only, and refuses uploads from outside tmp/', async () => {
     const lib = library([sound(1)])
     expect(lib.has(ID(1))).toBe(true)

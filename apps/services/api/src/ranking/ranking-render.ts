@@ -7,6 +7,18 @@ import { RANKING_FPS, RANKING_HEIGHT, RANKING_WIDTH } from '@reelmakeeasy/common
 /** Loudness the finished short is delivered at (streaming level, with headroom). */
 export const RANKING_LOUDNESS = 'loudnorm=I=-14:TP=-1.5:LRA=11'
 
+/** A library sound as the render plays it: its file, the part (seconds) and the level (1: as is). */
+export type SoundFile = { endSec: number; file: string; startSec: number; volume: number }
+
+/** ffmpeg input arguments for just the trimmed part of a sound. */
+export const soundInput = (sound: SoundFile): string[] => [
+  '-ss', String(sound.startSec), '-t', String(Math.max(0.05, sound.endSec - sound.startSec)), '-i', sound.file,
+]
+
+/** The filter that brings a sound input to the common format, at its level. */
+const soundChain = (index: number, sound: SoundFile, tail = 'apad') =>
+  `[${index}:a]aresample=48000,aformat=channel_layouts=stereo,volume=${sound.volume.toFixed(2)},${tail}`
+
 /** Runs a command quietly; rejects with the end of its output. */
 export function run(command: string, args: string[], cwd: string): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -52,7 +64,7 @@ export function segmentArgs(o: {
   out: string
   overlay: string
   /** A sound that plays as the clip starts (the reveal sound), mixed over the clip's own. */
-  sfx?: string
+  sfx?: SoundFile
   startSec: number
 }): string[] {
   const area = RANKING_HEIGHT - o.bandHeight
@@ -66,14 +78,14 @@ export function segmentArgs(o: {
     : `[2:a]aformat=channel_layouts=stereo`
   const sfxIndex = o.hasAudio ? 2 : 3
   const audio = o.sfx
-    ? `${base}[clip];[${sfxIndex}:a]aresample=48000,aformat=channel_layouts=stereo,apad[fx];[clip][fx]amix=inputs=2:duration=first:normalize=0[a]`
+    ? `${base}[clip];${soundChain(sfxIndex, o.sfx)}[fx];[clip][fx]amix=inputs=2:duration=first:normalize=0[a]`
     : `${base}[a]`
   return [
     '-v', 'error', '-y',
     '-ss', String(o.startSec), '-t', String(o.durSec), '-i', o.clipFile,
     '-loop', '1', '-t', String(o.durSec), '-i', o.overlay,
     ...(o.hasAudio ? [] : ['-f', 'lavfi', '-t', String(o.durSec), '-i', 'anullsrc=r=48000:cl=stereo']),
-    ...(o.sfx ? ['-i', o.sfx] : []),
+    ...(o.sfx ? soundInput(o.sfx) : []),
     '-filter_complex', `${video};${audio}`,
     '-map', '[v]', '-map', '[a]',
     '-t', String(o.durSec),
@@ -87,15 +99,15 @@ export function segmentArgs(o: {
  * The ffmpeg arguments for a transition slide: its full-frame PNG held for `durSec`, with its
  * sound (or silence), in the same format as the clip segments.
  */
-export function transitionArgs(o: { durSec: number; out: string; png: string; sfx?: string }): string[] {
+export function transitionArgs(o: { durSec: number; out: string; png: string; sfx?: SoundFile }): string[] {
   const audio = o.sfx
-    ? `[1:a]aformat=channel_layouts=stereo[bed];[2:a]aresample=48000,aformat=channel_layouts=stereo,apad[fx];[bed][fx]amix=inputs=2:duration=first:normalize=0[a]`
+    ? `[1:a]aformat=channel_layouts=stereo[bed];${soundChain(2, o.sfx)}[fx];[bed][fx]amix=inputs=2:duration=first:normalize=0[a]`
     : `[1:a]aformat=channel_layouts=stereo[a]`
   return [
     '-v', 'error', '-y',
     '-loop', '1', '-t', String(o.durSec), '-i', o.png,
     '-f', 'lavfi', '-t', String(o.durSec), '-i', 'anullsrc=r=48000:cl=stereo',
-    ...(o.sfx ? ['-i', o.sfx] : []),
+    ...(o.sfx ? soundInput(o.sfx) : []),
     '-filter_complex', `[0:v]scale=${RANKING_WIDTH}:${RANKING_HEIGHT},setsar=1,fps=${RANKING_FPS},format=yuv420p[v];${audio}`,
     '-map', '[v]', '-map', '[a]',
     '-t', String(o.durSec),
@@ -105,15 +117,19 @@ export function transitionArgs(o: { durSec: number; out: string; png: string; sf
   ]
 }
 
-/** The last step: the joined short, a looped music bed under it (when there is one), even loudness. */
-export function finishArgs(o: { joined: string; music?: { file: string; volume: number }; out: string }): string[] {
-  const filter = o.music
-    ? `[1:a]aresample=48000,aformat=channel_layouts=stereo,volume=${o.music.volume.toFixed(2)}[bed];[0:a][bed]amix=inputs=2:duration=first:normalize=0,${RANKING_LOUDNESS}[a]`
+/**
+ * The last step: the joined short, a music bed under it (when there is one: its trimmed part,
+ * looped to the end, at its own level times the short's music level), even loudness.
+ */
+export function finishArgs(o: { joined: string; music?: { level: number; sound: SoundFile }; out: string }): string[] {
+  const music = o.music
+  const filter = music
+    ? `[1:a]atrim=start=${music.sound.startSec}:end=${music.sound.endSec},asetpts=PTS-STARTPTS,aloop=loop=-1:size=2e9,aresample=48000,aformat=channel_layouts=stereo,volume=${(music.sound.volume * music.level).toFixed(2)}[bed];[0:a][bed]amix=inputs=2:duration=first:normalize=0,${RANKING_LOUDNESS}[a]`
     : `[0:a]${RANKING_LOUDNESS}[a]`
   return [
     '-v', 'error', '-y',
     '-i', o.joined,
-    ...(o.music ? ['-stream_loop', '-1', '-i', o.music.file] : []),
+    ...(music ? ['-i', music.sound.file] : []),
     '-filter_complex', filter,
     '-map', '0:v', '-map', '[a]',
     '-c:v', 'copy', '-ar', '48000', '-c:a', 'aac', '-b:a', '192k', '-movflags', '+faststart',
@@ -123,8 +139,8 @@ export function finishArgs(o: { joined: string; music?: { file: string; volume: 
 
 /** One piece to render: a rank's clip under its overlay, or a transition slide. */
 export type RenderPart =
-  | { clipFile: string; durSec: number; kind: 'clip'; overlay: string; sfx?: string; startSec: number }
-  | { durSec: number; kind: 'transition'; png: string; sfx?: string }
+  | { clipFile: string; durSec: number; kind: 'clip'; overlay: string; sfx?: SoundFile; startSec: number }
+  | { durSec: number; kind: 'transition'; png: string; sfx?: SoundFile }
 
 /**
  * Renders the short: each part (clip or slide) in order, joined, with the music bed and even
@@ -132,7 +148,7 @@ export type RenderPart =
  */
 export async function renderRanking(o: {
   bandHeight: number
-  music?: { file: string; volume: number }
+  music?: { level: number; sound: SoundFile }
   onProgress: (progress: number) => void
   out: string
   parts: RenderPart[]

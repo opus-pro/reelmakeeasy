@@ -48,25 +48,39 @@ describe('sounds in the render', () => {
       hasAudio: true,
       out: '/o.mp4',
       overlay: '/ov.png',
-      sfx: '/boom.mp3',
+      sfx: { endSec: 1.5, file: '/boom.mp3', startSec: 0.5, volume: 0.8 },
       startSec: 0,
     })
-    expect(args.slice(args.indexOf('/ov.png') + 1)).toEqual(expect.arrayContaining(['-i', '/boom.mp3']))
-    expect(args[args.indexOf('-filter_complex') + 1]).toContain('[clip][fx]amix=inputs=2:duration=first:normalize=0[a]')
+    // Only the trimmed part of the sound, at its level.
+    expect(args.slice(args.indexOf('/ov.png') + 1)).toEqual(expect.arrayContaining(['-ss', '0.5', '-t', '1', '-i', '/boom.mp3']))
+    const filter = args[args.indexOf('-filter_complex') + 1]
+    expect(filter).toContain('volume=0.80')
+    expect(filter).toContain('[clip][fx]amix=inputs=2:duration=first:normalize=0[a]')
   })
 
   it('holds a transition slide with its sound over silence', () => {
-    const args = transitionArgs({ durSec: 1, out: '/t.mp4', png: '/t.png', sfx: '/whoosh.mp3' })
+    const args = transitionArgs({
+      durSec: 1,
+      out: '/t.mp4',
+      png: '/t.png',
+      sfx: { endSec: 0.7, file: '/whoosh.mp3', startSec: 0, volume: 1 },
+    })
     expect(args).toEqual(expect.arrayContaining(['-loop', '1', '-t', '1', '-i', '/t.png', '-i', '/whoosh.mp3']))
     expect(args[args.indexOf('-filter_complex') + 1]).toContain('[bed][fx]amix')
   })
 
-  it('loops the music bed under the short at its level, then evens the loudness', () => {
-    const args = finishArgs({ joined: '/j.mp4', music: { file: '/bed.mp3', volume: 0.35 }, out: '/f.mp4' })
-    expect(args).toEqual(expect.arrayContaining(['-stream_loop', '-1', '-i', '/bed.mp3']))
+  it("loops the bed's trimmed part under the short at its level, then evens the loudness", () => {
+    const args = finishArgs({
+      joined: '/j.mp4',
+      music: { level: 0.5, sound: { endSec: 8, file: '/bed.mp3', startSec: 2, volume: 0.7 } },
+      out: '/f.mp4',
+    })
+    expect(args).toEqual(expect.arrayContaining(['-i', '/bed.mp3']))
     const filter = args[args.indexOf('-filter_complex') + 1]
+    expect(filter).toContain('atrim=start=2:end=8')
+    expect(filter).toContain('aloop=loop=-1')
     expect(filter).toContain('volume=0.35')
     expect(filter).toContain('loudnorm=I=-14')
-    expect(finishArgs({ joined: '/j.mp4', out: '/f.mp4' })).not.toContain('-stream_loop')
+    expect(finishArgs({ joined: '/j.mp4', out: '/f.mp4' }).filter((a) => a === '-i')).toHaveLength(1)
   })
 })
