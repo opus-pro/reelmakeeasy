@@ -25,6 +25,9 @@ export type Transcript = {
   mode: AgentMode | null
   /** The latest `turn/plan/updated` steps; cleared when the user sends a message. */
   plan: AgentPlanStep[] | null
+  /** A Ranking chat's ranking (the last `ranking` event) and how many changes it has seen, so
+   *  its preview reloads on each; null until a tool touches one. */
+  ranking: null | { id: string; version: number }
   working: boolean
 }
 
@@ -79,6 +82,7 @@ export const initialTranscript: Transcript = {
   lastEventId: 0,
   mode: null,
   plan: null,
+  ranking: null,
   working: false,
 }
 
@@ -542,6 +546,9 @@ export function reduceTranscript(state: Transcript, event: TranscriptAction): Tr
     }
     case 'question_expired': {
       return handleQuestionExpired(state, next, event)
+    }
+    case 'ranking': {
+      return { ...next, ranking: { id: event.rankingId, version: (state.ranking?.version ?? 0) + 1 } }
     }
     case 'session': {
       return handleSession(state, next, event)

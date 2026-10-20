@@ -8,12 +8,15 @@ import {
   rankingProblems,
   rankingTimeline,
 } from '@reelmakeeasy/common/ranking/ranking-project'
-import type { RankingProject, RankingRenderStatus } from '@shared/types/api/ranking'
+import { applyRankingTemplate } from '@reelmakeeasy/common/ranking/ranking-template'
+import type { RankingProject, RankingRenderStatus, RankingTemplate } from '@shared/types/api/ranking'
 import { Button } from '@shared/ui'
 import { useAtomValue } from 'jotai'
+import { useRouter } from 'next/navigation'
 import { useCallback, useEffect, useRef, useState } from 'react'
 
 import { apiOriginAtom } from '@/atom/apiOrigin'
+import { agentChatUrl } from '@/components/agent/start-easy'
 import { useSignedUpload } from '@/hooks/useSignedUpload'
 
 import { type RankingApi, useRankingApi } from './ranking-api'
@@ -156,6 +159,8 @@ export function RankingStudio({
         <span className="text-xs text-secondary">
           {saving === 'saving' ? 'Saving…' : saving === 'error' ? 'Not saved' : 'Saved'}
         </span>
+        <StylePicker onApply={(template) => change({ ...project, ...applyRankingTemplate(project, template) })} />
+        <OpenInChat api={api} project={project} />
       </header>
       {error && <p className="text-sm text-amber-400">{error}</p>}
       <div className="flex flex-col gap-6 lg:flex-row lg:items-start">
@@ -226,6 +231,68 @@ export async function drawOverlays(project: RankingProject): Promise<{ bandHeigh
     return canvas.toDataURL('image/png')
   })
   return { bandHeight, overlays }
+}
+
+/** "Apply style": gives the ranking a saved style's look and sounds (then autosaves). */
+function StylePicker({ onApply }: { onApply: (template: RankingTemplate) => void }) {
+  const api = useRankingApi()
+  const [styles, setStyles] = useState<RankingTemplate[]>([])
+  useEffect(() => {
+    api
+      .styles()
+      .then(setStyles)
+      .catch(() => setStyles([]))
+  }, [api])
+  if (!styles.length) return null
+  return (
+    <select
+      aria-label="Apply a style"
+      className="rounded-md border border-white/10 bg-black/30 px-2 py-1 text-xs text-primary"
+      onChange={(e) => {
+        const template = styles.find((s) => s.id === e.target.value)
+        e.target.value = ''
+        if (template) onApply(template)
+      }}
+      value=""
+    >
+      <option value="">Apply style…</option>
+      {styles.map((s) => (
+        <option key={s.id} value={s.id}>
+          {s.name}
+        </option>
+      ))}
+    </select>
+  )
+}
+
+/** Opens a Ranking chat on this ranking, so the agent carries on with it. */
+function OpenInChat({ api, project }: { api: RankingApi; project: RankingProject }) {
+  const router = useRouter()
+  const [opening, setOpening] = useState(false)
+  const [error, setError] = useState<null | string>(null)
+  return (
+    <>
+      <Button
+        disabled={opening}
+        onClick={() => {
+          setOpening(true)
+          setError(null)
+          api
+            .openChat(project.id, project.name)
+            .then((sessionId) => router.push(agentChatUrl(sessionId)))
+            .catch((e: unknown) => {
+              setError(errorText(e))
+              setOpening(false)
+            })
+        }}
+        size="sm"
+        variant="secondary"
+      >
+        {opening ? 'Opening…' : 'Open in chat'}
+      </Button>
+      {error && <span className="text-xs text-amber-400">{error}</span>}
+    </>
+  )
 }
 
 function ExportPanel({ api, project, saving }: { api: RankingApi; project: RankingProject; saving: boolean }) {

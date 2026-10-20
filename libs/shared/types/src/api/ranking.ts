@@ -147,3 +147,55 @@ export type RankingRenderStatus = {
   /** The finished video (a served URL), once done. */
   videoUrl?: string
 }
+
+/** One sound in a ranking style's plan: what it is, and the library sound that plays it. */
+export type RankingTemplateSound = {
+  /** In words a person can search for, e.g. "short low boom (vine boom)". */
+  description: string
+  /** A sound-library id; null: not in the library yet (the user downloads one). */
+  soundId: null | string
+}
+
+/** A sticker a style tends to use (text or emoji), placed as a fraction of the frame. */
+export type RankingTemplateSticker = Pick<RankingSticker, 'color' | 'rotation' | 'size' | 'text' | 'x' | 'y'>
+
+/**
+ * A ranking style (shown as a "style"): the pattern of a kind of ranking short, learned from a
+ * reference video or written by hand, that any ranking can take on. Saved as JSON in the data
+ * folder; sounds are sound-library ids.
+ */
+export type RankingTemplate = {
+  createdAt: string
+  id: string
+  /** How its labels read: their tone and a few examples. */
+  labels: { examples: string[]; tone: string }
+  name: string
+  /** What makes it work, for the agent and the user (plain text, a few lines). */
+  notes: string
+  /** About how long each rank plays, in seconds. */
+  perRankSec: number
+  rankCount: number
+  reveal: RankingRevealMode
+  sounds: {
+    music: null | RankingTemplateSound
+    musicVolume: number
+    /** The sounds that go on each clip's action (the agent picks the one that fits). */
+    onAction: RankingTemplateSound[]
+    /** On each clip's start. */
+    reveal: null | RankingTemplateSound
+    /** On each transition slide. */
+    transition: null | RankingTemplateSound
+  }
+  /** The video it was learned from, if any. */
+  source: null | { title?: string; url: string }
+  stickers: { examples: RankingTemplateSticker[]; habit: string }
+  style: RankingStyle
+  /** The title's look: band colour and coloured words (its text is an example). */
+  title: RankingTitle
+  /** The transition slide, without its sound (that is `sounds.transition`). */
+  transition: Omit<RankingTransition, 'sound'>
+  updatedAt: string
+}
+
+/** What a style is saved from (`POST /api/ranking/styles`); `PUT` takes any part of it. */
+export type RankingTemplateInput = Omit<RankingTemplate, 'createdAt' | 'id' | 'updatedAt'>

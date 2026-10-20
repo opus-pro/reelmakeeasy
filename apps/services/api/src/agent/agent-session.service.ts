@@ -41,7 +41,7 @@ import {
   resolveAttachment,
   turnInput,
 } from './agent-attachments'
-import { briefFor, EDIT_INTRO, kickoffFor } from './agent-brief'
+import { briefFor, EDIT_INTRO, kickoffFor, rankingKickoff } from './agent-brief'
 import { AgentSessionStore } from './agent-session.store'
 
 /** Drives an autonomous session once the user picks that mode (`AutonomousService`
@@ -490,8 +490,8 @@ export class AgentSessionService implements OnModuleDestroy {
       mode === 'autonomous' ? { flowActive: true, harness, mode } : { harness, mode },
     )
     this.emit(id, { mode, type: 'mode' })
-    if (mode === 'free') {
-      const prompt = kickoffFor(harness)
+    if (mode === 'free' || mode === 'ranking') {
+      const prompt = mode === 'ranking' ? rankingKickoff(harness, session.rankingId) : kickoffFor(harness)
       void this.startKickoff(id, prompt).catch((error: unknown) =>
         this.logger.warn(`Kickoff for ${id} failed: ${ensureError(error).message}`),
       )
@@ -512,14 +512,24 @@ export class AgentSessionService implements OnModuleDestroy {
   /** A new chat; `harness` is the agent picked before opening it (the Agent dialog), which its
    *  mode card then uses without asking again. */
   async createSession(
-    input: { harness?: AgentHarnessName; title?: string } = {},
+    input: { harness?: AgentHarnessName; rankingId?: string; title?: string } = {},
   ): Promise<AgentSession> {
     const session = this.store.create({
       id: randomUUID(),
       title: input.title?.trim() || DEFAULT_CHAT_TITLE,
     })
     if (input.harness) this.store.update(session.id, { harness: input.harness })
+    if (input.rankingId) this.store.update(session.id, { rankingId: input.rankingId })
     return this.getSession(session.id)
+  }
+
+  /** A Ranking chat's tools read or changed this ranking: the chat follows it, and its preview
+   *  reloads. */
+  followRanking(id: string, rankingId: string): void {
+    const session = this.store.get(id)
+    if (!session || session.mode !== 'ranking') return
+    if (session.rankingId !== rankingId) this.store.update(id, { rankingId }, { touch: false })
+    this.emit(id, { rankingId, type: 'ranking' })
   }
 
   /** Deletes a chat: its idle Codex child, open cards and event streams, then its record and
@@ -643,7 +653,7 @@ export class AgentSessionService implements OnModuleDestroy {
     }
     // Editing, or a Free chat (whose tools may be waiting on a clip or a render): the
     // waiting tool sees the flag and cancels its workflow.
-    if (editing || mode === 'free') this.cancelledFlows.add(id)
+    if (editing || mode === 'free' || mode === 'ranking') this.cancelledFlows.add(id)
     this.expireServerQuestions(id)
     if (!live?.currentTurnId || !threadId) return
     await live.client.request('turn/interrupt', { threadId, turnId: live.currentTurnId })
@@ -685,7 +695,7 @@ export class AgentSessionService implements OnModuleDestroy {
   notifyAgent(id: string, text: string): void {
     const session = this.store.get(id)
     if (!session || this.destroyed || !text.trim()) return
-    const chat = session.mode === 'free' || !!session.editing
+    const chat = session.mode === 'free' || session.mode === 'ranking' || !!session.editing
     if (!chat) return
     this.notes.set(id, [...(this.notes.get(id) ?? []), text.trim()])
     this.sendNotes(id)

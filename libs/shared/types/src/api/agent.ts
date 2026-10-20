@@ -1,10 +1,11 @@
 /** Question id -> the chosen option labels and/or typed text. */
 export type AgentAnswers = Record<string, string[]>
 
-/** How a session's chat is driven: an autonomous run (Easy) or free chat (Advanced). Chosen
- *  once, right after the session is created. A third mode, 'guided', was removed: chats saved
- *  with it load as 'free' (`agentModeFromStored`). */
-export type AgentMode = 'autonomous' | 'free'
+/** How a session's chat is driven: an autonomous run (Easy), free chat (Advanced), or a ranking
+ *  chat (builds ranking shorts in the Ranking Builder). Chosen once, right after the session is
+ *  created. A former mode, 'guided', was removed: chats saved with it load as 'free'
+ *  (`agentModeFromStored`). */
+export type AgentMode = 'autonomous' | 'free' | 'ranking'
 
 export type AgentPlanStep = { status: 'completed' | 'inProgress' | 'pending'; step: string }
 
@@ -213,6 +214,9 @@ export interface AgentSession {
    *  user stopped it, its video started, it failed). */
   interrupted?: boolean
   mode?: AgentMode
+  /** A Ranking chat's ranking (the one its tools last read or changed, or the one it was opened
+   *  from in the studio). */
+  rankingId?: string
   /** The project an autonomous session started its video in. */
   projectId: null | string
   /** Only in the API's view of a chat that can pick up where it left off
@@ -315,6 +319,8 @@ export type AgentUiEvent = { id?: number } & (
   | { type: 'flow_cancelled' }
   /** Autonomous mode wants the user to pick a style (the inline style picker). */
   | { type: 'style_request' }
+  /** A Ranking chat follows this ranking now, and it just changed (the preview reloads it). */
+  | { rankingId: string; type: 'ranking' }
 )
 
 /** One line of a loop short, as the storyboard panel lists it: what is said, and the fact stamp

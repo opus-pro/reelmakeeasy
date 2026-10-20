@@ -41,6 +41,13 @@ const MODE_OPTIONS: {
     mode: 'free',
     recommended: false,
   },
+  {
+    description: (agent) =>
+      `Build a ranking short with ${agent}: paste a YouTube Short to copy its style, attach your clips, and get the meme sounds on every action.`,
+    label: 'Ranking short',
+    mode: 'ranking',
+    recommended: false,
+  },
 ]
 
 /**

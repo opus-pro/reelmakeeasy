@@ -14,7 +14,7 @@ import type {
 import type { AgentAppServer } from './claude/agent-app-server'
 import { buildAppServerArgs } from './codex/codex-config'
 import { CodexRpcClient } from './codex/codex-rpc'
-import { briefFor, kickoffFor } from './agent-brief'
+import { briefFor, kickoffFor, rankingKickoff } from './agent-brief'
 
 const AUTONOMOUS_BRIEF = briefFor({ mode: 'autonomous' }, 'codex')
 const FREE_CHAT_BRIEF = briefFor({ mode: 'free' }, 'codex')
@@ -347,6 +347,30 @@ describe('AgentSessionService', () => {
       expect(threadStart?.params?.['developerInstructions']).toBe(FREE_CHAT_BRIEF)
       expect(threadStart?.params?.['sandbox']).toBe('workspace-write')
       expect(spawnOpts).toEqual([{ mode: 'free' }])
+    })
+
+    it('ranking: runs its kickoff (on the ranking it was opened on) with the ranking brief and tools', async () => {
+      const log = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'agent-svc-ranking-')), 'log.jsonl')
+      const svc = makeService(root, [], { FAKE_LOG: log })
+      const rankingId = '11111111-2222-3333-4444-555555555555'
+      const session = await svc.createSession({ rankingId })
+      const events: string[] = []
+      svc.subscribe(session.id, 0, (e) => events.push(e.type))
+
+      await svc.chooseMode(session.id, 'ranking')
+      await waitFor(() => svc.getSession(session.id).status === 'idle')
+
+      const entries = readLog(log)
+      const turnStart = entries.find((e) => e.method === 'turn/start')
+      expect(turnStart?.params?.['input']).toEqual([{ text: rankingKickoff('codex', rankingId), type: 'text' }])
+      const threadStart = entries.find((e) => e.method === 'thread/start')
+      expect(threadStart?.params?.['developerInstructions']).toBe(briefFor({ mode: 'ranking' }, 'codex'))
+      const tools = (threadStart?.params?.['dynamicTools'] as { name: string }[]).map((t) => t.name)
+      expect(tools.every((t) => t.startsWith('ranking_'))).toBe(true)
+
+      svc.followRanking(session.id, '99999999-2222-3333-4444-555555555555')
+      expect(svc.getSession(session.id).rankingId).toBe('99999999-2222-3333-4444-555555555555')
+      expect(events).toContain('ranking')
     })
 
     it('sends attached files: their paths in the text, pictures as localImage, shown with the message', async () => {
@@ -2054,6 +2078,12 @@ describe('dynamic tools', () => {
       'ranking_add_clip',
       'ranking_add_sticker_image',
       'ranking_export',
+      'ranking_analyze_reference',
+      'ranking_find_moments',
+      'ranking_style_list',
+      'ranking_style_get',
+      'ranking_style_save',
+      'ranking_apply_style',
     ])
     expect(calls).toEqual([{ args: { x: 'hi' }, tool: 'ping' }])
     // The fake finishes the turn with the tool's answer as the agent message.
@@ -2238,6 +2268,12 @@ describe('review fixes: edit mode robustness', () => {
       'ranking_add_clip',
       'ranking_add_sticker_image',
       'ranking_export',
+      'ranking_analyze_reference',
+      'ranking_find_moments',
+      'ranking_style_list',
+      'ranking_style_get',
+      'ranking_style_save',
+      'ranking_apply_style',
     ])
     expect(svc.getSession(session.id).threadId).not.toBe('thread-old')
     expect(events.some((e) => e.type === 'session' && /tools/i.test(e.reason ?? ''))).toBe(true)

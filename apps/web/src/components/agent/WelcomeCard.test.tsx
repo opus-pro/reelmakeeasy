@@ -7,12 +7,13 @@ function option(label: RegExp) {
 }
 
 describe('WelcomeCard', () => {
-  it('offers two modes: Easy (Guided) and Advanced (Free chat)', () => {
+  it('offers three modes: Easy (Guided), Advanced (Free chat) and Ranking short', () => {
     render(<WelcomeCard mode={null} onChoose={jest.fn(async () => true)} presetHarness="claude" />)
     const labels = screen.getAllByRole('button').map((b) => b.textContent ?? '')
-    expect(labels).toHaveLength(2)
+    expect(labels).toHaveLength(3)
     expect(labels[0]).toMatch(/Easy \(Guided\)/)
     expect(labels[1]).toMatch(/Advanced \(Free chat\)/)
+    expect(labels[2]).toMatch(/Ranking short/)
     // The old third mode (Medium · Guided) is gone; "Guided" now describes Easy.
     expect(screen.queryByText(/Medium/)).toBeNull()
   })

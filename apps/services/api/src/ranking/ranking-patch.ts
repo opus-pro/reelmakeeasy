@@ -32,27 +32,27 @@ import type {
 export class RankingPatchError extends Error {}
 
 const HEX = /^#[\da-f]{6}$/i
-const REVEAL_MODES: RankingRevealMode[] = ['countdown', 'countup', 'custom', 'shuffle']
+export const REVEAL_MODES: RankingRevealMode[] = ['countdown', 'countup', 'custom', 'shuffle']
 const NAME_MAX = 80
 const WORD_MAX = 40
 const ITEM_ID = /^[\w-]{1,40}$/
 
-const isRecord = (v: unknown): v is Record<string, unknown> =>
+export const isRecord = (v: unknown): v is Record<string, unknown> =>
   typeof v === 'object' && v !== null && !Array.isArray(v)
 
-function color(v: unknown, what: string): string {
+export function color(v: unknown, what: string): string {
   if (typeof v !== 'string' || !HEX.test(v)) throw new RankingPatchError(`${what} must be a colour like #ff2a2a.`)
   return v.toLowerCase()
 }
 
-function text(v: unknown, max: number, what: string): string {
+export function text(v: unknown, max: number, what: string): string {
   if (typeof v !== 'string') throw new RankingPatchError(`${what} must be text.`)
   const t = v.replace(/\s+/g, ' ')
   if (t.length > max) throw new RankingPatchError(`Keep ${what} under ${max} characters.`)
   return t
 }
 
-function parseTitle(v: unknown): RankingTitle {
+export function parseTitle(v: unknown): RankingTitle {
   if (!isRecord(v) || !Array.isArray(v['lines'])) throw new RankingPatchError('The title is missing its lines.')
   const lines = v['lines'] as unknown[]
   if (lines.length < 1 || lines.length > RANKING_TITLE_LINES_MAX)
@@ -70,7 +70,7 @@ function parseTitle(v: unknown): RankingTitle {
   }
 }
 
-function parseStyle(v: unknown): RankingStyle {
+export function parseStyle(v: unknown): RankingStyle {
   if (!isRecord(v) || !Array.isArray(v['numberColors']) || v['numberColors'].length !== 4)
     throw new RankingPatchError('The style needs four number colours.')
   const [a, b, c, d] = (v['numberColors'] as unknown[]).map((x) => color(x, 'A number'))
@@ -97,7 +97,7 @@ function parseClip(v: unknown, known: Map<string, RankingClip>): null | RankingC
   return { ...saved, trimEndSec: round2(end), trimStartSec: round2(start) }
 }
 
-const round2 = (n: number) => Math.round(n * 100) / 100
+export const round2 = (n: number) => Math.round(n * 100) / 100
 
 /** A sound choice: a library sound's id, or null for none. */
 function soundId(v: unknown, soundExists: (id: string) => boolean): null | string {
@@ -118,7 +118,7 @@ function parseSounds(v: unknown, soundExists: (id: string) => boolean): RankingS
   }
 }
 
-function parseTransition(v: unknown, soundExists: (id: string) => boolean): RankingTransition {
+export function parseTransition(v: unknown, soundExists: (id: string) => boolean): RankingTransition {
   if (!isRecord(v)) throw new RankingPatchError('The transition is missing.')
   const durationSec = Number(v['durationSec'])
   if (!Number.isFinite(durationSec) || durationSec < RANKING_TRANSITION_MIN_SEC || durationSec > RANKING_TRANSITION_MAX_SEC)
@@ -153,7 +153,7 @@ function parseCues(v: unknown, clip: null | RankingClip, soundExists: (id: strin
   })
 }
 
-const fraction = (v: unknown, what: string, min = 0, max = 1) => {
+export const fraction = (v: unknown, what: string, min = 0, max = 1) => {
   const n = Number(v)
   if (!Number.isFinite(n) || n < min || n > max) throw new RankingPatchError(`${what} is out of range.`)
   return Math.round(n * 1000) / 1000

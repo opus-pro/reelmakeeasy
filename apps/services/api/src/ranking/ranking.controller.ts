@@ -14,17 +14,21 @@ import type {
   RankingProject,
   RankingProjectSummary,
   RankingRenderStatus,
+  RankingTemplate,
 } from '@shared/types/api/ranking'
+import { applyRankingTemplate } from '@reelmakeeasy/common/ranking/ranking-template'
 
 import { RankingPatchError } from './ranking-patch'
 import { RankingInputError, RankingNotFoundError, RankingService } from './ranking.service'
+import { RankingTemplateNotFoundError, RankingTemplateService } from './ranking-template.service'
 
 /** Turns the service's errors into 400 / 404 with the message the studio shows. */
 function answer<T>(work: () => T): T {
   try {
     return work()
   } catch (error) {
-    if (error instanceof RankingNotFoundError) throw new NotFoundException(error.message)
+    if (error instanceof RankingNotFoundError || error instanceof RankingTemplateNotFoundError)
+      throw new NotFoundException(error.message)
     if (error instanceof RankingInputError || error instanceof RankingPatchError)
       throw new BadRequestException(error.message)
     throw error
@@ -44,7 +48,10 @@ async function answerAsync<T>(work: () => Promise<T>): Promise<T> {
 /** Ranking Builder: projects, clips and renders (`/api/ranking/...`). */
 @Controller('ranking')
 export class RankingController {
-  constructor(private readonly ranking: RankingService) {}
+  constructor(
+    private readonly ranking: RankingService,
+    private readonly templates: RankingTemplateService,
+  ) {}
 
   @Get('projects')
   list(): RankingProjectSummary[] {
@@ -101,6 +108,42 @@ export class RankingController {
   @Post('projects/:id/export')
   exportHeadless(@Param('id') id: string): Promise<RankingRenderStatus> {
     return answerAsync(() => this.ranking.exportHeadless(id))
+  }
+
+  /** Gives a ranking a saved style's look and sounds (`{ styleId }`). */
+  @Post('projects/:id/apply-style')
+  applyStyle(@Param('id') id: string, @Body() body: { styleId?: unknown }): RankingProject {
+    return answer(() =>
+      this.ranking.update(id, applyRankingTemplate(this.ranking.get(id), this.templates.get(String(body?.styleId)))),
+    )
+  }
+
+  /** Saved ranking styles, newest first. */
+  @Get('styles')
+  styles(): RankingTemplate[] {
+    return this.templates.list()
+  }
+
+  @Post('styles')
+  createStyle(@Body() body: unknown): RankingTemplate {
+    return answer(() => this.templates.create(body))
+  }
+
+  @Get('styles/:id')
+  style(@Param('id') id: string): RankingTemplate {
+    return answer(() => this.templates.get(id))
+  }
+
+  /** Changes any part of a style (whole fields). */
+  @Put('styles/:id')
+  updateStyle(@Param('id') id: string, @Body() body: unknown): RankingTemplate {
+    return answer(() => this.templates.update(id, body))
+  }
+
+  @Delete('styles/:id')
+  @HttpCode(204)
+  deleteStyle(@Param('id') id: string): void {
+    answer(() => this.templates.delete(id))
   }
 
   @Get('renders/:renderId')

@@ -809,3 +809,16 @@ describe('user messages with attachments', () => {
     ])
   })
 })
+
+describe('a Ranking chat', () => {
+  it('follows the ranking its tools touch, counting each change so the preview reloads', () => {
+    const t = run([
+      { id: 1, rankingId: 'a', type: 'ranking' },
+      { id: 2, rankingId: 'a', type: 'ranking' },
+      { id: 3, rankingId: 'b', type: 'ranking' },
+    ])
+    expect(t.ranking).toEqual({ id: 'b', version: 3 })
+    expect(initialTranscript.ranking).toBeNull()
+  })
+})
+

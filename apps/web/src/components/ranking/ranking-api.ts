@@ -1,10 +1,13 @@
 'use client'
 
+import type { AgentSession } from '@shared/types/api/agent'
 import type {
   RankingProject,
   RankingProjectPatch,
   RankingProjectSummary,
   RankingRenderStatus,
+  RankingTemplate,
+  RankingTemplateInput,
 } from '@shared/types/api/ranking'
 import { useMemo } from 'react'
 
@@ -35,6 +38,23 @@ export function useRankingApi() {
         ).data,
       list: async () =>
         (await fetchApiDomain<RankingProjectSummary[]>('/api/ranking/projects', { method: 'GET' })).data,
+      deleteStyle: async (id: string) => {
+        await fetchApiDomain('/api/ranking/styles/{id}', { method: 'DELETE', pathParams: { id } })
+      },
+      /** A new Ranking chat on this ranking (its mode chosen); answers the chat's id. */
+      openChat: async (rankingId: string, title: string) =>
+        (await fetchApiDomain<AgentSession>('/api/agent/sessions', { data: { rankingId, title }, method: 'POST' })).data
+          .id,
+      styles: async () =>
+        (await fetchApiDomain<RankingTemplate[]>('/api/ranking/styles', { method: 'GET' })).data,
+      updateStyle: async (id: string, patch: Partial<RankingTemplateInput>) =>
+        (
+          await fetchApiDomain<RankingTemplate>('/api/ranking/styles/{id}', {
+            data: patch,
+            method: 'PUT',
+            pathParams: { id },
+          })
+        ).data,
       remove: async (id: string) => {
         await fetchApiDomain('/api/ranking/projects/{id}', { method: 'DELETE', pathParams: { id } })
       },

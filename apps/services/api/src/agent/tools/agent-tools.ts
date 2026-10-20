@@ -8,10 +8,16 @@ export type AgentToolName =
   | 'make_video'
   | 'ranking_add_clip'
   | 'ranking_add_sticker_image'
+  | 'ranking_analyze_reference'
+  | 'ranking_apply_style'
   | 'ranking_create'
   | 'ranking_export'
+  | 'ranking_find_moments'
   | 'ranking_get'
   | 'ranking_list'
+  | 'ranking_style_get'
+  | 'ranking_style_list'
+  | 'ranking_style_save'
   | 'ranking_update'
   | 'regenerate_clip'
   | 'render_video'
@@ -133,6 +139,76 @@ export const AGENT_TOOLS: Record<AgentToolName, DynamicToolSpec> = {
       type: 'object',
     },
     name: 'ranking_add_sticker_image',
+  },
+  ranking_analyze_reference: {
+    description:
+      "Learn a ranking short's pattern from a reference: a YouTube link the user pasted (downloaded for analysis only, never used in a video), or a video file in your working folder. Takes about a minute. Answers its shots, its sound effects (when each fires, what it is like, and the user's library sound it matches, or 'not in the library'), and frames to look at (title frame, contact sheet, a frame per shot and per sound). Look at the frames before describing the style.",
+    inputSchema: {
+      additionalProperties: false,
+      properties: {
+        path: { description: 'Or: a video in your working folder, e.g. attachments/ref.mp4.', type: 'string' },
+        url: { description: 'A YouTube link (youtube.com, youtu.be or a Shorts link). TikTok is not supported.', type: 'string' },
+      },
+      type: 'object',
+    },
+    name: 'ranking_analyze_reference',
+  },
+  ranking_apply_style: {
+    description:
+      "Give a ranking a saved style's look and sound: title colours (and its title, if the ranking still has the default one), overlay colours, reveal order, transition and the reveal/music sounds; a ranking without clips also takes its number of ranks. Then place the labels, trims, action sounds and stickers per clip yourself.",
+    inputSchema: {
+      additionalProperties: false,
+      properties: {
+        id: { description: 'The ranking id.', type: 'string' },
+        styleId: { description: 'The style id (ranking_style_list).', type: 'string' },
+      },
+      required: ['id', 'styleId'],
+      type: 'object',
+    },
+    name: 'ranking_apply_style',
+  },
+  ranking_find_moments: {
+    description:
+      "Find a clip's action moments: its strongest sound onsets (with what they sound like) and its shot changes, in seconds from the file's start. Give a video in your working folder (path), or a ranking and rank to read the clip already under it. Use it to trim to the action and to time the action sound.",
+    inputSchema: {
+      additionalProperties: false,
+      properties: {
+        id: { description: 'Or: the ranking id (with rank).', type: 'string' },
+        path: { description: 'A video in your working folder, e.g. attachments/cat.mp4.', type: 'string' },
+        rank: { description: 'With id: the rank whose clip to read.', minimum: 1, type: 'integer' },
+      },
+      type: 'object',
+    },
+    name: 'ranking_find_moments',
+  },
+  ranking_style_get: {
+    description: 'Read a saved ranking style in full, with the sounds it plans that are not in the library yet.',
+    inputSchema: {
+      additionalProperties: false,
+      properties: { id: { description: 'The style id.', type: 'string' } },
+      required: ['id'],
+      type: 'object',
+    },
+    name: 'ranking_style_get',
+  },
+  ranking_style_list: {
+    description: "The user's saved ranking styles (patterns learned from references), with their ids.",
+    inputSchema: { additionalProperties: false, properties: {}, type: 'object' },
+    name: 'ranking_style_list',
+  },
+  ranking_style_save: {
+    description:
+      'Save a ranking style (new), or change one (with id: whole fields to replace). style is a JSON object; the reelmakeeasy-ranking skill lists its fields. Sounds are { description, soundId }: soundId from the library, or null for one the user still has to download.',
+    inputSchema: {
+      additionalProperties: false,
+      properties: {
+        id: { description: 'To change a saved style: its id. Leave out to save a new one.', type: 'string' },
+        style: { description: 'The style as a JSON object (see the skill).', type: 'string' },
+      },
+      required: ['style'],
+      type: 'object',
+    },
+    name: 'ranking_style_save',
   },
   ranking_create: {
     description: 'Start a new ranking short (5 empty ranks, a default title). Answers the project to fill in.',
@@ -284,7 +360,7 @@ export const AGENT_TOOLS: Record<AgentToolName, DynamicToolSpec> = {
   },
 }
 
-/** The Ranking Builder, for ranking shorts (Free chat). */
+/** The Ranking Builder, for ranking shorts (a Ranking chat's only tools; Free chat has them too). */
 const RANKING_TOOLS: AgentToolName[] = [
   'ranking_list',
   'ranking_create',
@@ -293,6 +369,12 @@ const RANKING_TOOLS: AgentToolName[] = [
   'ranking_add_clip',
   'ranking_add_sticker_image',
   'ranking_export',
+  'ranking_analyze_reference',
+  'ranking_find_moments',
+  'ranking_style_list',
+  'ranking_style_get',
+  'ranking_style_save',
+  'ranking_apply_style',
 ]
 
 const EDIT_TOOLS: AgentToolName[] = [
@@ -314,6 +396,7 @@ export function toolsForSession(
       (n) => AGENT_TOOLS[n],
     )
   if (session.mode === 'autonomous') return session.editing ? withImage(EDIT_TOOLS) : []
+  if (session.mode === 'ranking') return RANKING_TOOLS.map((n) => AGENT_TOOLS[n])
   if (session.mode !== 'free') return []
   return withImage(['make_video', 'make_beat_loop', ...EDIT_TOOLS, ...RANKING_TOOLS])
 }
@@ -335,6 +418,11 @@ export function toolSummary(tool: string, args: unknown): string {
   if (tool === 'ranking_get') return 'Reading the ranking'
   if (tool === 'ranking_update') return 'Changing the ranking'
   if (tool === 'ranking_add_sticker_image') return 'Adding a picture sticker'
+  if (tool === 'ranking_analyze_reference') return 'Watching the reference video'
+  if (tool === 'ranking_find_moments') return 'Finding the action in a clip'
+  if (tool === 'ranking_style_save') return 'Saving the ranking style'
+  if (tool === 'ranking_apply_style') return 'Applying the ranking style'
+  if (tool === 'ranking_style_list' || tool === 'ranking_style_get') return 'Reading ranking styles'
   if (tool === 'ranking_add_clip') return `Adding a clip to rank ${String(a.rank ?? '')}`.trim()
   if (tool === 'ranking_export') return 'Exporting the ranking short'
   if (tool === 'make_video')

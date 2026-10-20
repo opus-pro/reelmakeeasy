@@ -90,9 +90,28 @@ export const BRIEF_TOOL_NAMES: Record<AgentHarnessName, { ask: string; image: st
   codex: { ask: 'request_user_input', image: 'your image generation tool' },
 }
 
+/** Developer instructions for a Ranking chat: the skill carries the format and the method. */
+export const RANKING_BRIEF = [
+  'You build ranking shorts with the user in ReelMakeEasy\'s Ranking Builder ("Ranking the funniest ...": a title band, ranks down the left, one clip per rank, a meme sound on every action). Before anything else, read the `reelmakeeasy-ranking` skill and follow it. Keep replies short and use markdown. Write in English. When a decision has clear options, offer them with {ASK} (2-4 options, the best first with " (Recommended)").',
+  'The user may paste a YouTube link to copy its style: analyse it with ranking_analyze_reference, look at the frames it gives, tell the user the pattern, and save it with ranking_style_save. A reference is only studied: never use its footage or its sounds in a video. Sound effects come only from the user\'s sound library; when one the style needs is missing, say what to look for and that they add it in Ranking Builder > Sound library.',
+  "Build only with the ranking_* tools. Use the shell only to look at files in your working folder (ffprobe, or reading a frame image); don't browse and don't install anything. The chat shows the ranking's live preview next to your messages.",
+  SHOW_THE_USER_RULE,
+].join('\n')
+
+/** The hidden first turn of a Ranking chat; `rankingId` when it was opened from the studio. */
+export function rankingKickoff(harness: AgentHarnessName, rankingId?: string): string {
+  return fillToolNames(
+    rankingId
+      ? `[ReelMakeEasy] The user opened ranking ${rankingId} from the studio to work on it here. Read the skill, then the ranking with ranking_get, and in one or two short sentences say what it has so far and ask what to do next.`
+      : "[ReelMakeEasy] The user chose Ranking. Read the skill. Then in two short sentences: ask what the ranking is about and where the clips are (they can attach them), and say they can paste a YouTube Short whose style they'd like to copy.",
+    harness,
+  )
+}
+
 const BRIEF_BY_MODE: Record<AgentMode, string> = {
   autonomous: AUTONOMOUS_BRIEF,
   free: FREE_CHAT_BRIEF,
+  ranking: RANKING_BRIEF,
 }
 
 /** Each generation provider's name, as Setup shows it. */

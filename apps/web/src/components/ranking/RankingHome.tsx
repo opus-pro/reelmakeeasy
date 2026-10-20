@@ -8,6 +8,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { useRankingApi } from './ranking-api'
 import { RankingStudio } from './RankingStudio'
 import { SoundLibraryPanel } from './SoundLibraryPanel'
+import { StylesPanel } from './StylesPanel'
 import { useSoundLibrary } from './useSoundLibrary'
 
 const errorText = (error: unknown) => (error instanceof Error ? error.message : String(error))
@@ -18,7 +19,8 @@ export function RankingHome() {
   const pathname = usePathname()
   const params = useSearchParams()
   const id = params.get('id')
-  const tab = params.get('tab') === 'sounds' ? 'sounds' : 'rankings'
+  const asked = params.get('tab')
+  const tab = asked === 'sounds' || asked === 'styles' ? asked : 'rankings'
   const open = useCallback(
     (next: null | string) => router.push(next ? `${pathname}?id=${encodeURIComponent(next)}` : pathname),
     [pathname, router],
@@ -31,6 +33,7 @@ export function RankingHome() {
         {(
           [
             ['rankings', 'Rankings'],
+            ['styles', 'Styles'],
             ['sounds', 'Sound library'],
           ] as const
         ).map(([key, label]) => (
@@ -41,7 +44,7 @@ export function RankingHome() {
               tab === key ? 'bg-white/15 text-primary' : 'text-secondary hover:text-primary',
             )}
             key={key}
-            onClick={() => router.push(key === 'sounds' ? `${pathname}?tab=sounds` : pathname)}
+            onClick={() => router.push(key === 'rankings' ? pathname : `${pathname}?tab=${key}`)}
             role="tab"
             type="button"
           >
@@ -49,7 +52,7 @@ export function RankingHome() {
           </button>
         ))}
       </div>
-      {tab === 'sounds' ? <SoundLibraryTab /> : <RankingList onOpen={open} />}
+      {tab === 'sounds' ? <SoundLibraryTab /> : tab === 'styles' ? <StylesPanel /> : <RankingList onOpen={open} />}
     </div>
   )
 }

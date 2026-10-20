@@ -29,6 +29,8 @@ import {
 import { AgentEditService } from './edit/agent-edit.service'
 import { RankingModule } from '../ranking/ranking.module'
 import { RankingAgentTools } from '../ranking/ranking-agent-tools'
+import { RankingTemplateService } from '../ranking/ranking-template.service'
+import { LibraryPrints } from '../ranking/reference/library-prints'
 import { RankingService } from '../ranking/ranking.service'
 import { SoundLibraryModule } from '../sound-library/sound-library.module'
 import { SoundLibraryService } from '../sound-library/sound-library.service'
@@ -44,7 +46,7 @@ import { ChatModelService } from './chat-model.service'
     // The models agent chats can run on (asked of each harness, kept for a while).
     { provide: ChatModelService, useFactory: () => new ChatModelService() },
     {
-      inject: [ModuleRef, ChatModelService, RankingService, SoundLibraryService],
+      inject: [ModuleRef, ChatModelService, RankingService, SoundLibraryService, RankingTemplateService],
       provide: AgentSessionService,
       // The autonomous flow needs the session service and the session service starts the flow:
       // resolve the flow lazily, when a session first picks that mode.
@@ -53,14 +55,18 @@ import { ChatModelService } from './chat-model.service'
         chatModels: ChatModelService,
         ranking: RankingService,
         sounds: SoundLibraryService,
+        templates: RankingTemplateService,
       ) => {
         const flow = () => refs.get(AutonomousService, { strict: true })
         const edit = () => refs.get(AgentEditService, { strict: true })
         // The Ranking Builder's tools; the session service gives the chat's working folder.
         let session: AgentSessionService | undefined
         const rankingTools = new RankingAgentTools({
+          onRanking: (id, rankingId) => session?.followRanking(id, rankingId),
+          prints: new LibraryPrints(sounds),
           ranking,
           sounds,
+          templates,
           workingDir: (id) => (session as AgentSessionService).workingDir(id),
         })
         session = new AgentSessionService({

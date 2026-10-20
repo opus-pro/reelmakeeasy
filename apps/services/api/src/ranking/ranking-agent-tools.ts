@@ -2,14 +2,24 @@ import fs from 'node:fs'
 import path from 'node:path'
 
 import { rankingAdvice, rankingProblems } from '@reelmakeeasy/common/ranking/ranking-project'
+import { applyRankingTemplate, missingTemplateSounds } from '@reelmakeeasy/common/ranking/ranking-template'
 import { storeUri } from '@reelmakeeasy/common/storage/address'
-import { fileStore } from '@reelmakeeasy/common/storage/file-store'
+import { filePath, fileStore } from '@reelmakeeasy/common/storage/file-store'
 import { ensureError } from '@reelmakeeasy/common/utils/error-handler'
-import type { RankingProject } from '@shared/types/api/ranking'
+import type { RankingProject, RankingTemplate } from '@shared/types/api/ranking'
 
 import type { SoundLibraryService } from '../sound-library/sound-library.service'
 
 import type { RankingService } from './ranking.service'
+import type { RankingTemplateService } from './ranking-template.service'
+import type { LibraryPrints } from './reference/library-prints'
+import {
+  analyzeVideo,
+  clipMoments,
+  downloadYoutube,
+  type ReferenceAnalysis,
+  youtubeUrl,
+} from './reference/reference-video'
 
 /** What a tool call answers (the agent's `ToolCallResult`). */
 type ToolResult = { success: boolean; text: string }
@@ -43,6 +53,38 @@ function describe(project: RankingProject): string {
   return lines.join('\n')
 }
 
+const clock = (sec: number) => `${Math.floor(sec / 60)}:${(sec % 60).toFixed(2).padStart(5, '0')}`
+
+/** A reference's analysis as the agent reads it: what to look at, its shots and its sounds. */
+function describeAnalysis(a: ReferenceAnalysis, dir: string, librarySize: number): string {
+  const sounds = a.sounds.map((s) => {
+    const where = s.inShot ? ` (shot ${s.inShot.index}, ${s.inShot.secIntoShot.toFixed(2)} s in)` : ''
+    const what = s.match ? `= library "${s.match.name}" (soundId ${s.match.id}, match ${s.match.score})` : 'not in the library'
+    return `- ${clock(s.atSec)}${where} ${s.description}, ~${s.durationSec} s, strength ${s.strength}: ${what}. Frame: ${dir}/${s.frame}`
+  })
+  const shots = a.shots.map((s, i) => `- shot ${i + 1}: ${s.startSec}-${s.endSec} s (${(s.endSec - s.startSec).toFixed(1)} s). Frame: ${dir}/${s.frame}`)
+  return [
+    `Analysed ${a.source.title ? `"${a.source.title}"` : a.source.file} (${a.durationSec} s). Files in ${dir}/ (analysis.json has all of it).`,
+    `Look at ${dir}/${a.files.titleFrame} (full size: the title band, its words and colours, the rank column, labels, stickers) and ${dir}/${a.files.contactSheet} (16 frames across it), then the frames below where you need detail.`,
+    `Shots: ${a.shots.length}, median ${a.medianShotSec ?? '?'} s. A rank is often one shot, sometimes several: decide from the frames.`,
+    ...shots,
+    `Sound effects (onsets, strongest ${a.sounds.length}; ${librarySize} library sounds compared):`,
+    ...(sounds.length ? sounds : ['- none found']),
+    'Sounds marked "not in the library" are ones the user would download themselves: describe them plainly. Never cut sounds out of the reference.',
+    'Next: tell the user the pattern in a few lines (ranks, seconds per rank, title look, labels, reveal, stickers, sounds and when they fire), then save it with ranking_style_save.',
+  ].join('\n')
+}
+
+/** A ranking style as the agent reads it. */
+function describeTemplate(t: RankingTemplate): string {
+  const missing = missingTemplateSounds(t).map((s) => s.description)
+  return [
+    JSON.stringify(t),
+    missing.length ? `Not in the library yet (the user downloads these): ${missing.join('; ')}.` : 'Every planned sound is in the library.',
+    `Studio: /ranking?tab=styles`,
+  ].join('\n')
+}
+
 /**
  * The Ranking Builder as agent tools (`ranking_*`): the same service the studio uses, so a chat
  * and the studio edit the same project. Clips come from files in the chat's working folder (the
@@ -51,8 +93,13 @@ function describe(project: RankingProject): string {
 export class RankingAgentTools {
   constructor(
     private readonly deps: {
+      /** Library sound fingerprints, for naming a reference's sounds. */
+      prints?: Pick<LibraryPrints, 'all'>
+      /** A tool read or changed this ranking: the chat now follows it (its preview panel). */
+      onRanking?: (sessionId: string, rankingId: string) => void
       ranking: RankingService
       sounds: Pick<SoundLibraryService, 'list'>
+      templates?: RankingTemplateService
       /** The chat's working folder (where its attachments are). */
       workingDir: (sessionId: string) => string
     },
@@ -61,20 +108,37 @@ export class RankingAgentTools {
   async call(sessionId: string, tool: string, args: unknown): Promise<ToolResult> {
     const a = isRecord(args) ? args : {}
     try {
-      if (tool === 'ranking_list') return this.list()
-      if (tool === 'ranking_create')
-        return { success: true, text: describe(this.deps.ranking.create(String(a['name'] ?? ''))) }
-      if (tool === 'ranking_get') return { success: true, text: describe(this.deps.ranking.get(String(a['id']))) }
-      if (tool === 'ranking_update') return this.update(String(a['id']), a['patch'])
-      if (tool === 'ranking_add_clip')
-        return await this.addClip(sessionId, String(a['id']), Number(a['rank']), String(a['path'] ?? ''))
-      if (tool === 'ranking_add_sticker_image')
-        return await this.addStickerImage(sessionId, String(a['id']), String(a['path'] ?? ''))
-      if (tool === 'ranking_export') return await this.exportNow(String(a['id']))
-      return { success: false, text: `Unknown tool ${tool}.` }
+      const result = await this.dispatch(sessionId, tool, a)
+      // A tool that touched a ranking (its id is in the args, or the project it answered):
+      // the chat follows that one.
+      const id = typeof a['id'] === 'string' && tool !== 'ranking_style_get' ? a['id'] : /"id":"([\da-f-]{36})"/.exec(result.text)?.[1]
+      if (result.success && id && tool !== 'ranking_list' && !tool.startsWith('ranking_style_'))
+        this.deps.onRanking?.(sessionId, id)
+      return result
     } catch (error) {
       return { success: false, text: ensureError(error).message }
     }
+  }
+
+  private async dispatch(sessionId: string, tool: string, a: Record<string, unknown>): Promise<ToolResult> {
+    if (tool === 'ranking_list') return this.list()
+    if (tool === 'ranking_create')
+      return { success: true, text: describe(this.deps.ranking.create(String(a['name'] ?? ''))) }
+    if (tool === 'ranking_get') return { success: true, text: describe(this.deps.ranking.get(String(a['id']))) }
+    if (tool === 'ranking_update') return this.update(String(a['id']), a['patch'])
+    if (tool === 'ranking_add_clip')
+      return await this.addClip(sessionId, String(a['id']), Number(a['rank']), String(a['path'] ?? ''))
+    if (tool === 'ranking_add_sticker_image')
+      return await this.addStickerImage(sessionId, String(a['id']), String(a['path'] ?? ''))
+    if (tool === 'ranking_export') return await this.exportNow(String(a['id']))
+    if (tool === 'ranking_analyze_reference')
+      return await this.analyzeReference(sessionId, typeof a['url'] === 'string' ? a['url'] : '', typeof a['path'] === 'string' ? a['path'] : '')
+    if (tool === 'ranking_find_moments') return await this.findMoments(sessionId, a)
+    if (tool === 'ranking_style_list') return this.styleList()
+    if (tool === 'ranking_style_get') return { success: true, text: describeTemplate(this.templates().get(String(a['id']))) }
+    if (tool === 'ranking_style_save') return this.styleSave(typeof a['id'] === 'string' ? a['id'] : '', a['style'])
+    if (tool === 'ranking_apply_style') return this.applyStyle(String(a['id']), String(a['styleId']))
+    return { success: false, text: `Unknown tool ${tool}.` }
   }
 
   private list(): ToolResult {
@@ -154,6 +218,101 @@ export class RankingAgentTools {
     const upload = storeUri(`tmp/agent-ranking/${Date.now()}-${name.replace(/[^\w.-]/g, '_')}`)
     await fileStore.upload(real, upload)
     return upload
+  }
+
+  private templates(): RankingTemplateService {
+    if (!this.deps.templates) throw new Error('Ranking styles are not available.')
+    return this.deps.templates
+  }
+
+  /**
+   * Reads a reference Short (a YouTube link, downloaded with yt-dlp, or a video in the working
+   * folder) into `references/<name>/`: frames to look at, its shots and its sound effects matched
+   * against the library.
+   */
+  private async analyzeReference(sessionId: string, url: string, file: string): Promise<ToolResult> {
+    if (!url.trim() && !file.trim()) return { success: false, text: 'Give the YouTube link (url) or a video file (path).' }
+    const root = fs.realpathSync(this.deps.workingDir(sessionId))
+    const slug = `${new Date().toISOString().slice(0, 19).replace(/\D/g, '')}`
+    const dir = path.join(root, 'references', slug)
+    let video: string
+    let source: { title: null | string; url: null | string }
+    if (url.trim()) {
+      const link = youtubeUrl(url)
+      const downloaded = await downloadYoutube(link, dir)
+      video = downloaded.file
+      source = { title: downloaded.title, url: link }
+    } else {
+      const real = this.workingFile(sessionId, file)
+      if (typeof real !== 'string') return real
+      video = real
+      source = { title: path.basename(real), url: null }
+    }
+    const library = (await this.deps.prints?.all()) ?? []
+    const analysis = await analyzeVideo(video, dir, library, source)
+    return { success: true, text: describeAnalysis(analysis, path.relative(root, dir), library.length) }
+  }
+
+  /** A clip's action moments: a file in the working folder, or the clip under a rank. */
+  private async findMoments(sessionId: string, a: Record<string, unknown>): Promise<ToolResult> {
+    let file: string
+    let trim = ''
+    if (typeof a['path'] === 'string' && a['path']) {
+      const real = this.workingFile(sessionId, a['path'])
+      if (typeof real !== 'string') return real
+      file = real
+    } else {
+      const project = this.deps.ranking.get(String(a['id']))
+      const item = project.items.find((i) => i.rank === Number(a['rank']))
+      if (!item?.clip) return { success: false, text: `Rank ${String(a['rank'])} has no clip yet.` }
+      file = filePath(item.clip.url)
+      trim = ` It plays ${item.clip.trimStartSec}-${item.clip.trimEndSec} s now; a cue's atSec counts from the trim start.`
+    }
+    const m = await clipMoments(file)
+    const sounds = m.sounds.map((s) => `${s.atSec.toFixed(2)} s ${s.description} (strength ${s.strength})`)
+    return {
+      success: true,
+      text: [
+        `${path.basename(file)}: ${m.durationSec} s, times from the file's start.${trim}`,
+        `Sound moments (strongest are usually the action): ${sounds.join('; ') || 'none (quiet clip)'}`,
+        `Shot changes: ${m.cuts.map((c) => `${c.toFixed(2)} s`).join(', ') || 'none'}`,
+        'Trim to start about 1-1.5 s before the action and end about 1 s after it; put the action sound at its moment.',
+      ].join('\n'),
+    }
+  }
+
+  private styleList(): ToolResult {
+    const rows = this.templates()
+      .list()
+      .map((t) => `- ${t.name} (${t.rankCount} ranks, ~${t.perRankSec} s each; ${missingTemplateSounds(t).length} sounds to download) id=${t.id}`)
+    return { success: true, text: `Ranking styles:\n${rows.join('\n') || '(none yet: analyse a reference and save its style)'}` }
+  }
+
+  private styleSave(id: string, style: unknown): ToolResult {
+    let parsed: unknown = style
+    if (typeof style === 'string') {
+      try {
+        parsed = JSON.parse(style)
+      } catch {
+        return { success: false, text: 'style must be JSON (an object with the style\'s fields).' }
+      }
+    }
+    const saved = id ? this.templates().update(id, parsed) : this.templates().create(parsed)
+    return { success: true, text: `Saved.\n${describeTemplate(saved)}` }
+  }
+
+  private applyStyle(id: string, styleId: string): ToolResult {
+    const template = this.templates().get(styleId)
+    const project = this.deps.ranking.update(id, applyRankingTemplate(this.deps.ranking.get(id), template))
+    const action = template.sounds.onAction.filter((s) => s.soundId)
+    return {
+      success: true,
+      text: [
+        `Applied "${template.name}": title colours, overlay colours, reveal (${template.reveal}), transition and the reveal/music sounds.`,
+        `Still yours to do per clip: labels (${template.labels.tone || 'short'}), trims to about ${template.perRankSec} s, and a cue on each action with ${action.map((s) => `${s.description} (soundId ${s.soundId})`).join(' or ') || 'a fitting library sound'}${template.stickers.habit ? `; stickers: ${template.stickers.habit}` : ''}.`,
+        describe(project),
+      ].join('\n'),
+    }
   }
 
   /** Exports without the studio, waits for the render, answers where the video is. */

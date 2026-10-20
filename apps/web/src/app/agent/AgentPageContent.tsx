@@ -13,6 +13,7 @@ import { AgentChat } from '@/components/agent/AgentChat'
 import { useAgentPicker } from '@/components/agent/AgentPickerDialog'
 import { AgentSessionSidebar } from '@/components/agent/AgentSessionSidebar'
 import { ProjectProgressProvider } from '@/components/agent/ProjectProgressProvider'
+import { RankingChatPanel } from '@/components/agent/ranking/RankingChatPanel'
 import { useSidebarProjectActions } from '@/components/agent/SidebarProjectActions'
 import { START_EASY_PARAM, startsEasy, useStartEasyOnce } from '@/components/agent/start-easy'
 import { StoryboardPanel } from '@/components/agent/StoryboardPanel'
@@ -242,7 +243,14 @@ function AgentWorkspace({
           />
         </div>
         <div className="min-h-0 min-w-0 flex-1">
-          <StoryboardPanel mode={mode} sessionId={sessionId} transcript={agent.transcript} />
+          {mode === 'ranking' ? (
+            <RankingChatPanel
+              rankingId={agent.transcript.ranking?.id ?? agent.session?.rankingId ?? null}
+              version={agent.transcript.ranking?.version ?? 0}
+            />
+          ) : (
+            <StoryboardPanel mode={mode} sessionId={sessionId} transcript={agent.transcript} />
+          )}
         </div>
       </div>
     </ProjectProgressProvider>

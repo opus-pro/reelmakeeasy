@@ -57,4 +57,52 @@ describe('RankingAgentTools', () => {
     expect(ranking.addStickerImage).toHaveBeenCalledWith('p', expect.stringMatching(/^store:\/\/tmp\/agent-ranking\//), 'logo.png')
     expect((await t.call('s', 'ranking_add_sticker_image', { id: 'p', path: '/etc/hosts' })).success).toBe(false)
   })
+
+  it('saves a style from JSON, applies it, and follows the ranking it touched', async () => {
+    const { project, ranking, work } = tools()
+    const followed: string[] = []
+    const style = { id: 's1', name: 'Aura', sounds: { onAction: [{ description: 'boom', soundId: 'b' }] } }
+    const templates = {
+      create: jest.fn(() => ({ ...style, labels: { tone: '' }, stickers: { habit: '' } })),
+      get: jest.fn(() => ({
+        ...style,
+        labels: { examples: [], tone: 'deadpan' },
+        perRankSec: 3.5,
+        rankCount: 5,
+        reveal: 'shuffle',
+        sounds: { music: null, musicVolume: 0.3, onAction: [{ description: 'boom', soundId: 'b' }], reveal: null, transition: null },
+        stickers: { examples: [], habit: '' },
+        style: project.style,
+        title: project.title,
+        transition: { background: '#000000', durationSec: 1, enabled: false, text: '', textColor: '#ffffff' },
+      })),
+      list: jest.fn(() => []),
+      update: jest.fn(),
+    }
+    const t = new RankingAgentTools({
+      onRanking: (_s, id) => followed.push(id),
+      ranking: ranking as never,
+      sounds: { list: () => [] },
+      templates: templates as never,
+      workingDir: () => work,
+    })
+    expect((await t.call('s', 'ranking_style_save', { style: '{"name":"Aura"}' })).text).toMatch(/^Saved/)
+    expect(templates.create).toHaveBeenCalledWith({ name: 'Aura' })
+    expect((await t.call('s', 'ranking_style_save', { style: '{oops' })).success).toBe(false)
+    expect(followed).toEqual([])
+    const applied = await t.call('s', 'ranking_apply_style', { id: project.id, styleId: 's1' })
+    expect(applied.text).toMatch(/Applied "Aura"/)
+    expect(applied.text).toMatch(/boom \(soundId b\)/)
+    expect(ranking.update).toHaveBeenCalledWith(project.id, expect.objectContaining({ reveal: expect.objectContaining({ mode: 'shuffle' }) }))
+    expect(followed).toEqual([project.id])
+    await t.call('s', 'ranking_create', { name: 'x' })
+    expect(followed).toEqual([project.id, project.id])
+  })
+
+  it('refuses a TikTok link and a reference outside the working folder', async () => {
+    const { t } = tools()
+    expect((await t.call('s', 'ranking_analyze_reference', { url: 'https://www.tiktok.com/@a/video/1' })).text).toMatch(/TikTok/)
+    expect((await t.call('s', 'ranking_analyze_reference', { path: '/etc/hosts' })).success).toBe(false)
+    expect((await t.call('s', 'ranking_analyze_reference', {})).text).toMatch(/YouTube link/)
+  })
 })

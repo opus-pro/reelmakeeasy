@@ -82,7 +82,7 @@ import { LoopbackOnlyGuard } from './loopback-only.guard'
 
 /** A Codex item id, or a stringified JSON-RPC request id. */
 const QUESTION_ID = /^[\w.:-]{1,200}$/
-const AGENT_MODES: AgentMode[] = ['autonomous', 'free']
+const AGENT_MODES: AgentMode[] = ['autonomous', 'free', 'ranking']
 /** Guided mode was removed. A page still offering it (open since before the update) starts Free
  *  chat instead of failing. */
 const LEGACY_GUIDED_MODE = 'guided'
@@ -257,20 +257,37 @@ export class AgentController {
     return { ok: true }
   }
 
-  /** A new chat, on the agent picked in the Agent dialog when `harness` is given. */
+  /**
+   * A new chat, on the agent picked in the Agent dialog when `harness` is given. With
+   * `rankingId` (the studio's "Open in chat"), a Ranking chat on that ranking, its mode chosen.
+   */
   @Post('sessions')
-  createSession(@Body() body: { harness?: unknown; title?: string }): Promise<AgentSession> {
+  createSession(
+    @Body() body: { harness?: unknown; rankingId?: unknown; title?: string },
+  ): Promise<AgentSession> {
+    // Checked before anything starts, so a bad request throws here (400) rather than later.
     const harness = body?.harness
     if (harness !== undefined && !AGENT_HARNESSES.includes(harness as AgentHarnessName))
       throw new BadRequestException('harness must be "codex" or "claude"')
+    const rankingId = body?.rankingId
+    if (rankingId !== undefined && (typeof rankingId !== 'string' || !/^[\da-f-]{36}$/.test(rankingId)))
+      throw new BadRequestException('rankingId must be a ranking id')
     const opts =
       harness === undefined
         ? { title: body?.title }
         : { harness: harness as AgentHarnessName, title: body?.title }
-    return this.sessions.createSession(opts).then((session) => {
+    return this.sessions.createSession(rankingId ? { ...opts, rankingId } : opts).then(async (session) => {
       // Lists the harness's models now, so the chat's first message already runs on the right one.
       void this.chatModels.catalog(session.harness ?? 'codex')
-      return session
+      if (!rankingId) return session
+      try {
+        await this.sessions.chooseMode(session.id, 'ranking')
+      } catch (error) {
+        // Not ready (not signed in): the chat opens on its welcome card, which says why.
+        if (error instanceof HarnessNotReadyError) return session
+        throw error
+      }
+      return this.sessions.getSession(session.id)
     })
   }
 
