@@ -53,7 +53,7 @@ export function RankingChatPanel({ rankingId, version }: { rankingId: null | str
         <p className="text-sm font-semibold text-primary">Your ranking shows here</p>
         <ul className="flex max-w-sm flex-col gap-2 text-left text-sm text-secondary">
           <li>🔗 Paste a YouTube Short to copy its style: timing, title look, labels and sounds.</li>
-          <li>🎬 Attach your clips (the paperclip), one per rank.</li>
+          <li>🎬 Attach your clips (the paperclip), one per rank, or ask for AI-made clips.</li>
           <li>🔊 Sounds come from your sound library; the agent says which ones to add.</li>
         </ul>
         <div className="flex gap-3 text-xs">
@@ -81,7 +81,12 @@ export function RankingChatPanel({ rankingId, version }: { rankingId: null | str
       {error && <p className="text-sm text-amber-400">{error}</p>}
       {project && (
         <div className="mx-auto w-full max-w-[320px]">
-          <RankingPreview focusRank={null} fontsReady={fontsReady} project={project} sounds={library.sounds ?? []} />
+          <RankingPreview
+            focusRank={project.items.find((item) => item.clip)?.rank ?? null}
+            fontsReady={fontsReady}
+            project={project}
+            sounds={library.sounds ?? []}
+          />
         </div>
       )}
       {videoUrl && (
