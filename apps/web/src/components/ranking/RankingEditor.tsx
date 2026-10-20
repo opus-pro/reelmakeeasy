@@ -458,24 +458,92 @@ function RevealPanel({
           </button>
         )}
       </div>
-      <div className="flex flex-wrap items-center gap-1">
-        {reveal.order.map((rank, i) => (
-          <div className="flex items-center gap-0.5 rounded-md bg-white/10 px-1.5 py-0.5 text-xs text-primary" key={rank}>
-            {i > 0 && (
-              <button aria-label={`Reveal #${rank} earlier`} className="text-secondary hover:text-primary" onClick={() => moveIn(i, -1)} type="button">
-                ‹
-              </button>
-            )}
-            <span className="font-semibold">#{rank}</span>
-            {i < reveal.order.length - 1 && (
-              <button aria-label={`Reveal #${rank} later`} className="text-secondary hover:text-primary" onClick={() => moveIn(i, 1)} type="button">
-                ›
-              </button>
-            )}
-          </div>
-        ))}
-      </div>
+      <OrderChips
+        onMove={(from, to) => onChange({ mode: 'custom', order: moveItem(reveal.order, from, to) })}
+        onStep={moveIn}
+        order={reveal.order}
+      />
+      <p className="text-xs text-secondary">Drag the ranks to change the order they play in.</p>
     </section>
+  )
+}
+
+/** `list` with the item at `from` moved to index `to` (as counted before the move). */
+export function moveItem<T>(list: readonly T[], from: number, to: number): T[] {
+  const next = [...list]
+  const [item] = next.splice(from, 1)
+  next.splice(to > from ? to - 1 : to, 0, item as T)
+  return next
+}
+
+/**
+ * The reveal order as chips: drag one onto another to put it there (a bar shows where it lands),
+ * or use its arrows (keyboard). Dropping on a chip's left half puts it before, right half after.
+ */
+function OrderChips({
+  onMove,
+  onStep,
+  order,
+}: {
+  onMove: (from: number, to: number) => void
+  onStep: (i: number, by: number) => void
+  order: number[]
+}) {
+  const [dragging, setDragging] = useState<null | number>(null)
+  const [target, setTarget] = useState<null | number>(null)
+  const end = () => {
+    setDragging(null)
+    setTarget(null)
+  }
+  return (
+    <div className="flex flex-wrap items-center gap-1" onDragLeave={(e) => e.currentTarget === e.target && setTarget(null)}>
+      {order.map((rank, i) => (
+        <div
+          className={cn(
+            'relative flex cursor-grab items-center gap-0.5 rounded-md bg-white/10 px-1.5 py-0.5 text-xs text-primary select-none active:cursor-grabbing',
+            dragging === i && 'opacity-40',
+          )}
+          draggable
+          key={rank}
+          onDragEnd={end}
+          onDragOver={(e) => {
+            if (dragging === null) return
+            e.preventDefault()
+            e.dataTransfer.dropEffect = 'move'
+            const box = e.currentTarget.getBoundingClientRect()
+            setTarget(e.clientX < box.left + box.width / 2 ? i : i + 1)
+          }}
+          onDragStart={(e) => {
+            e.dataTransfer.effectAllowed = 'move'
+            e.dataTransfer.setData('text/plain', String(rank))
+            setDragging(i)
+          }}
+          onDrop={(e) => {
+            e.preventDefault()
+            if (dragging !== null && target !== null && target !== dragging && target !== dragging + 1)
+              onMove(dragging, target)
+            end()
+          }}
+          title="Drag to reorder"
+        >
+          {target === i && dragging !== null && <span className="absolute -left-1 inset-y-0 w-0.5 rounded bg-white" />}
+          {target === i + 1 && dragging !== null && i === order.length - 1 && (
+            <span className="absolute -right-1 inset-y-0 w-0.5 rounded bg-white" />
+          )}
+          {i > 0 && (
+            <button aria-label={`Reveal #${rank} earlier`} className="text-secondary hover:text-primary" onClick={() => onStep(i, -1)} type="button">
+              ‹
+            </button>
+          )}
+          <span className="font-semibold">#{rank}</span>
+          {i < order.length - 1 && (
+            <button aria-label={`Reveal #${rank} later`} className="text-secondary hover:text-primary" onClick={() => onStep(i, 1)} type="button">
+              ›
+            </button>
+          )}
+        </div>
+      ))}
+    </div>
   )
 }
 
