@@ -1,11 +1,14 @@
 import type { RankingProject } from '@shared/types/api/ranking'
 
 import {
+  DEFAULT_RANKING_TRANSITION,
   isPermutation,
   newRankingProject,
   rankingProblems,
   rankingSegments,
+  rankingTimeline,
   revealOrder,
+  transitionText,
 } from './ranking-project'
 
 const clip = (dur: number, start = 0, end = dur) => ({
@@ -64,5 +67,30 @@ describe('rankingProblems', () => {
       'Write a label for rank 1, 2, 3, 4, 5.',
       'Write a title.',
     ])
+  })
+})
+
+describe('rankingTimeline', () => {
+  it('puts a transition slide between ranks, never before the first', () => {
+    const p = newRankingProject('p', 'now')
+    p.items = p.items.slice(0, 3).map((item) => ({
+      ...item,
+      clip: { durationSec: 5, name: 'c', trimEndSec: 2, trimStartSec: 0, url: 'store://ranking/p/c.mp4' },
+    }))
+    p.reveal = { mode: 'countdown', order: [3, 2, 1] }
+    p.transition = { ...p.transition!, durationSec: 1, enabled: true }
+    expect(rankingTimeline(p).map((t) => [t.kind, t.startSec, t.durSec, t.kind === 'transition' ? t.nextRank : t.segment.item.rank])).toEqual([
+      ['clip', 0, 2, 3],
+      ['transition', 2, 1, 2],
+      ['clip', 3, 2, 2],
+      ['transition', 5, 1, 1],
+      ['clip', 6, 2, 1],
+    ])
+    p.transition = { ...p.transition, enabled: false }
+    expect(rankingTimeline(p).every((t) => t.kind === 'clip')).toBe(true)
+  })
+
+  it('fills {rank} in the slide text', () => {
+    expect(transitionText({ ...DEFAULT_RANKING_TRANSITION, text: 'Next: #{rank} ' }, 4)).toBe('Next: #4')
   })
 })

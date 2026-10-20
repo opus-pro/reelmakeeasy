@@ -6,6 +6,9 @@ import {
   RANKING_MIN_ITEMS,
   RANKING_TITLE_LINES_MAX,
   RANKING_TITLE_WORDS_MAX,
+  RANKING_TRANSITION_MAX_SEC,
+  RANKING_TRANSITION_MIN_SEC,
+  RANKING_TRANSITION_TEXT_MAX,
   revealOrder,
 } from '@reelmakeeasy/common/ranking/ranking-project'
 import { toSavedAddress } from '@reelmakeeasy/common/storage/address'
@@ -14,8 +17,10 @@ import type {
   RankingItem,
   RankingProject,
   RankingRevealMode,
+  RankingSounds,
   RankingStyle,
   RankingTitle,
+  RankingTransition,
 } from '@shared/types/api/ranking'
 
 /** A studio edit the API can't take; the message says what to fix. */
@@ -89,6 +94,42 @@ function parseClip(v: unknown, known: Map<string, RankingClip>): null | RankingC
 
 const round2 = (n: number) => Math.round(n * 100) / 100
 
+/** A sound choice: a library sound's id, or null for none. */
+function soundId(v: unknown, soundExists: (id: string) => boolean): null | string {
+  if (v === null || v === undefined || v === '') return null
+  if (typeof v !== 'string' || !soundExists(v)) throw new RankingPatchError('That sound is no longer in your library.')
+  return v
+}
+
+function parseSounds(v: unknown, soundExists: (id: string) => boolean): RankingSounds {
+  if (!isRecord(v)) throw new RankingPatchError('The sounds are missing.')
+  const volume = Number(v['musicVolume'])
+  if (!Number.isFinite(volume) || volume < 0 || volume > 1)
+    throw new RankingPatchError('The music level is from 0 to 100%.')
+  return {
+    music: soundId(v['music'], soundExists),
+    musicVolume: round2(volume),
+    reveal: soundId(v['reveal'], soundExists),
+  }
+}
+
+function parseTransition(v: unknown, soundExists: (id: string) => boolean): RankingTransition {
+  if (!isRecord(v)) throw new RankingPatchError('The transition is missing.')
+  const durationSec = Number(v['durationSec'])
+  if (!Number.isFinite(durationSec) || durationSec < RANKING_TRANSITION_MIN_SEC || durationSec > RANKING_TRANSITION_MAX_SEC)
+    throw new RankingPatchError(
+      `A transition lasts ${RANKING_TRANSITION_MIN_SEC} to ${RANKING_TRANSITION_MAX_SEC} s.`,
+    )
+  return {
+    background: color(v['background'], 'The transition background'),
+    durationSec: round2(durationSec),
+    enabled: v['enabled'] === true,
+    sound: soundId(v['sound'], soundExists),
+    text: text(v['text'] ?? '', RANKING_TRANSITION_TEXT_MAX, 'the transition text'),
+    textColor: color(v['textColor'], 'The transition text'),
+  }
+}
+
 function parseItems(v: unknown, current: RankingProject): RankingItem[] {
   if (!Array.isArray(v) || v.length < RANKING_MIN_ITEMS || v.length > RANKING_MAX_ITEMS)
     throw new RankingPatchError(`A ranking has ${RANKING_MIN_ITEMS} to ${RANKING_MAX_ITEMS} ranks.`)
@@ -116,7 +157,12 @@ function parseItems(v: unknown, current: RankingProject): RankingItem[] {
  * A studio edit applied to a project, checked field by field: colours are hex, text is short,
  * ranks are 1..N, clips are ones the project uploaded, the reveal order covers every rank.
  */
-export function applyRankingPatch(current: RankingProject, patch: unknown, now: string): RankingProject {
+export function applyRankingPatch(
+  current: RankingProject,
+  patch: unknown,
+  now: string,
+  soundExists: (id: string) => boolean = () => true,
+): RankingProject {
   if (!isRecord(patch)) throw new RankingPatchError('Nothing to change.')
   const next: RankingProject = { ...current, updatedAt: now }
   if ('name' in patch) {
@@ -125,6 +171,8 @@ export function applyRankingPatch(current: RankingProject, patch: unknown, now: 
   }
   if ('title' in patch) next.title = parseTitle(patch['title'])
   if ('style' in patch) next.style = parseStyle(patch['style'])
+  if ('sounds' in patch) next.sounds = parseSounds(patch['sounds'], soundExists)
+  if ('transition' in patch) next.transition = parseTransition(patch['transition'], soundExists)
   if ('items' in patch) next.items = parseItems(patch['items'], current)
   if ('reveal' in patch || 'items' in patch) {
     const raw = isRecord(patch['reveal']) ? patch['reveal'] : current.reveal

@@ -7,7 +7,10 @@ import { Logger } from '@reelmakeeasy/common/logger'
 import {
   newRankingProject,
   rankingProblems,
-  rankingSegments,
+  rankingTimeline,
+  type RankingTimelinePart,
+  soundsOf,
+  transitionOf,
 } from '@reelmakeeasy/common/ranking/ranking-project'
 import { keyIsUnder, parseStoreUri, storeUri, toSavedAddress } from '@reelmakeeasy/common/storage/address'
 import { dataDir, filePath, fileStore } from '@reelmakeeasy/common/storage/file-store'
@@ -19,8 +22,10 @@ import type {
   RankingRenderStatus,
 } from '@shared/types/api/ranking'
 
+import type { SoundLibraryService } from '../sound-library/sound-library.service'
+
 import { applyRankingPatch } from './ranking-patch'
-import { probeClip, renderRanking } from './ranking-render'
+import { probeClip, type RenderPart, renderRanking } from './ranking-render'
 
 const logger = new Logger('RankingService')
 
@@ -46,7 +51,10 @@ type RenderJob = RankingRenderStatus & { projectId: string }
 export class RankingService {
   private readonly jobs = new Map<string, RenderJob>()
 
-  constructor(private readonly root: string = path.join(dataDir(), 'ranking')) {
+  constructor(
+    private readonly sounds: null | Pick<SoundLibraryService, 'has' | 'localFile' | 'recordUse'> = null,
+    private readonly root: string = path.join(dataDir(), 'ranking'),
+  ) {
     fs.mkdirSync(this.root, { recursive: true })
   }
 
@@ -80,7 +88,12 @@ export class RankingService {
   }
 
   update(id: string, patch: unknown): RankingProject {
-    const next = applyRankingPatch(this.get(id), patch, new Date().toISOString())
+    const next = applyRankingPatch(
+      this.get(id),
+      patch,
+      new Date().toISOString(),
+      (soundId) => this.sounds?.has(soundId) ?? false,
+    )
     this.write(next)
     return next
   }
@@ -143,14 +156,14 @@ export class RankingService {
     const project = this.get(id)
     const problems = rankingProblems(project)
     if (problems.length) throw new RankingInputError(problems.join(' '))
-    const segments = rankingSegments(project)
-    const { bandHeight, overlays } = parseRenderBody(body, segments.length)
+    const timeline = rankingTimeline(project)
+    const { bandHeight, overlays } = parseRenderBody(body, timeline.length)
     if ([...this.jobs.values()].some((j) => j.projectId === id && j.state === 'rendering'))
       throw new RankingInputError('This ranking is already rendering.')
     const renderId = randomUUID()
     const job: RenderJob = { progress: 0, projectId: id, renderId, state: 'rendering' }
     this.jobs.set(renderId, job)
-    void this.render(project, segments, bandHeight, overlays, job)
+    void this.render(project, timeline, bandHeight, overlays, job)
     return publicJob(job)
   }
 
@@ -162,34 +175,54 @@ export class RankingService {
 
   private async render(
     project: RankingProject,
-    segments: ReturnType<typeof rankingSegments>,
+    timeline: RankingTimelinePart[],
     bandHeight: number,
     overlays: Buffer[],
     job: RenderJob,
   ): Promise<void> {
     const workDir = fs.mkdtempSync(path.join(os.tmpdir(), 'ranking-render-'))
     try {
-      const pngs = overlays.map((png, i) => {
-        const file = path.join(workDir, `overlay-${i}.png`)
-        fs.writeFileSync(file, png)
-        return file
+      const sounds = soundsOf(project)
+      const transition = transitionOf(project)
+      const used = new Set<string>()
+      // A sound that's gone from the library is skipped, not an error: the short still renders.
+      const soundFile = (id: null | string): string | undefined => {
+        if (!id || !this.sounds?.has(id)) return undefined
+        used.add(id)
+        return this.sounds.localFile(id)
+      }
+      const parts: RenderPart[] = timeline.map((part, i) => {
+        const png = path.join(workDir, `overlay-${i}.png`)
+        fs.writeFileSync(png, overlays[i] as Buffer)
+        if (part.kind === 'transition')
+          return { durSec: part.durSec, kind: 'transition', png, sfx: soundFile(transition.sound) }
+        const clip = part.segment.item.clip
+        return {
+          clipFile: filePath(clip?.url ?? ''),
+          durSec: part.durSec,
+          kind: 'clip',
+          overlay: png,
+          sfx: soundFile(sounds.reveal),
+          startSec: clip?.trimStartSec ?? 0,
+        }
       })
+      const musicFile = soundFile(sounds.music)
       const out = path.join(workDir, 'ranking.mp4')
       await renderRanking({
         bandHeight,
-        clipFile: (segment) => filePath(segment.item.clip?.url ?? ''),
+        ...(musicFile ? { music: { file: musicFile, volume: sounds.musicVolume } } : {}),
         onProgress: (p) => {
           job.progress = Math.round(p * 100) / 100
         },
         out,
-        overlays: pngs,
-        segments,
+        parts,
         workDir,
       })
       const target = storeUri(`${STORE_FOLDER}/${project.id}/renders/${job.renderId}.mp4`)
       await fileStore.upload(out, target)
       job.videoUrl = target
       job.state = 'done'
+      this.sounds?.recordUse(used)
       const saved = this.read(project.id)
       if (saved) this.write({ ...saved, lastRender: target } as RankingProject)
     } catch (error) {
@@ -224,7 +257,8 @@ export class RankingService {
 
 const publicJob = ({ projectId: _projectId, ...job }: RenderJob): RankingRenderStatus => ({ ...job })
 
-/** The render request: one PNG per segment (base64, as data URLs or bare), and the band height. */
+/** The render request: one PNG per timeline part (clip overlay or transition slide; base64, as
+ *  data URLs or bare), and the band height. */
 export function parseRenderBody(body: unknown, segmentCount: number): { bandHeight: number; overlays: Buffer[] } {
   const b = (body ?? {}) as Record<string, unknown>
   const bandHeight = Number(b['bandHeight'])

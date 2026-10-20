@@ -72,4 +72,30 @@ describe('applyRankingPatch', () => {
     const four = applyRankingPatch(p, { items: p.items.slice(0, 4) }, NOW)
     expect(four.reveal.order).toEqual([4, 3, 2, 1])
   })
+
+  it('takes sounds and a transition, refusing sounds not in the library', () => {
+    const has = (id: string) => id === 'boom'
+    const p = applyRankingPatch(
+      withClip(),
+      {
+        sounds: { music: null, musicVolume: 0.4, reveal: 'boom' },
+        transition: { background: '#000000', durationSec: 1.2, enabled: true, sound: 'boom', text: 'Number {rank}', textColor: '#FFD400' },
+      },
+      NOW,
+      has,
+    )
+    expect(p.sounds).toEqual({ music: null, musicVolume: 0.4, reveal: 'boom' })
+    expect(p.transition).toMatchObject({ durationSec: 1.2, enabled: true, sound: 'boom', textColor: '#ffd400' })
+    expect(() =>
+      applyRankingPatch(withClip(), { sounds: { music: 'gone', musicVolume: 0.4, reveal: null } }, NOW, has),
+    ).toThrow(/no longer in your library/)
+    expect(() =>
+      applyRankingPatch(
+        withClip(),
+        { transition: { background: '#000000', durationSec: 9, enabled: true, sound: null, text: '', textColor: '#ffffff' } },
+        NOW,
+        has,
+      ),
+    ).toThrow(/0.5 to 3 s/)
+  })
 })

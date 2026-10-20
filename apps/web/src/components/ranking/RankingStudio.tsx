@@ -1,11 +1,11 @@
 'use client'
 
-import { drawRankingOverlay } from '@reelmakeeasy/common/ranking/ranking-overlay'
+import { drawRankingOverlay, drawRankingTransition } from '@reelmakeeasy/common/ranking/ranking-overlay'
 import {
   RANKING_HEIGHT,
   RANKING_WIDTH,
   rankingProblems,
-  rankingSegments,
+  rankingTimeline,
 } from '@reelmakeeasy/common/ranking/ranking-project'
 import type { RankingProject, RankingRenderStatus } from '@shared/types/api/ranking'
 import { Button } from '@shared/ui'
@@ -19,6 +19,7 @@ import { type RankingApi, useRankingApi } from './ranking-api'
 import { loadRankingFonts, STUDIO_RANKING_FONTS } from './ranking-fonts'
 import { RankingEditor } from './RankingEditor'
 import { RankingPreview } from './RankingPreview'
+import { useSoundLibrary } from './useSoundLibrary'
 
 /** Edits are saved this long after the last change. */
 const SAVE_DELAY_MS = 600
@@ -31,8 +32,18 @@ const errorText = (error: unknown) => (error instanceof Error ? error.message : 
  * Export, which draws each segment's overlay here (the browser has the font and colour emoji)
  * and has the API cut, overlay and join the clips into one MP4.
  */
-export function RankingStudio({ id, onBack }: { id: string; onBack: () => void }) {
+export function RankingStudio({
+  id,
+  onBack,
+  onOpenLibrary,
+}: {
+  id: string
+  onBack: () => void
+  onOpenLibrary: () => void
+}) {
   const api = useRankingApi()
+  const library = useSoundLibrary()
+  const sounds = library.sounds ?? []
   const apiOrigin = useAtomValue(apiOriginAtom)
   const [project, setProject] = useState<null | RankingProject>(null)
   const [error, setError] = useState<null | string>(null)
@@ -64,9 +75,17 @@ export function RankingStudio({ id, onBack }: { id: string; onBack: () => void }
       setSaving('saving')
       clearTimeout(saveTimer.current)
       saveTimer.current = setTimeout(() => {
-        const { items, name, reveal, style, title } = next
+        const { items, name, reveal, sounds: chosen, style, title, transition } = next
         api
-          .update(id, { items, name, reveal, style, title })
+          .update(id, {
+            items,
+            name,
+            reveal,
+            ...(chosen ? { sounds: chosen } : {}),
+            style,
+            title,
+            ...(transition ? { transition } : {}),
+          })
           .then(() => setSaving('saved'))
           .catch((e: unknown) => {
             setSaving('error')
@@ -128,13 +147,15 @@ export function RankingStudio({ id, onBack }: { id: string; onBack: () => void }
             focusRank={focusRank}
             onChange={change}
             onFocusRank={setFocusRank}
+            onOpenLibrary={onOpenLibrary}
             onUploadClip={uploadClip}
             project={project}
+            sounds={sounds}
             uploading={uploading}
           />
         </div>
         <div className="flex flex-col items-center gap-4 lg:sticky lg:top-6">
-          <RankingPreview focusRank={focusRank} fontsReady={fontsReady} project={project} />
+          <RankingPreview focusRank={focusRank} fontsReady={fontsReady} project={project} sounds={sounds} />
           <ExportPanel api={api} project={project} saving={saving === 'saving'} />
         </div>
       </div>
@@ -142,7 +163,8 @@ export function RankingStudio({ id, onBack }: { id: string; onBack: () => void }
   )
 }
 
-/** Each segment's overlay as a PNG (data URL), drawn exactly as the preview draws it. */
+/** Each timeline part's picture as a PNG (data URL), drawn exactly as the preview draws it: a
+ *  clip's overlay, or a transition slide. */
 function drawOverlays(project: RankingProject): { bandHeight: number; overlays: string[] } {
   const canvas = document.createElement('canvas')
   canvas.width = RANKING_WIDTH
@@ -150,8 +172,9 @@ function drawOverlays(project: RankingProject): { bandHeight: number; overlays: 
   const ctx = canvas.getContext('2d')
   if (!ctx) throw new Error("This browser can't draw the overlay.")
   let bandHeight = 0
-  const overlays = rankingSegments(project).map((segment) => {
-    bandHeight = drawRankingOverlay(ctx, project, segment.revealed, { fonts: STUDIO_RANKING_FONTS }).bandHeight
+  const overlays = rankingTimeline(project).map((part) => {
+    if (part.kind === 'transition') drawRankingTransition(ctx, project, part.nextRank, STUDIO_RANKING_FONTS)
+    else bandHeight = drawRankingOverlay(ctx, project, part.segment.revealed, { fonts: STUDIO_RANKING_FONTS }).bandHeight
     return canvas.toDataURL('image/png')
   })
   return { bandHeight, overlays }

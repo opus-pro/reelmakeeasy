@@ -48,20 +48,46 @@ export type RankingStyle = {
   outlineColor: string
 }
 
+/** The sounds of a ranking short, by sound-library id (null: none). */
+export type RankingSounds = {
+  /** A track under the whole short, looped to fit. */
+  music: null | string
+  /** Its level, 0..1, under the clips' own sound. */
+  musicVolume: number
+  /** Plays as each rank's clip starts. */
+  reveal: null | string
+}
+
+/** A slide between ranks (rank N's clip, the slide, rank N+1's clip). */
+export type RankingTransition = {
+  background: string
+  durationSec: number
+  enabled: boolean
+  /** Plays as the slide starts. */
+  sound: null | string
+  /** Shown big and centred; `{rank}` is the next rank's number. */
+  text: string
+  textColor: string
+}
+
 export type RankingProject = {
   createdAt: string
   id: string
   items: RankingItem[]
   name: string
   reveal: { mode: RankingRevealMode; order: number[] }
+  /** Missing on projects saved before sounds existed: no sounds. */
+  sounds?: RankingSounds
   style: RankingStyle
   title: RankingTitle
+  /** Missing on projects saved before transitions existed: none. */
+  transition?: RankingTransition
   updatedAt: string
 }
 
 /** The fields the studio may change (`PUT /api/ranking/projects/:id`). */
 export type RankingProjectPatch = Partial<
-  Pick<RankingProject, 'items' | 'name' | 'reveal' | 'style' | 'title'>
+  Pick<RankingProject, 'items' | 'name' | 'reveal' | 'sounds' | 'style' | 'title' | 'transition'>
 >
 
 /** `GET /api/ranking/projects`: the list, newest first. */

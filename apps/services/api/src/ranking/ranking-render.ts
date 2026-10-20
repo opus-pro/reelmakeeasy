@@ -2,12 +2,7 @@ import { spawn } from 'node:child_process'
 import fs from 'node:fs'
 import path from 'node:path'
 
-import {
-  RANKING_FPS,
-  RANKING_HEIGHT,
-  RANKING_WIDTH,
-  type RankingSegment,
-} from '@reelmakeeasy/common/ranking/ranking-project'
+import { RANKING_FPS, RANKING_HEIGHT, RANKING_WIDTH } from '@reelmakeeasy/common/ranking/ranking-project'
 
 /** Loudness the finished short is delivered at (streaming level, with headroom). */
 export const RANKING_LOUDNESS = 'loudnorm=I=-14:TP=-1.5:LRA=11'
@@ -56,6 +51,8 @@ export function segmentArgs(o: {
   hasAudio: boolean
   out: string
   overlay: string
+  /** A sound that plays as the clip starts (the reveal sound), mixed over the clip's own. */
+  sfx?: string
   startSec: number
 }): string[] {
   const area = RANKING_HEIGHT - o.bandHeight
@@ -64,14 +61,19 @@ export function segmentArgs(o: {
     `crop=${RANKING_WIDTH}:${area},setsar=1,fps=${RANKING_FPS},` +
     `pad=${RANKING_WIDTH}:${RANKING_HEIGHT}:0:${o.bandHeight}:black[base];` +
     `[base][1:v]overlay=0:0:format=auto,format=yuv420p[v]`
-  const audio = o.hasAudio
-    ? `[0:a]aresample=48000,aformat=channel_layouts=stereo,apad[a]`
-    : `[2:a]aformat=channel_layouts=stereo[a]`
+  const base = o.hasAudio
+    ? `[0:a]aresample=48000,aformat=channel_layouts=stereo,apad`
+    : `[2:a]aformat=channel_layouts=stereo`
+  const sfxIndex = o.hasAudio ? 2 : 3
+  const audio = o.sfx
+    ? `${base}[clip];[${sfxIndex}:a]aresample=48000,aformat=channel_layouts=stereo,apad[fx];[clip][fx]amix=inputs=2:duration=first:normalize=0[a]`
+    : `${base}[a]`
   return [
     '-v', 'error', '-y',
     '-ss', String(o.startSec), '-t', String(o.durSec), '-i', o.clipFile,
     '-loop', '1', '-t', String(o.durSec), '-i', o.overlay,
     ...(o.hasAudio ? [] : ['-f', 'lavfi', '-t', String(o.durSec), '-i', 'anullsrc=r=48000:cl=stereo']),
+    ...(o.sfx ? ['-i', o.sfx] : []),
     '-filter_complex', `${video};${audio}`,
     '-map', '[v]', '-map', '[a]',
     '-t', String(o.durSec),
@@ -82,50 +84,85 @@ export function segmentArgs(o: {
 }
 
 /**
- * Renders the short: each segment's clip under its overlay, joined in reveal order, the sound
- * evened out. `overlays[i]` is segment i's PNG (the studio drew it). `onProgress` gets 0..1.
+ * The ffmpeg arguments for a transition slide: its full-frame PNG held for `durSec`, with its
+ * sound (or silence), in the same format as the clip segments.
+ */
+export function transitionArgs(o: { durSec: number; out: string; png: string; sfx?: string }): string[] {
+  const audio = o.sfx
+    ? `[1:a]aformat=channel_layouts=stereo[bed];[2:a]aresample=48000,aformat=channel_layouts=stereo,apad[fx];[bed][fx]amix=inputs=2:duration=first:normalize=0[a]`
+    : `[1:a]aformat=channel_layouts=stereo[a]`
+  return [
+    '-v', 'error', '-y',
+    '-loop', '1', '-t', String(o.durSec), '-i', o.png,
+    '-f', 'lavfi', '-t', String(o.durSec), '-i', 'anullsrc=r=48000:cl=stereo',
+    ...(o.sfx ? ['-i', o.sfx] : []),
+    '-filter_complex', `[0:v]scale=${RANKING_WIDTH}:${RANKING_HEIGHT},setsar=1,fps=${RANKING_FPS},format=yuv420p[v];${audio}`,
+    '-map', '[v]', '-map', '[a]',
+    '-t', String(o.durSec),
+    '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '20', '-r', String(RANKING_FPS),
+    '-c:a', 'aac', '-b:a', '192k', '-ar', '48000',
+    o.out,
+  ]
+}
+
+/** The last step: the joined short, a looped music bed under it (when there is one), even loudness. */
+export function finishArgs(o: { joined: string; music?: { file: string; volume: number }; out: string }): string[] {
+  const filter = o.music
+    ? `[1:a]aresample=48000,aformat=channel_layouts=stereo,volume=${o.music.volume.toFixed(2)}[bed];[0:a][bed]amix=inputs=2:duration=first:normalize=0,${RANKING_LOUDNESS}[a]`
+    : `[0:a]${RANKING_LOUDNESS}[a]`
+  return [
+    '-v', 'error', '-y',
+    '-i', o.joined,
+    ...(o.music ? ['-stream_loop', '-1', '-i', o.music.file] : []),
+    '-filter_complex', filter,
+    '-map', '0:v', '-map', '[a]',
+    '-c:v', 'copy', '-ar', '48000', '-c:a', 'aac', '-b:a', '192k', '-movflags', '+faststart',
+    o.out,
+  ]
+}
+
+/** One piece to render: a rank's clip under its overlay, or a transition slide. */
+export type RenderPart =
+  | { clipFile: string; durSec: number; kind: 'clip'; overlay: string; sfx?: string; startSec: number }
+  | { durSec: number; kind: 'transition'; png: string; sfx?: string }
+
+/**
+ * Renders the short: each part (clip or slide) in order, joined, with the music bed and even
+ * loudness. `onProgress` gets 0..1.
  */
 export async function renderRanking(o: {
   bandHeight: number
-  clipFile: (segment: RankingSegment) => string
+  music?: { file: string; volume: number }
   onProgress: (progress: number) => void
   out: string
-  overlays: string[]
-  segments: RankingSegment[]
+  parts: RenderPart[]
   workDir: string
 }): Promise<void> {
-  const parts: string[] = []
-  for (const [i, segment] of o.segments.entries()) {
-    const clip = segment.item.clip
-    if (!clip) continue
-    const clipFile = o.clipFile(segment)
-    const { hasAudio } = await probeClip(clipFile)
-    const part = path.join(o.workDir, `part-${i}.mp4`)
-    await run(
-      'ffmpeg',
-      segmentArgs({
-        bandHeight: o.bandHeight,
-        clipFile,
-        durSec: segment.durSec,
-        hasAudio,
-        out: part,
-        overlay: o.overlays[i] as string,
-        startSec: clip.trimStartSec,
-      }),
-      o.workDir,
-    )
-    parts.push(part)
-    o.onProgress(((i + 1) / o.segments.length) * 0.85)
+  const files: string[] = []
+  for (const [i, part] of o.parts.entries()) {
+    const out = path.join(o.workDir, `part-${i}.mp4`)
+    const args =
+      part.kind === 'clip'
+        ? segmentArgs({
+            bandHeight: o.bandHeight,
+            clipFile: part.clipFile,
+            durSec: part.durSec,
+            hasAudio: (await probeClip(part.clipFile)).hasAudio,
+            out,
+            overlay: part.overlay,
+            sfx: part.sfx,
+            startSec: part.startSec,
+          })
+        : transitionArgs({ durSec: part.durSec, out, png: part.png, sfx: part.sfx })
+    await run('ffmpeg', args, o.workDir)
+    files.push(out)
+    o.onProgress(((i + 1) / o.parts.length) * 0.85)
   }
   const list = path.join(o.workDir, 'parts.txt')
-  fs.writeFileSync(list, parts.map((p) => `file '${path.basename(p)}'`).join('\n'))
+  fs.writeFileSync(list, files.map((p) => `file '${path.basename(p)}'`).join('\n'))
   const joined = path.join(o.workDir, 'joined.mp4')
   await run('ffmpeg', ['-v', 'error', '-y', '-f', 'concat', '-safe', '0', '-i', list, '-c', 'copy', joined], o.workDir)
   o.onProgress(0.92)
-  await run(
-    'ffmpeg',
-    ['-v', 'error', '-y', '-i', joined, '-c:v', 'copy', '-af', RANKING_LOUDNESS, '-ar', '48000', '-c:a', 'aac', '-b:a', '192k', '-movflags', '+faststart', o.out],
-    o.workDir,
-  )
+  await run('ffmpeg', finishArgs({ joined, music: o.music, out: o.out }), o.workDir)
   o.onProgress(1)
 }

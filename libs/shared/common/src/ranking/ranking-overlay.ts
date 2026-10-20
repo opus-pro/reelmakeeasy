@@ -1,6 +1,6 @@
 import type { RankingProject, RankingTitleWord } from '@shared/types/api/ranking'
 
-import { RANKING_HEIGHT, RANKING_WIDTH } from './ranking-project'
+import { RANKING_HEIGHT, RANKING_WIDTH, transitionOf, transitionText } from './ranking-project'
 
 /**
  * The ranking short's overlay, drawn on a 2D canvas: the title band and the rank list. The same
@@ -179,4 +179,32 @@ export function drawRankingOverlay(
   }
   ctx.restore()
   return layout
+}
+
+/**
+ * A transition slide: the whole frame in the slide's colour, its text big and centred (shrunk to
+ * fit, outlined like the labels). Drawn into the same 1080x1920 frame as the overlay.
+ */
+export function drawRankingTransition(
+  ctx: RankingCanvas,
+  project: RankingProject,
+  nextRank: number,
+  fonts: RankingFonts = DEFAULT_RANKING_FONTS,
+): void {
+  const transition = transitionOf(project)
+  const text = transitionText(transition, nextRank)
+  ctx.save()
+  ctx.clearRect(0, 0, W, H)
+  ctx.fillStyle = transition.background
+  ctx.fillRect(0, 0, W, H)
+  ctx.textAlign = 'center'
+  ctx.textBaseline = 'middle'
+  let size = 150
+  ctx.font = fontOf(size, fonts.title, 900)
+  while (size > 48 && ctx.measureText(text).width > W - SIDE * 2) {
+    size -= 4
+    ctx.font = fontOf(size, fonts.title, 900)
+  }
+  if (text) outlined(ctx, text, W / 2, H / 2, transition.textColor, project.style.outlineColor, size)
+  ctx.restore()
 }

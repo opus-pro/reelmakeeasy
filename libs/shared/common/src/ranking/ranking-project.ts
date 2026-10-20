@@ -2,8 +2,10 @@ import type {
   RankingItem,
   RankingProject,
   RankingRevealMode,
+  RankingSounds,
   RankingStyle,
   RankingTitle,
+  RankingTransition,
 } from '@shared/types/api/ranking'
 
 /** The output frame: a vertical short. */
@@ -43,6 +45,31 @@ export const DEFAULT_RANKING_TITLE: RankingTitle = {
   ],
 }
 
+export const DEFAULT_RANKING_SOUNDS: RankingSounds = { music: null, musicVolume: 0.35, reveal: null }
+
+export const RANKING_TRANSITION_MIN_SEC = 0.5
+export const RANKING_TRANSITION_MAX_SEC = 3
+export const RANKING_TRANSITION_TEXT_MAX = 40
+
+export const DEFAULT_RANKING_TRANSITION: RankingTransition = {
+  background: '#000000',
+  durationSec: 1,
+  enabled: false,
+  sound: null,
+  text: 'Number {rank}…',
+  textColor: '#ffd400',
+}
+
+/** A project's sounds and transition, with defaults for one saved before they existed. */
+export const soundsOf = (project: RankingProject): RankingSounds => project.sounds ?? DEFAULT_RANKING_SOUNDS
+export const transitionOf = (project: RankingProject): RankingTransition =>
+  project.transition ?? DEFAULT_RANKING_TRANSITION
+
+/** A transition slide's text for the rank it leads into. */
+export function transitionText(transition: RankingTransition, nextRank: number): string {
+  return transition.text.replaceAll('{rank}', String(nextRank)).trim()
+}
+
 let counter = 0
 /** A short id for a rank row (unique enough within one project). */
 export function rankingItemId(): string {
@@ -69,8 +96,10 @@ export function newRankingProject(id: string, now: string, name = 'Untitled rank
     items,
     name,
     reveal: { mode: 'countdown', order: revealOrder('countdown', items.length) },
+    sounds: DEFAULT_RANKING_SOUNDS,
     style: DEFAULT_RANKING_STYLE,
     title: DEFAULT_RANKING_TITLE,
+    transition: DEFAULT_RANKING_TRANSITION,
     updatedAt: now,
   }
 }
@@ -143,6 +172,27 @@ export function rankingSegments(project: RankingProject): RankingSegment[] {
     at += durSec
   }
   return segments
+}
+
+/** A piece of the finished short: a rank's clip, or the slide leading into the next rank. */
+export type RankingTimelinePart =
+  | { durSec: number; kind: 'clip'; segment: RankingSegment; startSec: number }
+  | { durSec: number; kind: 'transition'; nextRank: number; startSec: number }
+
+/** The whole short in play order: each rank's clip, with a transition slide between ranks. */
+export function rankingTimeline(project: RankingProject): RankingTimelinePart[] {
+  const transition = transitionOf(project)
+  const parts: RankingTimelinePart[] = []
+  let at = 0
+  for (const [i, segment] of rankingSegments(project).entries()) {
+    if (i > 0 && transition.enabled) {
+      parts.push({ durSec: transition.durationSec, kind: 'transition', nextRank: segment.item.rank, startSec: at })
+      at += transition.durationSec
+    }
+    parts.push({ durSec: segment.durSec, kind: 'clip', segment, startSec: at })
+    at += segment.durSec
+  }
+  return parts
 }
 
 /** What still stops the short from rendering, in plain words (empty when it's ready). */

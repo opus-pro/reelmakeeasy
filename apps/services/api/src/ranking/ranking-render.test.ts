@@ -1,4 +1,4 @@
-import { segmentArgs } from './ranking-render'
+import { finishArgs, segmentArgs, transitionArgs } from './ranking-render'
 import { parseRenderBody, RankingInputError } from './ranking.service'
 
 const PNG = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0, 0]).toString('base64')
@@ -36,5 +36,37 @@ describe('segmentArgs', () => {
     expect(filter).toContain('pad=1080:1920:0:240')
     expect(filter).toContain('[2:a]')
     expect(args).toEqual(expect.arrayContaining(['-ss', '1.5', 'anullsrc=r=48000:cl=stereo']))
+  })
+})
+
+describe('sounds in the render', () => {
+  it('mixes a reveal sound over the clip, from the clip start', () => {
+    const args = segmentArgs({
+      bandHeight: 240,
+      clipFile: '/c.mp4',
+      durSec: 3,
+      hasAudio: true,
+      out: '/o.mp4',
+      overlay: '/ov.png',
+      sfx: '/boom.mp3',
+      startSec: 0,
+    })
+    expect(args.slice(args.indexOf('/ov.png') + 1)).toEqual(expect.arrayContaining(['-i', '/boom.mp3']))
+    expect(args[args.indexOf('-filter_complex') + 1]).toContain('[clip][fx]amix=inputs=2:duration=first:normalize=0[a]')
+  })
+
+  it('holds a transition slide with its sound over silence', () => {
+    const args = transitionArgs({ durSec: 1, out: '/t.mp4', png: '/t.png', sfx: '/whoosh.mp3' })
+    expect(args).toEqual(expect.arrayContaining(['-loop', '1', '-t', '1', '-i', '/t.png', '-i', '/whoosh.mp3']))
+    expect(args[args.indexOf('-filter_complex') + 1]).toContain('[bed][fx]amix')
+  })
+
+  it('loops the music bed under the short at its level, then evens the loudness', () => {
+    const args = finishArgs({ joined: '/j.mp4', music: { file: '/bed.mp3', volume: 0.35 }, out: '/f.mp4' })
+    expect(args).toEqual(expect.arrayContaining(['-stream_loop', '-1', '-i', '/bed.mp3']))
+    const filter = args[args.indexOf('-filter_complex') + 1]
+    expect(filter).toContain('volume=0.35')
+    expect(filter).toContain('loudnorm=I=-14')
+    expect(finishArgs({ joined: '/j.mp4', out: '/f.mp4' })).not.toContain('-stream_loop')
   })
 })

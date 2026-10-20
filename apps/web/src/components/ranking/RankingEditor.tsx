@@ -20,8 +20,11 @@ import type {
   RankingTitle,
   RankingTitleWord,
 } from '@shared/types/api/ranking'
+import type { LibrarySound } from '@shared/types/api/sound-library'
 import { Button, cn } from '@shared/ui'
 import { useRef, useState } from 'react'
+
+import { SoundsPanel, TransitionPanel } from './RankingSoundPanels'
 
 const SECTION = 'flex flex-col gap-2 rounded-xl border border-white/10 bg-fill-secondary/40 p-3'
 const HEADING = 'text-xs font-semibold tracking-wide text-secondary uppercase'
@@ -30,6 +33,10 @@ const INPUT =
 
 export type RankingEditorProps = {
   focusRank: null | number
+  /** Opens the sound library (the Sounds tab). */
+  onOpenLibrary: () => void
+  /** The user's sound library, for the sound pickers. */
+  sounds: LibrarySound[]
   onChange: (next: RankingProject) => void
   onFocusRank: (rank: number) => void
   /** Uploads a video under a rank (the studio saves it and returns the new clip). */
@@ -49,6 +56,17 @@ export function RankingEditor(props: RankingEditorProps) {
         count={project.items.length}
         onChange={(reveal) => onChange({ ...project, reveal })}
         reveal={project.reveal}
+      />
+      <SoundsPanel
+        onChange={(sounds) => onChange({ ...project, sounds })}
+        onOpenLibrary={props.onOpenLibrary}
+        sounds={props.sounds}
+        value={project.sounds}
+      />
+      <TransitionPanel
+        onChange={(transition) => onChange({ ...project, transition })}
+        sounds={props.sounds}
+        value={project.transition}
       />
       <StylePanel onChange={(style) => onChange({ ...project, style })} style={project.style} />
     </div>
