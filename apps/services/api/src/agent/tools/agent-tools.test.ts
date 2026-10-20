@@ -48,6 +48,7 @@ describe('agent tools', () => {
       'ranking_export',
       'ranking_analyze_reference',
       'ranking_find_moments',
+      'ranking_generate_clips',
       'ranking_style_list',
       'ranking_style_get',
       'ranking_style_save',
@@ -114,7 +115,7 @@ describe('a Ranking chat', () => {
       expect(names.every((n) => n.startsWith('ranking_'))).toBe(true)
       expect(names).toContain('ranking_analyze_reference')
       expect(names).toContain('ranking_style_save')
-      expect(names).toHaveLength(13)
+      expect(names).toHaveLength(14)
     }
   })
 })
@@ -147,6 +148,7 @@ describe('toolsForSession by harness', () => {
       'ranking_export',
       'ranking_analyze_reference',
       'ranking_find_moments',
+      'ranking_generate_clips',
       'ranking_style_list',
       'ranking_style_get',
       'ranking_style_save',

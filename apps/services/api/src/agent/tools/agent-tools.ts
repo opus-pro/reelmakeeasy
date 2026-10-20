@@ -13,6 +13,7 @@ export type AgentToolName =
   | 'ranking_create'
   | 'ranking_export'
   | 'ranking_find_moments'
+  | 'ranking_generate_clips'
   | 'ranking_get'
   | 'ranking_list'
   | 'ranking_style_get'
@@ -231,6 +232,24 @@ export const AGENT_TOOLS: Record<AgentToolName, DynamicToolSpec> = {
     },
     name: 'ranking_export',
   },
+  ranking_generate_clips: {
+    description:
+      "Make AI video clips for a ranking short from text, one per rank, and put each under its rank (paid: about $0.20 per 5 s clip on Hailuo; all made at once, about 2-3 minutes). Each prompt is one short continuous scene with one clear funny action and its payoff (who, where, what happens, how it ends). ReelMakeEasy adds the vertical phone-video look. Show the user the prompts and the cost and ask before calling it. The reply gives each clip's contact sheet to look at.",
+    inputSchema: {
+      additionalProperties: false,
+      properties: {
+        clips: {
+          description: 'JSON list: [{ "rank": 1, "prompt": "A fluffy orange cat misjudges a jump onto the kitchen counter and slides into the laundry basket below." }, ...] (1-6).',
+          type: 'string',
+        },
+        id: { description: 'The ranking id.', type: 'string' },
+        seconds: { description: 'Each clip\'s length, 4-8 s (default 5).', maximum: 8, minimum: 4, type: 'integer' },
+      },
+      required: ['id', 'clips'],
+      type: 'object',
+    },
+    name: 'ranking_generate_clips',
+  },
   ranking_get: {
     description: 'Read a ranking short: every field you can change, what still stops its export, and tips.',
     inputSchema: {
@@ -371,6 +390,7 @@ const RANKING_TOOLS: AgentToolName[] = [
   'ranking_export',
   'ranking_analyze_reference',
   'ranking_find_moments',
+  'ranking_generate_clips',
   'ranking_style_list',
   'ranking_style_get',
   'ranking_style_save',
@@ -420,6 +440,7 @@ export function toolSummary(tool: string, args: unknown): string {
   if (tool === 'ranking_add_sticker_image') return 'Adding a picture sticker'
   if (tool === 'ranking_analyze_reference') return 'Watching the reference video'
   if (tool === 'ranking_find_moments') return 'Finding the action in a clip'
+  if (tool === 'ranking_generate_clips') return 'Making the clips with AI'
   if (tool === 'ranking_style_save') return 'Saving the ranking style'
   if (tool === 'ranking_apply_style') return 'Applying the ranking style'
   if (tool === 'ranking_style_list' || tool === 'ranking_style_get') return 'Reading ranking styles'

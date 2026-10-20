@@ -103,7 +103,7 @@ export function rankingKickoff(harness: AgentHarnessName, rankingId?: string): s
   return fillToolNames(
     rankingId
       ? `[ReelMakeEasy] The user opened ranking ${rankingId} from the studio to work on it here. Read the skill, then the ranking with ranking_get, and in one or two short sentences say what it has so far and ask what to do next.`
-      : "[ReelMakeEasy] The user chose Ranking. Read the skill. Then in two short sentences: ask what the ranking is about and where the clips are (they can attach them), and say they can paste a YouTube Short whose style they'd like to copy.",
+      : "[ReelMakeEasy] The user chose Ranking. Read the skill. Then in two short sentences: ask what the ranking is about, and say they can attach their clips, have you make the clips with AI, or paste a YouTube Short whose style they'd like to copy.",
     harness,
   )
 }

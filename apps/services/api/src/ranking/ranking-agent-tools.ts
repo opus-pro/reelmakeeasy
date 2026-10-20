@@ -11,6 +11,15 @@ import type { RankingProject, RankingTemplate } from '@shared/types/api/ranking'
 import type { SoundLibraryService } from '../sound-library/sound-library.service'
 
 import type { RankingService } from './ranking.service'
+import {
+  AI_CLIP_DEFAULT_SEC,
+  AI_CLIP_MAX_SEC,
+  AI_CLIP_MIN_SEC,
+  AI_CLIPS_MAX,
+  aiClipCost,
+  clipContactSheet,
+  generateAiClip,
+} from './ranking-clip-generator'
 import type { RankingTemplateService } from './ranking-template.service'
 import type { LibraryPrints } from './reference/library-prints'
 import {
@@ -56,6 +65,7 @@ function describe(project: RankingProject): string {
 /** The tools that make or change a ranking (the chat's preview follows those). */
 const FOLLOW_TOOLS = new Set([
   'ranking_add_clip',
+  'ranking_generate_clips',
   'ranking_add_sticker_image',
   'ranking_apply_style',
   'ranking_create',
@@ -113,6 +123,8 @@ function describeTemplate(t: RankingTemplate): string {
 export class RankingAgentTools {
   constructor(
     private readonly deps: {
+      /** Makes an AI clip (default: the user's text-to-video model) and its contact sheet. */
+      ai?: { contactSheet: typeof clipContactSheet; generate: typeof generateAiClip }
       /** Library sound fingerprints, for naming a reference's sounds. */
       prints?: Pick<LibraryPrints, 'all'>
       /** A tool read or changed this ranking: the chat now follows it (its preview panel). */
@@ -153,6 +165,8 @@ export class RankingAgentTools {
     if (tool === 'ranking_analyze_reference')
       return await this.analyzeReference(sessionId, typeof a['url'] === 'string' ? a['url'] : '', typeof a['path'] === 'string' ? a['path'] : '')
     if (tool === 'ranking_find_moments') return await this.findMoments(sessionId, a)
+    if (tool === 'ranking_generate_clips')
+      return await this.generateClips(sessionId, String(a['id']), a['clips'], Number(a['seconds'] ?? AI_CLIP_DEFAULT_SEC))
     if (tool === 'ranking_style_list') return this.styleList()
     if (tool === 'ranking_style_get') return { success: true, text: describeTemplate(this.templates().get(String(a['id']))) }
     if (tool === 'ranking_style_save') return this.styleSave(typeof a['id'] === 'string' ? a['id'] : '', a['style'])
@@ -270,6 +284,75 @@ export class RankingAgentTools {
     const library = (await this.deps.prints?.all()) ?? []
     const analysis = await analyzeVideo(video, dir, library, source)
     return { success: true, text: describeAnalysis(analysis, path.relative(root, dir), library.length) }
+  }
+
+  /**
+   * Makes AI clips from text, one per rank (in parallel), and puts each under its rank (one at a
+   * time: each write reads the project the last one saved). Each gets a contact sheet (a frame
+   * every half second) in `generated/` for the agent to see the action and time it.
+   */
+  private async generateClips(sessionId: string, id: string, raw: unknown, seconds: number): Promise<ToolResult> {
+    let clips: unknown = raw
+    if (typeof raw === 'string') {
+      try {
+        clips = JSON.parse(raw)
+      } catch {
+        return { success: false, text: 'clips must be JSON: [{ "rank": 1, "prompt": "..." }, ...].' }
+      }
+    }
+    if (!Array.isArray(clips) || !clips.length || clips.length > AI_CLIPS_MAX)
+      return { success: false, text: `Give 1 to ${AI_CLIPS_MAX} clips: [{ "rank": 1, "prompt": "..." }, ...].` }
+    const project = this.deps.ranking.get(id)
+    const asks: { prompt: string; rank: number }[] = []
+    for (const clip of clips) {
+      const rank = Number((clip as Record<string, unknown>)?.['rank'])
+      const prompt = String((clip as Record<string, unknown>)?.['prompt'] ?? '').trim()
+      if (!project.items.some((i) => i.rank === rank)) return { success: false, text: `There is no rank ${rank}; the ranks are 1-${project.items.length}.` }
+      if (asks.some((x) => x.rank === rank)) return { success: false, text: `Rank ${rank} is asked for twice.` }
+      if (prompt.length < 20 || prompt.length > 1500) return { success: false, text: `Rank ${rank}'s prompt should describe the scene and its action (20-1500 characters).` }
+      asks.push({ prompt, rank })
+    }
+    const sec = Math.round(Math.min(AI_CLIP_MAX_SEC, Math.max(AI_CLIP_MIN_SEC, Number.isFinite(seconds) ? seconds : AI_CLIP_DEFAULT_SEC)))
+    const ai = this.deps.ai ?? { contactSheet: clipContactSheet, generate: generateAiClip }
+    const root = fs.realpathSync(this.deps.workingDir(sessionId))
+    const dir = path.join(root, 'generated')
+    fs.mkdirSync(dir, { recursive: true })
+    const stamp = Date.now()
+    const made = await Promise.allSettled(
+      asks.map(async (ask) => {
+        const file = path.join(dir, `rank-${ask.rank}-${stamp}.mp4`)
+        const result = await ai.generate({ outputPath: file, prompt: ask.prompt, seconds: sec })
+        const sheet = file.replace(/\.mp4$/, '-sheet.jpg')
+        await ai.contactSheet(file, sheet).catch(() => undefined)
+        return { ...ask, ...result, file, sheet: fs.existsSync(sheet) ? sheet : null }
+      }),
+    )
+    const lines: string[] = []
+    let spent = 0
+    for (const [i, outcome] of made.entries()) {
+      const ask = asks[i] as { rank: number }
+      if (outcome.status === 'rejected') {
+        lines.push(`- Rank ${ask.rank}: not made (${ensureError(outcome.reason).message.split('\n')[0]}).`)
+        continue
+      }
+      const clip = outcome.value
+      spent += clip.costUsd
+      const item = this.deps.ranking.get(id).items.find((it) => it.rank === clip.rank)
+      if (item) await this.deps.ranking.setClip(id, item.id, await this.toTmp(clip.file, path.basename(clip.file)), path.basename(clip.file))
+      lines.push(
+        `- Rank ${clip.rank}: ${clip.durationSec} s, now under rank ${clip.rank}.${clip.sheet ? ` Frames (every 0.5 s, left to right, two rows): ${path.relative(root, clip.sheet)}` : ''}`,
+      )
+    }
+    const done = made.filter((m) => m.status === 'fulfilled').length
+    return {
+      success: done > 0,
+      text: [
+        `Made ${done} of ${asks.length} clips (about $${spent.toFixed(2)}).`,
+        ...lines,
+        'Look at each contact sheet: what happens, and when (frame n is at n x 0.5 s). Then re-rank if one came out funnier, trim each to its action, and put a meme sound on the action.',
+        describe(this.deps.ranking.get(id)),
+      ].join('\n'),
+    }
   }
 
   /** A clip's action moments: a file in the working folder, or the clip under a rank. */

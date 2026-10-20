@@ -107,4 +107,29 @@ describe('RankingAgentTools', () => {
     expect((await t.call('s', 'ranking_analyze_reference', { path: '/etc/hosts' })).success).toBe(false)
     expect((await t.call('s', 'ranking_analyze_reference', {})).text).toMatch(/YouTube link/)
   })
+
+  it('makes AI clips in parallel, puts each under its rank, and points at their contact sheets', async () => {
+    const { project, ranking, work } = tools()
+    jest.spyOn(require('@reelmakeeasy/common/storage/file-store').fileStore, 'upload').mockResolvedValue(undefined)
+    const generate = jest.fn(async (o: { outputPath: string; prompt: string; seconds: number }) => {
+      if (o.prompt.includes('FAIL')) throw new Error('provider said no')
+      fs.writeFileSync(o.outputPath, 'mp4')
+      return { costUsd: 0.2, durationSec: 5.18, model: 'minimax-h3-max-turbo' }
+    })
+    const contactSheet = jest.fn(async (_video: string, out: string) => fs.writeFileSync(out, 'jpg'))
+    const t = new RankingAgentTools({ ai: { contactSheet, generate }, ranking: ranking as never, sounds: { list: () => [] }, workingDir: () => work })
+    const clips = JSON.stringify([
+      { prompt: 'A fluffy orange cat misjudges a jump onto the counter.', rank: 1 },
+      { prompt: 'A grey cat FAIL sees a cucumber and leaps straight up.', rank: 2 },
+    ])
+    const r = await t.call('s', 'ranking_generate_clips', { clips, id: project.id, seconds: 12 })
+    expect(r.success).toBe(true)
+    expect(r.text).toMatch(/Made 1 of 2 clips \(about \$0\.20\)/)
+    expect(r.text).toMatch(/Rank 2: not made \(provider said no\)/)
+    expect(r.text).toMatch(/generated\/rank-1-\d+-sheet\.jpg/)
+    expect(generate).toHaveBeenCalledWith(expect.objectContaining({ seconds: 8 }))
+    expect(ranking.setClip).toHaveBeenCalledTimes(1)
+    expect((await t.call('s', 'ranking_generate_clips', { clips: '[{"rank":9,"prompt":"long enough prompt for a clip"}]', id: project.id })).text).toMatch(/no rank 9/)
+  })
 })
+
