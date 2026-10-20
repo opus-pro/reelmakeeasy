@@ -29,8 +29,8 @@ export function RankingHeadlessRender() {
         const project = await api.get(id)
         await loadRankingFonts(apiOrigin)
         await document.fonts.ready
-        const { bandHeight, overlays } = await drawOverlays(project)
-        const status = await api.render(id, bandHeight, overlays)
+        const { bandHeight, overlays, stickers } = await drawOverlays(project)
+        const status = await api.render(id, bandHeight, overlays, stickers)
         if (live) setResult({ renderId: status.renderId })
       } catch (error) {
         if (live) setResult({ error: error instanceof Error ? error.message : String(error) })

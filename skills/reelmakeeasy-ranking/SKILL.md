@@ -15,7 +15,8 @@ A ranking short is a 9:16 Short: a title band at the top with its keywords in co
 - **Labels:** 1-4 words and one emoji, what happens or the reaction (`Got bitten 😳`, `Pure chaos 💀`). No sentences, no rank numbers.
 - **Order:** rank by how funny or impressive the moment is; #1 makes people replay. Reveal `shuffle` (blind: the viewer never knows which rank fills next; #1 always last) or `countdown`.
 - **Sound is half the joke.** Every rank gets at least one meme sound **on the action** (the fall, the bite, the surprise), from the user's sound library. A reveal sound on every clip start is optional; a short background bed under it all is optional.
-- **Stickers** add punch on the big moments: an emoji or a short word (`NO WAY`, `💀`) near the action, only while that rank plays. Use them sparingly: one or two in the whole short.
+- **Stickers** add punch on the big moments: an emoji or a short word (`NO WAY`, `💀`, `"MAMA!"`) near the action, only while that rank plays, timed to it: they pop in on the action (`startSec` at its moment), vibrate on a scream, fade out before the cut. Use them sparingly: one or two per rank at most.
+- **Blind rankings keep #1 last** (`shuffle`): its clip plays last, so the viewer stays to the end; many creators label it only at the payoff, which drives replays and comments.
 
 ## The tools
 
@@ -35,8 +36,10 @@ A ranking short is a 9:16 Short: a title band at the top with its keywords in co
 - `items`: every rank, top first: `{ "id", "rank", "label", "clip", "cues" }`. Keep each `id` and `clip` as `ranking_get` shows them; change `clip.trimStartSec` / `clip.trimEndSec` to trim. Reorder ranks by reordering the array (ranks renumber 1..N).
 - `cues` on an item: up to 8 `{ "id", "soundId", "atSec" }`, `atSec` in seconds from where the clip starts playing (after its trim), within its play time.
 - `reveal`: `{ "mode": "shuffle" | "countdown" | "countup" | "custom", "order": [ranks in play order] }`.
+- `style`: `{ "labelColor", "numberColors": [#1, #2, #3, others], "outlineColor" }`, plus optional fonts `"titleFont"`, `"numberFont"`, `"labelFont"` (alegreya, anton, dela, dmsans, montserrat, ptserif, roboto; montserrat is the trend's look, dela is chunky like comic lettering, anton tall) and rank marks `"numberFormat"`: `dot` (1.), `hash` (#1), `plain`, `keycap` (1️⃣), `medal` (🥇🥈🥉 then 4.) or `custom` with `"numberMarks": ["👑", "🔥", ...]` (one per rank, any text or emoji).
 - `sounds`: `{ "reveal": soundId | null, "music": soundId | null, "musicVolume": 0-1 }`.
 - `stickers`: up to 20 `{ "id", "kind": "text", "text": "💀", "color": "#ffffff", "x": 0-1, "y": 0-1, "size": 0.04-0.12 (text height / frame height), "rotation": degrees, "rank": a rank or null (the whole short) }`. Keep them in the clip area (y 0.25-0.9) and clear of the rank list on the left (x 0.55-0.9 is usually free). A picture: `"kind": "image", "imageUrl"` from `ranking_add_sticker_image`, `size` its width as a share of the frame (0.1-1).
+  Text stickers may also take `"font"` (as above) and `"italic": true` (slanted, comic style). Any sticker may take `"startSec"` / `"endSec"` (seconds into its rank's clip as it plays, or into the short for a whole-short sticker; missing: the whole time) and `"animation": { "in": "none" | "fade" | "pop" | "slide-left" | "slide-right" | "slide-up" | "slide-down", "loop": "none" | "shake" | "pulse" | "float", "out": "none" | "fade" | "pop" }` (`shake` is the vibrate). A reaction word: `pop` in at the action, `shake` while someone screams, `fade` out.
 - `transition`: `{ "enabled", "text": "Number {rank}…", "background", "textColor", "durationSec": 0.5-3, "sound": soundId | null }`: a slide between ranks. Off by default; Shorts usually go straight cut to cut.
 
 ## Styles

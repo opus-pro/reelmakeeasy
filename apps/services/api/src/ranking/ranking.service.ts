@@ -7,12 +7,21 @@ import { Logger } from '@reelmakeeasy/common/logger'
 import {
   newRankingProject,
   RANKING_DEFAULT_CLIP_SEC,
+  RANKING_HEIGHT,
+  RANKING_WIDTH,
   rankingProblems,
   rankingTimeline,
   type RankingTimelinePart,
   soundsOf,
   transitionOf,
 } from '@reelmakeeasy/common/ranking/ranking-project'
+import {
+  animationOf,
+  isMovingSticker,
+  STICKER_OUT_SEC,
+  stickerMotionExpr,
+  stickerWindow,
+} from '@reelmakeeasy/common/ranking/ranking-motion'
 import { keyIsUnder, parseStoreUri, storeUri, toSavedAddress } from '@reelmakeeasy/common/storage/address'
 import { dataDir, filePath, fileStore } from '@reelmakeeasy/common/storage/file-store'
 import { ensureError } from '@reelmakeeasy/common/utils/error-handler'
@@ -21,12 +30,13 @@ import type {
   RankingProject,
   RankingProjectSummary,
   RankingRenderStatus,
+  RankingSticker,
 } from '@shared/types/api/ranking'
 
 import type { SoundLibraryService } from '../sound-library/sound-library.service'
 
 import { applyRankingPatch } from './ranking-patch'
-import { probeClip, type RenderPart, renderRanking, type SoundFile } from './ranking-render'
+import { probeClip, type RenderPart, renderRanking, type SoundFile, type StickerLayer } from './ranking-render'
 
 const logger = new Logger('RankingService')
 
@@ -178,13 +188,13 @@ export class RankingService {
     const problems = rankingProblems(project)
     if (problems.length) throw new RankingInputError(problems.join(' '))
     const timeline = rankingTimeline(project)
-    const { bandHeight, overlays } = parseRenderBody(body, timeline.length)
+    const { bandHeight, overlays, stickers } = parseRenderBody(body, timeline.length, project)
     if ([...this.jobs.values()].some((j) => j.projectId === id && j.state === 'rendering'))
       throw new RankingInputError('This ranking is already rendering.')
     const renderId = randomUUID()
     const job: RenderJob = { progress: 0, projectId: id, renderId, state: 'rendering' }
     this.jobs.set(renderId, job)
-    void this.render(project, timeline, bandHeight, overlays, job)
+    void this.render(project, timeline, bandHeight, overlays, job, stickers)
     return publicJob(job)
   }
 
@@ -245,6 +255,7 @@ export class RankingService {
     bandHeight: number,
     overlays: Buffer[],
     job: RenderJob,
+    stickerPngs: ReadonlyMap<string, Buffer> = new Map(),
   ): Promise<void> {
     const workDir = fs.mkdtempSync(path.join(os.tmpdir(), 'ranking-render-'))
     try {
@@ -257,6 +268,7 @@ export class RankingService {
         used.add(id)
         return this.sounds.playback(id)
       }
+      const total = timeline.reduce((sum, part) => sum + part.durSec, 0)
       const parts: RenderPart[] = timeline.map((part, i) => {
         const png = path.join(workDir, `overlay-${i}.png`)
         fs.writeFileSync(png, overlays[i] as Buffer)
@@ -279,6 +291,13 @@ export class RankingService {
           kind: 'clip',
           overlay: png,
           startSec: clip?.trimStartSec ?? 0,
+          stickers: stickerLayers(project, part, total, (sticker) => {
+            const image = stickerPngs.get(sticker.id)
+            if (!image) return undefined
+            const file = path.join(workDir, `sticker-${sticker.id}.png`)
+            if (!fs.existsSync(file)) fs.writeFileSync(file, image)
+            return file
+          }),
         }
       })
       const musicFile = soundFile(sounds.music)
@@ -334,7 +353,11 @@ const publicJob = ({ projectId: _projectId, ...job }: RenderJob): RankingRenderS
 
 /** The render request: one PNG per timeline part (clip overlay or transition slide; base64, as
  *  data URLs or bare), and the band height. */
-export function parseRenderBody(body: unknown, segmentCount: number): { bandHeight: number; overlays: Buffer[] } {
+export function parseRenderBody(
+  body: unknown,
+  segmentCount: number,
+  project?: RankingProject,
+): { bandHeight: number; overlays: Buffer[]; stickers: Map<string, Buffer> } {
   const b = (body ?? {}) as Record<string, unknown>
   const bandHeight = Number(b['bandHeight'])
   if (!Number.isInteger(bandHeight) || bandHeight < 0 || bandHeight > BAND_MAX)
@@ -342,12 +365,67 @@ export function parseRenderBody(body: unknown, segmentCount: number): { bandHeig
   const raw = b['overlays']
   if (!Array.isArray(raw) || raw.length !== segmentCount)
     throw new RankingInputError('The overlays are out of date: try the export again.')
-  const overlays = raw.map((value) => {
-    const data = typeof value === 'string' ? value.replace(/^data:image\/png;base64,/, '') : ''
-    const png = Buffer.from(data, 'base64')
-    if (png.length < PNG_SIGNATURE.length || !png.subarray(0, 8).equals(PNG_SIGNATURE))
-      throw new RankingInputError('An overlay is not a PNG.')
-    return png
-  })
-  return { bandHeight, overlays }
+  const overlays = raw.map((value) => pngOf(value, 'An overlay'))
+  // Moving stickers' pictures, by sticker id (only this project's moving stickers).
+  const stickers = new Map<string, Buffer>()
+  const sent = b['stickers']
+  if (sent && typeof sent === 'object' && project) {
+    const moving = new Set((project.stickers ?? []).filter(isMovingSticker).map((st) => st.id))
+    for (const [id, value] of Object.entries(sent as Record<string, unknown>))
+      if (moving.has(id)) stickers.set(id, pngOf(value, 'A sticker'))
+  }
+  return { bandHeight, overlays, stickers }
 }
+
+function pngOf(value: unknown, what: string): Buffer {
+  const data = typeof value === 'string' ? value.replace(/^data:image\/png;base64,/, '') : ''
+  const png = Buffer.from(data, 'base64')
+  if (png.length < PNG_SIGNATURE.length || !png.subarray(0, 8).equals(PNG_SIGNATURE))
+    throw new RankingInputError(`${what} is not a PNG.`)
+  return png
+}
+
+/**
+ * The moving stickers over one clip part, as render layers: its rank's (on the clip's clock) and
+ * the whole short's (on the short's clock, `total` long), each in the part's own seconds. `png`
+ * gives a sticker's picture file (undefined: the studio sent none, so it is left out).
+ */
+export function stickerLayers(
+  project: RankingProject,
+  part: Extract<RankingTimelinePart, { kind: 'clip' }>,
+  total: number,
+  png: (sticker: RankingSticker) => string | undefined,
+): StickerLayer[] {
+  const layers: StickerLayer[] = []
+  for (const sticker of project.stickers ?? []) {
+    if (!isMovingSticker(sticker)) continue
+    const own = sticker.rank === part.segment.item.rank
+    if (!own && sticker.rank !== null) continue
+    // Its clock: the clip's, or the short's (this part starts `offset` into it).
+    const offset = own ? 0 : part.startSec
+    const window = stickerWindow(sticker, own ? part.durSec : total)
+    if (!window) continue
+    const from = Math.max(0, window.start - offset)
+    const to = Math.min(part.durSec, window.end - offset)
+    if (to <= from) continue
+    const file = png(sticker)
+    if (!file) continue
+    const animation = animationOf(sticker)
+    const fadeIn = window.start - offset
+    const fadeOut = window.end - STICKER_OUT_SEC - offset
+    const shift = round3(offset - window.start)
+    layers.push({
+      cx: Math.round(sticker.x * RANKING_WIDTH),
+      cy: Math.round(sticker.y * RANKING_HEIGHT),
+      ...(animation.in === 'fade' && fadeIn >= 0 ? { fadeIn: round3(fadeIn) } : {}),
+      ...(animation.out === 'fade' && fadeOut >= 0 && fadeOut < part.durSec ? { fadeOut: round3(fadeOut) } : {}),
+      from: round3(from),
+      motion: stickerMotionExpr(sticker, `(t${shift >= 0 ? '+' : ''}${shift})`, window.end - window.start),
+      png: file,
+      to: round3(to),
+    })
+  }
+  return layers
+}
+
+const round3 = (n: number) => Math.round(n * 1000) / 1000

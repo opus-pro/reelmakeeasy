@@ -123,4 +123,28 @@ describe('applyRankingPatch', () => {
     expect(() => applyRankingPatch(p, { stickers: [{ ...sticker, rank: 9 }] }, NOW)).toThrow(/rank that is gone/)
     expect(() => applyRankingPatch(p, { stickers: [{ ...sticker, x: 2 }] }, NOW)).toThrow(/out of range/)
   })
+
+  it('takes fonts, rank marks, and a sticker’s timing, font, slant and animation', () => {
+    const p = withClip()
+    const style = applyRankingPatch(p, { style: { ...p.style, numberFont: 'dela', numberFormat: 'custom', numberMarks: [' 👑 ', '🔥'] } }, NOW).style
+    expect(style).toMatchObject({ numberFont: 'dela', numberFormat: 'custom', numberMarks: ['👑', '🔥'] })
+    expect(() => applyRankingPatch(p, { style: { ...p.style, titleFont: 'comic-sans' } }, NOW)).toThrow(/Fonts are one of/)
+    expect(() => applyRankingPatch(p, { style: { ...p.style, numberFormat: 'roman' } }, NOW)).toThrow(/rank marks/)
+    const base = { color: '#ffffff', id: 's1', kind: 'text', rank: 1, rotation: 0, size: 0.06, text: 'MAMA!', x: 0.6, y: 0.4 }
+    const moving = { ...base, animation: { in: 'pop', loop: 'shake', out: 'fade' }, endSec: 3, font: 'dela', italic: true, startSec: 1.2 }
+    expect(applyRankingPatch(p, { stickers: [moving] }, NOW).stickers?.[0]).toMatchObject({
+      animation: { in: 'pop', loop: 'shake', out: 'fade' },
+      endSec: 3,
+      font: 'dela',
+      italic: true,
+      startSec: 1.2,
+    })
+    // "Always, still" is stored as nothing.
+    const still = applyRankingPatch(p, { stickers: [{ ...base, animation: { in: 'none', loop: 'none', out: 'none' }, startSec: 0 }] }, NOW).stickers?.[0]
+    expect(still).not.toHaveProperty('animation')
+    expect(still).not.toHaveProperty('startSec')
+    expect(() => applyRankingPatch(p, { stickers: [{ ...base, animation: { in: 'spin' } }] }, NOW)).toThrow(/entrance/)
+    expect(() => applyRankingPatch(p, { stickers: [{ ...base, endSec: 1, startSec: 2 }] }, NOW)).toThrow(/end after/)
+  })
 })
+

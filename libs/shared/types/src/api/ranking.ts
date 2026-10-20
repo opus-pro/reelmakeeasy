@@ -4,6 +4,21 @@
  * revealed and stays. Saved as JSON in the data folder; clips are stored files.
  */
 
+/**
+ * The fonts the overlay can draw with (from the render font pack): `montserrat` (heavy sans, the
+ * trend's default), `anton` (tall condensed), `dela` (chunky, poster-like), `roboto`,
+ * `alegreya` (bold serif), `dmsans` (rounded sans), `ptserif`.
+ */
+export type RankingFontId = 'alegreya' | 'anton' | 'dela' | 'dmsans' | 'montserrat' | 'ptserif' | 'roboto'
+
+/** How a sticker comes in, moves while shown, and goes. */
+export type RankingStickerAnimation = {
+  in: 'fade' | 'none' | 'pop' | 'slide-down' | 'slide-left' | 'slide-right' | 'slide-up'
+  /** `shake` is the vibrate: a fast jitter. */
+  loop: 'float' | 'none' | 'pulse' | 'shake'
+  out: 'fade' | 'none' | 'pop'
+}
+
 /** One word (or phrase) of the title, in its own colour: the keywords stand out. */
 export type RankingTitleWord = { color: string; text: string }
 
@@ -39,11 +54,20 @@ export type RankingCue = {
  * plays. Positions are fractions of the 1080x1920 frame, at the sticker's centre.
  */
 export type RankingSticker = {
+  /** How it comes in, moves and goes (missing: it just shows). */
+  animation?: RankingStickerAnimation
   /** Text colour (text stickers). */
   color: string
+  /** Seconds after its rank's clip starts (or the short starts, for the whole short) that it
+   *  goes; null or missing: until the end. */
+  endSec?: null | number
+  /** Text stickers' font (missing: the labels' font). */
+  font?: RankingFontId
   id: string
   /** A stored picture's address (picture stickers); a served URL as it leaves for the browser. */
   imageUrl?: string
+  /** Text stickers: slanted, like comic lettering. */
+  italic?: boolean
   kind: 'image' | 'text'
   /** Only while this rank plays; null: the whole short. */
   rank: null | number
@@ -51,6 +75,9 @@ export type RankingSticker = {
   rotation: number
   /** Text: its height as a fraction of the frame's height. Picture: its width as a fraction of the frame's width. */
   size: number
+  /** Seconds after its rank's clip starts (or the short starts, for the whole short) that it
+   *  shows; missing: 0. */
+  startSec?: number
   /** Text or emoji (text stickers). */
   text?: string
   x: number
@@ -72,13 +99,25 @@ export type RankingItem = {
 /** The order the ranks are revealed in: N down to 1, 1 up to N, a fixed shuffle, or by hand. */
 export type RankingRevealMode = 'countdown' | 'countup' | 'custom' | 'shuffle'
 
+/** How each rank is marked: `1.`, `#1`, `1`, a keycap emoji (1️⃣), medals for the top three
+ *  (🥇🥈🥉, then `4.`), or `custom` (`numberMarks`, one per rank: any text or emoji). */
+export type RankingNumberFormat = 'custom' | 'dot' | 'hash' | 'keycap' | 'medal' | 'plain'
+
 export type RankingStyle = {
   /** The label text's colour. */
   labelColor: string
+  /** Fonts per part (missing: Montserrat). */
+  labelFont?: RankingFontId
   /** Rank number colours: 1, 2, 3, then everything else. */
   numberColors: [string, string, string, string]
+  numberFont?: RankingFontId
+  /** Missing: `dot`. */
+  numberFormat?: RankingNumberFormat
+  /** With `custom`: the mark of rank 1, 2, ... (a missing one falls back to `N.`). */
+  numberMarks?: string[]
   /** The outline around numbers and labels (keeps them readable over any clip). */
   outlineColor: string
+  titleFont?: RankingFontId
 }
 
 /** The sounds of a ranking short, by sound-library id (null: none). */

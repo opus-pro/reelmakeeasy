@@ -1,5 +1,6 @@
 'use client'
 
+import { isMovingSticker, stickerPose } from '@reelmakeeasy/common/ranking/ranking-motion'
 import { drawRankingOverlay, drawRankingTransition } from '@reelmakeeasy/common/ranking/ranking-overlay'
 import {
   RANKING_HEIGHT,
@@ -47,6 +48,8 @@ export function RankingPreview({ focusRank, fontsReady, onMoveSticker, project, 
   const [elapsed, setElapsed] = useState(0)
 
   const part: RankingTimelinePart | null = playing === null ? null : (timeline[playing] ?? null)
+  const total = timeline.reduce((sum, t) => sum + t.durSec, 0)
+  const hasMoving = (project.stickers ?? []).some(isMovingSticker)
   const segment = part?.kind === 'clip' ? part.segment : null
   const focusItem = project.items.find((item) => item.rank === focusRank && item.clip)
   const clip = part ? (segment?.item.clip ?? null) : (focusItem?.clip ?? null)
@@ -69,10 +72,28 @@ export function RankingPreview({ focusRank, fontsReady, onMoveSticker, project, 
     }
     // Playing: the rank on screen; stopped: the rank being edited.
     const rank = segment ? segment.item.rank : focusRank
-    setBandHeight(
-      drawRankingOverlay(ctx, project, revealed, { fonts: STUDIO_RANKING_FONTS, images, rank }).bandHeight,
-    )
-  }, [focusRank, fontsReady, images, part, project, revealed, segment])
+    // While a clip plays, moving stickers follow its clock (the whole short's ones, the short's);
+    // stopped, they show at rest so they can be placed.
+    const clipPart = part?.kind === 'clip' ? part : null
+    const moving =
+      clipPart && hasMoving
+        ? (sticker: RankingSticker) => {
+            const video = videoRef.current
+            const sec = video && clip ? Math.max(0, video.currentTime - clip.trimStartSec) : 0
+            return sticker.rank === null
+              ? stickerPose(sticker, clipPart.startSec + sec, total)
+              : stickerPose(sticker, sec, clipPart.durSec)
+          }
+        : ('still' as const)
+    const draw = () => drawRankingOverlay(ctx, project, revealed, { fonts: STUDIO_RANKING_FONTS, images, moving, rank })
+    setBandHeight(draw().bandHeight)
+    if (moving === 'still') return undefined
+    let frame = requestAnimationFrame(function tick() {
+      draw()
+      frame = requestAnimationFrame(tick)
+    })
+    return () => cancelAnimationFrame(frame)
+  }, [clip, focusRank, fontsReady, hasMoving, images, part, project, revealed, segment, total])
 
   // Each part's sound as it starts; a transition advances on its own clock.
   useEffect(() => {
@@ -132,7 +153,6 @@ export function RankingPreview({ focusRank, fontsReady, onMoveSticker, project, 
     advance()
   }
 
-  const total = timeline.reduce((sum, t) => sum + t.durSec, 0)
   const top = (bandHeight / RANKING_HEIGHT) * 100
   return (
     <div className="flex flex-col items-center gap-3">

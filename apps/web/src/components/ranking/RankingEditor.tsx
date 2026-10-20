@@ -13,9 +13,12 @@ import {
   rankingItemId,
   revealOrder,
 } from '@reelmakeeasy/common/ranking/ranking-project'
+import { RANKING_FONT_FACES, RANKING_FONT_IDS } from '@reelmakeeasy/common/ranking/ranking-type'
 import type {
   RankingCue,
+  RankingFontId,
   RankingItem,
+  RankingNumberFormat,
   RankingProject,
   RankingRevealMode,
   RankingStyle,
@@ -725,6 +728,15 @@ function OrderChips({
   )
 }
 
+const NUMBER_FORMATS: [RankingNumberFormat, string][] = [
+  ['dot', '1.'],
+  ['hash', '#1'],
+  ['plain', '1'],
+  ['keycap', '1️⃣ keycaps'],
+  ['medal', '🥇 medals, then 4.'],
+  ['custom', 'Your own (emoji, words)'],
+]
+
 function StylePanel({ onChange, style }: { onChange: (style: RankingStyle) => void; style: RankingStyle }) {
   const swatch = (label: string, value: string, set: (v: string) => void) => (
     <label className="flex items-center gap-1.5 text-xs text-secondary" key={label}>
@@ -742,8 +754,57 @@ function StylePanel({ onChange, style }: { onChange: (style: RankingStyle) => vo
     numberColors[i] = v
     onChange({ ...style, numberColors })
   }
+  const font = (label: string, key: 'labelFont' | 'numberFont' | 'titleFont') => (
+    <label className="flex items-center gap-1.5 text-xs text-secondary" key={key}>
+      {label}
+      <select
+        className="rounded-md border border-white/10 bg-black/30 px-1.5 py-0.5 text-xs text-primary"
+        onChange={(e) => onChange({ ...style, [key]: (e.target.value || undefined) as RankingFontId | undefined })}
+        value={style[key] ?? 'montserrat'}
+      >
+        {RANKING_FONT_IDS.map((id) => (
+          <option key={id} value={id}>
+            {RANKING_FONT_FACES[id].label}
+          </option>
+        ))}
+      </select>
+    </label>
+  )
+  const format = style.numberFormat ?? 'dot'
   return (
     <section className={SECTION}>
+      <span className={HEADING}>Fonts and rank marks</span>
+      <div className="flex flex-wrap gap-x-4 gap-y-2">
+        {font('Title', 'titleFont')}
+        {font('Numbers', 'numberFont')}
+        {font('Labels', 'labelFont')}
+        <label className="flex items-center gap-1.5 text-xs text-secondary">
+          Marks
+          <select
+            className="rounded-md border border-white/10 bg-black/30 px-1.5 py-0.5 text-xs text-primary"
+            onChange={(e) => onChange({ ...style, numberFormat: e.target.value as RankingNumberFormat })}
+            value={format}
+          >
+            {NUMBER_FORMATS.map(([value, label]) => (
+              <option key={value} value={value}>
+                {label}
+              </option>
+            ))}
+          </select>
+        </label>
+      </div>
+      {format === 'custom' && (
+        <label className="flex flex-col gap-1 text-xs text-secondary">
+          Your marks, rank 1 first, separated by spaces (emoji welcome)
+          <input
+            className="rounded-md border border-white/10 bg-black/30 px-2 py-1 text-sm text-primary"
+            onChange={(e) => onChange({ ...style, numberMarks: e.target.value.split(/\s+/).filter(Boolean) })}
+            // Uncontrolled: the box keeps the spaces being typed; the marks are its words.
+            defaultValue={(style.numberMarks ?? []).join(' ')}
+            placeholder="👑 🔥 😂 💀 🤡"
+          />
+        </label>
+      )}
       <span className={HEADING}>Colours</span>
       <div className="flex flex-wrap gap-x-4 gap-y-2">
         {swatch('#1', style.numberColors[0], (v) => setNumber(0, v))}

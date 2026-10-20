@@ -2,6 +2,7 @@ import { spawn } from 'node:child_process'
 import fs from 'node:fs'
 import path from 'node:path'
 
+import { STICKER_IN_SEC, STICKER_OUT_SEC } from '@reelmakeeasy/common/ranking/ranking-motion'
 import { RANKING_FPS, RANKING_HEIGHT, RANKING_WIDTH } from '@reelmakeeasy/common/ranking/ranking-project'
 
 /** Loudness the finished short is delivered at (streaming level, with headroom). */
@@ -54,6 +55,39 @@ export async function probeClip(file: string): Promise<{ durationSec: number; ha
 }
 
 /**
+ * A moving sticker over a segment: its picture (drawn by the studio, centred on its anchor),
+ * where its anchor is, when it shows (segment seconds) and how it moves (`stickerMotionExpr`,
+ * offsets in fractions of the frame). `fadeIn` / `fadeOut`: when its fades start (segment
+ * seconds), if it has them.
+ */
+export type StickerLayer = {
+  cx: number
+  cy: number
+  fadeIn?: number
+  fadeOut?: number
+  from: number
+  motion: { dx: string; dy: string; scale: string }
+  png: string
+  to: number
+}
+
+/** The filter that animates sticker input `input` over `[from]`, out as `[to]`. */
+export function stickerFilter(layer: StickerLayer, input: number, from: string, to: string, fadeSec: { in: number; out: number }): string {
+  const { motion } = layer
+  const size = (side: string) => `max(2,trunc(${side}*(${motion.scale})/2)*2)`
+  const fades = [
+    layer.fadeIn === undefined ? '' : `,fade=t=in:st=${layer.fadeIn}:d=${fadeSec.in}:alpha=1`,
+    layer.fadeOut === undefined ? '' : `,fade=t=out:st=${layer.fadeOut}:d=${fadeSec.out}:alpha=1`,
+  ].join('')
+  const scale = motion.scale === '1' ? '' : `,scale=w='${size('iw')}':h='${size('ih')}':eval=frame`
+  return (
+    `[${input}:v]format=rgba${scale}${fades}[st${input}];` +
+    `[${from}][st${input}]overlay=x='${layer.cx}+(${motion.dx})*${RANKING_WIDTH}-overlay_w/2':` +
+    `y='${layer.cy}+(${motion.dy})*${RANKING_HEIGHT}-overlay_h/2':enable='between(t,${layer.from},${layer.to})':format=auto[${to}]`
+  )
+}
+
+/**
  * The ffmpeg arguments for one segment: the clip's trim, scaled to cover the area under the
  * title band (cropped to fill, never letterboxed), the overlay on top, its own sound (or
  * silence) as 48 kHz stereo. Every segment has the same format, so they join without
@@ -70,13 +104,15 @@ export function segmentArgs(o: {
    *  over the clip's own sound. */
   cues?: SoundCue[]
   startSec: number
+  /** Moving stickers over it (animated, or coming and going). */
+  stickers?: StickerLayer[]
 }): string[] {
   const area = RANKING_HEIGHT - o.bandHeight
   const video =
     `[0:v]scale=${RANKING_WIDTH}:${area}:force_original_aspect_ratio=increase,` +
     `crop=${RANKING_WIDTH}:${area},setsar=1,fps=${RANKING_FPS},` +
     `pad=${RANKING_WIDTH}:${RANKING_HEIGHT}:0:${o.bandHeight}:black[base];` +
-    `[base][1:v]overlay=0:0:format=auto,format=yuv420p[v]`
+    `[base][1:v]overlay=0:0:format=auto[ov0]`
   const base = o.hasAudio
     ? `[0:a]aresample=48000,aformat=channel_layouts=stereo,apad`
     : `[2:a]aformat=channel_layouts=stereo`
@@ -92,13 +128,20 @@ export function segmentArgs(o: {
         .join(';') +
       `;[clip]${cues.map((_, i) => `[fx${i}]`).join('')}amix=inputs=${cues.length + 1}:duration=first:normalize=0[a]`
     : `${base}[a]`
+  const layers = o.stickers ?? []
+  const stickerStart = first + cues.length
+  const stickers = layers.map((layer, i) =>
+    stickerFilter(layer, stickerStart + i, `ov${i}`, `ov${i + 1}`, { in: STICKER_IN_SEC, out: STICKER_OUT_SEC }),
+  )
+  const finish = `[ov${layers.length}]format=yuv420p[v]`
   return [
     '-v', 'error', '-y',
     '-ss', String(o.startSec), '-t', String(o.durSec), '-i', o.clipFile,
     '-loop', '1', '-t', String(o.durSec), '-i', o.overlay,
     ...(o.hasAudio ? [] : ['-f', 'lavfi', '-t', String(o.durSec), '-i', 'anullsrc=r=48000:cl=stereo']),
     ...cues.flatMap((cue) => soundInput(cue.sound)),
-    '-filter_complex', `${video};${audio}`,
+    ...layers.flatMap((layer) => ['-loop', '1', '-framerate', String(RANKING_FPS), '-t', String(o.durSec), '-i', layer.png]),
+    '-filter_complex', [video, ...stickers, finish, audio].join(';'),
     '-map', '[v]', '-map', '[a]',
     '-t', String(o.durSec),
     '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '20', '-r', String(RANKING_FPS),
@@ -151,7 +194,15 @@ export function finishArgs(o: { joined: string; music?: { level: number; sound: 
 
 /** One piece to render: a rank's clip under its overlay, or a transition slide. */
 export type RenderPart =
-  | { clipFile: string; cues?: SoundCue[]; durSec: number; kind: 'clip'; overlay: string; startSec: number }
+  | {
+      clipFile: string
+      cues?: SoundCue[]
+      durSec: number
+      kind: 'clip'
+      overlay: string
+      startSec: number
+      stickers?: StickerLayer[]
+    }
   | { durSec: number; kind: 'transition'; png: string; sfx?: SoundFile }
 
 /**
@@ -180,6 +231,7 @@ export async function renderRanking(o: {
             cues: part.cues,
             overlay: part.overlay,
             startSec: part.startSec,
+            stickers: part.stickers,
           })
         : transitionArgs({ durSec: part.durSec, out, png: part.png, sfx: part.sfx })
     await run('ffmpeg', args, o.workDir)

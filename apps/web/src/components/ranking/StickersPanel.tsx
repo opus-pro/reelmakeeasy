@@ -6,7 +6,9 @@ import {
   RANKING_TITLE_COLORS,
   rankingItemId,
 } from '@reelmakeeasy/common/ranking/ranking-project'
-import type { RankingProject, RankingSticker } from '@shared/types/api/ranking'
+import { animationOf, STICKER_INS, STICKER_LOOPS, STICKER_OUTS } from '@reelmakeeasy/common/ranking/ranking-motion'
+import { RANKING_FONT_FACES, RANKING_FONT_IDS } from '@reelmakeeasy/common/ranking/ranking-type'
+import type { RankingFontId, RankingProject, RankingSticker, RankingStickerAnimation } from '@shared/types/api/ranking'
 import { Button, cn } from '@shared/ui'
 import { useRef, useState } from 'react'
 
@@ -17,6 +19,27 @@ const INPUT =
 
 /** Emoji the trend uses most, one click away. */
 const QUICK_EMOJI = ['😂', '💀', '😳', '🔥', '😱', '🤯', '👀', '😭', '🗿', '💯']
+
+const IN_LABEL: Record<RankingStickerAnimation['in'], string> = {
+  fade: 'Fade in',
+  none: 'Just appears',
+  pop: 'Pop in',
+  'slide-down': 'Slide from top',
+  'slide-left': 'Slide from left',
+  'slide-right': 'Slide from right',
+  'slide-up': 'Slide from bottom',
+}
+const LOOP_LABEL: Record<RankingStickerAnimation['loop'], string> = {
+  float: 'Float',
+  none: 'Still',
+  pulse: 'Pulse',
+  shake: 'Vibrate',
+}
+const OUT_LABEL: Record<RankingStickerAnimation['out'], string> = {
+  fade: 'Fade out',
+  none: 'Stays to the end',
+  pop: 'Pop out',
+}
 
 /** A new sticker in the middle of the clip area, slightly up. */
 const newSticker = (over: Partial<RankingSticker>): RankingSticker => ({
@@ -183,6 +206,27 @@ function StickerRow({
           value={Math.round(sticker.size * 100)}
         />
       </label>
+      {sticker.kind === 'text' && (
+        <>
+          <select
+            aria-label="Sticker font"
+            className={cn(INPUT, 'py-0.5 text-xs')}
+            onChange={(e) => onChange({ font: (e.target.value || undefined) as RankingFontId | undefined })}
+            value={sticker.font ?? ''}
+          >
+            <option value="">Labels’ font</option>
+            {RANKING_FONT_IDS.map((id) => (
+              <option key={id} value={id}>
+                {RANKING_FONT_FACES[id].label}
+              </option>
+            ))}
+          </select>
+          <label className="flex items-center gap-1">
+            <input checked={!!sticker.italic} onChange={(e) => onChange({ italic: e.target.checked })} type="checkbox" />
+            Slant
+          </label>
+        </>
+      )}
       <label className="flex items-center gap-1">
         Angle
         <input
@@ -214,6 +258,63 @@ function StickerRow({
       <button aria-label="Remove sticker" className="ml-auto hover:text-primary" onClick={onRemove} type="button">
         ✕
       </button>
+      <StickerMotion onChange={onChange} sticker={sticker} />
+    </div>
+  )
+}
+
+/** When a sticker shows (seconds into its rank's clip, or the short) and how it moves. */
+function StickerMotion({
+  onChange,
+  sticker,
+}: {
+  onChange: (patch: Partial<RankingSticker>) => void
+  sticker: RankingSticker
+}) {
+  const animation = animationOf(sticker)
+  const setAnimation = (patch: Partial<RankingStickerAnimation>) => onChange({ animation: { ...animation, ...patch } })
+  const seconds = (value: string) => (value.trim() === '' ? undefined : Math.max(0, Number(value)))
+  const select = <T extends string>(label: string, value: T, options: T[], names: Record<T, string>, set: (v: T) => void) => (
+    <select aria-label={label} className={cn(INPUT, 'py-0.5 text-xs')} onChange={(e) => set(e.target.value as T)} value={value}>
+      {options.map((o) => (
+        <option key={o} value={o}>
+          {names[o]}
+        </option>
+      ))}
+    </select>
+  )
+  return (
+    <div className="flex w-full flex-wrap items-center gap-x-2 gap-y-1.5">
+      {select('Entrance', animation.in, STICKER_INS, IN_LABEL, (v) => setAnimation({ in: v }))}
+      {select('Movement', animation.loop, STICKER_LOOPS, LOOP_LABEL, (v) => setAnimation({ loop: v }))}
+      {select('Exit', animation.out, STICKER_OUTS, OUT_LABEL, (v) => setAnimation({ out: v }))}
+      <label className="flex items-center gap-1">
+        from
+        <input
+          aria-label="Shows from (seconds)"
+          className={cn(INPUT, 'w-14 py-0.5 text-xs')}
+          min={0}
+          onChange={(e) => onChange({ startSec: seconds(e.target.value) })}
+          placeholder="0"
+          step={0.1}
+          type="number"
+          value={sticker.startSec ?? ''}
+        />
+      </label>
+      <label className="flex items-center gap-1">
+        to
+        <input
+          aria-label="Shows until (seconds)"
+          className={cn(INPUT, 'w-14 py-0.5 text-xs')}
+          min={0}
+          onChange={(e) => onChange({ endSec: seconds(e.target.value) ?? null })}
+          placeholder="end"
+          step={0.1}
+          type="number"
+          value={sticker.endSec ?? ''}
+        />
+        s
+      </label>
     </div>
   )
 }

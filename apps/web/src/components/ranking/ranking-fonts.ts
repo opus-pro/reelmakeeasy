@@ -1,6 +1,7 @@
 'use client'
 
 import type { RankingFonts } from '@reelmakeeasy/common/ranking/ranking-overlay'
+import { RANKING_FONT_FACES, RANKING_FONT_IDS, rankingFontFamily } from '@reelmakeeasy/common/ranking/ranking-type'
 
 /** The family name the studio loads Montserrat under (its own, so nothing else is affected). */
 const FAMILY = 'RME Ranking'
@@ -20,19 +21,22 @@ export const STUDIO_RANKING_FONTS: RankingFonts = {
 let loading: null | Promise<boolean> = null
 
 /**
- * Loads the render pack's Montserrat into the page (from the API's font route), once. Resolves
- * false when it can't (no pack yet): the overlay then draws in the fallback fonts.
+ * Loads the render pack's fonts into the page (from the API's font route), once: Montserrat for
+ * the default look, and every font a ranking can pick (`RME <id>`, each one face that answers for
+ * any weight, so nothing is faked bold). Resolves false when Montserrat can't load (no pack yet):
+ * the overlay then draws in the fallback fonts; a pick that fails falls back the same way.
  */
 export function loadRankingFonts(apiOrigin: string): Promise<boolean> {
   if (typeof FontFace === 'undefined' || typeof document === 'undefined') return Promise.resolve(false)
-  loading ??= Promise.all(
-    FACES.map(async ({ file, weight }) => {
-      const face = new FontFace(FAMILY, `url(${JSON.stringify(`${apiOrigin}/api/caption-fonts/pack/${file}`)})`, {
-        weight,
-      })
-      document.fonts.add(await face.load())
-    }),
-  )
+  const url = (file: string) => `url(${JSON.stringify(`${apiOrigin}/api/caption-fonts/pack/${file}`)})`
+  const add = async (family: string, file: string, weight: string) =>
+    document.fonts.add(await new FontFace(family, url(file), { weight }).load())
+  loading ??= Promise.all([
+    ...FACES.map(({ file, weight }) => add(FAMILY, file, weight)),
+    ...RANKING_FONT_IDS.filter((id) => id !== 'montserrat').map((id) =>
+      add(rankingFontFamily(id), RANKING_FONT_FACES[id].file, '100 900').catch(() => undefined),
+    ),
+  ])
     .then(() => true)
     .catch(() => {
       loading = null

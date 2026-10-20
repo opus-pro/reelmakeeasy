@@ -1,6 +1,13 @@
 'use client'
 
-import { drawRankingOverlay, drawRankingTransition } from '@reelmakeeasy/common/ranking/ranking-overlay'
+import { isMovingSticker } from '@reelmakeeasy/common/ranking/ranking-motion'
+import {
+  drawRankingOverlay,
+  drawRankingTransition,
+  drawSticker,
+  projectFonts,
+  type StickerImage,
+} from '@reelmakeeasy/common/ranking/ranking-overlay'
 import {
   RANKING_HEIGHT,
   RANKING_WIDTH,
@@ -9,7 +16,7 @@ import {
   rankingTimeline,
 } from '@reelmakeeasy/common/ranking/ranking-project'
 import { applyRankingTemplate } from '@reelmakeeasy/common/ranking/ranking-template'
-import type { RankingProject, RankingRenderStatus, RankingTemplate } from '@shared/types/api/ranking'
+import type { RankingProject, RankingRenderStatus, RankingSticker, RankingTemplate } from '@shared/types/api/ranking'
 import { Button } from '@shared/ui'
 import { useAtomValue } from 'jotai'
 import { useRouter } from 'next/navigation'
@@ -201,7 +208,9 @@ export function RankingStudio({
 
 /** Each timeline part's picture as a PNG (data URL), drawn exactly as the preview draws it: a
  *  clip's overlay, or a transition slide. */
-export async function drawOverlays(project: RankingProject): Promise<{ bandHeight: number; overlays: string[] }> {
+export async function drawOverlays(
+  project: RankingProject,
+): Promise<{ bandHeight: number; overlays: string[]; stickers: Record<string, string> }> {
   // Every sticker picture loaded first: the export waits for them.
   const images = new Map(
     (
@@ -226,11 +235,50 @@ export async function drawOverlays(project: RankingProject): Promise<{ bandHeigh
       bandHeight = drawRankingOverlay(ctx, project, part.segment.revealed, {
         fonts: STUDIO_RANKING_FONTS,
         images,
+        // Moving stickers are animated by the render itself, from their own pictures below.
+        moving: 'skip',
         rank: part.segment.item.rank,
       }).bandHeight
     return canvas.toDataURL('image/png')
   })
-  return { bandHeight, overlays }
+  const stickers: Record<string, string> = {}
+  for (const sticker of (project.stickers ?? []).filter(isMovingSticker)) {
+    const png = stickerPicture(ctx, project, sticker, images)
+    if (png) stickers[sticker.id] = png
+  }
+  return { bandHeight, overlays, stickers }
+}
+
+/**
+ * A moving sticker on its own, at rest, as a PNG centred on its anchor (so the render can scale
+ * and move it around that point): drawn on the full frame, then cut to the smallest box around
+ * the anchor that holds it. Undefined when it draws nothing.
+ */
+function stickerPicture(
+  ctx: CanvasRenderingContext2D,
+  project: RankingProject,
+  sticker: RankingSticker,
+  images: ReadonlyMap<string, StickerImage>,
+): string | undefined {
+  ctx.clearRect(0, 0, RANKING_WIDTH, RANKING_HEIGHT)
+  drawSticker(ctx, sticker, project.style.outlineColor, projectFonts(project, STUDIO_RANKING_FONTS), images)
+  const { data } = ctx.getImageData(0, 0, RANKING_WIDTH, RANKING_HEIGHT)
+  const cx = Math.round(sticker.x * RANKING_WIDTH)
+  const cy = Math.round(sticker.y * RANKING_HEIGHT)
+  let halfW = 0
+  let halfH = 0
+  for (let y = 0; y < RANKING_HEIGHT; y++)
+    for (let x = 0; x < RANKING_WIDTH; x++) {
+      if (!data[(y * RANKING_WIDTH + x) * 4 + 3]) continue
+      halfW = Math.max(halfW, Math.abs(x - cx) + 2)
+      halfH = Math.max(halfH, Math.abs(y - cy) + 2)
+    }
+  if (!halfW || !halfH) return undefined
+  const cut = document.createElement('canvas')
+  cut.width = halfW * 2
+  cut.height = halfH * 2
+  cut.getContext('2d')?.drawImage(ctx.canvas, cx - halfW, cy - halfH, halfW * 2, halfH * 2, 0, 0, halfW * 2, halfH * 2)
+  return cut.toDataURL('image/png')
 }
 
 /** "Apply style": gives the ranking a saved style's look and sounds (then autosaves). */
@@ -316,8 +364,8 @@ function ExportPanel({ api, project, saving }: { api: RankingApi; project: Ranki
     setError(null)
     try {
       await document.fonts.ready
-      const { bandHeight, overlays } = await drawOverlays(project)
-      setStatus(await api.render(project.id, bandHeight, overlays))
+      const { bandHeight, overlays, stickers } = await drawOverlays(project)
+      setStatus(await api.render(project.id, bandHeight, overlays, stickers))
     } catch (e) {
       setError(errorText(e))
     }

@@ -1,6 +1,8 @@
-import type { RankingProject, RankingSticker, RankingTitleWord } from '@shared/types/api/ranking'
+import type { RankingFontId, RankingProject, RankingSticker, RankingTitleWord } from '@shared/types/api/ranking'
 
+import { isMovingSticker, type StickerPose } from './ranking-motion'
 import { RANKING_HEIGHT, RANKING_WIDTH, transitionOf, transitionText } from './ranking-project'
+import { rankingFontFamily, rankMark } from './ranking-type'
 
 /**
  * The ranking short's overlay, drawn on a 2D canvas: the title band and the rank list. The same
@@ -15,6 +17,7 @@ export interface RankingCanvas {
   fillStyle: unknown
   fillText(text: string, x: number, y: number): void
   font: string
+  globalAlpha: number
   lineJoin: string
   lineWidth: number
   measureText(text: string): { width: number }
@@ -22,10 +25,12 @@ export interface RankingCanvas {
   restore(): void
   rotate(angle: number): void
   save(): void
+  scale(x: number, y: number): void
   strokeStyle: unknown
   strokeText(text: string, x: number, y: number): void
   textAlign: string
   textBaseline: string
+  transform(a: number, b: number, c: number, d: number, e: number, f: number): void
   translate(x: number, y: number): void
 }
 
@@ -66,6 +71,20 @@ export type RankingLayout = {
 
 const fontOf = (size: number, family: string, weight = 800) => `${weight} ${size}px ${family}`
 
+/** A part's family: its chosen pack font first (loaded as `RME <id>`), then the default's. */
+export const familyFor = (id: RankingFontId | undefined, fallback: string) =>
+  id && id !== 'montserrat' ? `"${rankingFontFamily(id)}", ${fallback}` : fallback
+
+/** The project's fonts with its style's choices applied. */
+export function projectFonts(project: RankingProject, fonts: RankingFonts): RankingFonts {
+  const { labelFont, numberFont, titleFont } = project.style
+  return {
+    label: familyFor(labelFont, fonts.label),
+    number: familyFor(numberFont, fonts.number),
+    title: familyFor(titleFont, fonts.title),
+  }
+}
+
 function lineWidth(ctx: RankingCanvas, line: RankingTitleWord[], size: number, family: string): number {
   ctx.font = fontOf(size, family)
   const words = line.filter((w) => w.text.trim())
@@ -77,8 +96,9 @@ function lineWidth(ctx: RankingCanvas, line: RankingTitleWord[], size: number, f
 export function rankingLayout(
   ctx: RankingCanvas,
   project: RankingProject,
-  fonts: RankingFonts = DEFAULT_RANKING_FONTS,
+  base: RankingFonts = DEFAULT_RANKING_FONTS,
 ): RankingLayout {
+  const fonts = projectFonts(project, base)
   const lines = project.title.lines.filter((line) => line.some((w) => w.text.trim()))
   let titleSize = TITLE_MAX_SIZE
   while (
@@ -141,13 +161,18 @@ export function drawRankingOverlay(
     fonts?: RankingFonts
     /** Pictures for picture stickers, by their URL (one not loaded yet is skipped). */
     images?: ReadonlyMap<string, StickerImage>
+    /** Moving stickers (animated or timed): `still` draws them at rest (the studio while
+     *  stopped), `skip` leaves them out (the export animates them itself), or a function gives
+     *  each one's pose now (null: not shown). Default `still`. */
+    moving?: 'skip' | 'still' | ((sticker: RankingSticker) => null | StickerPose)
     /** The rank playing now: its stickers show, with the whole short's (undefined: none of a rank's). */
     rank?: null | number
   } = {},
 ): RankingLayout {
-  const fonts = opts.fonts ?? DEFAULT_RANKING_FONTS
+  const base = opts.fonts ?? DEFAULT_RANKING_FONTS
+  const fonts = projectFonts(project, base)
   const shown = new Set(revealed)
-  const layout = rankingLayout(ctx, project, fonts)
+  const layout = rankingLayout(ctx, project, base)
   ctx.save()
   ctx.clearRect(0, 0, W, H)
   if (opts.background) {
@@ -182,7 +207,7 @@ export function drawRankingOverlay(
     const y = layout.rowY.get(item.rank)
     if (y === undefined) continue
     ctx.font = fontOf(layout.numberSize, fonts.number, 900)
-    const number = `${item.rank}.`
+    const number = rankMark(project.style, item.rank)
     outlined(ctx, number, LIST_LEFT, y, numberColor(item.rank), project.style.outlineColor, layout.numberSize)
     if (!shown.has(item.rank) || !item.label.trim()) continue
     const labelX = LIST_LEFT + ctx.measureText(number).width + layout.numberSize * 0.12
@@ -194,7 +219,14 @@ export function drawRankingOverlay(
   // Stickers on top: the whole short's, and the playing rank's.
   for (const sticker of project.stickers ?? []) {
     if (sticker.rank !== null && sticker.rank !== opts.rank) continue
-    drawSticker(ctx, sticker, project.style.outlineColor, fonts, opts.images)
+    const moving = opts.moving ?? 'still'
+    let pose: null | StickerPose | undefined
+    if (isMovingSticker(sticker) && moving !== 'still') {
+      if (moving === 'skip') continue
+      pose = moving(sticker)
+      if (!pose) continue
+    }
+    drawSticker(ctx, sticker, project.style.outlineColor, fonts, opts.images, pose ?? undefined)
   }
   ctx.restore()
   return layout
@@ -207,13 +239,22 @@ export function drawSticker(
   outline: string,
   fonts: RankingFonts = DEFAULT_RANKING_FONTS,
   images?: ReadonlyMap<string, StickerImage>,
+  /** Where it is in its animation (missing: at rest). */
+  pose?: StickerPose,
 ): void {
+  if (pose && (pose.alpha <= 0 || pose.scale <= 0)) return
   ctx.save()
-  ctx.translate(sticker.x * W, sticker.y * H)
+  ctx.translate((sticker.x + (pose?.dx ?? 0)) * W, (sticker.y + (pose?.dy ?? 0)) * H)
+  if (pose) {
+    ctx.globalAlpha = pose.alpha
+    ctx.scale(pose.scale, pose.scale)
+  }
   if (sticker.rotation) ctx.rotate((sticker.rotation * Math.PI) / 180)
   if (sticker.kind === 'text' && sticker.text) {
     const size = Math.round(sticker.size * H)
-    ctx.font = fontOf(size, fonts.label, 900)
+    // Slanted like comic lettering: a shear, so every font can do it.
+    if (sticker.italic) ctx.transform(1, 0, -0.2, 1, 0, 0)
+    ctx.font = fontOf(size, familyFor(sticker.font, fonts.label), 900)
     ctx.textAlign = 'center'
     ctx.textBaseline = 'middle'
     outlined(ctx, sticker.text, 0, 0, sticker.color, outline, size)
@@ -236,8 +277,9 @@ export function drawRankingTransition(
   ctx: RankingCanvas,
   project: RankingProject,
   nextRank: number,
-  fonts: RankingFonts = DEFAULT_RANKING_FONTS,
+  base: RankingFonts = DEFAULT_RANKING_FONTS,
 ): void {
+  const fonts = projectFonts(project, base)
   const transition = transitionOf(project)
   const text = transitionText(transition, nextRank)
   ctx.save()

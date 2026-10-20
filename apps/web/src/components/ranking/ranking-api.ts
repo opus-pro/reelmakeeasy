@@ -58,10 +58,10 @@ export function useRankingApi() {
       remove: async (id: string) => {
         await fetchApiDomain('/api/ranking/projects/{id}', { method: 'DELETE', pathParams: { id } })
       },
-      render: async (id: string, bandHeight: number, overlays: string[]) =>
+      render: async (id: string, bandHeight: number, overlays: string[], stickers: Record<string, string> = {}) =>
         (
           await fetchApiDomain<RankingRenderStatus>('/api/ranking/projects/{id}/render', {
-            data: { bandHeight, overlays },
+            data: { bandHeight, overlays, stickers },
             method: 'POST',
             pathParams: { id },
           })

@@ -7,6 +7,7 @@ import {
   RANKING_LABEL_MAX,
   RANKING_MAX_ITEMS,
   RANKING_MIN_ITEMS,
+  RANKING_SHORT_MAX_SEC,
   RANKING_TITLE_LINES_MAX,
   RANKING_TITLE_WORDS_MAX,
   RANKING_TRANSITION_MAX_SEC,
@@ -14,10 +15,14 @@ import {
   RANKING_TRANSITION_TEXT_MAX,
   revealOrder,
 } from '@reelmakeeasy/common/ranking/ranking-project'
+import { STICKER_INS, STICKER_LOOPS, STICKER_OUTS } from '@reelmakeeasy/common/ranking/ranking-motion'
+import { isRankingFontId, RANKING_FONT_IDS, RANKING_NUMBER_MARK_MAX } from '@reelmakeeasy/common/ranking/ranking-type'
 import { keyIsUnder, parseStoreUri, toSavedAddress } from '@reelmakeeasy/common/storage/address'
 import type {
   RankingClip,
   RankingCue,
+  RankingFontId,
+  RankingNumberFormat,
   RankingSticker,
   RankingItem,
   RankingProject,
@@ -74,11 +79,63 @@ export function parseStyle(v: unknown): RankingStyle {
   if (!isRecord(v) || !Array.isArray(v['numberColors']) || v['numberColors'].length !== 4)
     throw new RankingPatchError('The style needs four number colours.')
   const [a, b, c, d] = (v['numberColors'] as unknown[]).map((x) => color(x, 'A number'))
-  return {
+  const style: RankingStyle = {
     labelColor: color(v['labelColor'], 'The label'),
     numberColors: [a as string, b as string, c as string, d as string],
     outlineColor: color(v['outlineColor'], 'The outline'),
   }
+  for (const key of ['labelFont', 'numberFont', 'titleFont'] as const) {
+    const font = optionalFont(v[key])
+    if (font) style[key] = font
+  }
+  const format = v['numberFormat']
+  if (format !== undefined && format !== null) {
+    if (!NUMBER_FORMATS.includes(format as never))
+      throw new RankingPatchError(`The rank marks are one of ${NUMBER_FORMATS.join(', ')}.`)
+    style.numberFormat = format as RankingNumberFormat
+  }
+  if (style.numberFormat === 'custom') {
+    const marks = v['numberMarks']
+    if (!Array.isArray(marks) || marks.length > RANKING_MAX_ITEMS)
+      throw new RankingPatchError(`Custom rank marks are a list, one per rank (at most ${RANKING_MAX_ITEMS}).`)
+    style.numberMarks = marks.map((m) => text(m ?? '', RANKING_NUMBER_MARK_MAX, 'a rank mark').trim())
+  }
+  return style
+}
+
+const NUMBER_FORMATS: RankingNumberFormat[] = ['custom', 'dot', 'hash', 'keycap', 'medal', 'plain']
+
+/** A font choice: a pack font's id, or none (the default). */
+function optionalFont(v: unknown): RankingFontId | undefined {
+  if (v === undefined || v === null || v === '') return undefined
+  if (!isRankingFontId(v)) throw new RankingPatchError(`Fonts are one of ${RANKING_FONT_IDS.join(', ')}.`)
+  return v
+}
+
+/** A sticker's timing and animation, checked; only what differs from "always, still" is kept. */
+function parseStickerMotion(raw: Record<string, unknown>, sticker: RankingSticker): void {
+  const start = raw['startSec']
+  if (start !== undefined && start !== null && Number(start) !== 0)
+    sticker.startSec = fraction(start, 'A sticker’s start', 0, RANKING_SHORT_MAX_SEC)
+  const end = raw['endSec']
+  if (end !== undefined && end !== null) {
+    sticker.endSec = fraction(end, 'A sticker’s end', 0, RANKING_SHORT_MAX_SEC)
+    if (sticker.endSec <= (sticker.startSec ?? 0)) throw new RankingPatchError('A sticker must end after it starts.')
+  }
+  const anim = raw['animation']
+  if (anim === undefined || anim === null) return
+  if (!isRecord(anim)) throw new RankingPatchError('A sticker’s animation is { in, loop, out }.')
+  const pick = <T extends string>(value: unknown, options: T[], what: string): T => {
+    const v = value ?? 'none'
+    if (!options.includes(v as T)) throw new RankingPatchError(`A sticker’s ${what} is one of ${options.join(', ')}.`)
+    return v as T
+  }
+  const animation = {
+    in: pick(anim['in'], STICKER_INS, 'entrance'),
+    loop: pick(anim['loop'], STICKER_LOOPS, 'loop'),
+    out: pick(anim['out'], STICKER_OUTS, 'exit'),
+  }
+  if (animation.in !== 'none' || animation.loop !== 'none' || animation.out !== 'none') sticker.animation = animation
 }
 
 /** A clip as the studio sends it back: only one the project already has (by url), re-trimmed. */
@@ -186,10 +243,14 @@ function parseStickers(v: unknown, project: RankingProject): RankingSticker[] {
       x: fraction(raw['x'], 'A sticker’s position'),
       y: fraction(raw['y'], 'A sticker’s position'),
     }
+    parseStickerMotion(raw, sticker)
     if (kind === 'text') {
       const t = text(raw['text'] ?? '', RANKING_STICKER_TEXT_MAX, 'a sticker').trim()
       if (!t) throw new RankingPatchError('A text sticker needs its text.')
       sticker.text = t
+      const font = optionalFont(raw['font'])
+      if (font) sticker.font = font
+      if (raw['italic'] === true) sticker.italic = true
       return sticker
     }
     const address = typeof raw['imageUrl'] === 'string' ? toSavedAddress(raw['imageUrl']) : ''
