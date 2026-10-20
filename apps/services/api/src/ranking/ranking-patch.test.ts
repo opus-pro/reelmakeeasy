@@ -98,4 +98,29 @@ describe('applyRankingPatch', () => {
       ),
     ).toThrow(/0.5 to 3 s/)
   })
+
+  it('takes cues inside the clip, from the library only', () => {
+    const p = withClip()
+    const has = (id: string) => id === 'bruh'
+    const items = p.items.map((i, n) => (n === 0 ? { ...i, cues: [{ atSec: 2.3, id: 'c1', soundId: 'bruh' }] } : i))
+    expect(applyRankingPatch(p, { items }, NOW, has).items[0]?.cues).toEqual([{ atSec: 2.3, id: 'c1', soundId: 'bruh' }])
+    const late = p.items.map((i, n) => (n === 0 ? { ...i, cues: [{ atSec: 9, id: 'c1', soundId: 'bruh' }] } : i))
+    expect(() => applyRankingPatch(p, { items: late }, NOW, has)).toThrow(/inside its clip/)
+    const unknown = p.items.map((i, n) => (n === 0 ? { ...i, cues: [{ atSec: 1, id: 'c1', soundId: 'nope' }] } : i))
+    expect(() => applyRankingPatch(p, { items: unknown }, NOW, has)).toThrow(/no longer in your library/)
+  })
+
+  it("takes text stickers and this project's pictures, for the whole short or a rank", () => {
+    const p = withClip()
+    const sticker = { color: '#ffffff', id: 's1', kind: 'text', rank: 3, rotation: 10, size: 0.06, text: ' 💀 ', x: 0.7, y: 0.5 }
+    expect(applyRankingPatch(p, { stickers: [sticker] }, NOW).stickers?.[0]).toMatchObject({ rank: 3, text: '💀' })
+    const own = `store://ranking/${p.id}/stickers/a.png`
+    const pic = { ...sticker, imageUrl: own, kind: 'image', rank: null, text: undefined }
+    expect(applyRankingPatch(p, { stickers: [pic] }, NOW).stickers?.[0]?.imageUrl).toBe(own)
+    expect(() =>
+      applyRankingPatch(p, { stickers: [{ ...pic, imageUrl: 'store://projects/x/secret.png' }] }, NOW),
+    ).toThrow(/Upload the picture/)
+    expect(() => applyRankingPatch(p, { stickers: [{ ...sticker, rank: 9 }] }, NOW)).toThrow(/rank that is gone/)
+    expect(() => applyRankingPatch(p, { stickers: [{ ...sticker, x: 2 }] }, NOW)).toThrow(/out of range/)
+  })
 })

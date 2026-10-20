@@ -5,6 +5,7 @@ import { dataDir } from '@reelmakeeasy/common/storage/file-store'
 
 import { BEAT_LOOP_SKILL_NAME, renderBeatLoopSkill } from '../craft/beat-loop-skill'
 import { CAMERA_SKILL_NAME, renderCameraSkill } from '../craft/camera-skill'
+import { RANKING_SKILL_NAME, renderRankingSkill } from '../craft/ranking-skill'
 
 import { codexHome } from './codex-config'
 
@@ -21,6 +22,7 @@ export function agentCodexHome(root: string = dataDir()): string {
 const AGENT_SKILLS: Record<string, () => string> = {
   [CAMERA_SKILL_NAME]: renderCameraSkill,
   [BEAT_LOOP_SKILL_NAME]: renderBeatLoopSkill,
+  [RANKING_SKILL_NAME]: renderRankingSkill,
 }
 
 /** The skills' names, in the order they are written. */

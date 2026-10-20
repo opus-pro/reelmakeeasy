@@ -6,6 +6,7 @@ function fakeCanvas() {
   const texts: { fill: unknown; font: string; text: string; x: number; y: number }[] = []
   const ctx: RankingCanvas = {
     clearRect: () => undefined,
+    drawImage: () => undefined,
     fillRect: () => undefined,
     fillStyle: '',
     fillText(text, x, y) {
@@ -20,11 +21,13 @@ function fakeCanvas() {
     },
     miterLimit: 10,
     restore: () => undefined,
+    rotate: () => undefined,
     save: () => undefined,
     strokeStyle: '',
     strokeText: () => undefined,
     textAlign: 'left',
     textBaseline: 'alphabetic',
+    translate: () => undefined,
   }
   return { ctx, texts }
 }
@@ -54,5 +57,20 @@ describe('drawRankingOverlay', () => {
     const { ctx } = fakeCanvas()
     const layout = drawRankingOverlay(ctx, p, [])
     expect(layout.titleSize).toBeLessThan(86)
+  })
+
+  it("draws the whole short's stickers always, and a rank's only while it plays", () => {
+    const p = newRankingProject('p', 'now')
+    p.stickers = [
+      { color: '#fff', id: 's1', kind: 'text', rank: null, rotation: 0, size: 0.05, text: '😂', x: 0.8, y: 0.2 },
+      { color: '#fff', id: 's2', kind: 'text', rank: 3, rotation: 10, size: 0.05, text: 'NO WAY', x: 0.5, y: 0.5 },
+    ]
+    const drawn = (rank: null | number | undefined) => {
+      const { ctx, texts } = fakeCanvas()
+      drawRankingOverlay(ctx, p, [], { rank })
+      return texts.map((t) => t.text).filter((t) => t === '😂' || t === 'NO WAY')
+    }
+    expect(drawn(1)).toEqual(['😂'])
+    expect(drawn(3)).toEqual(['😂', 'NO WAY'])
   })
 })

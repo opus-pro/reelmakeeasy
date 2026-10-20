@@ -4,6 +4,7 @@ import path from 'node:path'
 
 import { BEAT_LOOP_SKILL_NAME, renderBeatLoopSkill } from '../craft/beat-loop-skill'
 import { CAMERA_SKILL_NAME, renderCameraSkill } from '../craft/camera-skill'
+import { RANKING_SKILL_NAME } from '../craft/ranking-skill'
 
 import {
   AGENT_CODEX_CONFIG,
@@ -94,7 +95,7 @@ describe('ensureAgentCodexHome', () => {
     ensureAgentCodexHome({ home, userHome })
     const file = path.join(home, 'skills', BEAT_LOOP_SKILL_NAME, 'SKILL.md')
     expect(fs.readFileSync(file, 'utf8')).toBe(renderBeatLoopSkill())
-    expect(AGENT_SKILL_NAMES).toEqual([CAMERA_SKILL_NAME, BEAT_LOOP_SKILL_NAME])
+    expect(AGENT_SKILL_NAMES).toEqual([CAMERA_SKILL_NAME, BEAT_LOOP_SKILL_NAME, RANKING_SKILL_NAME])
   })
 
   it('removes retired reelmakeeasy skills and leaves other skills alone', () => {

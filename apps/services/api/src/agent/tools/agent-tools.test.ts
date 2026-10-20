@@ -39,6 +39,13 @@ describe('agent tools', () => {
       'render_video',
       'set_music',
       'use_image_as_keyframe',
+      'ranking_list',
+      'ranking_create',
+      'ranking_get',
+      'ranking_update',
+      'ranking_add_clip',
+      'ranking_add_sticker_image',
+      'ranking_export',
     ])
     expect(AGENT_TOOLS.set_music.inputSchema).toMatchObject({ required: ['enabled'] })
     expect(AGENT_TOOLS.set_music.inputSchema).toMatchObject({
@@ -113,6 +120,13 @@ describe('toolsForSession by harness', () => {
       'render_video',
       'set_music',
       'use_image_as_keyframe',
+      'ranking_list',
+      'ranking_create',
+      'ranking_get',
+      'ranking_update',
+      'ranking_add_clip',
+      'ranking_add_sticker_image',
+      'ranking_export',
     ])
     expect(names({ editing: true, mode: 'autonomous' })).toEqual([
       'regenerate_clip',

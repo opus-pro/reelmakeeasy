@@ -8,6 +8,7 @@ import { RankingService } from './ranking.service'
 
 @Module({
   controllers: [RankingController],
+  exports: [RankingService],
   imports: [SoundLibraryModule],
   providers: [
     {

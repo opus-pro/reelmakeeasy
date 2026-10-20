@@ -10,6 +10,9 @@ export const RANKING_LOUDNESS = 'loudnorm=I=-14:TP=-1.5:LRA=11'
 /** A library sound as the render plays it: its file, the part (seconds) and the level (1: as is). */
 export type SoundFile = { endSec: number; file: string; startSec: number; volume: number }
 
+/** A sound at a moment of a clip, in seconds from the clip's start as it plays. */
+export type SoundCue = { atSec: number; sound: SoundFile }
+
 /** ffmpeg input arguments for just the trimmed part of a sound. */
 export const soundInput = (sound: SoundFile): string[] => [
   '-ss', String(sound.startSec), '-t', String(Math.max(0.05, sound.endSec - sound.startSec)), '-i', sound.file,
@@ -63,8 +66,9 @@ export function segmentArgs(o: {
   hasAudio: boolean
   out: string
   overlay: string
-  /** A sound that plays as the clip starts (the reveal sound), mixed over the clip's own. */
-  sfx?: SoundFile
+  /** Sounds at moments of the clip (the reveal sound at 0, meme sounds on the action), mixed
+   *  over the clip's own sound. */
+  cues?: SoundCue[]
   startSec: number
 }): string[] {
   const area = RANKING_HEIGHT - o.bandHeight
@@ -76,16 +80,24 @@ export function segmentArgs(o: {
   const base = o.hasAudio
     ? `[0:a]aresample=48000,aformat=channel_layouts=stereo,apad`
     : `[2:a]aformat=channel_layouts=stereo`
-  const sfxIndex = o.hasAudio ? 2 : 3
-  const audio = o.sfx
-    ? `${base}[clip];${soundChain(sfxIndex, o.sfx)}[fx];[clip][fx]amix=inputs=2:duration=first:normalize=0[a]`
+  const first = o.hasAudio ? 2 : 3
+  const cues = (o.cues ?? []).filter((c) => c.atSec < o.durSec)
+  const audio = cues.length
+    ? `${base}[clip];` +
+      cues
+        .map((cue, i) => {
+          const ms = Math.round(cue.atSec * 1000)
+          return `${soundChain(first + i, cue.sound, `adelay=${ms}|${ms},apad`)}[fx${i}]`
+        })
+        .join(';') +
+      `;[clip]${cues.map((_, i) => `[fx${i}]`).join('')}amix=inputs=${cues.length + 1}:duration=first:normalize=0[a]`
     : `${base}[a]`
   return [
     '-v', 'error', '-y',
     '-ss', String(o.startSec), '-t', String(o.durSec), '-i', o.clipFile,
     '-loop', '1', '-t', String(o.durSec), '-i', o.overlay,
     ...(o.hasAudio ? [] : ['-f', 'lavfi', '-t', String(o.durSec), '-i', 'anullsrc=r=48000:cl=stereo']),
-    ...(o.sfx ? soundInput(o.sfx) : []),
+    ...cues.flatMap((cue) => soundInput(cue.sound)),
     '-filter_complex', `${video};${audio}`,
     '-map', '[v]', '-map', '[a]',
     '-t', String(o.durSec),
@@ -139,7 +151,7 @@ export function finishArgs(o: { joined: string; music?: { level: number; sound: 
 
 /** One piece to render: a rank's clip under its overlay, or a transition slide. */
 export type RenderPart =
-  | { clipFile: string; durSec: number; kind: 'clip'; overlay: string; sfx?: SoundFile; startSec: number }
+  | { clipFile: string; cues?: SoundCue[]; durSec: number; kind: 'clip'; overlay: string; startSec: number }
   | { durSec: number; kind: 'transition'; png: string; sfx?: SoundFile }
 
 /**
@@ -165,8 +177,8 @@ export async function renderRanking(o: {
             durSec: part.durSec,
             hasAudio: (await probeClip(part.clipFile)).hasAudio,
             out,
+            cues: part.cues,
             overlay: part.overlay,
-            sfx: part.sfx,
             startSec: part.startSec,
           })
         : transitionArgs({ durSec: part.durSec, out, png: part.png, sfx: part.sfx })

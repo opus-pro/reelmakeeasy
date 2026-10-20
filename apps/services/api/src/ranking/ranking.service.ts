@@ -6,6 +6,7 @@ import path from 'node:path'
 import { Logger } from '@reelmakeeasy/common/logger'
 import {
   newRankingProject,
+  RANKING_DEFAULT_CLIP_SEC,
   rankingProblems,
   rankingTimeline,
   type RankingTimelinePart,
@@ -33,8 +34,7 @@ const logger = new Logger('RankingService')
 const STORE_FOLDER = 'ranking'
 const PROJECT_ID = /^[\da-f-]{36}$/
 const CLIP_EXT = new Set(['.m4v', '.mkv', '.mov', '.mp4', '.webm'])
-/** A new clip plays this long until the user trims it. */
-const DEFAULT_CLIP_SEC = 6
+const STICKER_EXT = new Set(['.gif', '.jpeg', '.jpg', '.png', '.webp'])
 /** The title band height the studio may send (it covers the top of the frame). */
 const BAND_MAX = 960
 const PNG_SIGNATURE = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])
@@ -135,7 +135,7 @@ export class RankingService {
     const clip: RankingClip = {
       durationSec,
       name: fileName,
-      trimEndSec: Math.min(durationSec, DEFAULT_CLIP_SEC),
+      trimEndSec: Math.min(durationSec, RANKING_DEFAULT_CLIP_SEC),
       trimStartSec: 0,
       url: target,
     }
@@ -146,6 +146,27 @@ export class RankingService {
     }
     this.write(next)
     return next
+  }
+
+  /**
+   * Stores a picture for a sticker (an upload, `store://tmp/...`) in the project's sticker folder
+   * and answers its address; placing it is a normal edit (`stickers`).
+   */
+  async addStickerImage(id: string, upload: unknown, name: unknown): Promise<{ imageUrl: string }> {
+    this.get(id)
+    const source = typeof upload === 'string' ? toSavedAddress(upload) : ''
+    let key: string
+    try {
+      key = parseStoreUri(source)
+    } catch {
+      throw new RankingInputError('Upload the picture first.')
+    }
+    if (!keyIsUnder(key, 'tmp')) throw new RankingInputError('Upload the picture first.')
+    const ext = path.extname(typeof name === 'string' ? name : '').toLowerCase()
+    if (!STICKER_EXT.has(ext)) throw new RankingInputError('Use a picture: png, jpg, webp or gif.')
+    const target = storeUri(`${STORE_FOLDER}/${id}/stickers/${randomUUID()}${ext}`)
+    await fileStore.file(source).copyTo(target)
+    return { imageUrl: target }
   }
 
   /**
@@ -165,6 +186,51 @@ export class RankingService {
     this.jobs.set(renderId, job)
     void this.render(project, timeline, bandHeight, overlays, job)
     return publicJob(job)
+  }
+
+  /**
+   * Exports without a studio open (an agent asked): opens the web app's render page in a
+   * headless browser, which draws the overlays as the studio does (font, colour emoji, pictures)
+   * and starts the render. Answers the render's status (poll `renderStatus` until done).
+   */
+  async exportHeadless(id: string): Promise<RankingRenderStatus> {
+    const project = this.get(id)
+    const problems = rankingProblems(project)
+    if (problems.length) throw new RankingInputError(problems.join(' '))
+    const { chromium } = await import('playwright')
+    const launch = async () => {
+      const executablePath = process.env['PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH'] || undefined
+      try {
+        return await chromium.launch({ executablePath, headless: true })
+      } catch {
+        // No Playwright browser downloaded: the user's own Chrome.
+        return await chromium.launch({ channel: 'chrome', headless: true })
+      }
+    }
+    let browser
+    try {
+      browser = await launch()
+    } catch {
+      throw new RankingInputError(
+        'Exporting without the studio needs Google Chrome (or `npx playwright install chromium`). Open the ranking in the studio and press Export instead.',
+      )
+    }
+    try {
+      const page = await browser.newPage()
+      const webPort = Number(process.env['WEB_PORT']) || 3000
+      await page.goto(`http://localhost:${webPort}/ranking/render?id=${encodeURIComponent(id)}`, {
+        timeout: 120_000,
+      })
+      const marker = await page.waitForSelector('#ranking-render[data-render-id], #ranking-render[data-render-error]', {
+        timeout: 120_000,
+      })
+      const error = await marker.getAttribute('data-render-error')
+      if (error) throw new RankingInputError(error)
+      const renderId = (await marker.getAttribute('data-render-id')) ?? ''
+      return this.renderStatus(renderId)
+    } finally {
+      await browser.close()
+    }
   }
 
   renderStatus(renderId: string): RankingRenderStatus {
@@ -196,13 +262,22 @@ export class RankingService {
         fs.writeFileSync(png, overlays[i] as Buffer)
         if (part.kind === 'transition')
           return { durSec: part.durSec, kind: 'transition', png, sfx: soundFile(transition.sound) }
-        const clip = part.segment.item.clip
+        const { item } = part.segment
+        const clip = item.clip
+        // The reveal sound as the clip starts, then this rank's own cues.
+        const cues = [
+          { atSec: 0, soundId: sounds.reveal },
+          ...(item.cues ?? []).map((cue) => ({ atSec: cue.atSec, soundId: cue.soundId })),
+        ].flatMap(({ atSec, soundId }) => {
+          const sound = soundFile(soundId)
+          return sound ? [{ atSec, sound }] : []
+        })
         return {
           clipFile: filePath(clip?.url ?? ''),
+          cues,
           durSec: part.durSec,
           kind: 'clip',
           overlay: png,
-          sfx: soundFile(sounds.reveal),
           startSec: clip?.trimStartSec ?? 0,
         }
       })

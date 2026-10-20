@@ -21,6 +21,15 @@ export const RANKING_TITLE_LINES_MAX = 3
 export const RANKING_TITLE_WORDS_MAX = 12
 /** A clip plays at most this long: a ranking short moves fast. */
 export const RANKING_CLIP_MAX_SEC = 20
+/** What a rank should play for a Short (the trend keeps each rank to about 3-5 s). */
+export const RANKING_RANK_TARGET_SEC = { max: 5, min: 3 }
+/** A new clip plays this long until trimmed. */
+export const RANKING_DEFAULT_CLIP_SEC = 4.5
+/** A Short stays under this. */
+export const RANKING_SHORT_MAX_SEC = 60
+export const RANKING_CUES_MAX = 8
+export const RANKING_STICKERS_MAX = 20
+export const RANKING_STICKER_TEXT_MAX = 40
 
 /** Title colours the studio offers first (white, then the trend's red, cyan and yellow). */
 export const RANKING_TITLE_COLORS = ['#ffffff', '#ff2a2a', '#22e5ff', '#ffd400', '#3dff6e', '#ff5fd2']
@@ -193,6 +202,25 @@ export function rankingTimeline(project: RankingProject): RankingTimelinePart[] 
     at += segment.durSec
   }
   return parts
+}
+
+/**
+ * Advice for a Short (never blocking): ranks that run long, a short over a minute, ranks with no
+ * sound on their action.
+ */
+export function rankingAdvice(project: RankingProject): string[] {
+  const advice: string[] = []
+  const long = project.items.filter((item) => clipPlaySec(item) > RANKING_RANK_TARGET_SEC.max + 0.5)
+  if (long.length)
+    advice.push(
+      `Rank ${long.map((i) => i.rank).join(', ')} play${long.length === 1 ? 's' : ''} over ${RANKING_RANK_TARGET_SEC.max} s: Shorts keep each rank to ${RANKING_RANK_TARGET_SEC.min}-${RANKING_RANK_TARGET_SEC.max} s.`,
+    )
+  const total = rankingTimeline(project).reduce((sum, part) => sum + part.durSec, 0)
+  if (total > RANKING_SHORT_MAX_SEC) advice.push(`The short is ${Math.round(total)} s: keep it under a minute.`)
+  const silent = project.items.filter((item) => item.clip && !item.cues?.length).map((item) => item.rank)
+  if (silent.length && silent.length < project.items.length)
+    advice.push(`Rank ${silent.join(', ')} ha${silent.length === 1 ? 's' : 've'} no sound on its action yet.`)
+  return advice
 }
 
 /** What still stops the short from rendering, in plain words (empty when it's ready). */

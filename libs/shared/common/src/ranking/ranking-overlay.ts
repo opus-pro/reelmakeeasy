@@ -1,4 +1,4 @@
-import type { RankingProject, RankingTitleWord } from '@shared/types/api/ranking'
+import type { RankingProject, RankingSticker, RankingTitleWord } from '@shared/types/api/ranking'
 
 import { RANKING_HEIGHT, RANKING_WIDTH, transitionOf, transitionText } from './ranking-project'
 
@@ -10,6 +10,7 @@ import { RANKING_HEIGHT, RANKING_WIDTH, transitionOf, transitionText } from './r
  */
 export interface RankingCanvas {
   clearRect(x: number, y: number, w: number, h: number): void
+  drawImage(image: never, x: number, y: number, w: number, h: number): void
   fillRect(x: number, y: number, w: number, h: number): void
   fillStyle: unknown
   fillText(text: string, x: number, y: number): void
@@ -19,12 +20,17 @@ export interface RankingCanvas {
   measureText(text: string): { width: number }
   miterLimit: number
   restore(): void
+  rotate(angle: number): void
   save(): void
   strokeStyle: unknown
   strokeText(text: string, x: number, y: number): void
   textAlign: string
   textBaseline: string
+  translate(x: number, y: number): void
 }
+
+/** A loaded picture for a picture sticker: what the canvas draws, and its natural size. */
+export type StickerImage = { height: number; source: unknown; width: number }
 
 /** The font families the overlay draws with (loaded by the caller). */
 export type RankingFonts = { label: string; number: string; title: string }
@@ -130,7 +136,14 @@ export function drawRankingOverlay(
   ctx: RankingCanvas,
   project: RankingProject,
   revealed: ReadonlySet<number> | readonly number[],
-  opts: { background?: string; fonts?: RankingFonts } = {},
+  opts: {
+    background?: string
+    fonts?: RankingFonts
+    /** Pictures for picture stickers, by their URL (one not loaded yet is skipped). */
+    images?: ReadonlyMap<string, StickerImage>
+    /** The rank playing now: its stickers show, with the whole short's (undefined: none of a rank's). */
+    rank?: null | number
+  } = {},
 ): RankingLayout {
   const fonts = opts.fonts ?? DEFAULT_RANKING_FONTS
   const shown = new Set(revealed)
@@ -177,8 +190,42 @@ export function drawRankingOverlay(
     ctx.font = fontOf(label.size, fonts.label)
     outlined(ctx, label.text, labelX, y, project.style.labelColor, project.style.outlineColor, label.size)
   }
+
+  // Stickers on top: the whole short's, and the playing rank's.
+  for (const sticker of project.stickers ?? []) {
+    if (sticker.rank !== null && sticker.rank !== opts.rank) continue
+    drawSticker(ctx, sticker, project.style.outlineColor, fonts, opts.images)
+  }
   ctx.restore()
   return layout
+}
+
+/** One sticker at its place, size and angle: text or emoji outlined like the labels, or a picture. */
+export function drawSticker(
+  ctx: RankingCanvas,
+  sticker: RankingSticker,
+  outline: string,
+  fonts: RankingFonts = DEFAULT_RANKING_FONTS,
+  images?: ReadonlyMap<string, StickerImage>,
+): void {
+  ctx.save()
+  ctx.translate(sticker.x * W, sticker.y * H)
+  if (sticker.rotation) ctx.rotate((sticker.rotation * Math.PI) / 180)
+  if (sticker.kind === 'text' && sticker.text) {
+    const size = Math.round(sticker.size * H)
+    ctx.font = fontOf(size, fonts.label, 900)
+    ctx.textAlign = 'center'
+    ctx.textBaseline = 'middle'
+    outlined(ctx, sticker.text, 0, 0, sticker.color, outline, size)
+  } else if (sticker.kind === 'image' && sticker.imageUrl) {
+    const image = images?.get(sticker.imageUrl)
+    if (image && image.width > 0) {
+      const w = sticker.size * W
+      const h = (w * image.height) / image.width
+      ctx.drawImage(image.source as never, -w / 2, -h / 2, w, h)
+    }
+  }
+  ctx.restore()
 }
 
 /**

@@ -1,6 +1,9 @@
 import {
   isPermutation,
   RANKING_CLIP_MAX_SEC,
+  RANKING_CUES_MAX,
+  RANKING_STICKER_TEXT_MAX,
+  RANKING_STICKERS_MAX,
   RANKING_LABEL_MAX,
   RANKING_MAX_ITEMS,
   RANKING_MIN_ITEMS,
@@ -11,9 +14,11 @@ import {
   RANKING_TRANSITION_TEXT_MAX,
   revealOrder,
 } from '@reelmakeeasy/common/ranking/ranking-project'
-import { toSavedAddress } from '@reelmakeeasy/common/storage/address'
+import { keyIsUnder, parseStoreUri, toSavedAddress } from '@reelmakeeasy/common/storage/address'
 import type {
   RankingClip,
+  RankingCue,
+  RankingSticker,
   RankingItem,
   RankingProject,
   RankingRevealMode,
@@ -130,7 +135,82 @@ function parseTransition(v: unknown, soundExists: (id: string) => boolean): Rank
   }
 }
 
-function parseItems(v: unknown, current: RankingProject): RankingItem[] {
+/** A rank's sound cues: library sounds, at moments inside the clip as it plays. */
+function parseCues(v: unknown, clip: null | RankingClip, soundExists: (id: string) => boolean): RankingCue[] {
+  if (v === undefined || v === null) return []
+  if (!Array.isArray(v) || v.length > RANKING_CUES_MAX)
+    throw new RankingPatchError(`A rank has at most ${RANKING_CUES_MAX} sounds.`)
+  const playSec = clip ? clip.trimEndSec - clip.trimStartSec : 0
+  return v.map((raw, i) => {
+    if (!isRecord(raw)) throw new RankingPatchError('A sound cue is missing.')
+    const soundId = typeof raw['soundId'] === 'string' ? raw['soundId'] : ''
+    if (!soundExists(soundId)) throw new RankingPatchError('That sound is no longer in your library.')
+    const atSec = Number(raw['atSec'])
+    if (!Number.isFinite(atSec) || atSec < 0 || (clip && atSec > playSec + 0.05))
+      throw new RankingPatchError(`Put each sound inside its clip (0 to ${playSec.toFixed(1)} s).`)
+    const id = typeof raw['id'] === 'string' && ITEM_ID.test(raw['id']) ? raw['id'] : `c${i}`
+    return { atSec: round2(atSec), id, soundId }
+  })
+}
+
+const fraction = (v: unknown, what: string, min = 0, max = 1) => {
+  const n = Number(v)
+  if (!Number.isFinite(n) || n < min || n > max) throw new RankingPatchError(`${what} is out of range.`)
+  return Math.round(n * 1000) / 1000
+}
+
+/**
+ * Stickers: text or emoji, or a picture uploaded to this project (its address must be under
+ * `ranking/<projectId>/stickers/`). Ranks they belong to must exist.
+ */
+function parseStickers(v: unknown, project: RankingProject): RankingSticker[] {
+  if (!Array.isArray(v) || v.length > RANKING_STICKERS_MAX)
+    throw new RankingPatchError(`A short has at most ${RANKING_STICKERS_MAX} stickers.`)
+  const ranks = new Set(project.items.map((item) => item.rank))
+  const ids = new Set<string>()
+  return v.map((raw) => {
+    if (!isRecord(raw)) throw new RankingPatchError('A sticker is missing.')
+    const id = typeof raw['id'] === 'string' && ITEM_ID.test(raw['id']) ? raw['id'] : ''
+    if (!id || ids.has(id)) throw new RankingPatchError('Each sticker needs its own id.')
+    ids.add(id)
+    const kind = raw['kind'] === 'image' ? 'image' : 'text'
+    const rank = raw['rank'] === null || raw['rank'] === undefined ? null : Number(raw['rank'])
+    if (rank !== null && !ranks.has(rank)) throw new RankingPatchError('A sticker belongs to a rank that is gone.')
+    const sticker: RankingSticker = {
+      color: kind === 'text' ? color(raw['color'], 'A sticker') : '#ffffff',
+      id,
+      kind,
+      rank,
+      rotation: fraction(raw['rotation'] ?? 0, 'A sticker’s rotation', -180, 180),
+      size: fraction(raw['size'], 'A sticker’s size', 0.02, 1),
+      x: fraction(raw['x'], 'A sticker’s position'),
+      y: fraction(raw['y'], 'A sticker’s position'),
+    }
+    if (kind === 'text') {
+      const t = text(raw['text'] ?? '', RANKING_STICKER_TEXT_MAX, 'a sticker').trim()
+      if (!t) throw new RankingPatchError('A text sticker needs its text.')
+      sticker.text = t
+      return sticker
+    }
+    const address = typeof raw['imageUrl'] === 'string' ? toSavedAddress(raw['imageUrl']) : ''
+    let key = ''
+    try {
+      key = parseStoreUri(address)
+    } catch {
+      // Refused below.
+    }
+    if (!key || !keyIsUnder(key, `ranking/${project.id}/stickers`))
+      throw new RankingPatchError('Upload the picture before placing it.')
+    sticker.imageUrl = address
+    return sticker
+  })
+}
+
+function parseItems(
+  v: unknown,
+  current: RankingProject,
+  soundExists: (id: string) => boolean,
+): RankingItem[] {
   if (!Array.isArray(v) || v.length < RANKING_MIN_ITEMS || v.length > RANKING_MAX_ITEMS)
     throw new RankingPatchError(`A ranking has ${RANKING_MIN_ITEMS} to ${RANKING_MAX_ITEMS} ranks.`)
   // Clips are known by the url of any version of this project's items (a clip moved to
@@ -143,8 +223,11 @@ function parseItems(v: unknown, current: RankingProject): RankingItem[] {
     const id = typeof raw['id'] === 'string' && ITEM_ID.test(raw['id']) ? raw['id'] : ''
     if (!id || ids.has(id)) throw new RankingPatchError('Each rank needs its own id.')
     ids.add(id)
+    const clip = parseClip(raw['clip'] ?? null, known)
+    const cues = parseCues(raw['cues'], clip, soundExists)
     return {
-      clip: parseClip(raw['clip'] ?? null, known),
+      clip,
+      ...(cues.length ? { cues } : {}),
       id,
       label: text(raw['label'] ?? '', RANKING_LABEL_MAX, 'a label'),
       // Ranks are their position: 1..N top to bottom.
@@ -173,7 +256,8 @@ export function applyRankingPatch(
   if ('style' in patch) next.style = parseStyle(patch['style'])
   if ('sounds' in patch) next.sounds = parseSounds(patch['sounds'], soundExists)
   if ('transition' in patch) next.transition = parseTransition(patch['transition'], soundExists)
-  if ('items' in patch) next.items = parseItems(patch['items'], current)
+  if ('items' in patch) next.items = parseItems(patch['items'], current, soundExists)
+  if ('stickers' in patch) next.stickers = parseStickers(patch['stickers'], next)
   if ('reveal' in patch || 'items' in patch) {
     const raw = isRecord(patch['reveal']) ? patch['reveal'] : current.reveal
     const mode = REVEAL_MODES.includes(raw['mode'] as RankingRevealMode)

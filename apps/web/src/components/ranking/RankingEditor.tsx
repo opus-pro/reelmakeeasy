@@ -3,6 +3,7 @@
 import {
   emptyItems,
   RANKING_CLIP_MAX_SEC,
+  RANKING_CUES_MAX,
   RANKING_LABEL_MAX,
   RANKING_MAX_ITEMS,
   RANKING_MIN_ITEMS,
@@ -13,6 +14,7 @@ import {
   revealOrder,
 } from '@reelmakeeasy/common/ranking/ranking-project'
 import type {
+  RankingCue,
   RankingItem,
   RankingProject,
   RankingRevealMode,
@@ -25,6 +27,8 @@ import { Button, cn } from '@shared/ui'
 import { useRef, useState } from 'react'
 
 import { SoundsPanel, TransitionPanel } from './RankingSoundPanels'
+import { previewSound } from './sound-player'
+import { StickersPanel } from './StickersPanel'
 
 const SECTION = 'flex flex-col gap-2 rounded-xl border border-white/10 bg-fill-secondary/40 p-3'
 const HEADING = 'text-xs font-semibold tracking-wide text-secondary uppercase'
@@ -39,6 +43,8 @@ export type RankingEditorProps = {
   sounds: LibrarySound[]
   onChange: (next: RankingProject) => void
   onFocusRank: (rank: number) => void
+  /** Uploads a sticker picture; resolves its address (null when it failed). */
+  onUploadStickerImage: (file: File) => Promise<null | string>
   /** Uploads a video under a rank (the studio saves it and returns the new clip). */
   onUploadClip: (itemId: string, file: File) => Promise<void>
   project: RankingProject
@@ -67,6 +73,11 @@ export function RankingEditor(props: RankingEditorProps) {
         onChange={(transition) => onChange({ ...project, transition })}
         sounds={props.sounds}
         value={project.transition}
+      />
+      <StickersPanel
+        onChange={(stickers) => onChange({ ...project, stickers })}
+        onUploadImage={props.onUploadStickerImage}
+        project={project}
       />
       <StylePanel onChange={(style) => onChange({ ...project, style })} style={project.style} />
     </div>
@@ -215,7 +226,7 @@ function TitleEditor({ onChange, title }: { onChange: (title: RankingTitle) => v
 }
 
 /** The ranks, top first: each one's label, its clip (upload, trim) and its place in the list. */
-function RankRows({ focusRank, onChange, onFocusRank, onUploadClip, project, uploading }: RankingEditorProps) {
+function RankRows({ focusRank, onChange, onFocusRank, onUploadClip, project, sounds, uploading }: RankingEditorProps) {
   // Which row is being dragged, and where it would land (before row `target`).
   const [drag, setDrag] = useState<{ dragging: null | number; target: null | number }>({
     dragging: null,
@@ -282,6 +293,7 @@ function RankRows({ focusRank, onChange, onFocusRank, onUploadClip, project, upl
               : undefined
           }
           onUpload={(file) => onUploadClip(item.id, file)}
+          sounds={sounds}
           uploading={uploading.has(item.id)}
         />
       ))}
@@ -320,6 +332,7 @@ function RankRow({
   onRemove,
   onUpload,
   uploading,
+  sounds,
 }: {
   drag: RowDrag
   focused: boolean
@@ -330,6 +343,7 @@ function RankRow({
   onMoveUp?: () => void
   onRemove?: () => void
   onUpload: (file: File) => Promise<void>
+  sounds: LibrarySound[]
   uploading: boolean
 }) {
   const fileRef = useRef<HTMLInputElement>(null)
@@ -404,6 +418,9 @@ function RankRow({
         />
         {item.clip && <TrimFields item={item} onChange={onChange} />}
       </div>
+      <div className="pl-12">
+        <CueList item={item} onChange={onChange} sounds={sounds} />
+      </div>
     </div>
   )
 }
@@ -429,6 +446,99 @@ function IconButton({
     >
       {children}
     </button>
+  )
+}
+
+/**
+ * A rank's meme sounds: each one plays at a moment of the clip (seconds from where the clip
+ * starts playing). Put them on the action: the fall, the bite, the reveal.
+ */
+function CueList({
+  item,
+  onChange,
+  sounds,
+}: {
+  item: RankingItem
+  onChange: (item: RankingItem) => void
+  sounds: LibrarySound[]
+}) {
+  const cues = item.cues ?? []
+  const playSec = item.clip ? Math.max(0, item.clip.trimEndSec - item.clip.trimStartSec) : 0
+  const setCues = (next: RankingCue[]) => onChange({ ...item, cues: next })
+  if (!item.clip) return null
+  return (
+    <div className="flex flex-wrap items-center gap-1.5 text-xs text-secondary">
+      <span>Sounds</span>
+      {cues.map((cue) => (
+        <span className="flex items-center gap-1 rounded-md bg-white/10 px-1.5 py-0.5" key={cue.id}>
+          <select
+            aria-label="Cue sound"
+            className="max-w-[120px] truncate bg-transparent text-primary focus:outline-none"
+            onChange={(e) => setCues(cues.map((c) => (c.id === cue.id ? { ...c, soundId: e.target.value } : c)))}
+            value={cue.soundId}
+          >
+            {sounds.map((s) => (
+              <option key={s.id} value={s.id}>
+                {s.favorite ? '★ ' : ''}
+                {s.name}
+              </option>
+            ))}
+          </select>
+          <span>at</span>
+          <input
+            aria-label="Cue time"
+            className="w-12 bg-transparent text-primary tabular-nums focus:outline-none"
+            max={playSec}
+            min={0}
+            onChange={(e) =>
+              setCues(
+                cues.map((c) =>
+                  c.id === cue.id ? { ...c, atSec: Math.max(0, Math.min(playSec, Number(e.target.value))) } : c,
+                ),
+              )
+            }
+            step={0.1}
+            type="number"
+            value={cue.atSec}
+          />
+          <span>s</span>
+          <button
+            aria-label="Play cue sound"
+            className="hover:text-primary"
+            onClick={() => {
+              const s = sounds.find((x) => x.id === cue.soundId)
+              if (s) previewSound(s)
+            }}
+            type="button"
+          >
+            ▶
+          </button>
+          <button
+            aria-label="Remove cue"
+            className="hover:text-primary"
+            onClick={() => setCues(cues.filter((c) => c.id !== cue.id))}
+            type="button"
+          >
+            ✕
+          </button>
+        </span>
+      ))}
+      {cues.length < RANKING_CUES_MAX && sounds.length > 0 && (
+        <button
+          className="rounded-md border border-dashed border-white/20 px-2 py-0.5 hover:text-primary"
+          onClick={() =>
+            setCues([
+              ...cues,
+              { atSec: Math.round(Math.min(playSec, playSec / 2) * 10) / 10, id: rankingItemId(), soundId: sounds[0]!.id },
+            ])
+          }
+          type="button"
+        >
+          + sound on the action
+        </button>
+      )}
+      {sounds.length === 0 && <span>(add sounds to your library to use them here)</span>}
+    </div>
   )
 }
 

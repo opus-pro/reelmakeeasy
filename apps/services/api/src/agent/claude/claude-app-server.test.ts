@@ -386,7 +386,11 @@ describe('ClaudeAppServer review fixes', () => {
     await tick()
     const options = q.calls[0]?.options
     expect(options).toMatchObject({
-      skills: ['reelmakeeasy:reelmakeeasy-camera', 'reelmakeeasy:reelmakeeasy-beat-loop'],
+      skills: [
+        'reelmakeeasy:reelmakeeasy-camera',
+        'reelmakeeasy:reelmakeeasy-beat-loop',
+        'reelmakeeasy:reelmakeeasy-ranking',
+      ],
       strictMcpConfig: true,
     })
     expect(options.tools).toContain('Skill')

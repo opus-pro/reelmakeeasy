@@ -26,8 +26,41 @@ export type RankingClip = {
   url: string
 }
 
+/** A sound that plays at a moment of a rank's clip (a meme sound on the action). */
+export type RankingCue = {
+  /** Seconds from the start of the rank's clip as it plays (after its trim). */
+  atSec: number
+  id: string
+  soundId: string
+}
+
+/**
+ * Text, an emoji or a picture placed on the frame: over the whole short, or only while one rank
+ * plays. Positions are fractions of the 1080x1920 frame, at the sticker's centre.
+ */
+export type RankingSticker = {
+  /** Text colour (text stickers). */
+  color: string
+  id: string
+  /** A stored picture's address (picture stickers); a served URL as it leaves for the browser. */
+  imageUrl?: string
+  kind: 'image' | 'text'
+  /** Only while this rank plays; null: the whole short. */
+  rank: null | number
+  /** Degrees, clockwise. */
+  rotation: number
+  /** Text: its height as a fraction of the frame's height. Picture: its width as a fraction of the frame's width. */
+  size: number
+  /** Text or emoji (text stickers). */
+  text?: string
+  x: number
+  y: number
+}
+
 export type RankingItem = {
   clip: null | RankingClip
+  /** Sounds at moments of this rank's clip (missing: none). */
+  cues?: RankingCue[]
   /** A short, stable id (the studio's React key and the render's file names). */
   id: string
   /** What is revealed next to the rank number, e.g. "Got bitten 😳". */
@@ -78,6 +111,8 @@ export type RankingProject = {
   reveal: { mode: RankingRevealMode; order: number[] }
   /** Missing on projects saved before sounds existed: no sounds. */
   sounds?: RankingSounds
+  /** Text, emoji and pictures on the frame (missing: none). */
+  stickers?: RankingSticker[]
   style: RankingStyle
   title: RankingTitle
   /** Missing on projects saved before transitions existed: none. */
@@ -87,7 +122,10 @@ export type RankingProject = {
 
 /** The fields the studio may change (`PUT /api/ranking/projects/:id`). */
 export type RankingProjectPatch = Partial<
-  Pick<RankingProject, 'items' | 'name' | 'reveal' | 'sounds' | 'style' | 'title' | 'transition'>
+  Pick<
+    RankingProject,
+    'items' | 'name' | 'reveal' | 'sounds' | 'stickers' | 'style' | 'title' | 'transition'
+  >
 >
 
 /** `GET /api/ranking/projects`: the list, newest first. */

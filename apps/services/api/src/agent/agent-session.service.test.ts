@@ -2047,6 +2047,13 @@ describe('dynamic tools', () => {
       'render_video',
       'set_music',
       'use_image_as_keyframe',
+      'ranking_list',
+      'ranking_create',
+      'ranking_get',
+      'ranking_update',
+      'ranking_add_clip',
+      'ranking_add_sticker_image',
+      'ranking_export',
     ])
     expect(calls).toEqual([{ args: { x: 'hi' }, tool: 'ping' }])
     // The fake finishes the turn with the tool's answer as the agent message.
@@ -2224,6 +2231,13 @@ describe('review fixes: edit mode robustness', () => {
       'render_video',
       'set_music',
       'use_image_as_keyframe',
+      'ranking_list',
+      'ranking_create',
+      'ranking_get',
+      'ranking_update',
+      'ranking_add_clip',
+      'ranking_add_sticker_image',
+      'ranking_export',
     ])
     expect(svc.getSession(session.id).threadId).not.toBe('thread-old')
     expect(events.some((e) => e.type === 'session' && /tools/i.test(e.reason ?? ''))).toBe(true)

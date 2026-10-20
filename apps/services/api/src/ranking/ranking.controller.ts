@@ -82,10 +82,25 @@ export class RankingController {
     return answerAsync(() => this.ranking.setClip(id, itemId, body?.fileUri, body?.name))
   }
 
+  /** Stores an uploaded picture (`{ fileUri, name }`) for a sticker; answers `{ imageUrl }`. */
+  @Post('projects/:id/sticker-images')
+  addStickerImage(
+    @Param('id') id: string,
+    @Body() body: { fileUri?: unknown; name?: unknown },
+  ): Promise<{ imageUrl: string }> {
+    return answerAsync(() => this.ranking.addStickerImage(id, body?.fileUri, body?.name))
+  }
+
   /** Starts a render: `{ bandHeight, overlays: [png base64 per segment] }`. */
   @Post('projects/:id/render')
   render(@Param('id') id: string, @Body() body: unknown): RankingRenderStatus {
     return answer(() => this.ranking.startRender(id, body))
+  }
+
+  /** Exports without a studio open (headless): answers the render's status to poll. */
+  @Post('projects/:id/export')
+  exportHeadless(@Param('id') id: string): Promise<RankingRenderStatus> {
+    return answerAsync(() => this.ranking.exportHeadless(id))
   }
 
   @Get('renders/:renderId')

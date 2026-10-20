@@ -15,6 +15,14 @@ export function useRankingApi() {
   const { fetchApiDomain } = useApi()
   return useMemo(
     () => ({
+      addStickerImage: async (id: string, fileUri: string, name: string) =>
+        (
+          await fetchApiDomain<{ imageUrl: string }>('/api/ranking/projects/{id}/sticker-images', {
+            data: { fileUri, name },
+            method: 'POST',
+            pathParams: { id },
+          })
+        ).data,
       create: async (name?: string) =>
         (await fetchApiDomain<RankingProject>('/api/ranking/projects', { data: { name }, method: 'POST' }))
           .data,

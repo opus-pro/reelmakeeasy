@@ -6,6 +6,13 @@ export type AgentToolName =
   | 'generate_image'
   | 'make_beat_loop'
   | 'make_video'
+  | 'ranking_add_clip'
+  | 'ranking_add_sticker_image'
+  | 'ranking_create'
+  | 'ranking_export'
+  | 'ranking_get'
+  | 'ranking_list'
+  | 'ranking_update'
   | 'regenerate_clip'
   | 'render_video'
   | 'set_music'
@@ -97,6 +104,85 @@ export const AGENT_TOOLS: Record<AgentToolName, DynamicToolSpec> = {
       type: 'object',
     },
     name: 'make_video',
+  },
+  ranking_add_clip: {
+    description:
+      "Put a video file from your working folder (the user's attachments are in attachments/) under a rank of a ranking short. It plays its first 4.5 s until you trim it (items[].clip.trimStartSec/trimEndSec with ranking_update).",
+    inputSchema: {
+      additionalProperties: false,
+      properties: {
+        id: { description: 'The ranking id.', type: 'string' },
+        path: { description: 'The file, relative to your working folder, e.g. attachments/cat.mp4.', type: 'string' },
+        rank: { description: 'The rank it goes under (1 is the top).', minimum: 1, type: 'integer' },
+      },
+      required: ['id', 'rank', 'path'],
+      type: 'object',
+    },
+    name: 'ranking_add_clip',
+  },
+  ranking_add_sticker_image: {
+    description:
+      'Make a picture (png, jpg, webp or gif) in your working folder usable as a sticker on a ranking short. Answers its imageUrl: put it in a stickers entry with kind "image" (size is its width as a share of the frame, e.g. 0.3) with ranking_update.',
+    inputSchema: {
+      additionalProperties: false,
+      properties: {
+        id: { description: 'The ranking id.', type: 'string' },
+        path: { description: 'The picture, relative to your working folder, e.g. attachments/logo.png.', type: 'string' },
+      },
+      required: ['id', 'path'],
+      type: 'object',
+    },
+    name: 'ranking_add_sticker_image',
+  },
+  ranking_create: {
+    description: 'Start a new ranking short (5 empty ranks, a default title). Answers the project to fill in.',
+    inputSchema: {
+      additionalProperties: false,
+      properties: { name: { description: 'A name for the user’s list, e.g. Funniest cat fails.', type: 'string' } },
+      required: ['name'],
+      type: 'object',
+    },
+    name: 'ranking_create',
+  },
+  ranking_export: {
+    description:
+      'Render a ranking short to a 1080x1920 MP4 (free; about a minute) without the studio open, and wait for it. Only once it has every clip, label and title; the reply says where the video is.',
+    inputSchema: {
+      additionalProperties: false,
+      properties: { id: { description: 'The ranking id.', type: 'string' } },
+      required: ['id'],
+      type: 'object',
+    },
+    name: 'ranking_export',
+  },
+  ranking_get: {
+    description: 'Read a ranking short: every field you can change, what still stops its export, and tips.',
+    inputSchema: {
+      additionalProperties: false,
+      properties: { id: { description: 'The ranking id.', type: 'string' } },
+      required: ['id'],
+      type: 'object',
+    },
+    name: 'ranking_get',
+  },
+  ranking_list: {
+    description: "List the user's ranking shorts and their sound library (sound ids, names, lengths; starred first).",
+    inputSchema: { additionalProperties: false, properties: {}, type: 'object' },
+    name: 'ranking_list',
+  },
+  ranking_update: {
+    description:
+      'Change a ranking short: patch is a JSON object with any of title, items, reveal, sounds, stickers, transition, style, name (whole fields, as ranking_get shows them). The reelmakeeasy-ranking skill explains each field.',
+    inputSchema: {
+      additionalProperties: false,
+      properties: {
+        id: { description: 'The ranking id.', type: 'string' },
+        patch: { description: 'A JSON object of the fields to replace.', type: 'string' },
+      },
+      required: ['id', 'patch'],
+      type: 'object',
+    },
+    name: 'ranking_update',
   },
   regenerate_clip: {
     description:
@@ -198,6 +284,17 @@ export const AGENT_TOOLS: Record<AgentToolName, DynamicToolSpec> = {
   },
 }
 
+/** The Ranking Builder, for ranking shorts (Free chat). */
+const RANKING_TOOLS: AgentToolName[] = [
+  'ranking_list',
+  'ranking_create',
+  'ranking_get',
+  'ranking_update',
+  'ranking_add_clip',
+  'ranking_add_sticker_image',
+  'ranking_export',
+]
+
 const EDIT_TOOLS: AgentToolName[] = [
   'regenerate_clip',
   'render_video',
@@ -218,7 +315,7 @@ export function toolsForSession(
     )
   if (session.mode === 'autonomous') return session.editing ? withImage(EDIT_TOOLS) : []
   if (session.mode !== 'free') return []
-  return withImage(['make_video', 'make_beat_loop', ...EDIT_TOOLS])
+  return withImage(['make_video', 'make_beat_loop', ...EDIT_TOOLS, ...RANKING_TOOLS])
 }
 
 /** The chat pill's text for a call. */
@@ -233,6 +330,13 @@ export function toolSummary(tool: string, args: unknown): string {
   if (tool === 'use_image_as_keyframe')
     return `Putting the new picture in as keyframe ${String(a.keyframe ?? '')}`.trim()
   if (tool === 'generate_image') return 'Making a preview image'
+  if (tool === 'ranking_list') return 'Looking at your rankings and sounds'
+  if (tool === 'ranking_create') return `Starting a ranking: ${String(a.name ?? '')}`.trim()
+  if (tool === 'ranking_get') return 'Reading the ranking'
+  if (tool === 'ranking_update') return 'Changing the ranking'
+  if (tool === 'ranking_add_sticker_image') return 'Adding a picture sticker'
+  if (tool === 'ranking_add_clip') return `Adding a clip to rank ${String(a.rank ?? '')}`.trim()
+  if (tool === 'ranking_export') return 'Exporting the ranking short'
   if (tool === 'make_video')
     return `Starting the video: ${String(a.title ?? '')}`.trim().replace(/:$/, '')
   if (tool === 'make_beat_loop')

@@ -64,6 +64,8 @@ export const FREE_CHAT_BRIEF = [
   MAKE_VIDEO_GUIDE,
   '',
   EDIT_GUIDE,
+  '',
+  'Ranking shorts ("Ranking the funniest ...", a top-5 of clips): build them with the ranking_* tools in the Ranking Builder, following the reelmakeeasy-ranking skill. The user can open the same project in the studio at any time.',
 ].join('\n')
 
 /** The hidden first turn for "Free chat" mode. */

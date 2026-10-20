@@ -27,25 +27,43 @@ import {
   makeLlmResolver,
 } from './codex-llm/codex-projects'
 import { AgentEditService } from './edit/agent-edit.service'
+import { RankingModule } from '../ranking/ranking.module'
+import { RankingAgentTools } from '../ranking/ranking-agent-tools'
+import { RankingService } from '../ranking/ranking.service'
+import { SoundLibraryModule } from '../sound-library/sound-library.module'
+import { SoundLibraryService } from '../sound-library/sound-library.service'
+
 import { AgentController } from './agent.controller'
 import { AgentSessionService } from './agent-session.service'
 import { ChatModelService } from './chat-model.service'
 
 @Module({
   controllers: [AgentController],
-  imports: [LongTakeModule, ProjectsModule, MusicModule, SetupModule],
+  imports: [LongTakeModule, ProjectsModule, MusicModule, SetupModule, RankingModule, SoundLibraryModule],
   providers: [
     // The models agent chats can run on (asked of each harness, kept for a while).
     { provide: ChatModelService, useFactory: () => new ChatModelService() },
     {
-      inject: [ModuleRef, ChatModelService],
+      inject: [ModuleRef, ChatModelService, RankingService, SoundLibraryService],
       provide: AgentSessionService,
       // The autonomous flow needs the session service and the session service starts the flow:
       // resolve the flow lazily, when a session first picks that mode.
-      useFactory: (refs: ModuleRef, chatModels: ChatModelService) => {
+      useFactory: (
+        refs: ModuleRef,
+        chatModels: ChatModelService,
+        ranking: RankingService,
+        sounds: SoundLibraryService,
+      ) => {
         const flow = () => refs.get(AutonomousService, { strict: true })
         const edit = () => refs.get(AgentEditService, { strict: true })
-        return new AgentSessionService({
+        // The Ranking Builder's tools; the session service gives the chat's working folder.
+        let session: AgentSessionService | undefined
+        const rankingTools = new RankingAgentTools({
+          ranking,
+          sounds,
+          workingDir: (id) => (session as AgentSessionService).workingDir(id),
+        })
+        session = new AgentSessionService({
           autonomous: {
             cancel: (id) => flow().cancel(id),
             resume: (id) => flow().resume(id),
@@ -53,9 +71,12 @@ import { ChatModelService } from './chat-model.service'
             start: (id) => flow().start(id),
           },
           chatModels,
-          // Codex's ReelMakeEasy tools, answered by the edit service (resolved lazily, like the flow).
-          onToolCall: (id, tool, args) => edit().callTool(id, tool, args),
+          // Codex's ReelMakeEasy tools, answered by the edit service (resolved lazily, like the
+          // flow); the Ranking Builder's by its own tools.
+          onToolCall: (id, tool, args) =>
+            tool.startsWith('ranking_') ? rankingTools.call(id, tool, args) : edit().callTool(id, tool, args),
         })
+        return session
       },
     },
     {

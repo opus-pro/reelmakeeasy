@@ -9,19 +9,22 @@ import {
   soundsOf,
   transitionOf,
 } from '@reelmakeeasy/common/ranking/ranking-project'
-import type { RankingProject } from '@shared/types/api/ranking'
+import type { RankingProject, RankingSticker } from '@shared/types/api/ranking'
 import type { LibrarySound } from '@shared/types/api/sound-library'
 import { Button, cn } from '@shared/ui'
 import { useEffect, useMemo, useRef, useState } from 'react'
 
 import { STUDIO_RANKING_FONTS } from './ranking-fonts'
 import { type PlayingSound, playSoundPart } from './sound-player'
+import { useStickerImages } from './sticker-images'
 
 export type RankingPreviewProps = {
   /** Redraw once the fonts arrive. */
   fontsReady: boolean
   /** The rank being edited: its clip shows (paused at its start) while not playing. */
   focusRank: null | number
+  /** A sticker was dragged to a new place (fractions of the frame). */
+  onMoveSticker?: (id: string, x: number, y: number) => void
   project: RankingProject
   sounds: LibrarySound[]
 }
@@ -32,7 +35,9 @@ export type RankingPreviewProps = {
  * order, the transition slides between them, the reveal sound and the music bed. Stopped, it
  * shows the focused rank's clip with every label, as an editing view.
  */
-export function RankingPreview({ focusRank, fontsReady, project, sounds }: RankingPreviewProps) {
+export function RankingPreview({ focusRank, fontsReady, onMoveSticker, project, sounds }: RankingPreviewProps) {
+  const images = useStickerImages(project.stickers)
+  const [draggingSticker, setDraggingSticker] = useState<null | string>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const videoRef = useRef<HTMLVideoElement>(null)
   const musicRef = useRef<null | PlayingSound>(null)
@@ -62,8 +67,12 @@ export function RankingPreview({ focusRank, fontsReady, project, sounds }: Ranki
       drawRankingTransition(ctx, project, part.nextRank, STUDIO_RANKING_FONTS)
       return
     }
-    setBandHeight(drawRankingOverlay(ctx, project, revealed, { fonts: STUDIO_RANKING_FONTS }).bandHeight)
-  }, [fontsReady, part, project, revealed])
+    // Playing: the rank on screen; stopped: the rank being edited.
+    const rank = segment ? segment.item.rank : focusRank
+    setBandHeight(
+      drawRankingOverlay(ctx, project, revealed, { fonts: STUDIO_RANKING_FONTS, images, rank }).bandHeight,
+    )
+  }, [focusRank, fontsReady, images, part, project, revealed, segment])
 
   // Each part's sound as it starts; a transition advances on its own clock.
   useEffect(() => {
@@ -74,7 +83,11 @@ export function RankingPreview({ focusRank, fontsReady, project, sounds }: Ranki
       return () => clearTimeout(timer)
     }
     play(soundsOf(project).reveal)
-    return undefined
+    // This rank's meme sounds, each at its moment.
+    const timers = (part.segment.item.cues ?? []).map((cue) =>
+      setTimeout(() => play(cue.soundId), cue.atSec * 1000),
+    )
+    return () => timers.forEach(clearTimeout)
     // Only when the playing part changes.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [playing])
@@ -159,6 +172,14 @@ export function RankingPreview({ focusRank, fontsReady, project, sounds }: Ranki
           ref={canvasRef}
           width={RANKING_WIDTH}
         />
+        {playing === null && onMoveSticker && (
+          <StickerHandles
+            dragging={draggingSticker}
+            onDragging={setDraggingSticker}
+            onMove={onMoveSticker}
+            stickers={(project.stickers ?? []).filter((s) => s.rank === null || s.rank === focusRank)}
+          />
+        )}
       </div>
       <div className="flex w-full max-w-[430px] items-center gap-3">
         <Button
@@ -209,6 +230,68 @@ function Timeline({
         </div>
       ))}
       <div className="pointer-events-none absolute inset-y-0 w-0.5 bg-white" style={{ left: `${(elapsed / total) * 100}%` }} />
+    </div>
+  )
+}
+
+/**
+ * Invisible handles over the stickers on the stage (while stopped): press one and drag to move
+ * it. The overlay redraws as it moves.
+ */
+function StickerHandles({
+  dragging,
+  onDragging,
+  onMove,
+  stickers,
+}: {
+  dragging: null | string
+  onDragging: (id: null | string) => void
+  onMove: (id: string, x: number, y: number) => void
+  stickers: RankingSticker[]
+}) {
+  const at = (e: React.PointerEvent<HTMLDivElement>) => {
+    const box = e.currentTarget.getBoundingClientRect()
+    return {
+      x: Math.min(1, Math.max(0, (e.clientX - box.left) / box.width)),
+      y: Math.min(1, Math.max(0, (e.clientY - box.top) / box.height)),
+    }
+  }
+  return (
+    <div
+      className={cn('absolute inset-0', dragging ? 'cursor-grabbing' : '')}
+      onPointerMove={(e) => {
+        if (!dragging) return
+        const { x, y } = at(e)
+        onMove(dragging, x, y)
+      }}
+      onPointerUp={() => onDragging(null)}
+      onPointerLeave={() => onDragging(null)}
+      style={{ pointerEvents: dragging ? 'auto' : 'none' }}
+    >
+      {stickers.map((s) => {
+        const w = s.kind === 'image' ? s.size * 100 : Math.max(8, s.size * 100 * 1.8 * (s.text?.length ?? 1) * 0.35)
+        const h = s.kind === 'image' ? s.size * 100 * 0.5625 : s.size * 100
+        return (
+          <div
+            aria-label="Drag sticker"
+            className="absolute cursor-grab rounded border border-dashed border-white/40 hover:border-white"
+            key={s.id}
+            onPointerDown={(e) => {
+              e.preventDefault()
+              e.currentTarget.parentElement?.setPointerCapture?.(e.pointerId)
+              onDragging(s.id)
+            }}
+            style={{
+              height: `${h}%`,
+              left: `${s.x * 100 - w / 2}%`,
+              pointerEvents: 'auto',
+              top: `${s.y * 100 - h / 2}%`,
+              width: `${w}%`,
+            }}
+            title="Drag to move"
+          />
+        )
+      })}
     </div>
   )
 }

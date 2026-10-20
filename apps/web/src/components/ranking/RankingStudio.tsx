@@ -4,6 +4,7 @@ import { drawRankingOverlay, drawRankingTransition } from '@reelmakeeasy/common/
 import {
   RANKING_HEIGHT,
   RANKING_WIDTH,
+  rankingAdvice,
   rankingProblems,
   rankingTimeline,
 } from '@reelmakeeasy/common/ranking/ranking-project'
@@ -19,6 +20,7 @@ import { type RankingApi, useRankingApi } from './ranking-api'
 import { loadRankingFonts, STUDIO_RANKING_FONTS } from './ranking-fonts'
 import { RankingEditor } from './RankingEditor'
 import { RankingPreview } from './RankingPreview'
+import { loadStickerImage } from './sticker-images'
 import { useSoundLibrary } from './useSoundLibrary'
 
 /** Edits are saved this long after the last change. */
@@ -75,13 +77,14 @@ export function RankingStudio({
       setSaving('saving')
       clearTimeout(saveTimer.current)
       saveTimer.current = setTimeout(() => {
-        const { items, name, reveal, sounds: chosen, style, title, transition } = next
+        const { items, name, reveal, sounds: chosen, stickers, style, title, transition } = next
         api
           .update(id, {
             items,
             name,
             reveal,
             ...(chosen ? { sounds: chosen } : {}),
+            stickers: stickers ?? [],
             style,
             title,
             ...(transition ? { transition } : {}),
@@ -121,6 +124,20 @@ export function RankingStudio({
     [api, id, uploadFile],
   )
 
+  const uploadStickerImage = useCallback(
+    async (file: File): Promise<null | string> => {
+      setError(null)
+      try {
+        const { fileUri } = await uploadFile(file, { tempScope: 'ranking' })
+        return (await api.addStickerImage(id, fileUri, file.name)).imageUrl
+      } catch (e) {
+        setError(errorText(e))
+        return null
+      }
+    },
+    [api, id, uploadFile],
+  )
+
   if (error && !project) return <p className="p-6 text-sm text-amber-400">{error}</p>
   if (!project) return <p className="p-6 text-sm text-secondary">Loading…</p>
   return (
@@ -149,13 +166,27 @@ export function RankingStudio({
             onFocusRank={setFocusRank}
             onOpenLibrary={onOpenLibrary}
             onUploadClip={uploadClip}
+            onUploadStickerImage={uploadStickerImage}
             project={project}
             sounds={sounds}
             uploading={uploading}
           />
         </div>
         <div className="flex flex-col items-center gap-4 lg:sticky lg:top-6">
-          <RankingPreview focusRank={focusRank} fontsReady={fontsReady} project={project} sounds={sounds} />
+          <RankingPreview
+            focusRank={focusRank}
+            fontsReady={fontsReady}
+            onMoveSticker={(stickerId, x, y) =>
+              change({
+                ...project,
+                stickers: (project.stickers ?? []).map((s) =>
+                  s.id === stickerId ? { ...s, x: Math.round(x * 1000) / 1000, y: Math.round(y * 1000) / 1000 } : s,
+                ),
+              })
+            }
+            project={project}
+            sounds={sounds}
+          />
           <ExportPanel api={api} project={project} saving={saving === 'saving'} />
         </div>
       </div>
@@ -165,7 +196,19 @@ export function RankingStudio({
 
 /** Each timeline part's picture as a PNG (data URL), drawn exactly as the preview draws it: a
  *  clip's overlay, or a transition slide. */
-function drawOverlays(project: RankingProject): { bandHeight: number; overlays: string[] } {
+export async function drawOverlays(project: RankingProject): Promise<{ bandHeight: number; overlays: string[] }> {
+  // Every sticker picture loaded first: the export waits for them.
+  const images = new Map(
+    (
+      await Promise.all(
+        (project.stickers ?? []).flatMap((s) =>
+          s.kind === 'image' && s.imageUrl
+            ? [loadStickerImage(s.imageUrl).then((img) => [s.imageUrl as string, img] as const)]
+            : [],
+        ),
+      )
+    ).flatMap(([url, img]) => (img ? [[url, img] as const] : [])),
+  )
   const canvas = document.createElement('canvas')
   canvas.width = RANKING_WIDTH
   canvas.height = RANKING_HEIGHT
@@ -174,7 +217,12 @@ function drawOverlays(project: RankingProject): { bandHeight: number; overlays: 
   let bandHeight = 0
   const overlays = rankingTimeline(project).map((part) => {
     if (part.kind === 'transition') drawRankingTransition(ctx, project, part.nextRank, STUDIO_RANKING_FONTS)
-    else bandHeight = drawRankingOverlay(ctx, project, part.segment.revealed, { fonts: STUDIO_RANKING_FONTS }).bandHeight
+    else
+      bandHeight = drawRankingOverlay(ctx, project, part.segment.revealed, {
+        fonts: STUDIO_RANKING_FONTS,
+        images,
+        rank: part.segment.item.rank,
+      }).bandHeight
     return canvas.toDataURL('image/png')
   })
   return { bandHeight, overlays }
@@ -184,6 +232,7 @@ function ExportPanel({ api, project, saving }: { api: RankingApi; project: Ranki
   const [status, setStatus] = useState<null | RankingRenderStatus>(null)
   const [error, setError] = useState<null | string>(null)
   const problems = rankingProblems(project)
+  const advice = rankingAdvice(project)
 
   useEffect(() => {
     if (status?.state !== 'rendering') return undefined
@@ -200,7 +249,7 @@ function ExportPanel({ api, project, saving }: { api: RankingApi; project: Ranki
     setError(null)
     try {
       await document.fonts.ready
-      const { bandHeight, overlays } = drawOverlays(project)
+      const { bandHeight, overlays } = await drawOverlays(project)
       setStatus(await api.render(project.id, bandHeight, overlays))
     } catch (e) {
       setError(errorText(e))
@@ -221,6 +270,11 @@ function ExportPanel({ api, project, saving }: { api: RankingApi; project: Ranki
         )}
       </div>
       {problems.length > 0 && <p className="text-xs text-secondary">{problems.join(' ')}</p>}
+      {advice.map((tip) => (
+        <p className="text-xs text-amber-300/80" key={tip}>
+          Tip: {tip}
+        </p>
+      ))}
       {status?.state === 'failed' && <p className="text-xs text-amber-400">{status.error}</p>}
       {error && <p className="text-xs text-amber-400">{error}</p>}
       {status?.state === 'done' && status.videoUrl && (
