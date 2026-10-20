@@ -2,6 +2,7 @@ import { SOUND_ANALYSIS_RATE as SR } from './decode-audio'
 import {
   describeSound,
   detectOnsets,
+  findPulse,
   type LibraryPrint,
   matchSound,
   printOfSound,
@@ -79,19 +80,19 @@ describe('sound analysis', () => {
   it('names the library sound that plays at each one, and only that one', () => {
     for (const p of PLACED) {
       const onset = onsets.find((o) => Math.abs(o.atSec - p.atSec) < 0.04)
-      expect(matchSound(spec, onset?.atSec ?? p.atSec, library)?.name).toBe(p.name)
+      expect(matchSound(spec, onset?.atSec ?? p.atSec, library).match?.name).toBe(p.name)
     }
   })
 
   it('names nothing when the sound is not in the library', () => {
     const without = library.filter((s) => s.name !== 'hit')
-    expect(matchSound(spec, 2.3, without)).toBeNull()
+    expect(matchSound(spec, 2.3, without).match).toBeNull()
   })
 
   it('still matches a quieter, louder or re-encoded copy (gain does not matter)', () => {
     const quiet = bed(3)
     mix(quiet, SOUNDS['boom'] as Float32Array, 1, 0.2)
-    expect(matchSound(spectrogram(quiet), 1, library)?.name).toBe('boom')
+    expect(matchSound(spectrogram(quiet), 1, library).match?.name).toBe('boom')
   })
 
   it('describes a sound so the user can look for it', () => {
@@ -103,4 +104,30 @@ describe('sound analysis', () => {
   it('finds nothing in silence', () => {
     expect(detectOnsets(spectrogram(new Float32Array(SR * 2)))).toEqual([])
   })
+
+  it("doesn't name a sound when two library sounds are just as close", () => {
+    const twin = [...library, { id: 'boom2', name: 'boom copy', print: library.find((s) => s.name === 'boom')!.print }]
+    const result = matchSound(spec, 1, twin)
+    expect(result.match).toBeNull()
+    expect(result.maybe.map((m) => m.name).toSorted()).toEqual(['boom', 'boom copy'])
+  })
+
+  it('finds a steady music beat and the onsets on it, apart from a sound effect between beats', () => {
+    const kick = make(0.15, (t) => Math.sin(2 * Math.PI * 55 * t) * Math.exp(-t * 30))
+    const beat = bed(8)
+    for (let t = 0.25; t < 8; t += 0.5) mix(beat, kick, t, 0.6)
+    mix(beat, SOUNDS['hit'] as Float32Array, 3.62, 0.6)
+    const onsets = detectOnsets(spectrogram(beat))
+    const pulse = findPulse(onsets)
+    expect(pulse?.bpm).toBe(120)
+    const hit = onsets.findIndex((o) => Math.abs(o.atSec - 3.62) < 0.04)
+    expect(hit).toBeGreaterThanOrEqual(0)
+    expect(pulse?.onPulse.has(hit)).toBe(false)
+    expect(pulse?.onPulse.size).toBeGreaterThanOrEqual(10)
+  })
+
+  it('finds no beat in a few scattered sounds', () => {
+    expect(findPulse(onsets)).toBeNull()
+  })
 })
+

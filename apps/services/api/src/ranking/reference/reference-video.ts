@@ -7,6 +7,7 @@ import { decodeAudioMono, SOUND_ANALYSIS_RATE } from '@reelmakeeasy/common/audio
 import {
   describeSound,
   detectOnsets,
+  findPulse,
   type LibraryPrint,
   matchSound,
   spectrogram,
@@ -24,9 +25,15 @@ const YOUTUBE_HOSTS = new Set(['m.youtube.com', 'www.youtube.com', 'youtu.be', '
 export class ReferenceError extends Error {}
 
 /** Runs a command and keeps its whole output (scene detection prints a line per frame). */
-function exec(command: string, args: string[], cwd: string, timeoutMs = 10 * 60_000): Promise<string> {
+function exec(
+  command: string,
+  args: string[],
+  cwd: string,
+  timeoutMs = 10 * 60_000,
+  env?: NodeJS.ProcessEnv,
+): Promise<string> {
   return new Promise((resolve, reject) => {
-    const child = spawn(command, args, { cwd, stdio: ['ignore', 'pipe', 'pipe'], windowsHide: true })
+    const child = spawn(command, args, { cwd, env, stdio: ['ignore', 'pipe', 'pipe'], windowsHide: true })
     let out = ''
     const keep = (chunk: Buffer) => {
       if (out.length < 8_000_000) out += chunk.toString('utf8')
@@ -41,7 +48,7 @@ function exec(command: string, args: string[], cwd: string, timeoutMs = 10 * 60_
     child.on('close', (code) => {
       clearTimeout(timer)
       if (code === 0) resolve(out)
-      else reject(new Error(`${command} failed (${code}): ${out.trim().slice(-800)}`))
+      else reject(new Error(`${command} failed (${code}): ${out.trim().slice(-2000)}`))
     })
   })
 }
@@ -95,36 +102,87 @@ export async function ytDlp(binDir: string = path.join(dataDir(), 'bin')): Promi
   return file
 }
 
+/**
+ * The certificates the system trusts, as a PEM file for yt-dlp: its standalone build trusts only
+ * its own bundled list, so on a network that inspects HTTPS (a company proxy, a VPN) it fails the
+ * certificate check where the browser works. `SSL_CERT_FILE` / `NODE_EXTRA_CA_CERTS` when set,
+ * plus (on macOS) the system keychains.
+ */
+async function systemCaBundle(binDir: string): Promise<string> {
+  const file = path.join(binDir, 'system-ca.pem')
+  const parts: string[] = []
+  for (const extra of [process.env['SSL_CERT_FILE'], process.env['NODE_EXTRA_CA_CERTS']]) {
+    if (extra && fs.existsSync(extra)) parts.push(fs.readFileSync(extra, 'utf8'))
+  }
+  if (process.platform === 'darwin') {
+    parts.push(
+      await exec(
+        'security',
+        ['find-certificate', '-a', '-p', '/Library/Keychains/System.keychain', '/System/Library/Keychains/SystemRootCertificates.keychain'],
+        os.tmpdir(),
+        30_000,
+      ).catch(() => ''),
+    )
+  }
+  fs.mkdirSync(binDir, { recursive: true })
+  fs.writeFileSync(file, parts.join('\n'))
+  return file
+}
+
+/** Why yt-dlp failed, in words for the user (and what to do). */
+export function downloadFailure(output: string): string {
+  if (/confirm you.?re not a bot|Sign in to confirm/i.test(output))
+    return "YouTube asked to confirm this computer isn't a bot (it does this on VPNs and some networks). Attach the video file instead, or set YOUTUBE_COOKIES_FROM_BROWSER (e.g. chrome) in .env so downloads use your browser's YouTube sign-in."
+  if (/Private video|members-only|age/i.test(output)) return "That video isn't public, so it can't be read. Attach the video file instead."
+  if (/Video unavailable|not available/i.test(output)) return 'That video is unavailable. Check the link, or attach the video file.'
+  if (/CERTIFICATE_VERIFY_FAILED/.test(output))
+    return "This computer's network blocked the connection to YouTube (a certificate check failed). Attach the video file instead."
+  const line = output.split('\n').find((l) => l.startsWith('ERROR'))
+  return `The video could not be downloaded${line ? `: ${line.replace(/^ERROR:\s*/, '').slice(0, 200)}` : '.'} Attach the video file instead.`
+}
+
 /** Downloads a YouTube video (720p at most, its first three minutes) into `dir`; returns the file and its title. */
 export async function downloadYoutube(url: string, dir: string): Promise<{ file: string; title: null | string }> {
   fs.mkdirSync(dir, { recursive: true })
-  const binary = await ytDlp()
-  const out = await exec(
-    binary,
-    [
-      '--no-playlist',
-      '--no-progress',
-      '-f',
-      'bv*[height<=720]+ba/b[height<=720]/b',
-      '--merge-output-format',
-      'mp4',
-      '--download-sections',
-      `*0-${REFERENCE_MAX_SEC}`,
-      '--max-filesize',
-      '400M',
-      '--print',
-      'after_move:title',
-      '-o',
-      'reference.%(ext)s',
-      url,
-    ],
-    dir,
-    5 * 60_000,
-  ).catch((error: Error) => {
-    throw new ReferenceError(`The video could not be downloaded: ${error.message.split('\n').find((l) => /ERROR/.test(l)) ?? 'yt-dlp failed'}`)
-  })
+  const binDir = path.join(dataDir(), 'bin')
+  const binary = await ytDlp(binDir)
+  const cookies = process.env['YOUTUBE_COOKIES_FROM_BROWSER']?.trim()
+  const args = [
+    '--no-playlist',
+    '--no-progress',
+    // YouTube needs a JavaScript runtime for some formats: the one running this app.
+    '--js-runtimes',
+    `node:${process.execPath}`,
+    ...(cookies ? ['--cookies-from-browser', cookies] : []),
+    '-f',
+    'bv*[height<=720]+ba/b[height<=720]/b',
+    '--merge-output-format',
+    'mp4',
+    '--download-sections',
+    `*0-${REFERENCE_MAX_SEC}`,
+    '--max-filesize',
+    '400M',
+    '--print',
+    'after_move:title',
+    '-o',
+    'reference.%(ext)s',
+    url,
+  ]
+  const attempt = (extra: string[], env?: NodeJS.ProcessEnv) => exec(binary, [...extra, ...args], dir, 5 * 60_000, env)
+  let out: string
+  try {
+    out = await attempt([])
+  } catch (error) {
+    const message = (error as Error).message
+    if (!/CERTIFICATE_VERIFY_FAILED/.test(message)) throw new ReferenceError(downloadFailure(message))
+    // A network that inspects HTTPS: retry trusting the system's certificates.
+    const bundle = await systemCaBundle(binDir)
+    out = await attempt(['--compat-options', 'no-certifi'], { ...process.env, SSL_CERT_FILE: bundle }).catch((retry: Error) => {
+      throw new ReferenceError(downloadFailure(retry.message))
+    })
+  }
   const name = fs.readdirSync(dir).find((n) => n.startsWith('reference.') && !n.endsWith('.part'))
-  if (!name) throw new ReferenceError('The video could not be downloaded.')
+  if (!name) throw new ReferenceError('The video could not be downloaded. Attach the video file instead.')
   const title = out.trim().split('\n').filter(Boolean).at(-1) ?? null
   return { file: path.join(dir, name), title }
 }
@@ -164,8 +222,12 @@ export type ReferenceSound = {
   description: string
   /** A frame just after it starts: what the sound goes with. */
   frame: string
-  /** The library sound it is, when one is close enough. */
+  /** The library sound it is, when one is clearly the closest and close enough. */
   match: null | { id: string; name: string; score: number }
+  /** Library sounds it is like, when none is clearly it. */
+  maybe: { id: string; name: string; score: number }[]
+  /** On the steady music beat (a kick or snare of the music, not a sound effect). */
+  onBeat: boolean
   /** In the shot that starts at this many seconds into the shot (the action's moment in its clip). */
   inShot: { index: number; secIntoShot: number } | null
   strength: number
@@ -176,6 +238,8 @@ export type ReferenceAnalysis = {
   /** Files, relative to the analysis folder. */
   files: { contactSheet: string; titleFrame: string }
   medianShotSec: null | number
+  /** A steady beat under it (music), when there is one. */
+  music: null | { bpm: number }
   shots: ReferenceShot[]
   sounds: ReferenceSound[]
   source: { file: string; title: null | string; url: null | string }
@@ -213,10 +277,15 @@ export async function analyzeVideo(
   )
 
   let sounds: ReferenceSound[] = []
+  let music: ReferenceAnalysis['music'] = null
   try {
     const samples = await decodeAudioMono(file, SOUND_ANALYSIS_RATE, durationSec)
     const spec = spectrogram(samples)
-    const onsets = detectOnsets(spec)
+    const all = detectOnsets(spec)
+    const pulse = findPulse(all)
+    music = pulse ? { bpm: pulse.bpm } : null
+    const onsets = all
+      .map((onset, i) => ({ ...onset, onBeat: pulse?.onPulse.has(i) ?? false }))
       .toSorted((a, b) => b.strength - a.strength)
       .slice(0, SOUNDS_MAX)
       .toSorted((a, b) => a.atSec - b.atSec)
@@ -230,13 +299,15 @@ export async function analyzeVideo(
         ...describeSound(spec, onset.atSec),
         frame,
         inShot: shot ? { index: shotIndex + 1, secIntoShot: round2(Math.max(0, onset.atSec - shot.startSec)) } : null,
-        match: matchSound(spec, onset.atSec, library),
+        ...matchSound(spec, onset.atSec, library),
+        onBeat: onset.onBeat,
         strength: onset.strength,
       })
     }
   } catch {
     // A silent video has no sounds to read; its shots still say how it moves.
     sounds = []
+    music = null
   }
 
   const lengths = shots.map((s) => s.endSec - s.startSec).toSorted((a, b) => a - b)
@@ -244,6 +315,7 @@ export async function analyzeVideo(
     durationSec: round2(durationSec),
     files: { contactSheet, titleFrame },
     medianShotSec: lengths.length ? round2(lengths[Math.floor(lengths.length / 2)] as number) : null,
+    music,
     shots,
     sounds,
     source: { file: path.basename(file), ...source },

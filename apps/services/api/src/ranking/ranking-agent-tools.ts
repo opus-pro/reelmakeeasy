@@ -53,24 +53,44 @@ function describe(project: RankingProject): string {
   return lines.join('\n')
 }
 
+/** The tools that make or change a ranking (the chat's preview follows those). */
+const FOLLOW_TOOLS = new Set([
+  'ranking_add_clip',
+  'ranking_add_sticker_image',
+  'ranking_apply_style',
+  'ranking_create',
+  'ranking_export',
+  'ranking_update',
+])
+
 const clock = (sec: number) => `${Math.floor(sec / 60)}:${(sec % 60).toFixed(2).padStart(5, '0')}`
 
 /** A reference's analysis as the agent reads it: what to look at, its shots and its sounds. */
 function describeAnalysis(a: ReferenceAnalysis, dir: string, librarySize: number): string {
-  const sounds = a.sounds.map((s) => {
+  // Sound effects: off the music's beat, or far louder than it (a beat's kick can look like a boom).
+  const effects = a.sounds.filter((s) => !s.onBeat || s.strength >= 0.9)
+  const onBeat = a.sounds.length - effects.length
+  const sounds = effects.map((s) => {
     const where = s.inShot ? ` (shot ${s.inShot.index}, ${s.inShot.secIntoShot.toFixed(2)} s in)` : ''
-    const what = s.match ? `= library "${s.match.name}" (soundId ${s.match.id}, match ${s.match.score})` : 'not in the library'
-    return `- ${clock(s.atSec)}${where} ${s.description}, ~${s.durationSec} s, strength ${s.strength}: ${what}. Frame: ${dir}/${s.frame}`
+    const what = s.match
+      ? `= library "${s.match.name}" (soundId ${s.match.id}, match ${s.match.score})`
+      : s.maybe.length
+        ? `not clearly in the library; like ${s.maybe.map((m) => `"${m.name}" (soundId ${m.id}, ${m.score})`).join(' or ')}`
+        : 'not in the library'
+    return `- ${clock(s.atSec)}${where} ${s.description}, ~${s.durationSec} s, strength ${s.strength}${s.onBeat ? ', on the beat' : ''}: ${what}. Frame: ${dir}/${s.frame}`
   })
   const shots = a.shots.map((s, i) => `- shot ${i + 1}: ${s.startSec}-${s.endSec} s (${(s.endSec - s.startSec).toFixed(1)} s). Frame: ${dir}/${s.frame}`)
   return [
     `Analysed ${a.source.title ? `"${a.source.title}"` : a.source.file} (${a.durationSec} s). Files in ${dir}/ (analysis.json has all of it).`,
     `Look at ${dir}/${a.files.titleFrame} (full size: the title band, its words and colours, the rank column, labels, stickers) and ${dir}/${a.files.contactSheet} (16 frames across it), then the frames below where you need detail.`,
-    `Shots: ${a.shots.length}, median ${a.medianShotSec ?? '?'} s. A rank is often one shot, sometimes several: decide from the frames.`,
+    `Shots: ${a.shots.length}, median ${a.medianShotSec ?? '?'} s. A rank is often one shot, sometimes several (a clip with cuts, a transition slide): decide from the frames.`,
     ...shots,
-    `Sound effects (onsets, strongest ${a.sounds.length}; ${librarySize} library sounds compared):`,
+    a.music
+      ? `Music: a steady beat at about ${a.music.bpm} BPM runs under it${onBeat ? ` (${onBeat} quieter onsets on that beat are left out below: they are the music, not effects)` : ''}.`
+      : 'Music: no steady beat found.',
+    `Sound effects (${effects.length}; ${librarySize} library sounds compared):`,
     ...(sounds.length ? sounds : ['- none found']),
-    'Sounds marked "not in the library" are ones the user would download themselves: describe them plainly. Never cut sounds out of the reference.',
+    'A sound repeated at each new rank is the reveal sound; one on the impact inside a clip is the action sound. "Not in the library" sounds are ones the user would download themselves: describe them plainly. Never cut sounds out of the reference.',
     'Next: tell the user the pattern in a few lines (ranks, seconds per rank, title look, labels, reveal, stickers, sounds and when they fire), then save it with ranking_style_save.',
   ].join('\n')
 }
@@ -109,11 +129,10 @@ export class RankingAgentTools {
     const a = isRecord(args) ? args : {}
     try {
       const result = await this.dispatch(sessionId, tool, a)
-      // A tool that touched a ranking (its id is in the args, or the project it answered):
-      // the chat follows that one.
-      const id = typeof a['id'] === 'string' && tool !== 'ranking_style_get' ? a['id'] : /"id":"([\da-f-]{36})"/.exec(result.text)?.[1]
-      if (result.success && id && tool !== 'ranking_list' && !tool.startsWith('ranking_style_'))
-        this.deps.onRanking?.(sessionId, id)
+      // A tool that made or changed a ranking: the chat follows it (reading one doesn't move
+      // the preview off the one being built).
+      const id = tool === 'ranking_create' ? /"id":"([\da-f-]{36})"/.exec(result.text)?.[1] : a['id']
+      if (result.success && FOLLOW_TOOLS.has(tool) && typeof id === 'string') this.deps.onRanking?.(sessionId, id)
       return result
     } catch (error) {
       return { success: false, text: ensureError(error).message }

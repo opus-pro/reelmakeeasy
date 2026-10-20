@@ -95,6 +95,8 @@ describe('RankingAgentTools', () => {
     expect(applied.text).toMatch(/boom \(soundId b\)/)
     expect(ranking.update).toHaveBeenCalledWith(project.id, expect.objectContaining({ reveal: expect.objectContaining({ mode: 'shuffle' }) }))
     expect(followed).toEqual([project.id])
+    await t.call('s', 'ranking_get', { id: 'other' })
+    expect(followed).toEqual([project.id])
     await t.call('s', 'ranking_create', { name: 'x' })
     expect(followed).toEqual([project.id, project.id])
   })

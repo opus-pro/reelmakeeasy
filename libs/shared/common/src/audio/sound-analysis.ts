@@ -227,32 +227,72 @@ export function similarity(a: SoundPrint, b: SoundPrint): number {
 }
 
 /** A match good enough to name: the same sound, re-encoded and mixed over a clip. */
-export const MATCH_THRESHOLD = 0.72
+export const MATCH_THRESHOLD = 0.8
+/** Below this, nothing in the library is like it. */
+const MAYBE_THRESHOLD = 0.7
+/** The best match must beat the next library sound by this much to be named. */
+const MATCH_MARGIN = 0.03
 
 export type LibraryPrint = { id: string; name: string; print: SoundPrint }
 
+export type SoundMatch = {
+  /** The library sound it is: clearly the closest, and close enough. */
+  match: null | { id: string; name: string; score: number }
+  /** Library sounds it is like, when none is clearly it (best first, at most 3). */
+  maybe: { id: string; name: string; score: number }[]
+}
+
 /**
- * The library sound closest to what starts at `atSec`, trying a few frames either side (onset
- * timing wobbles); null when none clears `MATCH_THRESHOLD`. `runnerUp` is the next best score.
+ * The library sound that starts at `atSec`, trying a few frames either side (onset timing
+ * wobbles). Named only when it clears `MATCH_THRESHOLD` and beats every other library sound
+ * by `MATCH_MARGIN`; otherwise the close ones are listed as `maybe`.
  */
-export function matchSound(
-  spec: Spectrogram,
-  atSec: number,
-  library: LibraryPrint[],
-): { id: string; name: string; score: number } | null {
-  if (!library.length) return null
+export function matchSound(spec: Spectrogram, atSec: number, library: LibraryPrint[]): SoundMatch {
+  if (!library.length) return { match: null, maybe: [] }
   const t0 = Math.round(atSec / spec.hopSec)
-  let best: { id: string; name: string; score: number } | null = null
+  const best = new Map<string, number>()
   for (let dt = -3; dt <= 3; dt++) {
     const print = printOf(addedSlices(spec, t0 + dt, true))
     if (!print) continue
-    for (const sound of library) {
-      const score = similarity(print, sound.print)
-      if (!best || score > best.score) best = { id: sound.id, name: sound.name, score }
-    }
+    for (const sound of library) best.set(sound.id, Math.max(best.get(sound.id) ?? -1, similarity(print, sound.print)))
   }
-  if (!best || best.score < MATCH_THRESHOLD) return null
-  return { ...best, score: Math.round(best.score * 100) / 100 }
+  const ranked = library
+    .map((sound) => ({ id: sound.id, name: sound.name, score: Math.round((best.get(sound.id) ?? -1) * 100) / 100 }))
+    .toSorted((a, b) => b.score - a.score)
+  const [first, second] = ranked
+  if (first && first.score >= MATCH_THRESHOLD && first.score - (second?.score ?? -1) >= MATCH_MARGIN)
+    return { match: first, maybe: [] }
+  return { match: null, maybe: ranked.filter((r) => r.score >= MAYBE_THRESHOLD).slice(0, 3) }
+}
+
+/**
+ * A steady pulse in the onsets (a music beat under everything): its period, when one interval
+ * (or its double) separates at least 40% of neighbouring onsets, and which onsets sit on it.
+ */
+export function findPulse(onsets: Onset[]): { bpm: number; onPulse: Set<number> } | null {
+  const times = onsets.map((o) => o.atSec)
+  const gaps = times.slice(1).map((t, i) => t - (times[i] as number)).filter((g) => g >= 0.2 && g <= 1.2)
+  if (gaps.length < 6) return null
+  let bestPeriod = 0
+  let bestCount = 0
+  for (const period of gaps) {
+    const count = gaps.filter((g) => [1, 2].some((k) => Math.abs(g - k * period) <= 0.06 * k * period)).length
+    if (count > bestCount) [bestPeriod, bestCount] = [period, count]
+  }
+  if (bestCount < gaps.length * 0.4) return null
+  const near = (a: number, b: number) =>
+    [1, 2, 3, 4].some((k) => Math.abs(Math.abs(a - b) - k * bestPeriod) <= 0.06 * bestPeriod * k)
+  const onPulse = new Set<number>()
+  times.forEach((t, i) => {
+    const neighbours = times.filter((u, j) => j !== i && Math.abs(u - t) <= 4.5 * bestPeriod && near(t, u))
+    if (neighbours.length >= 2) onPulse.add(i)
+  })
+  // Reported as a tempo people count in (70-160 BPM): a pulse on every half or quarter beat is
+  // still the same song.
+  let bpm = 60 / bestPeriod
+  while (bpm > 160) bpm /= 2
+  while (bpm < 70) bpm *= 2
+  return { bpm: Math.round(bpm), onPulse }
 }
 
 /**

@@ -6,7 +6,7 @@ import path from 'node:path'
 import { decodeAudioMono } from '@reelmakeeasy/common/audio/decode-audio'
 import { printOfSound, spectrogram } from '@reelmakeeasy/common/audio/sound-analysis'
 
-import { analyzeVideo, clipMoments, ReferenceError, youtubeUrl } from './reference-video'
+import { analyzeVideo, clipMoments, downloadFailure, ReferenceError, youtubeUrl } from './reference-video'
 
 const BOOM = 'if(between(t,1,1.6),0.6*sin(2*PI*(70-30*(t-1))*(t-1))*exp(-5*(t-1)),0)'
 const HIT = 'if(between(t,3,3.2),0.5*sin(2*PI*3000*t)*exp(-25*(t-3)),0)'
@@ -41,6 +41,7 @@ describe('reference video analysis', () => {
     expect(boom?.match?.name).toBe('Vine boom')
     expect(boom?.inShot).toEqual({ index: 1, secIntoShot: expect.closeTo(1, 1) })
     expect(hit?.match).toBeNull()
+    expect(a.music).toBeNull()
     expect(hit?.description).toMatch(/bright/)
     expect(hit?.inShot?.index).toBe(2)
     for (const file of [a.files.titleFrame, a.files.contactSheet, ...a.shots.map((s) => s.frame), boom?.frame ?? ''])
@@ -63,5 +64,14 @@ describe('youtubeUrl', () => {
     expect(() => youtubeUrl('http://www.youtube.com/watch?v=1')).toThrow(ReferenceError)
     expect(() => youtubeUrl('file:///etc/passwd')).toThrow(ReferenceError)
     expect(() => youtubeUrl('not a link')).toThrow(/isn't a link/)
+  })
+})
+
+describe('downloadFailure', () => {
+  it('says what went wrong and offers attaching the file', () => {
+    expect(downloadFailure("ERROR: [youtube] x: Sign in to confirm you’re not a bot.")).toMatch(/YOUTUBE_COOKIES_FROM_BROWSER/)
+    expect(downloadFailure('ERROR: [SSL: CERTIFICATE_VERIFY_FAILED]')).toMatch(/certificate/)
+    expect(downloadFailure('ERROR: [youtube] x: Video unavailable')).toMatch(/unavailable/)
+    expect(downloadFailure('ERROR: something odd')).toMatch(/something odd.*Attach/)
   })
 })
