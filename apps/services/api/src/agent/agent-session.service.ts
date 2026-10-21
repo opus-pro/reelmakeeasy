@@ -477,7 +477,14 @@ export class AgentSessionService implements OnModuleDestroy {
    *  `harness` (default: the one picked when the chat was created, else `AGENT_HARNESS`) is fixed
    *  with the mode; a harness that isn't ready throws `HarnessNotReadyError` and leaves the mode
    *  unchosen. */
-  async chooseMode(id: string, mode: AgentMode, picked?: AgentHarnessName): Promise<void> {
+  async chooseMode(
+    id: string,
+    mode: AgentMode,
+    picked?: AgentHarnessName,
+    /** A Ranking chat's first message, typed before the chat opened (the studio's "Ask the
+     *  agent"): shown as the user's, and the first turn does it. */
+    request?: string,
+  ): Promise<void> {
     const session = this.getSession(id)
     if (session.mode) throw new ModeAlreadyChosenError(id)
     const harness = picked ?? session.harness ?? defaultHarness()
@@ -492,8 +499,14 @@ export class AgentSessionService implements OnModuleDestroy {
     )
     this.emit(id, { mode, type: 'mode' })
     if (mode === 'free' || isRankingMode(mode)) {
+      const asked = isRankingMode(mode) ? request?.trim() : undefined
+      if (asked) {
+        if (isUnsetChatTitle(session.title))
+          this.store.update(id, { title: chatTitleFrom(asked) }, { touch: false })
+        this.emit(id, { text: asked, type: 'user_message' })
+      }
       const prompt = isRankingMode(mode)
-        ? rankingKickoff(harness, session.rankingId, mode === 'ranking_easy')
+        ? rankingKickoff(harness, session.rankingId, mode === 'ranking_easy', asked)
         : kickoffFor(harness)
       void this.startKickoff(id, prompt).catch((error: unknown) =>
         this.logger.warn(`Kickoff for ${id} failed: ${ensureError(error).message}`),

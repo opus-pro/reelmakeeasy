@@ -48,7 +48,11 @@ export function RankingHeadlessRender() {
 
   return (
     <p data-render-error={result.error} data-render-id={result.renderId} id="ranking-render">
-      {result.renderId ? `Rendering ${result.renderId}` : result.error ? `Failed: ${result.error}` : 'Drawing…'}
+      {result.renderId
+        ? `Rendering ${result.renderId}`
+        : result.error
+          ? `Failed: ${result.error}`
+          : 'Drawing…'}
     </p>
   )
 }

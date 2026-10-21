@@ -100,16 +100,6 @@ const CREATE_USE_CASES_BY_KEY = new Map<CreateUseCaseKey, CreateUseCaseConfig>(
   CREATE_USE_CASES.map((useCase) => [useCase.key, useCase]),
 )
 
-const DEFAULT_USE_CASE_BY_WORKFLOW: Record<CreateWorkflow, CreateUseCaseKey> = {
-  'story-mode': 'script-to-video',
-}
-
-// Sidebar create menu: exclude animation-style-ad (existing) and song-to-video
-// (its only entry point is the home omnibox, gated separately).
-export const SIDEBAR_CREATE_USE_CASES = CREATE_USE_CASES.filter(
-  (useCase) => useCase.key !== 'animation-style-ad' && useCase.key !== 'song-to-video',
-)
-
 // Home omnibox chip order.
 const DASHBOARD_USE_CASE_KEYS: CreateUseCaseKey[] = [
   'script-to-video',
@@ -126,46 +116,8 @@ export function getCreateUseCase(key: CreateUseCaseKey): CreateUseCaseConfig {
   return useCase
 }
 
-export function getCreateUseCaseHref(key: CreateUseCaseKey): string {
-  const useCase = getCreateUseCase(key)
-  const defaultKey = DEFAULT_USE_CASE_BY_WORKFLOW[useCase.workflow]
-
-  if (key === defaultKey) {
-    return useCase.path
-  }
-
-  return `${useCase.path}?${CREATE_USE_CASE_QUERY_PARAM}=${key}`
-}
-
 export function getDashboardUseCases(): CreateUseCaseConfig[] {
   return DASHBOARD_USE_CASE_KEYS.map(getCreateUseCase)
-}
-
-export function resolveCreateUseCase(
-  pathname: string,
-  searchParams?: null | Pick<URLSearchParams, 'get'>,
-): CreateUseCaseConfig | null {
-  const workflow = resolveCreateWorkflow(pathname)
-  if (!workflow) {
-    return null
-  }
-
-  const requestedKey = searchParams?.get(CREATE_USE_CASE_QUERY_PARAM) ?? null
-  if (isCreateUseCaseKey(requestedKey)) {
-    const requestedUseCase = getCreateUseCase(requestedKey)
-    if (requestedUseCase.workflow === workflow) {
-      return requestedUseCase
-    }
-  }
-
-  return getCreateUseCase(DEFAULT_USE_CASE_BY_WORKFLOW[workflow])
-}
-
-export function resolveCreateWorkflow(pathname: string): CreateWorkflow | null {
-  if (pathname.startsWith('/story-mode')) {
-    return 'story-mode'
-  }
-  return null
 }
 
 // Use cases whose /home?create=... door renders as a focused create screen:
@@ -176,8 +128,4 @@ export function resolveCreateWorkflow(pathname: string): CreateWorkflow | null {
 export const FOCUSED_CREATE_USE_CASE_KEYS = ['news-article-to-video'] as const
 export function isFocusedCreateUseCaseKey(key: null | string | undefined): boolean {
   return key != null && (FOCUSED_CREATE_USE_CASE_KEYS as readonly string[]).includes(key)
-}
-
-function isCreateUseCaseKey(value: null | string): value is CreateUseCaseKey {
-  return value !== null && CREATE_USE_CASES_BY_KEY.has(value as CreateUseCaseKey)
 }

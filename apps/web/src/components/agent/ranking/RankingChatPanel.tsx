@@ -61,8 +61,10 @@ export function RankingChatPanel({
           <li>
             🔗 Paste a YouTube Short to copy its style: timing, title look, labels and sounds.
           </li>
-          <li>🎬 Attach your clips (the paperclip), one per rank, or ask for AI-made clips.</li>
-          <li>🔊 Sounds come from your sound library; the agent says which ones to add.</li>
+          <li>
+            🎬 Attach your clips or photos (the paperclip), one per rank, or ask for AI-made clips.
+          </li>
+          <li>🔊 Drop sound files into the chat: the agent adds them to your sound library.</li>
         </ul>
         <div className="flex gap-3 text-xs">
           <Link className="text-accent-green hover:underline" href="/ranking?tab=sounds">

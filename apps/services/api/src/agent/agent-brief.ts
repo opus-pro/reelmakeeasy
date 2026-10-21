@@ -123,8 +123,12 @@ export function rankingKickoff(
   harness: AgentHarnessName,
   rankingId?: string,
   easy = false,
+  /** What the user asked for in the studio before the chat opened (their first message). */
+  request?: string,
 ): string {
-  const opened = `[ReelMakeEasy] The user opened ranking ${rankingId} from the studio to work on it here. Read the skill, then the ranking with ranking_get, and in one or two short sentences say what it has so far and ask what to do next.`
+  const opened = request
+    ? `[ReelMakeEasy] The user asked for this from the studio, on ranking ${rankingId}. Read the skill, then the ranking with ranking_get, and do it; ask first only when it's unclear or it costs money.\n\n${request}`
+    : `[ReelMakeEasy] The user opened ranking ${rankingId} from the studio to work on it here. Read the skill, then the ranking with ranking_get, and in one or two short sentences say what it has so far and ask what to do next.`
   const first = easy
     ? '[ReelMakeEasy] The user chose Ranking, Easy. Read the skill. Then, in one short sentence, ask what their ranking is about, with two example topics (like "guiltiest dogs caught in the act"); say you will take it from there, a question at a time. Nothing else yet.'
     : "[ReelMakeEasy] The user chose Ranking. Read the skill. Then in two short sentences: ask what the ranking is about, and say they can attach their clips, have you make the clips with AI, or paste a YouTube Short whose style they'd like to copy."

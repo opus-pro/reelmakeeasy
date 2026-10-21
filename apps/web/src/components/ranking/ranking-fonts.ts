@@ -1,7 +1,11 @@
 'use client'
 
 import type { RankingFonts } from '@reelmakeeasy/common/ranking/ranking-overlay'
-import { RANKING_FONT_FACES, RANKING_FONT_IDS, rankingFontFamily } from '@reelmakeeasy/common/ranking/ranking-type'
+import {
+  RANKING_FONT_FACES,
+  RANKING_FONT_IDS,
+  rankingFontFamily,
+} from '@reelmakeeasy/common/ranking/ranking-type'
 
 /** The family name the studio loads Montserrat under (its own, so nothing else is affected). */
 const FAMILY = 'RME Ranking'
@@ -27,8 +31,12 @@ let loading: null | Promise<boolean> = null
  * the overlay then draws in the fallback fonts; a pick that fails falls back the same way.
  */
 export function loadRankingFonts(apiOrigin: string): Promise<boolean> {
-  if (typeof FontFace === 'undefined' || typeof document === 'undefined') return Promise.resolve(false)
-  const url = (file: string) => `url(${JSON.stringify(`${apiOrigin}/api/caption-fonts/pack/${file}`)})`
+  if (typeof FontFace === 'undefined' || typeof document === 'undefined')
+    return Promise.resolve(false)
+  const url = (file: string) => {
+    const href = `${apiOrigin}/api/caption-fonts/pack/${file}`
+    return `url(${JSON.stringify(href)})`
+  }
   const add = async (family: string, file: string, weight: string) =>
     document.fonts.add(await new FontFace(family, url(file), { weight }).load())
   loading ??= Promise.all([

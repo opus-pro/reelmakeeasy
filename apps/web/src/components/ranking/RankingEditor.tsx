@@ -38,51 +38,113 @@ const HEADING = 'text-xs font-semibold tracking-wide text-secondary uppercase'
 const INPUT =
   'rounded-md border border-white/10 bg-black/30 px-2 py-1 text-sm text-primary placeholder:text-tertiary focus:border-white/30 focus:outline-none'
 
+/** The editor's tabs, in order. */
+export type RankingEditorTab = 'effects' | 'look' | 'ranks' | 'sounds' | 'title'
+const TABS: [RankingEditorTab, string][] = [
+  ['ranks', 'Ranks'],
+  ['title', 'Title'],
+  ['effects', 'Effects'],
+  ['sounds', 'Sounds'],
+  ['look', 'Look'],
+]
+
 export type RankingEditorProps = {
   focusRank: null | number
-  /** Opens the sound library (the Sounds tab). */
-  onOpenLibrary: () => void
-  /** The user's sound library, for the sound pickers. */
-  sounds: LibrarySound[]
   onChange: (next: RankingProject) => void
   onFocusRank: (rank: number) => void
+  /** Opens the sound library (the Sounds tab). */
+  onOpenLibrary: () => void
+  /** A sticker picked (in Effects, or on the preview); null: none. */
+  onSelectSticker: (id: null | string) => void
+  onTab: (tab: RankingEditorTab) => void
+  /** Uploads a video or a photo under a rank (the studio saves it; a photo becomes a clip). */
+  onUploadClip: (itemId: string, file: File) => Promise<void>
   /** Uploads a sticker picture; resolves its address (null when it failed). */
   onUploadStickerImage: (file: File) => Promise<null | string>
-  /** Uploads a video under a rank (the studio saves it and returns the new clip). */
-  onUploadClip: (itemId: string, file: File) => Promise<void>
   project: RankingProject
+  /** The sticker being edited. */
+  selectedSticker: null | string
+  /** The user's sound library, for the sound pickers. */
+  sounds: LibrarySound[]
+  tab: RankingEditorTab
   uploading: ReadonlySet<string>
 }
 
-/** The studio's left side: the title, the ranks and their clips, the reveal order, the colours. */
+/**
+ * The studio's editor, one tab at a time: the ranks and their clips, the title, the effects
+ * (stickers, the slide between ranks), the sounds, and the look (reveal order, fonts, colours).
+ */
 export function RankingEditor(props: RankingEditorProps) {
-  const { onChange, project } = props
+  const { onChange, onTab, project, tab } = props
   return (
     <div className="flex flex-col gap-3">
-      <TitleEditor onChange={(title) => onChange({ ...project, title })} title={project.title} />
-      <RankRows {...props} />
-      <RevealPanel
-        count={project.items.length}
-        onChange={(reveal) => onChange({ ...project, reveal })}
-        reveal={project.reveal}
-      />
-      <SoundsPanel
-        onChange={(sounds) => onChange({ ...project, sounds })}
-        onOpenLibrary={props.onOpenLibrary}
-        sounds={props.sounds}
-        value={project.sounds}
-      />
-      <TransitionPanel
-        onChange={(transition) => onChange({ ...project, transition })}
-        sounds={props.sounds}
-        value={project.transition}
-      />
-      <StickersPanel
-        onChange={(stickers) => onChange({ ...project, stickers })}
-        onUploadImage={props.onUploadStickerImage}
-        project={project}
-      />
-      <StylePanel onChange={(style) => onChange({ ...project, style })} style={project.style} />
+      <div aria-label="Editor" className="flex gap-1 rounded-lg bg-black/25 p-1" role="tablist">
+        {TABS.map(([key, label]) => (
+          <button
+            aria-selected={tab === key}
+            className={cn(
+              'flex-1 rounded-md px-2 py-1.5 text-sm font-medium transition-colors',
+              tab === key ? 'bg-white/15 text-primary' : 'text-secondary hover:text-primary',
+            )}
+            key={key}
+            onClick={() => onTab(key)}
+            role="tab"
+            type="button"
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+      <div className="flex flex-col gap-3" role="tabpanel">
+        {tab === 'ranks' && <RankRows {...props} />}
+        {tab === 'title' && (
+          <TitleEditor
+            onChange={(title) => onChange({ ...project, title })}
+            title={project.title}
+          />
+        )}
+        {tab === 'effects' && (
+          <>
+            <section className={SECTION}>
+              <span className={HEADING}>Stickers</span>
+              <StickersPanel
+                focusRank={props.focusRank}
+                onChange={(stickers) => onChange({ ...project, stickers })}
+                onSelect={props.onSelectSticker}
+                onUploadImage={props.onUploadStickerImage}
+                project={project}
+                selected={props.selectedSticker}
+              />
+            </section>
+            <TransitionPanel
+              onChange={(transition) => onChange({ ...project, transition })}
+              sounds={props.sounds}
+              value={project.transition}
+            />
+          </>
+        )}
+        {tab === 'sounds' && (
+          <SoundsPanel
+            onChange={(sounds) => onChange({ ...project, sounds })}
+            onOpenLibrary={props.onOpenLibrary}
+            sounds={props.sounds}
+            value={project.sounds}
+          />
+        )}
+        {tab === 'look' && (
+          <>
+            <RevealPanel
+              count={project.items.length}
+              onChange={(reveal) => onChange({ ...project, reveal })}
+              reveal={project.reveal}
+            />
+            <StylePanel
+              onChange={(style) => onChange({ ...project, style })}
+              style={project.style}
+            />
+          </>
+        )}
+      </div>
     </div>
   )
 }
@@ -99,7 +161,10 @@ function ColorDot({
   return (
     <button
       aria-label={`Colour ${color}`}
-      className={cn('size-5 rounded-full border', selected ? 'border-white ring-1 ring-white' : 'border-white/30')}
+      className={cn(
+        'size-5 rounded-full border',
+        selected ? 'border-white ring-1 ring-white' : 'border-white/30',
+      )}
       onClick={() => onPick(color)}
       style={{ background: color }}
       type="button"
@@ -125,12 +190,20 @@ function ColorPicker({ onPick, value }: { onPick: (color: string) => void; value
 }
 
 /** The title: one to three lines of words, each word in its own colour (keywords pop). */
-function TitleEditor({ onChange, title }: { onChange: (title: RankingTitle) => void; title: RankingTitle }) {
-  const [active, setActive] = useState<null | [number, number]>(null)
+function TitleEditor({
+  onChange,
+  title,
+}: {
+  onChange: (title: RankingTitle) => void
+  title: RankingTitle
+}) {
+  const [active, setActive] = useState<[number, number] | null>(null)
   const setWord = (li: number, wi: number, word: RankingTitleWord) =>
     onChange({
       ...title,
-      lines: title.lines.map((line, i) => (i === li ? line.map((w, j) => (j === wi ? word : w)) : line)),
+      lines: title.lines.map((line, i) =>
+        i === li ? line.map((w, j) => (j === wi ? word : w)) : line,
+      ),
     })
   const activeWord = active ? title.lines[active[0]]?.[active[1]] : undefined
   return (
@@ -155,7 +228,11 @@ function TitleEditor({ onChange, title }: { onChange: (title: RankingTitle) => v
           {line.map((word, wi) => (
             <input
               aria-label={`Title line ${li + 1}, word ${wi + 1}`}
-              className={cn(INPUT, 'w-auto min-w-0 font-bold', active?.[0] === li && active[1] === wi && 'border-white/60')}
+              className={cn(
+                INPUT,
+                'w-auto min-w-0 font-bold',
+                active?.[0] === li && active[1] === wi && 'border-white/60',
+              )}
               key={`w-${li}-${wi}`}
               maxLength={40}
               onChange={(e) => setWord(li, wi, { ...word, text: e.target.value })}
@@ -171,7 +248,9 @@ function TitleEditor({ onChange, title }: { onChange: (title: RankingTitle) => v
               onClick={() =>
                 onChange({
                   ...title,
-                  lines: title.lines.map((l, i) => (i === li ? [...l, { color: '#ffffff', text: '' }] : l)),
+                  lines: title.lines.map((l, i) =>
+                    i === li ? [...l, { color: '#ffffff', text: '' }] : l,
+                  ),
                 })
               }
               type="button"
@@ -197,7 +276,9 @@ function TitleEditor({ onChange, title }: { onChange: (title: RankingTitle) => v
       <div className="flex flex-wrap items-center gap-3">
         {title.lines.length < RANKING_TITLE_LINES_MAX && (
           <Button
-            onClick={() => onChange({ ...title, lines: [...title.lines, [{ color: '#ffffff', text: '' }]] })}
+            onClick={() =>
+              onChange({ ...title, lines: [...title.lines, [{ color: '#ffffff', text: '' }]] })
+            }
             size="sm"
             variant="secondary"
           >
@@ -207,13 +288,18 @@ function TitleEditor({ onChange, title }: { onChange: (title: RankingTitle) => v
         {active && activeWord && (
           <div className="flex items-center gap-2 text-xs text-secondary">
             <span>“{activeWord.text || '…'}” colour</span>
-            <ColorPicker onPick={(color) => setWord(active[0], active[1], { ...activeWord, color })} value={activeWord.color} />
+            <ColorPicker
+              onPick={(color) => setWord(active[0], active[1], { ...activeWord, color })}
+              value={activeWord.color}
+            />
             <button
               className="text-secondary hover:text-primary"
               onClick={() => {
                 onChange({
                   ...title,
-                  lines: title.lines.map((l, i) => (i === active[0] ? l.filter((_, j) => j !== active[1]) : l)),
+                  lines: title.lines.map((l, i) =>
+                    i === active[0] ? l.filter((_, j) => j !== active[1]) : l,
+                  ),
                 })
                 setActive(null)
               }}
@@ -229,91 +315,6 @@ function TitleEditor({ onChange, title }: { onChange: (title: RankingTitle) => v
 }
 
 /** The ranks, top first: each one's label, its clip (upload, trim) and its place in the list. */
-function RankRows({ focusRank, onChange, onFocusRank, onUploadClip, project, sounds, uploading }: RankingEditorProps) {
-  // Which row is being dragged, and where it would land (before row `target`).
-  const [drag, setDrag] = useState<{ dragging: null | number; target: null | number }>({
-    dragging: null,
-    target: null,
-  })
-  const setItems = (items: RankingItem[]) => {
-    const ranked = items.map((item, i) => ({ ...item, rank: i + 1 }))
-    const order =
-      ranked.length === project.items.length
-        ? project.reveal.order
-        : revealOrder(project.reveal.mode === 'custom' ? 'countdown' : project.reveal.mode, ranked.length)
-    onChange({ ...project, items: ranked, reveal: { ...project.reveal, order } })
-  }
-  const move = (i: number, by: number) => {
-    const items = [...project.items]
-    const j = i + by
-    if (j < 0 || j >= items.length) return
-    ;[items[i], items[j]] = [items[j] as RankingItem, items[i] as RankingItem]
-    setItems(items)
-  }
-  return (
-    <section className={SECTION}>
-      <div className="flex items-center justify-between">
-        <span className={HEADING}>Ranks</span>
-        <span className="text-xs text-secondary">1 is the top · drag ⠿ to reorder</span>
-      </div>
-      {project.items.map((item, i) => (
-        <RankRow
-          drag={{
-            dragging: drag.dragging === i,
-            line: drag.dragging !== null && drag.target === i ? 'before' : drag.dragging !== null && drag.target === i + 1 && i === project.items.length - 1 ? 'after' : null,
-            onDragEnd: () => setDrag({ dragging: null, target: null }),
-            onDragOver: (e) => {
-              if (drag.dragging === null) return
-              e.preventDefault()
-              e.dataTransfer.dropEffect = 'move'
-              const box = e.currentTarget.getBoundingClientRect()
-              const target = e.clientY < box.top + box.height / 2 ? i : i + 1
-              if (target !== drag.target) setDrag({ ...drag, target })
-            },
-            onDragStart: (e) => {
-              e.dataTransfer.effectAllowed = 'move'
-              e.dataTransfer.setData('text/plain', item.id)
-              setDrag({ dragging: i, target: null })
-            },
-            onDrop: (e) => {
-              e.preventDefault()
-              const { dragging, target } = drag
-              if (dragging !== null && target !== null && target !== dragging && target !== dragging + 1)
-                setItems(moveItem(project.items, dragging, target))
-              setDrag({ dragging: null, target: null })
-            },
-          }}
-          focused={item.rank === focusRank}
-          item={item}
-          key={item.id}
-          onChange={(next) => setItems(project.items.map((it) => (it.id === item.id ? next : it)))}
-          onFocus={() => onFocusRank(item.rank)}
-          onMoveDown={i < project.items.length - 1 ? () => move(i, 1) : undefined}
-          onMoveUp={i > 0 ? () => move(i, -1) : undefined}
-          onRemove={
-            project.items.length > RANKING_MIN_ITEMS
-              ? () => setItems(project.items.filter((it) => it.id !== item.id))
-              : undefined
-          }
-          onUpload={(file) => onUploadClip(item.id, file)}
-          sounds={sounds}
-          uploading={uploading.has(item.id)}
-        />
-      ))}
-      {project.items.length < RANKING_MAX_ITEMS && (
-        <Button
-          className="w-fit"
-          onClick={() => setItems([...project.items, { ...emptyItems(1)[0]!, id: rankingItemId() }])}
-          size="sm"
-          variant="secondary"
-        >
-          Add a rank
-        </Button>
-      )}
-    </section>
-  )
-}
-
 type RowDrag = {
   dragging: boolean
   /** A bar above (or, on the last row, below) where the dragged row would land. */
@@ -322,6 +323,30 @@ type RowDrag = {
   onDragOver: (e: React.DragEvent<HTMLDivElement>) => void
   onDragStart: (e: React.DragEvent<HTMLDivElement>) => void
   onDrop: (e: React.DragEvent<HTMLDivElement>) => void
+}
+
+function IconButton({
+  children,
+  disabled,
+  label,
+  onClick,
+}: {
+  children: React.ReactNode
+  disabled: boolean
+  label: string
+  onClick?: () => void
+}) {
+  return (
+    <button
+      aria-label={label}
+      className="rounded px-1.5 py-0.5 text-sm hover:bg-white/10 hover:text-primary disabled:opacity-30 disabled:hover:bg-transparent"
+      disabled={disabled}
+      onClick={onClick}
+      type="button"
+    >
+      {children}
+    </button>
+  )
 }
 
 function RankRow({
@@ -364,8 +389,12 @@ function RankRow({
       onFocusCapture={onFocus}
       onPointerDown={onFocus}
     >
-      {drag.line === 'before' && <span className="absolute inset-x-0 -top-1.5 h-0.5 rounded bg-white" />}
-      {drag.line === 'after' && <span className="absolute inset-x-0 -bottom-1.5 h-0.5 rounded bg-white" />}
+      {drag.line === 'before' && (
+        <span className="absolute inset-x-0 -top-1.5 h-0.5 rounded bg-white" />
+      )}
+      {drag.line === 'after' && (
+        <span className="absolute inset-x-0 -bottom-1.5 h-0.5 rounded bg-white" />
+      )}
       <div className="flex items-center gap-2">
         <span
           aria-label={`Drag rank ${item.rank}`}
@@ -405,11 +434,16 @@ function RankRow({
         </div>
       </div>
       <div className="flex flex-wrap items-center gap-2 pl-12">
-        <Button disabled={uploading} onClick={() => fileRef.current?.click()} size="sm" variant="secondary">
-          {uploading ? 'Uploading…' : item.clip ? 'Replace clip' : 'Add clip'}
+        <Button
+          disabled={uploading}
+          onClick={() => fileRef.current?.click()}
+          size="sm"
+          variant="secondary"
+        >
+          {uploading ? 'Uploading…' : item.clip ? 'Replace clip' : 'Add clip or photo'}
         </Button>
         <input
-          accept="video/mp4,video/quicktime,video/webm,.mp4,.mov,.webm,.mkv,.m4v"
+          accept="video/mp4,video/quicktime,video/webm,.mp4,.mov,.webm,.mkv,.m4v,image/jpeg,image/png,image/webp"
           className="hidden"
           onChange={(e) => {
             const file = e.target.files?.[0]
@@ -428,27 +462,109 @@ function RankRow({
   )
 }
 
-function IconButton({
-  children,
-  disabled,
-  label,
-  onClick,
-}: {
-  children: React.ReactNode
-  disabled: boolean
-  label: string
-  onClick?: () => void
-}) {
+function RankRows({
+  focusRank,
+  onChange,
+  onFocusRank,
+  onUploadClip,
+  project,
+  sounds,
+  uploading,
+}: RankingEditorProps) {
+  // Which row is being dragged, and where it would land (before row `target`).
+  const [drag, setDrag] = useState<{ dragging: null | number; target: null | number }>({
+    dragging: null,
+    target: null,
+  })
+  const setItems = (items: RankingItem[]) => {
+    const ranked = items.map((item, i) => ({ ...item, rank: i + 1 }))
+    const order =
+      ranked.length === project.items.length
+        ? project.reveal.order
+        : revealOrder(
+            project.reveal.mode === 'custom' ? 'countdown' : project.reveal.mode,
+            ranked.length,
+          )
+    onChange({ ...project, items: ranked, reveal: { ...project.reveal, order } })
+  }
+  const move = (i: number, by: number) => {
+    const items = [...project.items]
+    const j = i + by
+    if (j < 0 || j >= items.length) return
+    ;[items[i], items[j]] = [items[j] as RankingItem, items[i] as RankingItem]
+    setItems(items)
+  }
   return (
-    <button
-      aria-label={label}
-      className="rounded px-1.5 py-0.5 text-sm hover:bg-white/10 hover:text-primary disabled:opacity-30 disabled:hover:bg-transparent"
-      disabled={disabled}
-      onClick={onClick}
-      type="button"
-    >
-      {children}
-    </button>
+    <section className={SECTION}>
+      <div className="flex items-center justify-between">
+        <span className={HEADING}>Ranks</span>
+        <span className="text-xs text-secondary">1 is the top · drag ⠿ to reorder</span>
+      </div>
+      {project.items.map((item, i) => (
+        <RankRow
+          drag={{
+            dragging: drag.dragging === i,
+            line:
+              drag.dragging !== null && drag.target === i
+                ? 'before'
+                : drag.dragging !== null && drag.target === i + 1 && i === project.items.length - 1
+                  ? 'after'
+                  : null,
+            onDragEnd: () => setDrag({ dragging: null, target: null }),
+            onDragOver: (e) => {
+              if (drag.dragging === null) return
+              e.preventDefault()
+              e.dataTransfer.dropEffect = 'move'
+              const box = e.currentTarget.getBoundingClientRect()
+              const target = e.clientY < box.top + box.height / 2 ? i : i + 1
+              if (target !== drag.target) setDrag({ ...drag, target })
+            },
+            onDragStart: (e) => {
+              e.dataTransfer.effectAllowed = 'move'
+              e.dataTransfer.setData('text/plain', item.id)
+              setDrag({ dragging: i, target: null })
+            },
+            onDrop: (e) => {
+              e.preventDefault()
+              const { dragging, target } = drag
+              if (
+                dragging !== null &&
+                target !== null &&
+                target !== dragging &&
+                target !== dragging + 1
+              )
+                setItems(moveItem(project.items, dragging, target))
+              setDrag({ dragging: null, target: null })
+            },
+          }}
+          focused={item.rank === focusRank}
+          item={item}
+          key={item.id}
+          onChange={(next) => setItems(project.items.map((it) => (it.id === item.id ? next : it)))}
+          onFocus={() => onFocusRank(item.rank)}
+          onMoveDown={i < project.items.length - 1 ? () => move(i, 1) : undefined}
+          onMoveUp={i > 0 ? () => move(i, -1) : undefined}
+          onRemove={
+            project.items.length > RANKING_MIN_ITEMS
+              ? () => setItems(project.items.filter((it) => it.id !== item.id))
+              : undefined
+          }
+          onUpload={(file) => onUploadClip(item.id, file)}
+          sounds={sounds}
+          uploading={uploading.has(item.id)}
+        />
+      ))}
+      {project.items.length < RANKING_MAX_ITEMS && (
+        <Button
+          className="w-fit"
+          onClick={() => setItems([...project.items, ...emptyItems(1)])}
+          size="sm"
+          variant="secondary"
+        >
+          Add a rank
+        </Button>
+      )}
+    </section>
   )
 }
 
@@ -469,6 +585,8 @@ function CueList({
   const playSec = item.clip ? Math.max(0, item.clip.trimEndSec - item.clip.trimStartSec) : 0
   const setCues = (next: RankingCue[]) => onChange({ ...item, cues: next })
   if (!item.clip) return null
+  // A new cue starts with the first library sound (starred and most used come first).
+  const firstSound = sounds[0]
   return (
     <div className="flex flex-wrap items-center gap-1.5 text-xs text-secondary">
       <span>Sounds</span>
@@ -477,7 +595,9 @@ function CueList({
           <select
             aria-label="Cue sound"
             className="max-w-[120px] truncate bg-transparent text-primary focus:outline-none"
-            onChange={(e) => setCues(cues.map((c) => (c.id === cue.id ? { ...c, soundId: e.target.value } : c)))}
+            onChange={(e) =>
+              setCues(cues.map((c) => (c.id === cue.id ? { ...c, soundId: e.target.value } : c)))
+            }
             value={cue.soundId}
           >
             {sounds.map((s) => (
@@ -496,7 +616,9 @@ function CueList({
             onChange={(e) =>
               setCues(
                 cues.map((c) =>
-                  c.id === cue.id ? { ...c, atSec: Math.max(0, Math.min(playSec, Number(e.target.value))) } : c,
+                  c.id === cue.id
+                    ? { ...c, atSec: Math.max(0, Math.min(playSec, Number(e.target.value))) }
+                    : c,
                 ),
               )
             }
@@ -526,13 +648,17 @@ function CueList({
           </button>
         </span>
       ))}
-      {cues.length < RANKING_CUES_MAX && sounds.length > 0 && (
+      {cues.length < RANKING_CUES_MAX && firstSound && (
         <button
           className="rounded-md border border-dashed border-white/20 px-2 py-0.5 hover:text-primary"
           onClick={() =>
             setCues([
               ...cues,
-              { atSec: Math.round(Math.min(playSec, playSec / 2) * 10) / 10, id: rankingItemId(), soundId: sounds[0]!.id },
+              {
+                atSec: Math.round(Math.min(playSec, playSec / 2) * 10) / 10,
+                id: rankingItemId(),
+                soundId: firstSound.id,
+              },
             ])
           }
           type="button"
@@ -546,7 +672,13 @@ function CueList({
 }
 
 /** The part of a clip that plays: from and to, in seconds, within the file and the cap. */
-function TrimFields({ item, onChange }: { item: RankingItem; onChange: (item: RankingItem) => void }) {
+function TrimFields({
+  item,
+  onChange,
+}: {
+  item: RankingItem
+  onChange: (item: RankingItem) => void
+}) {
   const clip = item.clip
   if (!clip) return null
   const set = (start: number, end: number) => {
@@ -582,7 +714,8 @@ function TrimFields({ item, onChange }: { item: RankingItem; onChange: (item: Ra
         />
       </label>
       <span>
-        of {clip.durationSec.toFixed(1)} s · plays {(clip.trimEndSec - clip.trimStartSec).toFixed(1)} s
+        of {clip.durationSec.toFixed(1)} s · plays{' '}
+        {(clip.trimEndSec - clip.trimStartSec).toFixed(1)} s
       </span>
     </div>
   )
@@ -608,7 +741,11 @@ function RevealPanel({
   reveal: RankingProject['reveal']
 }) {
   const pick = (mode: RankingRevealMode) =>
-    onChange({ mode, order: mode === 'custom' ? reveal.order : revealOrder(mode, count, reveal.order, Date.now() % 997) })
+    onChange({
+      mode,
+      order:
+        mode === 'custom' ? reveal.order : revealOrder(mode, count, reveal.order, Date.now() % 997),
+    })
   const moveIn = (i: number, by: number) => {
     const order = [...reveal.order]
     const j = i + by
@@ -624,7 +761,9 @@ function RevealPanel({
           <button
             className={cn(
               'rounded-md border px-2.5 py-1 text-xs',
-              reveal.mode === mode ? 'border-white/50 bg-white/15 text-primary' : 'border-white/10 text-secondary hover:text-primary',
+              reveal.mode === mode
+                ? 'border-white/50 bg-white/15 text-primary'
+                : 'border-white/10 text-secondary hover:text-primary',
             )}
             key={mode}
             onClick={() => pick(mode)}
@@ -634,7 +773,11 @@ function RevealPanel({
           </button>
         ))}
         {reveal.mode === 'shuffle' && (
-          <button className="text-xs text-secondary underline hover:text-primary" onClick={() => pick('shuffle')} type="button">
+          <button
+            className="text-xs text-secondary underline hover:text-primary"
+            onClick={() => pick('shuffle')}
+            type="button"
+          >
             Shuffle again
           </button>
         )}
@@ -677,7 +820,10 @@ function OrderChips({
     setTarget(null)
   }
   return (
-    <div className="flex flex-wrap items-center gap-1" onDragLeave={(e) => e.currentTarget === e.target && setTarget(null)}>
+    <div
+      className="flex flex-wrap items-center gap-1"
+      onDragLeave={(e) => e.currentTarget === e.target && setTarget(null)}
+    >
       {order.map((rank, i) => (
         <div
           className={cn(
@@ -701,24 +847,41 @@ function OrderChips({
           }}
           onDrop={(e) => {
             e.preventDefault()
-            if (dragging !== null && target !== null && target !== dragging && target !== dragging + 1)
+            if (
+              dragging !== null &&
+              target !== null &&
+              target !== dragging &&
+              target !== dragging + 1
+            )
               onMove(dragging, target)
             end()
           }}
           title="Drag to reorder"
         >
-          {target === i && dragging !== null && <span className="absolute -left-1 inset-y-0 w-0.5 rounded bg-white" />}
+          {target === i && dragging !== null && (
+            <span className="absolute -left-1 inset-y-0 w-0.5 rounded bg-white" />
+          )}
           {target === i + 1 && dragging !== null && i === order.length - 1 && (
             <span className="absolute -right-1 inset-y-0 w-0.5 rounded bg-white" />
           )}
           {i > 0 && (
-            <button aria-label={`Reveal #${rank} earlier`} className="text-secondary hover:text-primary" onClick={() => onStep(i, -1)} type="button">
+            <button
+              aria-label={`Reveal #${rank} earlier`}
+              className="text-secondary hover:text-primary"
+              onClick={() => onStep(i, -1)}
+              type="button"
+            >
               ‹
             </button>
           )}
           <span className="font-semibold">#{rank}</span>
           {i < order.length - 1 && (
-            <button aria-label={`Reveal #${rank} later`} className="text-secondary hover:text-primary" onClick={() => onStep(i, 1)} type="button">
+            <button
+              aria-label={`Reveal #${rank} later`}
+              className="text-secondary hover:text-primary"
+              onClick={() => onStep(i, 1)}
+              type="button"
+            >
               ›
             </button>
           )}
@@ -737,7 +900,13 @@ const NUMBER_FORMATS: [RankingNumberFormat, string][] = [
   ['custom', 'Your own (emoji, words)'],
 ]
 
-function StylePanel({ onChange, style }: { onChange: (style: RankingStyle) => void; style: RankingStyle }) {
+function StylePanel({
+  onChange,
+  style,
+}: {
+  onChange: (style: RankingStyle) => void
+  style: RankingStyle
+}) {
   const swatch = (label: string, value: string, set: (v: string) => void) => (
     <label className="flex items-center gap-1.5 text-xs text-secondary" key={label}>
       <input
@@ -759,7 +928,9 @@ function StylePanel({ onChange, style }: { onChange: (style: RankingStyle) => vo
       {label}
       <select
         className="rounded-md border border-white/10 bg-black/30 px-1.5 py-0.5 text-xs text-primary"
-        onChange={(e) => onChange({ ...style, [key]: (e.target.value || undefined) as RankingFontId | undefined })}
+        onChange={(e) =>
+          onChange({ ...style, [key]: (e.target.value || undefined) as RankingFontId | undefined })
+        }
         value={style[key] ?? 'montserrat'}
       >
         {RANKING_FONT_IDS.map((id) => (
@@ -782,7 +953,9 @@ function StylePanel({ onChange, style }: { onChange: (style: RankingStyle) => vo
           Marks
           <select
             className="rounded-md border border-white/10 bg-black/30 px-1.5 py-0.5 text-xs text-primary"
-            onChange={(e) => onChange({ ...style, numberFormat: e.target.value as RankingNumberFormat })}
+            onChange={(e) =>
+              onChange({ ...style, numberFormat: e.target.value as RankingNumberFormat })
+            }
             value={format}
           >
             {NUMBER_FORMATS.map(([value, label]) => (
@@ -798,9 +971,11 @@ function StylePanel({ onChange, style }: { onChange: (style: RankingStyle) => vo
           Your marks, rank 1 first, separated by spaces (emoji welcome)
           <input
             className="rounded-md border border-white/10 bg-black/30 px-2 py-1 text-sm text-primary"
-            onChange={(e) => onChange({ ...style, numberMarks: e.target.value.split(/\s+/).filter(Boolean) })}
             // Uncontrolled: the box keeps the spaces being typed; the marks are its words.
             defaultValue={(style.numberMarks ?? []).join(' ')}
+            onChange={(e) =>
+              onChange({ ...style, numberMarks: e.target.value.split(/\s+/).filter(Boolean) })
+            }
             placeholder="👑 🔥 😂 💀 🤡"
           />
         </label>

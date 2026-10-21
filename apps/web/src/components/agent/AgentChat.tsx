@@ -5,7 +5,7 @@ import {
   type Transcript,
   type TranscriptEntry,
 } from '@reelmakeeasy/common/codex-agent/agent-transcript'
-import type { AgentAnswers, AgentMode } from '@shared/types/api/agent'
+import type { AgentAnswers, AgentMode, AgentTool } from '@shared/types/api/agent'
 import { Button, cn, Textarea } from '@shared/ui'
 import Link from 'next/link'
 import {
@@ -52,6 +52,8 @@ import { WelcomeCard } from './WelcomeCard'
 export type AgentChatProps = {
   /** The page's one `useAgentSession`, shared with the storyboard panel. */
   agent: AgentSessionState
+  /** The tool the welcome card shows first (a link from Ranking Builder: Ranking). */
+  firstTool?: AgentTool | null
   /** Shown at the start of the header (the agent page's sidebar button). */
   headerStart?: ReactNode
   sessionId: string
@@ -362,7 +364,14 @@ function useClearWhenDisabled(disabled: boolean, setInput: (value: string) => vo
  * restart cut the flow off before its video, when "Pick up where you left off" under the
  * last card carries it on.
  */
-export function AgentChat({ agent, headerStart, sessionId, startingMode, title }: AgentChatProps) {
+export function AgentChat({
+  agent,
+  firstTool,
+  headerStart,
+  sessionId,
+  startingMode,
+  title,
+}: AgentChatProps) {
   const {
     answer,
     chooseMode,
@@ -601,6 +610,7 @@ export function AgentChat({ agent, headerStart, sessionId, startingMode, title }
         <div className="flex flex-col gap-3" ref={contentRef}>
           <WelcomeCard
             chosenHarness={chosenHarnessOf(session)}
+            firstTool={firstTool}
             mode={mode}
             onChoose={chooseMode}
             presetHarness={presetHarnessOf(session)}

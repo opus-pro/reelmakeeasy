@@ -80,15 +80,31 @@ export function SoundsPanel({
     <section className={SECTION}>
       <div className="flex items-center justify-between">
         <span className={HEADING}>Sound</span>
-        <button className="text-xs text-secondary underline hover:text-primary" onClick={onOpenLibrary} type="button">
+        <button
+          className="text-xs text-secondary underline hover:text-primary"
+          onClick={onOpenLibrary}
+          type="button"
+        >
           Sound library
         </button>
       </div>
       {sounds.length === 0 && (
-        <p className="text-xs text-secondary">Upload sound effects and music to your sound library to use them here.</p>
+        <p className="text-xs text-secondary">
+          Upload sound effects and music to your sound library to use them here.
+        </p>
       )}
-      <SoundPicker label="On each reveal" onChange={(reveal) => onChange({ ...v, reveal })} sounds={sounds} value={v.reveal} />
-      <SoundPicker label="Background" onChange={(music) => onChange({ ...v, music })} sounds={sounds} value={v.music} />
+      <SoundPicker
+        label="On each reveal"
+        onChange={(reveal) => onChange({ ...v, reveal })}
+        sounds={sounds}
+        value={v.reveal}
+      />
+      <SoundPicker
+        label="Background"
+        onChange={(music) => onChange({ ...v, music })}
+        sounds={sounds}
+        value={v.music}
+      />
       {v.music && (
         <label className="flex items-center gap-2 text-xs text-secondary">
           <span className="w-24">Music level</span>
@@ -122,7 +138,11 @@ export function TransitionPanel({
     <section className={SECTION}>
       <label className="flex items-center justify-between">
         <span className={HEADING}>Transition between ranks</span>
-        <input checked={v.enabled} onChange={(e) => onChange({ ...v, enabled: e.target.checked })} type="checkbox" />
+        <input
+          checked={v.enabled}
+          onChange={(e) => onChange({ ...v, enabled: e.target.checked })}
+          type="checkbox"
+        />
       </label>
       {v.enabled && (
         <>
@@ -136,7 +156,9 @@ export function TransitionPanel({
               value={v.text}
             />
           </label>
-          <p className="pl-[104px] text-xs text-secondary">{'{rank}'} becomes the next rank’s number.</p>
+          <p className="pl-[104px] text-xs text-secondary">
+            {'{rank}'} becomes the next rank’s number.
+          </p>
           <div className="flex flex-wrap items-center gap-4 text-xs text-secondary">
             <label className="flex items-center gap-1.5">
               <input
@@ -170,7 +192,12 @@ export function TransitionPanel({
               <span className="tabular-nums">{v.durationSec.toFixed(1)} s</span>
             </label>
           </div>
-          <SoundPicker label="Sound" onChange={(sound) => onChange({ ...v, sound })} sounds={sounds} value={v.sound} />
+          <SoundPicker
+            label="Sound"
+            onChange={(sound) => onChange({ ...v, sound })}
+            sounds={sounds}
+            value={v.sound}
+          />
         </>
       )}
     </section>

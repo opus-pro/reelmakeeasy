@@ -48,7 +48,8 @@ export function StylesPanel() {
   }
 
   const remove = async (style: RankingTemplate) => {
-    if (!window.confirm(`Delete the style "${style.name}"? Rankings that used it keep their look.`)) return
+    if (!window.confirm(`Delete the style "${style.name}"? Rankings that used it keep their look.`))
+      return
     try {
       await api.deleteStyle(style.id)
       setStyles((list) => list?.filter((s) => s.id !== style.id) ?? null)
@@ -66,8 +67,8 @@ export function StylesPanel() {
           <Link className="text-accent-green hover:underline" href="/agent">
             Ranking chat
           </Link>{' '}
-          and the agent saves its timing, title look, labels and sound plan here. Apply one from the studio, or ask the
-          agent to build with it.
+          and the agent saves its timing, title look, labels and sound plan here. Apply one from the
+          studio, or ask the agent to build with it.
         </p>
       </div>
       {error && <p className="text-sm text-amber-400">{error}</p>}
@@ -103,13 +104,27 @@ function StyleCard({
 }) {
   const missing = missingTemplateSounds(style)
   const plan = style.sounds
-  const slot = (label: string, sound: RankingTemplateSound, set: (next: RankingTemplateSound) => void) => (
-    <div className="flex flex-col gap-1 rounded-lg border border-white/10 p-2" key={label + sound.description}>
+  const slot = (
+    label: string,
+    sound: RankingTemplateSound,
+    set: (next: RankingTemplateSound) => void,
+  ) => (
+    <div
+      className="flex flex-col gap-1 rounded-lg border border-white/10 p-2"
+      key={label + sound.description}
+    >
       <p className="text-xs text-primary">
         {sound.description}
-        {!sound.soundId && <span className="ml-2 text-amber-400">not in your library: download one</span>}
+        {!sound.soundId && (
+          <span className="ml-2 text-amber-400">not in your library: download one</span>
+        )}
       </p>
-      <SoundPicker label={label} onChange={(soundId) => set({ ...sound, soundId })} sounds={sounds} value={sound.soundId} />
+      <SoundPicker
+        label={label}
+        onChange={(soundId) => set({ ...sound, soundId })}
+        sounds={sounds}
+        value={sound.soundId}
+      />
     </div>
   )
   return (
@@ -122,7 +137,12 @@ function StyleCard({
             {style.source && (
               <>
                 {' · from '}
-                <a className="text-accent-green hover:underline" href={style.source.url} rel="noreferrer" target="_blank">
+                <a
+                  className="text-accent-green hover:underline"
+                  href={style.source.url}
+                  rel="noreferrer"
+                  target="_blank"
+                >
                   {style.source.title ?? 'the reference'}
                 </a>
               </>
@@ -133,7 +153,10 @@ function StyleCard({
           Delete
         </Button>
       </div>
-      <div className="flex flex-wrap gap-x-1.5 rounded-md px-3 py-2 text-sm font-extrabold" style={{ background: style.title.band }}>
+      <div
+        className="flex flex-wrap gap-x-1.5 rounded-md px-3 py-2 text-sm font-extrabold"
+        style={{ background: style.title.band }}
+      >
         {style.title.lines.map((line, i) => (
           <span className="flex gap-1.5" key={i}>
             {line.map((word, j) => (
@@ -167,8 +190,10 @@ function StyleCard({
             onSounds({ ...plan, onAction: plan.onAction.map((s, j) => (j === i ? next : s)) }),
           ),
         )}
-        {plan.reveal && slot('On each rank', plan.reveal, (next) => onSounds({ ...plan, reveal: next }))}
-        {plan.transition && slot('Transition', plan.transition, (next) => onSounds({ ...plan, transition: next }))}
+        {plan.reveal &&
+          slot('On each rank', plan.reveal, (next) => onSounds({ ...plan, reveal: next }))}
+        {plan.transition &&
+          slot('Transition', plan.transition, (next) => onSounds({ ...plan, transition: next }))}
         {plan.music && slot('Music', plan.music, (next) => onSounds({ ...plan, music: next }))}
         {!plan.onAction.length && !plan.reveal && !plan.transition && !plan.music && (
           <p className="text-xs text-secondary">No sounds in this style.</p>

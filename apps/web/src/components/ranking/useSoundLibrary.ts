@@ -9,6 +9,8 @@ import { useSignedUpload } from '@/hooks/useSignedUpload'
 const errorText = (error: unknown) => (error instanceof Error ? error.message : String(error))
 
 /** The user's sound library (`/api/sounds`): the list, and upload, rename, favourite, remove. */
+export type SoundLibrary = ReturnType<typeof useSoundLibrary>
+
 export function useSoundLibrary() {
   const { fetchApiDomain } = useApi()
   const { uploadFile } = useSignedUpload({ module: 'media-temp' })
@@ -36,7 +38,10 @@ export function useSoundLibrary() {
       for (const file of files) {
         try {
           const { fileUri } = await uploadFile(file, { tempScope: 'sound-library' })
-          await fetchApiDomain<LibrarySound>('/api/sounds', { data: { fileUri, name: file.name }, method: 'POST' })
+          await fetchApiDomain<LibrarySound>('/api/sounds', {
+            data: { fileUri, name: file.name },
+            method: 'POST',
+          })
           await reload()
         } catch (e) {
           setError(`${file.name}: ${errorText(e)}`)
@@ -77,5 +82,3 @@ export function useSoundLibrary() {
 
   return { error, reload, remove, sounds, update, upload, uploading }
 }
-
-export type SoundLibrary = ReturnType<typeof useSoundLibrary>

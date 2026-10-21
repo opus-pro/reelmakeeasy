@@ -29,11 +29,12 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 
 import { apiOriginAtom } from '@/atom/apiOrigin'
 import { agentChatUrl } from '@/components/agent/start-easy'
+import { Sparkle } from '@/components/icons/core'
 import { useSignedUpload } from '@/hooks/useSignedUpload'
 
 import { type RankingApi, useRankingApi } from './ranking-api'
 import { loadRankingFonts, STUDIO_RANKING_FONTS } from './ranking-fonts'
-import { RankingEditor } from './RankingEditor'
+import { RankingEditor, type RankingEditorTab } from './RankingEditor'
 import { type RankFocusRequest, RankingPreview } from './RankingPreview'
 import { loadStickerImage } from './sticker-images'
 import { useSoundLibrary } from './useSoundLibrary'
@@ -73,6 +74,8 @@ export function RankingStudio({
     if (rank !== null) setFocusRequest((r) => ({ nonce: (r?.nonce ?? 0) + 1, rank }))
   }, [])
   const [fontsReady, setFontsReady] = useState(false)
+  const [tab, setTab] = useState<RankingEditorTab>('ranks')
+  const [selectedSticker, setSelectedSticker] = useState<null | string>(null)
   const [uploading, setUploading] = useState<ReadonlySet<string>>(() => new Set())
   const saveTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
   const { uploadFile } = useSignedUpload({ module: 'media-temp' })
@@ -186,8 +189,8 @@ export function RankingStudio({
         <StylePicker
           onApply={(template) => change({ ...project, ...applyRankingTemplate(project, template) })}
         />
-        <OpenInChat api={api} project={project} />
       </header>
+      <AskAgent api={api} project={project} />
       {error && <p className="text-sm text-amber-400">{error}</p>}
       <div className="flex flex-col gap-6 lg:flex-row lg:items-start">
         <div className="min-w-0 flex-1 lg:max-w-[560px]">
@@ -196,10 +199,14 @@ export function RankingStudio({
             onChange={change}
             onFocusRank={pickRank}
             onOpenLibrary={onOpenLibrary}
+            onSelectSticker={setSelectedSticker}
+            onTab={setTab}
             onUploadClip={uploadClip}
             onUploadStickerImage={uploadStickerImage}
             project={project}
+            selectedSticker={selectedSticker}
             sounds={sounds}
+            tab={tab}
             uploading={uploading}
           />
         </div>
@@ -218,7 +225,13 @@ export function RankingStudio({
               })
             }
             onRankOnScreen={setFocusRank}
+            onSelectSticker={(stickerId) => {
+              setSelectedSticker(stickerId)
+              // Picking one on the preview opens it in Effects.
+              if (stickerId) setTab('effects')
+            }}
             project={project}
+            selectedSticker={selectedSticker}
             sounds={sounds}
           />
           <ExportPanel api={api} project={project} saving={saving === 'saving'} />
@@ -431,31 +444,51 @@ function ExportPanel({
   )
 }
 
-function OpenInChat({ api, project }: { api: RankingApi; project: RankingProject }) {
+/**
+ * "Ask the agent": what the user types opens a Ranking chat on this ranking with it as the first
+ * message, and the agent does it there (with nothing typed, the chat asks what to do next).
+ */
+function AskAgent({ api, project }: { api: RankingApi; project: RankingProject }) {
   const router = useRouter()
+  const [text, setText] = useState('')
   const [opening, setOpening] = useState(false)
   const [error, setError] = useState<null | string>(null)
+  const ask = () => {
+    if (opening) return
+    setOpening(true)
+    setError(null)
+    api
+      .openChat(project.id, project.name, text)
+      .then((sessionId) => router.push(agentChatUrl(sessionId)))
+      .catch((e: unknown) => {
+        setError(errorText(e))
+        setOpening(false)
+      })
+  }
   return (
-    <>
-      <Button
-        disabled={opening}
-        onClick={() => {
-          setOpening(true)
-          setError(null)
-          api
-            .openChat(project.id, project.name)
-            .then((sessionId) => router.push(agentChatUrl(sessionId)))
-            .catch((e: unknown) => {
-              setError(errorText(e))
-              setOpening(false)
-            })
+    <div className="flex flex-col gap-1">
+      <form
+        className="flex items-center gap-2 rounded-xl border border-accent-green/25 bg-accent-green/[0.06] py-1.5 pr-1.5 pl-3 focus-within:border-accent-green/50"
+        onSubmit={(e) => {
+          e.preventDefault()
+          ask()
         }}
-        size="sm"
-        variant="secondary"
       >
-        {opening ? 'Opening…' : 'Open in chat'}
-      </Button>
-      {error && <span className="text-xs text-amber-400">{error}</span>}
-    </>
+        <Sparkle className="size-4 shrink-0 text-accent-green" />
+        <input
+          aria-label="Ask the agent"
+          className="min-w-0 flex-1 bg-transparent text-sm text-primary placeholder:text-secondary focus:outline-none"
+          disabled={opening}
+          maxLength={2000}
+          onChange={(e) => setText(e.target.value)}
+          placeholder="Ask the agent: “add a 💀 when he falls on #2”, “make the labels funnier”"
+          value={text}
+        />
+        <Button disabled={opening} size="sm" type="submit">
+          {opening ? 'Opening…' : text.trim() ? 'Ask' : 'Open chat'}
+        </Button>
+      </form>
+      {error && <span className="px-1 text-xs text-amber-400">{error}</span>}
+    </div>
   )
 }

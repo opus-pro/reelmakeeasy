@@ -1,5 +1,5 @@
 import { cn } from '@shared/ui'
-import { usePathname, useRouter, useSearchParams } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import React, { memo, useMemo, useState } from 'react'
 
 import {
@@ -11,11 +11,6 @@ import {
   ThreeLines as Menu,
   VideoCards,
 } from '@/components/icons/core'
-import {
-  getCreateUseCaseHref,
-  resolveCreateUseCase,
-  SIDEBAR_CREATE_USE_CASES,
-} from '@/constants/create-use-cases'
 import { useRefCallback } from '@/hooks/use-ref-callback'
 
 import { LogoWithText } from './NavigateBar'
@@ -47,16 +42,17 @@ interface NavItemProps {
   onClick: () => void
   tag?: string
 }
-type NavSection = 'create' | 'main' | 'support'
+type NavSection = 'main' | 'support' | 'tools'
 
 interface SidebarV2Props {
   className?: string
 }
 
-const NAV_SECTION_ORDER: NavSection[] = ['main', 'create', 'support']
+const NAV_SECTION_ORDER: NavSection[] = ['main', 'tools', 'support']
 
+/** Tools: each makes one kind of short, with the agent (Easy or Advanced) or by hand. */
 const NAV_SECTION_TITLE: Partial<Record<NavSection, string>> = {
-  create: 'Create',
+  tools: 'Tools',
 }
 
 const NAV_ITEMS: NavConfigItem[] = [
@@ -85,7 +81,7 @@ const NAV_ITEMS: NavConfigItem[] = [
     key: 'ranking',
     label: 'Ranking Builder',
     path: '/ranking',
-    section: 'main',
+    section: 'tools',
   },
   {
     contexts: ['desktop', 'mobile'],
@@ -132,27 +128,12 @@ const NavItem: React.FC<NavItemProps> = memo(
 const SidebarV2: React.FC<SidebarV2Props> = ({ className }) => {
   const router = useRouter()
   const pathname = usePathname()
-  const searchParams = useSearchParams()
   const pathnameValue = pathname ?? ''
-  const activeCreateUseCase = useMemo(
-    () => resolveCreateUseCase(pathnameValue, searchParams),
-    [pathnameValue, searchParams],
-  )
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
 
   const handleNavigation = useRefCallback((path: string) => {
     router.push(path)
   })
-
-  const handleCreateUseCaseClick = useRefCallback(
-    (key: Parameters<typeof getCreateUseCaseHref>[0], context: NavContext) => {
-      if (context === 'mobile') {
-        setMobileMenuOpen(false)
-      }
-
-      handleNavigation(getCreateUseCaseHref(key))
-    },
-  )
 
   const onNavItemClick = useRefCallback((item: NavConfigItem, context: NavContext) => {
     if (context === 'mobile') {
@@ -195,58 +176,7 @@ const SidebarV2: React.FC<SidebarV2Props> = ({ className }) => {
     }),
   )
 
-  const renderCreateSection = useRefCallback((context: NavContext) => {
-    const items = SIDEBAR_CREATE_USE_CASES
-
-    if (items.length === 0) {
-      return null
-    }
-
-    return (
-      <div
-        className="self-stretch rounded-2xl backdrop-blur-[20px] flex flex-col gap-0.5"
-        key={`${context}-create`}
-      >
-        <div className="px-2.5 py-2 text-sm font-medium leading-4 text-secondary">Create</div>
-        {items.map((item) => {
-          const isActive = activeCreateUseCase?.key === item.key
-          return (
-            <button
-              className={cn(
-                'self-stretch min-h-[42px] rounded-sm px-2.5 py-2 text-left transition-colors',
-                isActive ? 'bg-white/10' : 'hover:bg-white/5',
-              )}
-              key={item.key}
-              onClick={() => handleCreateUseCaseClick(item.key, context)}
-              type="button"
-            >
-              <div className="flex items-center gap-2">
-                <span className="text-sm font-medium leading-4 text-white">
-                  {item.sidebarLabel}
-                </span>
-                {item.sidebarMetaLabel && (
-                  <span
-                    className={cn(
-                      'text-sm leading-4',
-                      isActive ? 'text-white/70' : 'text-secondary',
-                    )}
-                  >
-                    {item.sidebarMetaLabel}
-                  </span>
-                )}
-              </div>
-            </button>
-          )
-        })}
-      </div>
-    )
-  })
-
   const renderNavSection = useRefCallback((section: NavSection, context: NavContext) => {
-    if (section === 'create') {
-      return renderCreateSection(context)
-    }
-
     const items = getSectionItems(section, context)
 
     if (items.length === 0) {

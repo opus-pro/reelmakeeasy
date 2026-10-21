@@ -1,9 +1,12 @@
 'use client'
 
 import type { RankingProjectSummary } from '@shared/types/api/ranking'
-import { Button, cn } from '@shared/ui'
+import { cn } from '@shared/ui'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { useCallback, useEffect, useState } from 'react'
+
+import { useStartAgentSession } from '@/components/agent/useStartAgentSession'
+import { ClipsVertical, Edit, Sparkle } from '@/components/icons/core'
 
 import { useRankingApi } from './ranking-api'
 import { RankingStudio } from './RankingStudio'
@@ -22,11 +25,13 @@ export function RankingHome() {
   const asked = params.get('tab')
   const tab = asked === 'sounds' || asked === 'styles' ? asked : 'rankings'
   const open = useCallback(
-    (next: null | string) => router.push(next ? `${pathname}?id=${encodeURIComponent(next)}` : pathname),
+    (next: null | string) =>
+      router.push(next ? `${pathname}?id=${encodeURIComponent(next)}` : pathname),
     [pathname, router],
   )
   const openLibrary = useCallback(() => router.push(`${pathname}?tab=sounds`), [pathname, router])
-  if (id) return <RankingStudio id={id} key={id} onBack={() => open(null)} onOpenLibrary={openLibrary} />
+  if (id)
+    return <RankingStudio id={id} key={id} onBack={() => open(null)} onOpenLibrary={openLibrary} />
   return (
     <div className="flex w-full max-w-[880px] flex-col gap-6">
       <div className="flex gap-1 rounded-lg border border-white/10 p-0.5 self-start" role="tablist">
@@ -52,23 +57,13 @@ export function RankingHome() {
           </button>
         ))}
       </div>
-      {tab === 'sounds' ? <SoundLibraryTab /> : tab === 'styles' ? <StylesPanel /> : <RankingList onOpen={open} />}
-    </div>
-  )
-}
-
-function SoundLibraryTab() {
-  const library = useSoundLibrary()
-  return (
-    <div className="flex flex-col gap-4">
-      <div className="flex flex-col gap-1">
-        <h1 className="text-2xl font-semibold text-primary">Sound library</h1>
-        <p className="max-w-[560px] text-sm text-secondary">
-          Your sound effects and short music, kept on this computer. Star the ones you use most: they stay on top here
-          and in the studio’s sound pickers.
-        </p>
-      </div>
-      <SoundLibraryPanel library={library} />
+      {tab === 'sounds' ? (
+        <SoundLibraryTab />
+      ) : tab === 'styles' ? (
+        <StylesPanel />
+      ) : (
+        <RankingList onOpen={open} />
+      )}
     </div>
   )
 }
@@ -78,6 +73,8 @@ function RankingList({ onOpen }: { onOpen: (id: string) => void }) {
   const [items, setItems] = useState<null | RankingProjectSummary[]>(null)
   const [error, setError] = useState<null | string>(null)
   const [creating, setCreating] = useState(false)
+  // The chat opens with Ranking's Easy chosen (a full page load: /agent is cross-origin isolated).
+  const agent = useStartAgentSession({ hard: true })
 
   useEffect(() => {
     api
@@ -98,23 +95,64 @@ function RankingList({ onOpen }: { onOpen: (id: string) => void }) {
 
   return (
     <div className="flex w-full max-w-[880px] flex-col gap-6">
-      <div className="flex flex-wrap items-end justify-between gap-4">
-        <div className="flex flex-col gap-1">
-          <h1 className="text-2xl font-semibold text-primary">Ranking Builder</h1>
-          <p className="max-w-[560px] text-sm text-secondary">
-            Make a ranking short: a title with coloured keywords, ranks 1 to N, and one clip per rank. Each label is
-            revealed as its clip plays, in countdown, top-first or blind order. Export a 1080×1920 MP4.
-          </p>
-        </div>
-        <Button disabled={creating} onClick={() => void create()}>
-          {creating ? 'Creating…' : 'New ranking'}
-        </Button>
+      <div className="flex flex-col gap-1">
+        <h1 className="text-2xl font-semibold text-primary">Ranking Builder</h1>
+        <p className="max-w-[560px] text-sm text-secondary">
+          Ranking shorts: a title, ranks counting down, one clip per rank and a meme sound on every
+          action.
+        </p>
+      </div>
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-[3fr_2fr]">
+        <button
+          className="group flex flex-col gap-3 rounded-2xl border border-accent-green/30 bg-gradient-to-br from-accent-green/10 to-transparent p-5 text-left transition-colors hover:border-accent-green/60 disabled:opacity-60"
+          disabled={agent.starting}
+          onClick={() => void agent.start(undefined, { mode: 'ranking_easy' })}
+          type="button"
+        >
+          <span className="flex items-center gap-2">
+            <Sparkle className="size-5 text-accent-green" />
+            <span className="text-base font-semibold text-primary">
+              {agent.starting ? 'Opening the chat…' : 'Make one with the agent'}
+            </span>
+            <span className="rounded bg-accent-green/15 px-1.5 py-0.5 text-[10px] font-medium text-accent-green">
+              Recommended
+            </span>
+          </span>
+          <span className="text-sm text-secondary">
+            Answer a few quick questions: a Short to copy, your sounds, how many ranks, your photos
+            or AI clips. You get a finished ranking short.
+          </span>
+          <span className="text-xs font-medium text-accent-green group-hover:underline">
+            Start (Easy) →
+          </span>
+        </button>
+        <button
+          className="flex flex-col gap-3 rounded-2xl border border-white/10 bg-fill-secondary/40 p-5 text-left transition-colors hover:border-white/30 disabled:opacity-60"
+          disabled={creating}
+          onClick={() => void create()}
+          type="button"
+        >
+          <span className="flex items-center gap-2">
+            <Edit className="size-5 text-secondary" />
+            <span className="text-base font-semibold text-primary">
+              {creating ? 'Creating…' : 'Build it in the editor'}
+            </span>
+          </span>
+          <span className="text-sm text-secondary">
+            Advanced: place every clip, label, sound and sticker yourself. The agent can still help
+            any time.
+          </span>
+        </button>
       </div>
       {error && <p className="text-sm text-amber-400">{error}</p>}
       {items === null && !error && <p className="text-sm text-secondary">Loading…</p>}
+      {items?.length ? (
+        <h2 className="text-sm font-semibold text-secondary">Your rankings</h2>
+      ) : null}
       {items?.length === 0 && (
-        <p className="rounded-xl border border-dashed border-white/15 p-8 text-center text-sm text-secondary">
-          No rankings yet. Start one, add five funny clips, and label them.
+        <p className="flex items-center justify-center gap-2 rounded-xl border border-dashed border-white/15 p-8 text-center text-sm text-secondary">
+          <ClipsVertical className="size-4" />
+          No rankings yet. The agent makes your first one in a few minutes.
         </p>
       )}
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3">
@@ -133,6 +171,22 @@ function RankingList({ onOpen }: { onOpen: (id: string) => void }) {
           </button>
         ))}
       </div>
+    </div>
+  )
+}
+
+function SoundLibraryTab() {
+  const library = useSoundLibrary()
+  return (
+    <div className="flex flex-col gap-4">
+      <div className="flex flex-col gap-1">
+        <h1 className="text-2xl font-semibold text-primary">Sound library</h1>
+        <p className="max-w-[560px] text-sm text-secondary">
+          Your sound effects and short music, kept on this computer. Star the ones you use most:
+          they stay on top here and in the studio’s sound pickers.
+        </p>
+      </div>
+      <SoundLibraryPanel library={library} />
     </div>
   )
 }

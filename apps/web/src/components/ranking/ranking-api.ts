@@ -14,6 +14,8 @@ import { useMemo } from 'react'
 import { useApi } from '@/hooks/useApi'
 
 /** The Ranking Builder's API calls (`/api/ranking/...`). Errors throw with the API's message. */
+export type RankingApi = ReturnType<typeof useRankingApi>
+
 export function useRankingApi() {
   const { fetchApiDomain } = useApi()
   return useMemo(
@@ -27,8 +29,12 @@ export function useRankingApi() {
           })
         ).data,
       create: async (name?: string) =>
-        (await fetchApiDomain<RankingProject>('/api/ranking/projects', { data: { name }, method: 'POST' }))
-          .data,
+        (
+          await fetchApiDomain<RankingProject>('/api/ranking/projects', {
+            data: { name },
+            method: 'POST',
+          })
+        ).data,
       get: async (id: string) =>
         (
           await fetchApiDomain<RankingProject>('/api/ranking/projects/{id}', {
@@ -37,14 +43,20 @@ export function useRankingApi() {
           })
         ).data,
       list: async () =>
-        (await fetchApiDomain<RankingProjectSummary[]>('/api/ranking/projects', { method: 'GET' })).data,
+        (await fetchApiDomain<RankingProjectSummary[]>('/api/ranking/projects', { method: 'GET' }))
+          .data,
       deleteStyle: async (id: string) => {
         await fetchApiDomain('/api/ranking/styles/{id}', { method: 'DELETE', pathParams: { id } })
       },
       /** A new Ranking chat on this ranking (its mode chosen); answers the chat's id. */
-      openChat: async (rankingId: string, title: string) =>
-        (await fetchApiDomain<AgentSession>('/api/agent/sessions', { data: { rankingId, title }, method: 'POST' })).data
-          .id,
+      /** A Ranking chat on this ranking; `request`, what the user asked for, is its first message. */
+      openChat: async (rankingId: string, title: string, request?: string) =>
+        (
+          await fetchApiDomain<AgentSession>('/api/agent/sessions', {
+            data: { rankingId, title, ...(request?.trim() ? { request: request.trim() } : {}) },
+            method: 'POST',
+          })
+        ).data.id,
       styles: async () =>
         (await fetchApiDomain<RankingTemplate[]>('/api/ranking/styles', { method: 'GET' })).data,
       updateStyle: async (id: string, patch: Partial<RankingTemplateInput>) =>
@@ -58,7 +70,12 @@ export function useRankingApi() {
       remove: async (id: string) => {
         await fetchApiDomain('/api/ranking/projects/{id}', { method: 'DELETE', pathParams: { id } })
       },
-      render: async (id: string, bandHeight: number, overlays: string[], stickers: Record<string, string> = {}) =>
+      render: async (
+        id: string,
+        bandHeight: number,
+        overlays: string[],
+        stickers: Record<string, string> = {},
+      ) =>
         (
           await fetchApiDomain<RankingRenderStatus>('/api/ranking/projects/{id}/render', {
             data: { bandHeight, overlays, stickers },
@@ -93,5 +110,3 @@ export function useRankingApi() {
     [fetchApiDomain],
   )
 }
-
-export type RankingApi = ReturnType<typeof useRankingApi>

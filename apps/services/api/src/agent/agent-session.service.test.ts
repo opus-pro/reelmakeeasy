@@ -373,6 +373,50 @@ describe('AgentSessionService', () => {
       expect(events).toContain('ranking')
     })
 
+    it('ranking: a request typed in the studio is the first message, and the first turn does it', async () => {
+      const log = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'agent-svc-ask-')), 'log.jsonl')
+      const svc = makeService(root, [], { FAKE_LOG: log })
+      const rankingId = '11111111-2222-3333-4444-555555555555'
+      const session = await svc.createSession({ rankingId })
+      const shown: string[] = []
+      svc.subscribe(session.id, 0, (e) => {
+        if (e.type === 'user_message') shown.push(e.text)
+      })
+
+      await svc.chooseMode(session.id, 'ranking', undefined, 'Add a boom when the dog falls on #2')
+      await waitFor(() => svc.getSession(session.id).status === 'idle')
+
+      expect(shown).toEqual(['Add a boom when the dog falls on #2'])
+      expect(svc.getSession(session.id).title).toBe('Add a boom when the dog falls on #2')
+      const turnStart = readLog(log).find((e) => e.method === 'turn/start')
+      expect(turnStart?.params?.['input']).toEqual([
+        {
+          text: rankingKickoff('codex', rankingId, false, 'Add a boom when the dog falls on #2'),
+          type: 'text',
+        },
+      ])
+    })
+
+    it('ranking easy: the guided brief, and a kickoff that asks what the ranking is about', async () => {
+      const log = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'agent-svc-easy-')), 'log.jsonl')
+      const svc = makeService(root, [], { FAKE_LOG: log })
+      const session = await svc.createSession()
+
+      await svc.chooseMode(session.id, 'ranking_easy')
+      await waitFor(() => svc.getSession(session.id).status === 'idle')
+
+      const entries = readLog(log)
+      expect(entries.find((e) => e.method === 'turn/start')?.params?.['input']).toEqual([
+        { text: rankingKickoff('codex', undefined, true), type: 'text' },
+      ])
+      const threadStart = entries.find((e) => e.method === 'thread/start')
+      expect(threadStart?.params?.['developerInstructions']).toBe(
+        briefFor({ mode: 'ranking_easy' }, 'codex'),
+      )
+      const tools = (threadStart?.params?.['dynamicTools'] as { name: string }[]).map((t) => t.name)
+      expect(tools).toContain('ranking_add_sound')
+    })
+
     it('sends attached files: their paths in the text, pictures as localImage, shown with the message', async () => {
       const log = path.join(
         fs.mkdtempSync(path.join(os.tmpdir(), 'agent-svc-attach-')),

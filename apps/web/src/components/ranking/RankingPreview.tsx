@@ -48,7 +48,11 @@ export type RankingPreviewProps = {
   onMoveSticker?: (id: string, x: number, y: number) => void
   /** The rank on screen changed (the editor follows it). */
   onRankOnScreen?: (rank: number) => void
+  /** A sticker was picked on the stage (null: a click beside them). */
+  onSelectSticker?: (id: null | string) => void
   project: RankingProject
+  /** The sticker being edited: outlined on the stage. */
+  selectedSticker?: null | string
   sounds: LibrarySound[]
 }
 
@@ -66,7 +70,9 @@ export function RankingPreview({
   fontsReady,
   onMoveSticker,
   onRankOnScreen,
+  onSelectSticker,
   project,
+  selectedSticker,
   sounds,
 }: RankingPreviewProps) {
   const images = useStickerImages(project.stickers)
@@ -498,8 +504,12 @@ export function RankingPreview({
         {!playing && onMoveSticker && part?.kind === 'clip' && (
           <StickerHandles
             dragging={draggingSticker}
-            onDragging={setDraggingSticker}
+            onDragging={(id) => {
+              setDraggingSticker(id)
+              if (id) onSelectSticker?.(id)
+            }}
             onMove={onMoveSticker}
+            selected={selectedSticker ?? null}
             stickers={(project.stickers ?? []).filter(
               (s) => s.rank === null || s.rank === rankOnScreen,
             )}
@@ -748,11 +758,14 @@ function StickerHandles({
   dragging,
   onDragging,
   onMove,
+  selected,
   stickers,
 }: {
   dragging: null | string
   onDragging: (id: null | string) => void
   onMove: (id: string, x: number, y: number) => void
+  /** The sticker being edited: a solid outline. */
+  selected: null | string
   stickers: RankingSticker[]
 }) {
   const at = (e: React.PointerEvent<HTMLDivElement>) => {
@@ -803,7 +816,12 @@ function StickerHandles({
             title="Drag to move"
           >
             <span
-              className="absolute rounded border border-dashed border-white/40 group-hover:border-white"
+              className={cn(
+                'absolute rounded',
+                s.id === selected
+                  ? 'border-2 border-white shadow-[0_0_0_1px_rgba(0,0,0,0.5)]'
+                  : 'border border-dashed border-white/40 group-hover:border-white',
+              )}
               style={{
                 inset: `${(pad / (h + pad * 2)) * 100}% ${(pad / (w + pad * 2)) * 100}%`,
               }}

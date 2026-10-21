@@ -5,7 +5,9 @@ import {
   agentChatUrl,
   START_EASY_PARAM,
   type StartEasyInput,
+  startModeOf,
   startsEasy,
+  toolOf,
   useStartEasyOnce,
 } from './start-easy'
 
@@ -26,6 +28,16 @@ describe('agentChatUrl', () => {
   it('opens the chat, with the Easy marker when asked', () => {
     expect(agentChatUrl('a b')).toBe('/agent?sessionId=a%20b')
     expect(agentChatUrl('s1', { easy: true })).toBe(`/agent?sessionId=s1&${START_EASY_PARAM}=easy`)
+  })
+
+  it("chooses a tool's mode, or only shows its tool first", () => {
+    expect(agentChatUrl('s1', { start: 'ranking_easy' })).toBe('/agent?sessionId=s1&start=ranking_easy')
+    expect(agentChatUrl('s1', { tool: 'ranking' })).toBe('/agent?sessionId=s1&tool=ranking')
+    expect(startModeOf(new URLSearchParams('start=ranking_easy'))).toBe('ranking_easy')
+    expect(startModeOf(new URLSearchParams('start=easy'))).toBe('autonomous')
+    expect(startModeOf(new URLSearchParams('start=autonomous'))).toBeNull()
+    expect(toolOf(new URLSearchParams('tool=ranking'))).toBe('ranking')
+    expect(toolOf(new URLSearchParams('tool=motion'))).toBeNull()
   })
 })
 
@@ -75,6 +87,13 @@ describe('useStartEasyOnce', () => {
     rerender({ ...input, mode: 'autonomous', session: session({ mode: 'autonomous' }) })
     expect(chooseMode).toHaveBeenCalledTimes(1)
     expect(onConsumed).toHaveBeenCalledTimes(1)
+  })
+
+  it("chooses the marker's mode when it names one", async () => {
+    const { chooseMode, input, rerender, result } = setup({ start: 'ranking_easy' })
+    rerender({ ...input, session: session() })
+    await waitFor(() => expect(chooseMode).toHaveBeenCalledWith('ranking_easy', 'claude'))
+    expect(result.current).toBe('ranking_easy')
   })
 
   it('does nothing without the marker', () => {

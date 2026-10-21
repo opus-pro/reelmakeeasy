@@ -1,8 +1,17 @@
 'use client'
 
-import type { AgentHarnessName, AgentMode, AgentStatusResponse } from '@shared/types/api/agent'
+import {
+  AGENT_TOOL_MODES,
+  type AgentHarnessName,
+  type AgentMode,
+  type AgentStatusResponse,
+  type AgentTool,
+  toolOfMode,
+} from '@shared/types/api/agent'
 import { cn } from '@shared/ui'
 import { useEffect, useRef, useState } from 'react'
+
+import { ClipsVertical, Film } from '@/components/icons/core'
 
 import { HARNESS_LABEL, HARNESS_SHORT, harnessChoices, initialHarness } from './agent-harness'
 import { Spinner } from './Spinner'
@@ -10,13 +19,15 @@ import { Spinner } from './Spinner'
 export type WelcomeCardProps = {
   /** The harness the chat runs on once chosen (the session's); null until then. */
   chosenHarness?: AgentHarnessName | null
+  /** The tool shown first (a link from Ranking Builder shows Ranking); default Short video. */
+  firstTool?: AgentTool | null
   /** The session's mode once the `mode` event arrived; null until then. */
   mode: AgentMode | null
   onChoose: (mode: AgentMode, harness?: AgentHarnessName) => Promise<boolean>
   /** The agent picked in the Agent dialog before the chat opened: no switch, just its name. */
   presetHarness?: AgentHarnessName | null
-  /** A mode the page is choosing for the user (Easy, from the home page's first-video prompt):
-   *  shown and locked like a click on it. */
+  /** A mode the page is choosing for the user (Easy, from the home page's first-video prompt,
+   *  or Ranking's Easy, from Ranking Builder): shown and locked like a click on it. */
   startingMode?: AgentMode | null
   /** Which harnesses can run the chat (null while loading, or when the check failed). */
   status?: AgentStatusResponse | null
@@ -29,39 +40,69 @@ type ModeOption = {
   recommended: boolean
 }
 
-const MODE_OPTIONS: ModeOption[] = [
+type ToolOption = {
+  icon: React.ComponentType<{ className?: string }>
+  key: AgentTool
+  label: string
+  modes: [ModeOption, ModeOption]
+}
+
+const SHORT_VIDEO: ToolOption = {
+  icon: Film,
+  key: 'short',
+  label: 'Short video',
+  modes: [
+    {
+      description: () =>
+        'We find a fun fact, a news story or a famous figure. You pick one and a style, and we make the whole video.',
+      label: 'Easy (Guided)',
+      mode: AGENT_TOOL_MODES.short.easy,
+      recommended: true,
+    },
+    {
+      description: (agent) => `Talk with ${agent} about anything for your video.`,
+      label: 'Advanced (Free chat)',
+      mode: AGENT_TOOL_MODES.short.advanced,
+      recommended: false,
+    },
+  ],
+}
+
+/** The tools, each with its Easy (guided) and Advanced (free chat) mode. */
+const TOOLS: ToolOption[] = [
+  SHORT_VIDEO,
   {
-    description: () =>
-      'We find a fun fact, a news story or a famous figure. You pick one and a style, and we make the whole video.',
-    label: 'Easy (Guided)',
-    mode: 'autonomous',
-    recommended: true,
-  },
-  {
-    description: (agent) => `Talk with ${agent} about anything for your video.`,
-    label: 'Advanced (Free chat)',
-    mode: 'free',
-    recommended: false,
+    icon: ClipsVertical,
+    key: 'ranking',
+    label: 'Ranking',
+    modes: [
+      {
+        description: () =>
+          'Answer a few quick questions: a YouTube Short to copy, your sounds, how many ranks, your photos or AI clips. We build the ranking for you.',
+        label: 'Easy (Guided)',
+        mode: AGENT_TOOL_MODES.ranking.easy,
+        recommended: true,
+      },
+      {
+        description: (agent) =>
+          `Chat freely with ${agent} about your ranking short, and open it in the editor any time.`,
+        label: 'Advanced (Free chat)',
+        mode: AGENT_TOOL_MODES.ranking.advanced,
+        recommended: false,
+      },
+    ],
   },
 ]
 
-/** Below the line: a different kind of video, made in the same chat. */
-const RANKING_OPTION: ModeOption = {
-  description: (agent) =>
-    `Build a ranking short with ${agent}: paste a YouTube Short to copy its style, attach your clips (or make them with AI), and get the meme sounds on every action.`,
-  label: 'Ranking short',
-  mode: 'ranking',
-  recommended: false,
-}
-
 /**
- * The first thing in every agent chat, rendered locally (no request needed): how
- * the session should start. A click posts the mode; the card stays locked (the
- * clicked option spinning) until the `mode` event marks the choice with a check.
+ * The first thing in every agent chat, rendered locally (no request needed): what to make (the
+ * tool) and how (Easy, guided, or Advanced, free chat). A click posts the mode; the card stays
+ * locked (the clicked option spinning) until the `mode` event marks the choice with a check.
  * A refused choice unlocks it again.
  */
 export function WelcomeCard({
   chosenHarness,
+  firstTool,
   mode,
   onChoose,
   presetHarness,
@@ -80,6 +121,11 @@ export function WelcomeCard({
   const agent = HARNESS_SHORT[chosenHarness ?? presetHarness ?? harness]
   // Mirrors `clicked` synchronously, so two clicks in one render can't both choose.
   const inFlightRef = useRef(false)
+  const [picked, setPicked] = useState<AgentTool>(firstTool ?? 'short')
+  // Once a mode is chosen or starting, the card shows its tool.
+  const settled = mode ?? pending
+  const toolKey = settled ? toolOfMode(settled) : picked
+  const tool = TOOLS.find((t) => t.key === toolKey) ?? SHORT_VIDEO
 
   const locked = mode !== null || pending !== null
 
@@ -99,10 +145,39 @@ export function WelcomeCard({
   return (
     <div className="flex w-full max-w-xl flex-col gap-3 rounded-xl border border-white/10 bg-fill-secondary/50 p-3">
       <div className="flex flex-col gap-1">
-        <p className="text-sm font-semibold text-primary">What would you like to do?</p>
+        <p className="text-sm font-semibold text-primary">What would you like to make?</p>
         <p className="text-xs text-secondary">
           {agent} is your creative partner here. New to this? Start with Easy.
         </p>
+      </div>
+      <div
+        aria-label="Tool"
+        className="flex w-full gap-1 rounded-lg bg-black/25 p-1"
+        role="tablist"
+      >
+        {TOOLS.map((option) => {
+          const selected = option.key === tool.key
+          const Icon = option.icon
+          return (
+            <button
+              aria-selected={selected}
+              className={cn(
+                'flex flex-1 items-center justify-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors disabled:cursor-default',
+                selected ? 'bg-white/15 text-primary' : 'text-secondary',
+                !locked && !selected && 'hover:bg-white/5 hover:text-primary',
+                locked && !selected && 'opacity-50',
+              )}
+              disabled={locked}
+              key={option.key}
+              onClick={() => setPicked(option.key)}
+              role="tab"
+              type="button"
+            >
+              <Icon className="size-4" />
+              {option.label}
+            </button>
+          )
+        })}
       </div>
       {mode === null && presetHarness && (
         <p className="text-xs text-secondary">Running on {HARNESS_LABEL[presetHarness]}</p>
@@ -142,8 +217,8 @@ export function WelcomeCard({
             ))}
         </div>
       )}
-      <div className="flex flex-col gap-1.5">
-        {MODE_OPTIONS.map((option) => (
+      <div className="flex flex-col gap-1.5" role="tabpanel">
+        {tool.modes.map((option) => (
           <ModeButton
             agent={agent}
             key={option.mode}
@@ -154,21 +229,6 @@ export function WelcomeCard({
             pending={pending}
           />
         ))}
-        <div className="my-1 flex items-center gap-2" role="separator">
-          <span className="h-px flex-1 bg-white/10" />
-          <span className="text-[10px] font-medium tracking-wider text-secondary uppercase">
-            or make
-          </span>
-          <span className="h-px flex-1 bg-white/10" />
-        </div>
-        <ModeButton
-          agent={agent}
-          locked={locked}
-          mode={mode}
-          onChoose={(next) => void choose(next)}
-          option={RANKING_OPTION}
-          pending={pending}
-        />
       </div>
     </div>
   )
