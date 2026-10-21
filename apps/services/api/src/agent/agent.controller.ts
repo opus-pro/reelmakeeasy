@@ -83,6 +83,7 @@ import { LoopbackOnlyGuard } from './loopback-only.guard'
 /** A Codex item id, or a stringified JSON-RPC request id. */
 const QUESTION_ID = /^[\w.:-]{1,200}$/
 const AGENT_MODES: AgentMode[] = ['autonomous', 'free', 'ranking', 'ranking_easy']
+const MODE_NAMES = AGENT_MODES.map((m) => JSON.stringify(m)).join(', ')
 /** Guided mode was removed. A page still offering it (open since before the update) starts Free
  *  chat instead of failing. */
 const LEGACY_GUIDED_MODE = 'guided'
@@ -221,7 +222,7 @@ export class AgentController {
     checkSessionId(id)
     const mode = body?.mode === LEGACY_GUIDED_MODE ? 'free' : body?.mode
     if (!AGENT_MODES.includes(mode as AgentMode))
-      throw new BadRequestException('mode must be "free" or "autonomous"')
+      throw new BadRequestException(`mode must be one of ${MODE_NAMES}`)
     const harness = body?.harness
     if (harness !== undefined && !AGENT_HARNESSES.includes(harness as AgentHarnessName))
       throw new BadRequestException('harness must be "codex" or "claude"')
