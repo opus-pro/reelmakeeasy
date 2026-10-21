@@ -119,8 +119,15 @@ export const AGENT_TOOLS: Record<AgentToolName, DynamicToolSpec> = {
       additionalProperties: false,
       properties: {
         id: { description: 'The ranking id.', type: 'string' },
-        path: { description: 'The file, relative to your working folder, e.g. attachments/cat.mp4.', type: 'string' },
-        rank: { description: 'The rank it goes under (1 is the top).', minimum: 1, type: 'integer' },
+        path: {
+          description: 'The file, relative to your working folder, e.g. attachments/cat.mp4.',
+          type: 'string',
+        },
+        rank: {
+          description: 'The rank it goes under (1 is the top).',
+          minimum: 1,
+          type: 'integer',
+        },
       },
       required: ['id', 'rank', 'path'],
       type: 'object',
@@ -134,7 +141,10 @@ export const AGENT_TOOLS: Record<AgentToolName, DynamicToolSpec> = {
       additionalProperties: false,
       properties: {
         id: { description: 'The ranking id.', type: 'string' },
-        path: { description: 'The picture, relative to your working folder, e.g. attachments/logo.png.', type: 'string' },
+        path: {
+          description: 'The picture, relative to your working folder, e.g. attachments/logo.png.',
+          type: 'string',
+        },
       },
       required: ['id', 'path'],
       type: 'object',
@@ -147,8 +157,15 @@ export const AGENT_TOOLS: Record<AgentToolName, DynamicToolSpec> = {
     inputSchema: {
       additionalProperties: false,
       properties: {
-        path: { description: 'Or: a video in your working folder, e.g. attachments/ref.mp4.', type: 'string' },
-        url: { description: 'A YouTube link (youtube.com, youtu.be or a Shorts link). TikTok is not supported.', type: 'string' },
+        path: {
+          description: 'Or: a video in your working folder, e.g. attachments/ref.mp4.',
+          type: 'string',
+        },
+        url: {
+          description:
+            'A YouTube link (youtube.com, youtu.be or a Shorts link). TikTok is not supported.',
+          type: 'string',
+        },
       },
       type: 'object',
     },
@@ -175,7 +192,10 @@ export const AGENT_TOOLS: Record<AgentToolName, DynamicToolSpec> = {
       additionalProperties: false,
       properties: {
         id: { description: 'Or: the ranking id (with rank).', type: 'string' },
-        path: { description: 'A video in your working folder, e.g. attachments/cat.mp4.', type: 'string' },
+        path: {
+          description: 'A video in your working folder, e.g. attachments/cat.mp4.',
+          type: 'string',
+        },
         rank: { description: 'With id: the rank whose clip to read.', minimum: 1, type: 'integer' },
       },
       type: 'object',
@@ -183,7 +203,8 @@ export const AGENT_TOOLS: Record<AgentToolName, DynamicToolSpec> = {
     name: 'ranking_find_moments',
   },
   ranking_style_get: {
-    description: 'Read a saved ranking style in full, with the sounds it plans that are not in the library yet.',
+    description:
+      'Read a saved ranking style in full, with the sounds it plans that are not in the library yet.',
     inputSchema: {
       additionalProperties: false,
       properties: { id: { description: 'The style id.', type: 'string' } },
@@ -193,7 +214,8 @@ export const AGENT_TOOLS: Record<AgentToolName, DynamicToolSpec> = {
     name: 'ranking_style_get',
   },
   ranking_style_list: {
-    description: "The user's saved ranking styles (patterns learned from references), with their ids.",
+    description:
+      "The user's saved ranking styles (patterns learned from references), with their ids.",
     inputSchema: { additionalProperties: false, properties: {}, type: 'object' },
     name: 'ranking_style_list',
   },
@@ -203,7 +225,10 @@ export const AGENT_TOOLS: Record<AgentToolName, DynamicToolSpec> = {
     inputSchema: {
       additionalProperties: false,
       properties: {
-        id: { description: 'To change a saved style: its id. Leave out to save a new one.', type: 'string' },
+        id: {
+          description: 'To change a saved style: its id. Leave out to save a new one.',
+          type: 'string',
+        },
         style: { description: 'The style as a JSON object (see the skill).', type: 'string' },
       },
       required: ['style'],
@@ -212,10 +237,16 @@ export const AGENT_TOOLS: Record<AgentToolName, DynamicToolSpec> = {
     name: 'ranking_style_save',
   },
   ranking_create: {
-    description: 'Start a new ranking short (5 empty ranks, a default title). Answers the project to fill in.',
+    description:
+      'Start a new ranking short (5 empty ranks, a default title). Answers the project to fill in.',
     inputSchema: {
       additionalProperties: false,
-      properties: { name: { description: 'A name for the user’s list, e.g. Funniest cat fails.', type: 'string' } },
+      properties: {
+        name: {
+          description: 'A name for the user’s list, e.g. Funniest cat fails.',
+          type: 'string',
+        },
+      },
       required: ['name'],
       type: 'object',
     },
@@ -234,16 +265,28 @@ export const AGENT_TOOLS: Record<AgentToolName, DynamicToolSpec> = {
   },
   ranking_generate_clips: {
     description:
-      "Make AI video clips for a ranking short from text, one per rank, at 1080p, and put each under its rank (paid: about $0.40 per 5 s clip on Hailuo; all made at once, about 2-3 minutes). Each prompt is one short continuous scene with one clear funny action and its payoff (who, where, what happens, how it ends). Avoid water and fast motion (splashes, pouring, spins, sprints): AI smears them; prefer slow, readable actions and a still camera. ReelMakeEasy adds the vertical phone-video look. Show the user the prompts and the cost and ask before calling it. The reply gives each clip's contact sheet to look at.",
+      "Make AI video clips for a ranking short from text, one per rank, and put each under its rank (paid; all made at once, about 2-3 minutes). Each prompt is one short continuous scene with one clear funny action and its payoff (who, where, what happens, how it ends). Avoid water and fast motion (splashes, pouring, spins, sprints): AI smears them; prefer slow, readable actions and a still camera. ReelMakeEasy adds the vertical phone-video look. Before calling it, show the user the prompts and ask which resolution (each with its cost; 1080p recommended). Called without a resolution it makes nothing and answers the choices with their prices. The reply gives each clip's contact sheet to look at.",
     inputSchema: {
       additionalProperties: false,
       properties: {
         clips: {
-          description: 'JSON list: [{ "rank": 1, "prompt": "A fluffy orange cat misjudges a jump onto the kitchen counter and slides into the laundry basket below." }, ...] (1-6).',
+          description:
+            'JSON list: [{ "rank": 1, "prompt": "A fluffy orange cat misjudges a jump onto the kitchen counter and slides into the laundry basket below." }, ...] (1-6).',
           type: 'string',
         },
         id: { description: 'The ranking id.', type: 'string' },
-        seconds: { description: 'Each clip\'s length, 4-8 s (default 5).', maximum: 8, minimum: 4, type: 'integer' },
+        resolution: {
+          description:
+            'The resolution the user picked. Hailuo (fal) makes "480p" (cheapest, softest), "768p" or "1080p" (recommended: sharpest, smears least), about $0.13, $0.20 or $0.40 per 5 s clip; Gemini makes "720p" only.',
+          enum: ['480p', '720p', '768p', '1080p'],
+          type: 'string',
+        },
+        seconds: {
+          description: "Each clip's length, 4-8 s (default 5).",
+          maximum: 8,
+          minimum: 4,
+          type: 'integer',
+        },
       },
       required: ['id', 'clips'],
       type: 'object',
@@ -251,7 +294,8 @@ export const AGENT_TOOLS: Record<AgentToolName, DynamicToolSpec> = {
     name: 'ranking_generate_clips',
   },
   ranking_get: {
-    description: 'Read a ranking short: every field you can change, what still stops its export, and tips.',
+    description:
+      'Read a ranking short: every field you can change, what still stops its export, and tips.',
     inputSchema: {
       additionalProperties: false,
       properties: { id: { description: 'The ranking id.', type: 'string' } },
@@ -261,7 +305,8 @@ export const AGENT_TOOLS: Record<AgentToolName, DynamicToolSpec> = {
     name: 'ranking_get',
   },
   ranking_list: {
-    description: "List the user's ranking shorts and their sound library (sound ids, names, lengths; starred first).",
+    description:
+      "List the user's ranking shorts and their sound library (sound ids, names, lengths; starred first).",
     inputSchema: { additionalProperties: false, properties: {}, type: 'object' },
     name: 'ranking_list',
   },

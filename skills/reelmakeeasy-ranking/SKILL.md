@@ -26,7 +26,7 @@ A ranking short is a 9:16 Short: a title band at the top with its keywords in co
 - `ranking_find_moments`: a clip's action moments (strongest sound onsets, with what they sound like, and shot changes), from a file in your working folder or the clip under a rank. Use it to trim and to time the action sound.
 - `ranking_analyze_reference`: learn the pattern of a reference Short, from a YouTube link the user pasted or a video in your working folder (about a minute). It answers the shots, the sound effects (time, what each is like, and the library sound it matches or "not in the library") and frames to look at.
 - `ranking_style_save` / `ranking_style_list` / `ranking_style_get` / `ranking_apply_style`: saved styles (patterns any ranking can take on), and giving a ranking one.
-- `ranking_generate_clips`: no clips? Make them with AI from text, one per rank, always at 1080p (paid, about $0.40 per 5 s clip; show the prompts and cost and ask first). Each comes with a contact sheet to look at.
+- `ranking_generate_clips`: no clips? Make them with AI from text, one per rank (paid; show the prompts and ask which resolution first). Each comes with a contact sheet to look at.
 - `ranking_add_sticker_image`: a picture from your working folder (png, jpg, webp, gif) for an image sticker; answers its `imageUrl`.
 - `ranking_update`: `patch` is a JSON object of whole fields to replace (send each field in full, as `ranking_get` shows it).
 - `ranking_export`: renders the MP4 (about a minute) once every rank has a clip and a label.
@@ -69,7 +69,7 @@ When the user has no clips (or asks for AI ones), write one prompt per rank: a s
 
 AI video still gives itself away on water and on fast motion: splashes, pouring, waves, wet fur, spins, sprints and quick tumbles smear or melt. Build each action around a clear, readable motion instead: a slow topple, a startled freeze, a slide onto something soft, a stare. Keep water out of the shot, or calm and small in the background, and keep the camera still. When a contact sheet shows smearing on the action, offer to make that clip again with a calmer version of it.
 
-Show the prompts and the cost in a few lines and ask. Then `ranking_generate_clips` (all ranks in one call), look at every contact sheet, and re-rank by what actually came out (reorder `items`; an AI clip can miss its action: say so and offer to make that one again). Trim each to its action, put a meme sound from the library on it, label it, add a sticker on the big moments, and export.
+Show the prompts in a few lines and ask which resolution to make them at, with the cost of each: 480p (cheapest, softest), 768p, or 1080p (recommended: the sharpest, and AI smears water and fast motion least). On Hailuo a 5 s clip is about $0.13, $0.20 or $0.40; calling the tool without a resolution answers the exact prices. Then `ranking_generate_clips` with the resolution they picked (all ranks in one call), look at every contact sheet, and re-rank by what actually came out (reorder `items`; an AI clip can miss its action: say so and offer to make that one again). Trim each to its action, put a meme sound from the library on it, label it, add a sticker on the big moments, and export.
 
 AI clips are made up: YouTube and TikTok ask creators to label realistic AI video when posting; mention it once when handing over.
 
