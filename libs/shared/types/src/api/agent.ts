@@ -1,11 +1,31 @@
 /** Question id -> the chosen option labels and/or typed text. */
 export type AgentAnswers = Record<string, string[]>
 
-/** How a session's chat is driven: an autonomous run (Easy), free chat (Advanced), or a ranking
- *  chat (builds ranking shorts in the Ranking Builder). Chosen once, right after the session is
- *  created. A former mode, 'guided', was removed: chats saved with it load as 'free'
+/** How a session's chat is driven, per tool: a short video's autonomous run (Easy) or free chat
+ *  (Advanced); a ranking short's guided chat (Easy: one question at a time, then the agent builds
+ *  it) or free chat (Advanced), both in the Ranking Builder. Chosen once, right after the session
+ *  is created. A former mode, 'guided', was removed: chats saved with it load as 'free'
  *  (`agentModeFromStored`). */
-export type AgentMode = 'autonomous' | 'free' | 'ranking'
+export type AgentMode = 'autonomous' | 'free' | 'ranking' | 'ranking_easy'
+
+/** What a chat makes: a tool, each with an Easy and an Advanced mode. */
+export type AgentTool = 'ranking' | 'short'
+
+/** Each tool's modes: Easy (guided) first, then Advanced (free chat). */
+export const AGENT_TOOL_MODES: Record<AgentTool, { advanced: AgentMode; easy: AgentMode }> = {
+  ranking: { advanced: 'ranking', easy: 'ranking_easy' },
+  short: { advanced: 'free', easy: 'autonomous' },
+}
+
+/** The tool a mode belongs to. */
+export function toolOfMode(mode: AgentMode): AgentTool {
+  return mode === 'ranking' || mode === 'ranking_easy' ? 'ranking' : 'short'
+}
+
+/** A Ranking chat, Easy or Advanced: it builds ranking shorts with the ranking tools. */
+export function isRankingMode(mode: AgentMode | null | undefined): boolean {
+  return !!mode && toolOfMode(mode) === 'ranking'
+}
 
 export type AgentPlanStep = { status: 'completed' | 'inProgress' | 'pending'; step: string }
 

@@ -9,6 +9,7 @@ import {
   rankingTimeline,
   revealOrder,
   transitionText,
+  withRankCount,
 } from './ranking-project'
 
 const clip = (dur: number, start = 0, end = dur) => ({
@@ -92,5 +93,26 @@ describe('rankingTimeline', () => {
 
   it('fills {rank} in the slide text', () => {
     expect(transitionText({ ...DEFAULT_RANKING_TRANSITION, text: 'Next: #{rank} ' }, 4)).toBe('Next: #4')
+  })
+})
+
+describe('withRankCount', () => {
+  it('adds empty ranks at the bottom or drops the last ones, with their stickers', () => {
+    const project = newRankingProject('p', 'now')
+    project.items[0] = { ...project.items[0]!, label: 'Top' }
+    project.stickers = [
+      { color: '#fff', id: 'a', kind: 'text', rank: 5, rotation: 0, size: 0.1, text: 'x', x: 0.5, y: 0.5 },
+      { color: '#fff', id: 'b', kind: 'text', rank: null, rotation: 0, size: 0.1, text: 'y', x: 0.5, y: 0.5 },
+    ]
+    const three = withRankCount(project, 3)
+    expect(three.items.map((i) => i.rank)).toEqual([1, 2, 3])
+    expect(three.items[0]?.label).toBe('Top')
+    expect(three.reveal.order).toEqual([3, 2, 1])
+    expect(three.stickers?.map((s) => s.id)).toEqual(['b'])
+    const seven = withRankCount(project, 7)
+    expect(seven.items.map((i) => i.rank)).toEqual([1, 2, 3, 4, 5, 6, 7])
+    expect(new Set(seven.items.map((i) => i.id)).size).toBe(7)
+    expect(withRankCount(project, 40).items).toHaveLength(10)
+    expect(withRankCount(project, 1).items).toHaveLength(2)
   })
 })

@@ -82,7 +82,7 @@ import { LoopbackOnlyGuard } from './loopback-only.guard'
 
 /** A Codex item id, or a stringified JSON-RPC request id. */
 const QUESTION_ID = /^[\w.:-]{1,200}$/
-const AGENT_MODES: AgentMode[] = ['autonomous', 'free', 'ranking']
+const AGENT_MODES: AgentMode[] = ['autonomous', 'free', 'ranking', 'ranking_easy']
 /** Guided mode was removed. A page still offering it (open since before the update) starts Free
  *  chat instead of failing. */
 const LEGACY_GUIDED_MODE = 'guided'

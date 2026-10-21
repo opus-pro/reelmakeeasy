@@ -17,7 +17,7 @@ describe('renderRankingSkill', () => {
 
   it('names every ranking tool, and each one exists', () => {
     const tools = Object.keys(AGENT_TOOLS).filter((t) => t.startsWith('ranking_'))
-    expect(tools).toHaveLength(14)
+    expect(tools).toHaveLength(15)
     for (const tool of tools) expect(skill).toContain(`\`${tool}\``)
   })
 

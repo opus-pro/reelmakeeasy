@@ -24,6 +24,7 @@ import type {
   ChatModelChoice,
   HarnessStatus,
 } from '@shared/types/api/agent'
+import { isRankingMode } from '@shared/types/api/agent'
 
 import type { AgentAppServer } from './claude/agent-app-server'
 import { ClaudeAppServer } from './claude/claude-app-server'
@@ -490,8 +491,10 @@ export class AgentSessionService implements OnModuleDestroy {
       mode === 'autonomous' ? { flowActive: true, harness, mode } : { harness, mode },
     )
     this.emit(id, { mode, type: 'mode' })
-    if (mode === 'free' || mode === 'ranking') {
-      const prompt = mode === 'ranking' ? rankingKickoff(harness, session.rankingId) : kickoffFor(harness)
+    if (mode === 'free' || isRankingMode(mode)) {
+      const prompt = isRankingMode(mode)
+        ? rankingKickoff(harness, session.rankingId, mode === 'ranking_easy')
+        : kickoffFor(harness)
       void this.startKickoff(id, prompt).catch((error: unknown) =>
         this.logger.warn(`Kickoff for ${id} failed: ${ensureError(error).message}`),
       )
@@ -527,7 +530,7 @@ export class AgentSessionService implements OnModuleDestroy {
    *  reloads. */
   followRanking(id: string, rankingId: string): void {
     const session = this.store.get(id)
-    if (!session || session.mode !== 'ranking') return
+    if (!session || !isRankingMode(session.mode)) return
     if (session.rankingId !== rankingId) this.store.update(id, { rankingId }, { touch: false })
     this.emit(id, { rankingId, type: 'ranking' })
   }
@@ -653,7 +656,7 @@ export class AgentSessionService implements OnModuleDestroy {
     }
     // Editing, or a Free chat (whose tools may be waiting on a clip or a render): the
     // waiting tool sees the flag and cancels its workflow.
-    if (editing || mode === 'free' || mode === 'ranking') this.cancelledFlows.add(id)
+    if (editing || mode === 'free' || isRankingMode(mode)) this.cancelledFlows.add(id)
     this.expireServerQuestions(id)
     if (!live?.currentTurnId || !threadId) return
     await live.client.request('turn/interrupt', { threadId, turnId: live.currentTurnId })
@@ -695,7 +698,7 @@ export class AgentSessionService implements OnModuleDestroy {
   notifyAgent(id: string, text: string): void {
     const session = this.store.get(id)
     if (!session || this.destroyed || !text.trim()) return
-    const chat = session.mode === 'free' || session.mode === 'ranking' || !!session.editing
+    const chat = session.mode === 'free' || isRankingMode(session.mode) || !!session.editing
     if (!chat) return
     this.notes.set(id, [...(this.notes.get(id) ?? []), text.trim()])
     this.sendNotes(id)

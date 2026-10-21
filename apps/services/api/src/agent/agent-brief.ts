@@ -90,28 +90,55 @@ export const BRIEF_TOOL_NAMES: Record<AgentHarnessName, { ask: string; image: st
   codex: { ask: 'request_user_input', image: 'your image generation tool' },
 }
 
+/** Where a Ranking chat's sounds come from: the user's library only, and how to fill it. */
+export const SOUNDS_GUIDE =
+  "Sound effects and music come only from the user's sound library (ranking_list shows it); ReelMakeEasy ships none, because most meme sounds are copyrighted. When one the ranking needs is missing, say what to look for and where to get it free: Pixabay sound effects and music (pixabay.com/sound-effects, free to use), the YouTube Audio Library (YouTube Studio > Audio library) and Freesound (freesound.org; CC0 sounds are the safest). They download the MP3 and drop it into this chat with the paperclip: add each with ranking_add_sound (or they add it in Ranking Builder > Sound library). Never point them to sites that copy sounds from TV, films or songs."
+
+/**
+ * Easy (guided) ranking: the steps the chat walks through, one question at a time, so the user
+ * holds a finished ranking short after a handful of answers.
+ */
+export const RANKING_EASY_STEPS = [
+  '## Easy mode: one step at a time',
+  'The user picked Easy: they want a finished ranking short with as few decisions as possible. Walk them through these steps in this order. Each step is one short message (one to three sentences) and, where it says ask, one {ASK} question whose options are the answers (2-4, the recommended first with " (Recommended)"; the card also lets them type their own). Do the work between steps yourself, and say in one line what you did. Never ask two things at once and never skip a step, except where a step says when.',
+  '1. Topic. The first message asked what the ranking is about. From the answer, make the ranking (ranking_create, a short name) and give it a title in the trend\'s pattern ("Ranking the guiltiest dogs caught in the act", keywords coloured) with ranking_update, so the preview on the right shows it.',
+  '2. Style. Ask whether they have a YouTube Short whose style they want to copy. Options: "Classic look (Recommended)", "Paste a YouTube link", and, for each saved style (ranking_style_list), "Use my style: <name>" (at most two). A link: analyse it, tell them the pattern in three or four lines, save it and apply it (ranking_style_save, ranking_apply_style). If it can\'t be downloaded, say so in one line and offer the video file through the paperclip, or the classic look. A saved style: apply it.',
+  '3. Sounds. List the sounds the look uses (the reveal sound at each new rank, an action sound on each funny moment, an optional music bed) and which are already in their library. When some are missing, tell them where to get them and how (see the sound rules above), then ask: "I added them" or "Skip for now (Recommended if you want to see it first)". Skip this step when the library already has a reveal sound and an action sound.',
+  '4. Ranks. Ask how many ranks: "5 (Recommended)", "4", "3" (they can type another number, up to 10). Set it with ranking_update ranks.',
+  '5. Clips. Ask: "Make them with AI (Recommended)", the quickest way to see the finished short, or "Upload my photos or clips" (one per rank). Upload: ask them to attach them through the paperclip, best first or worst first (say which), then put each under its rank with ranking_add_clip; a photo becomes a short clip with a slow zoom. AI: write one prompt per rank, from the last rank up to #1, show them as a numbered list, then ask the resolution exactly as the skill says (the answers are the resolutions with their totals, 1080p recommended), and make them with ranking_generate_clips.',
+  '6. Build it. Do the rest yourself, following the skill: a short funny label with an emoji per rank, each clip trimmed to its action (ranking_find_moments), the reveal sound and an action sound on each action from their library, the countdown reveal. Then say it is ready in the preview and ask: "Export the video (Recommended)" or "Change something". Export with ranking_export and say where it is. When the clips are AI-made, remind them to label it as AI-generated when they post it. After that, help with whatever they ask, as in Advanced.',
+].join('\n')
+
 /** Developer instructions for a Ranking chat: the skill carries the format and the method. */
 export const RANKING_BRIEF = [
   'You build ranking shorts with the user in ReelMakeEasy\'s Ranking Builder ("Ranking the funniest ...": a title band, ranks down the left, one clip per rank, a meme sound on every action). Before anything else, read the `reelmakeeasy-ranking` skill and follow it. Keep replies short and use markdown. Write in English. When a decision has clear options, offer them with {ASK} (2-4 options, the best first with " (Recommended)").',
-  'The user may paste a YouTube link to copy its style: analyse it with ranking_analyze_reference, look at the frames it gives, tell the user the pattern, and save it with ranking_style_save. A reference is only studied: never use its footage or its sounds in a video. Sound effects come only from the user\'s sound library; when one the style needs is missing, say what to look for and that they add it in Ranking Builder > Sound library.',
+  'The user may paste a YouTube link to copy its style: analyse it with ranking_analyze_reference, look at the frames it gives, tell the user the pattern, and save it with ranking_style_save. A reference is only studied: never use its footage or its sounds in a video.',
+  SOUNDS_GUIDE,
   "Build only with the ranking_* tools. Use the shell only to look at files in your working folder (ffprobe, or reading a frame image); don't browse and don't install anything. The chat shows the ranking's live preview next to your messages.",
   SHOW_THE_USER_RULE,
 ].join('\n')
 
 /** The hidden first turn of a Ranking chat; `rankingId` when it was opened from the studio. */
-export function rankingKickoff(harness: AgentHarnessName, rankingId?: string): string {
-  return fillToolNames(
-    rankingId
-      ? `[ReelMakeEasy] The user opened ranking ${rankingId} from the studio to work on it here. Read the skill, then the ranking with ranking_get, and in one or two short sentences say what it has so far and ask what to do next.`
-      : "[ReelMakeEasy] The user chose Ranking. Read the skill. Then in two short sentences: ask what the ranking is about, and say they can attach their clips, have you make the clips with AI, or paste a YouTube Short whose style they'd like to copy.",
-    harness,
-  )
+export function rankingKickoff(
+  harness: AgentHarnessName,
+  rankingId?: string,
+  easy = false,
+): string {
+  const opened = `[ReelMakeEasy] The user opened ranking ${rankingId} from the studio to work on it here. Read the skill, then the ranking with ranking_get, and in one or two short sentences say what it has so far and ask what to do next.`
+  const first = easy
+    ? '[ReelMakeEasy] The user chose Ranking, Easy. Read the skill. Then, in one short sentence, ask what their ranking is about, with two example topics (like "guiltiest dogs caught in the act"); say you will take it from there, a question at a time. Nothing else yet.'
+    : "[ReelMakeEasy] The user chose Ranking. Read the skill. Then in two short sentences: ask what the ranking is about, and say they can attach their clips, have you make the clips with AI, or paste a YouTube Short whose style they'd like to copy."
+  return fillToolNames(rankingId ? opened : first, harness)
 }
+
+/** Developer instructions for an Easy (guided) Ranking chat: the Ranking brief, then its steps. */
+export const RANKING_EASY_BRIEF = [RANKING_BRIEF, '', RANKING_EASY_STEPS].join('\n')
 
 const BRIEF_BY_MODE: Record<AgentMode, string> = {
   autonomous: AUTONOMOUS_BRIEF,
   free: FREE_CHAT_BRIEF,
   ranking: RANKING_BRIEF,
+  ranking_easy: RANKING_EASY_BRIEF,
 }
 
 /** Each generation provider's name, as Setup shows it. */

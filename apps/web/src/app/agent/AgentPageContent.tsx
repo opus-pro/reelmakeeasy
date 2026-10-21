@@ -5,6 +5,7 @@ import {
   FLOW_CANCELLED_NOTICE,
   type TranscriptEntry,
 } from '@reelmakeeasy/common/codex-agent/agent-transcript'
+import { isRankingMode } from '@shared/types/api/agent'
 import { Button, cn } from '@shared/ui'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { type ReactNode, useEffect, useMemo, useState } from 'react'
@@ -243,7 +244,7 @@ function AgentWorkspace({
           />
         </div>
         <div className="min-h-0 min-w-0 flex-1">
-          {mode === 'ranking' ? (
+          {isRankingMode(mode) ? (
             <RankingChatPanel
               rankingId={agent.transcript.ranking?.id ?? agent.session?.rankingId ?? null}
               version={agent.transcript.ranking?.version ?? 0}

@@ -40,6 +40,29 @@ export function run(command: string, args: string[], cwd: string): Promise<strin
   })
 }
 
+/** How long a photo plays as a clip. */
+export const PHOTO_CLIP_SEC = 5
+
+/**
+ * A photo as a clip: `seconds` long at the export's size, slowly zooming in to its centre (so a
+ * still doesn't look frozen). Made at twice the size first, so the zoom moves smoothly.
+ */
+export async function photoToClip(photo: string, out: string, seconds = PHOTO_CLIP_SEC): Promise<void> {
+  const frames = Math.round(seconds * RANKING_FPS)
+  const [w, h] = [RANKING_WIDTH * 2, RANKING_HEIGHT * 2]
+  const zoom = [
+    `scale=${w}:${h}:force_original_aspect_ratio=increase`,
+    `crop=${w}:${h}`,
+    `zoompan=z='1+0.12*on/${frames}':x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':d=${frames}:s=${RANKING_WIDTH}x${RANKING_HEIGHT}:fps=${RANKING_FPS}`,
+    'format=yuv420p',
+  ].join(',')
+  await run(
+    'ffmpeg',
+    ['-y', '-v', 'error', '-i', photo, '-vf', zoom, '-frames:v', String(frames), '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '20', '-movflags', '+faststart', out],
+    path.dirname(out),
+  )
+}
+
 /** A clip's length in seconds and whether it has sound. */
 export async function probeClip(file: string): Promise<{ durationSec: number; hasAudio: boolean }> {
   const out = await run(

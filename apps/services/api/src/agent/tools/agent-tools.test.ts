@@ -44,6 +44,7 @@ describe('agent tools', () => {
       'ranking_get',
       'ranking_update',
       'ranking_add_clip',
+      'ranking_add_sound',
       'ranking_add_sticker_image',
       'ranking_export',
       'ranking_analyze_reference',
@@ -111,11 +112,14 @@ describe('use_image_as_keyframe', () => {
 describe('a Ranking chat', () => {
   it('gets the ranking tools only, on either agent', () => {
     for (const harness of ['codex', 'claude'] as const) {
-      const names = toolsForSession({ mode: 'ranking' }, harness).map((t) => t.name)
-      expect(names.every((n) => n.startsWith('ranking_'))).toBe(true)
-      expect(names).toContain('ranking_analyze_reference')
-      expect(names).toContain('ranking_style_save')
-      expect(names).toHaveLength(14)
+      for (const mode of ['ranking', 'ranking_easy'] as const) {
+        const names = toolsForSession({ mode }, harness).map((t) => t.name)
+        expect(names.every((n) => n.startsWith('ranking_'))).toBe(true)
+        expect(names).toContain('ranking_analyze_reference')
+        expect(names).toContain('ranking_add_sound')
+        expect(names).toContain('ranking_style_save')
+        expect(names).toHaveLength(15)
+      }
     }
   })
 })
@@ -144,6 +148,7 @@ describe('toolsForSession by harness', () => {
       'ranking_get',
       'ranking_update',
       'ranking_add_clip',
+      'ranking_add_sound',
       'ranking_add_sticker_image',
       'ranking_export',
       'ranking_analyze_reference',

@@ -1,4 +1,4 @@
-import type { AgentHarnessName, AgentMode } from '@shared/types/api/agent'
+import { type AgentHarnessName, type AgentMode, isRankingMode } from '@shared/types/api/agent'
 
 import { MAKE_LOOP_LABEL } from '../craft/beat-loop-skill'
 
@@ -7,6 +7,7 @@ export type AgentToolName =
   | 'make_beat_loop'
   | 'make_video'
   | 'ranking_add_clip'
+  | 'ranking_add_sound'
   | 'ranking_add_sticker_image'
   | 'ranking_analyze_reference'
   | 'ranking_apply_style'
@@ -114,7 +115,7 @@ export const AGENT_TOOLS: Record<AgentToolName, DynamicToolSpec> = {
   },
   ranking_add_clip: {
     description:
-      "Put a video file from your working folder (the user's attachments are in attachments/) under a rank of a ranking short. It plays its first 4.5 s until you trim it (items[].clip.trimStartSec/trimEndSec with ranking_update).",
+      "Put a video or a photo from your working folder (the user's attachments are in attachments/) under a rank of a ranking short. A photo (jpg, png, webp) becomes a 5 s clip with a slow zoom. It plays its first 4.5 s until you trim it (items[].clip.trimStartSec/trimEndSec with ranking_update).",
     inputSchema: {
       additionalProperties: false,
       properties: {
@@ -133,6 +134,26 @@ export const AGENT_TOOLS: Record<AgentToolName, DynamicToolSpec> = {
       type: 'object',
     },
     name: 'ranking_add_clip',
+  },
+  ranking_add_sound: {
+    description:
+      "Add a sound file the user dropped into the chat (or one in your working folder) to their sound library: mp3, wav, m4a, ogg, flac or aac, under 10 minutes. Answers its soundId, ready to use as the reveal sound, the music bed or an action sound.",
+    inputSchema: {
+      additionalProperties: false,
+      properties: {
+        name: {
+          description: 'A short name for the library, e.g. Vine boom (default: the file name).',
+          type: 'string',
+        },
+        path: {
+          description: 'The file, relative to your working folder, e.g. attachments/boom.mp3.',
+          type: 'string',
+        },
+      },
+      required: ['path'],
+      type: 'object',
+    },
+    name: 'ranking_add_sound',
   },
   ranking_add_sticker_image: {
     description:
@@ -238,7 +259,7 @@ export const AGENT_TOOLS: Record<AgentToolName, DynamicToolSpec> = {
   },
   ranking_create: {
     description:
-      'Start a new ranking short (5 empty ranks, a default title). Answers the project to fill in.',
+      'Start a new ranking short (empty ranks, a default title). Answers the project to fill in.',
     inputSchema: {
       additionalProperties: false,
       properties: {
@@ -246,6 +267,7 @@ export const AGENT_TOOLS: Record<AgentToolName, DynamicToolSpec> = {
           description: 'A name for the user’s list, e.g. Funniest cat fails.',
           type: 'string',
         },
+        ranks: { description: 'How many ranks (2-10, default 5).', maximum: 10, minimum: 2, type: 'integer' },
       },
       required: ['name'],
       type: 'object',
@@ -312,14 +334,15 @@ export const AGENT_TOOLS: Record<AgentToolName, DynamicToolSpec> = {
   },
   ranking_update: {
     description:
-      'Change a ranking short: patch is a JSON object with any of title, items, reveal, sounds, stickers, transition, style, name (whole fields, as ranking_get shows them). The reelmakeeasy-ranking skill explains each field.',
+      'Change a ranking short: patch is a JSON object with any of title, items, reveal, sounds, stickers, transition, style, name (whole fields, as ranking_get shows them). The reelmakeeasy-ranking skill explains each field. ranks changes how many ranks it has (empty ones added at the bottom, or the last ones dropped with their clips).',
     inputSchema: {
       additionalProperties: false,
       properties: {
         id: { description: 'The ranking id.', type: 'string' },
         patch: { description: 'A JSON object of the fields to replace.', type: 'string' },
+        ranks: { description: 'How many ranks (2-10).', maximum: 10, minimum: 2, type: 'integer' },
       },
-      required: ['id', 'patch'],
+      required: ['id'],
       type: 'object',
     },
     name: 'ranking_update',
@@ -431,6 +454,7 @@ const RANKING_TOOLS: AgentToolName[] = [
   'ranking_get',
   'ranking_update',
   'ranking_add_clip',
+  'ranking_add_sound',
   'ranking_add_sticker_image',
   'ranking_export',
   'ranking_analyze_reference',
@@ -461,7 +485,7 @@ export function toolsForSession(
       (n) => AGENT_TOOLS[n],
     )
   if (session.mode === 'autonomous') return session.editing ? withImage(EDIT_TOOLS) : []
-  if (session.mode === 'ranking') return RANKING_TOOLS.map((n) => AGENT_TOOLS[n])
+  if (isRankingMode(session.mode)) return RANKING_TOOLS.map((n) => AGENT_TOOLS[n])
   if (session.mode !== 'free') return []
   return withImage(['make_video', 'make_beat_loop', ...EDIT_TOOLS, ...RANKING_TOOLS])
 }

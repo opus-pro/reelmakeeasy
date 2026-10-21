@@ -17,6 +17,7 @@ import {
   FREE_CHAT_BRIEF,
   FREE_CHAT_KICKOFF,
   kickoffFor,
+  rankingKickoff,
 } from './agent-brief'
 
 describe('Guided mode is gone', () => {
@@ -115,6 +116,8 @@ describe('briefFor / kickoffFor', () => {
     { mode: 'free' },
     { mode: 'autonomous' },
     { editing: true, mode: 'autonomous' },
+    { mode: 'ranking' },
+    { mode: 'ranking_easy' },
   ] as const
 
   it.each(sessions)('fills the tool names for each harness (%o)', (s) => {
@@ -133,6 +136,41 @@ describe('briefFor / kickoffFor', () => {
   it('kicks off Free chat on either harness', () => {
     for (const h of ['codex', 'claude'] as const) expect(kickoffFor(h)).toBe(FREE_CHAT_KICKOFF)
     expect(FREE_CHAT_KICKOFF).toContain('Free chat')
+  })
+})
+
+describe('Ranking chats', () => {
+  it('walks an Easy ranking through its steps in order, one question at a time', () => {
+    const easy = briefFor({ mode: 'ranking_easy' }, 'claude')
+    // The Ranking brief first (the skill, the tools), then the steps.
+    expect(easy).toContain('read the `reelmakeeasy-ranking` skill')
+    expect(easy.indexOf('read the `reelmakeeasy-ranking` skill')).toBeLessThan(easy.indexOf('## Easy mode'))
+    const steps = ['1. Topic.', '2. Style.', '3. Sounds.', '4. Ranks.', '5. Clips.', '6. Build it.']
+    const at = steps.map((step) => easy.indexOf(step))
+    expect(at.every((i) => i > 0)).toBe(true)
+    expect(at).toEqual(at.toSorted((a, b) => a - b))
+    expect(easy).toContain('"5 (Recommended)", "4", "3"')
+    expect(easy).toContain('with AskUserQuestion')
+    expect(briefFor({ mode: 'ranking' }, 'claude')).not.toContain('## Easy mode')
+  })
+
+  it('sends both kinds to free sound libraries and the chat for sounds, never to copied ones', () => {
+    for (const mode of ['ranking', 'ranking_easy'] as const) {
+      const brief = briefFor({ mode }, 'codex')
+      expect(brief).toContain('Pixabay')
+      expect(brief).toContain('ranking_add_sound')
+      expect(brief).toMatch(/Never point them to sites that copy sounds/)
+    }
+  })
+
+  it('opens an Easy ranking by asking what it is about, and nothing else', () => {
+    const easy = rankingKickoff('claude', undefined, true)
+    expect(easy).toContain('chose Ranking, Easy')
+    expect(easy).toMatch(/ask what their ranking is about/)
+    expect(rankingKickoff('claude')).not.toContain('chose Ranking, Easy')
+    expect(rankingKickoff('codex', '11111111-1111-1111-1111-111111111111', true)).toContain(
+      'opened ranking 11111111-1111-1111-1111-111111111111',
+    )
   })
 })
 

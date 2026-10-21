@@ -1,7 +1,11 @@
 import fs from 'node:fs'
 import path from 'node:path'
 
-import { rankingAdvice, rankingProblems } from '@reelmakeeasy/common/ranking/ranking-project'
+import {
+  rankingAdvice,
+  rankingProblems,
+  withRankCount,
+} from '@reelmakeeasy/common/ranking/ranking-project'
 import {
   applyRankingTemplate,
   missingTemplateSounds,
@@ -141,7 +145,7 @@ export class RankingAgentTools {
       /** Library sound fingerprints, for naming a reference's sounds. */
       prints?: Pick<LibraryPrints, 'all'>
       ranking: RankingService
-      sounds: Pick<SoundLibraryService, 'list'>
+      sounds: Pick<SoundLibraryService, 'add' | 'list'>
       templates?: RankingTemplateService
       /** The chat's working folder (where its attachments are). */
       workingDir: (sessionId: string) => string
@@ -265,11 +269,12 @@ export class RankingAgentTools {
     a: Record<string, unknown>,
   ): Promise<ToolResult> {
     if (tool === 'ranking_list') return this.list()
-    if (tool === 'ranking_create')
-      return { success: true, text: describe(this.deps.ranking.create(String(a['name'] ?? ''))) }
+    if (tool === 'ranking_create') return this.create(String(a['name'] ?? ''), a['ranks'])
     if (tool === 'ranking_get')
       return { success: true, text: describe(this.deps.ranking.get(String(a['id']))) }
-    if (tool === 'ranking_update') return this.update(String(a['id']), a['patch'])
+    if (tool === 'ranking_update') return this.update(String(a['id']), a['patch'], a['ranks'])
+    if (tool === 'ranking_add_sound')
+      return await this.addSound(sessionId, String(a['path'] ?? ''), a['name'])
     if (tool === 'ranking_add_clip')
       return await this.addClip(
         sessionId,
@@ -520,8 +525,17 @@ export class RankingAgentTools {
     return upload
   }
 
-  private update(id: string, patch: unknown): ToolResult {
-    let parsed: unknown = patch
+  /** A new ranking, with `ranks` ranks when given (5 by default). */
+  private create(name: string, ranks: unknown): ToolResult {
+    const made = this.deps.ranking.create(name)
+    const project =
+      typeof ranks === 'number' ? this.deps.ranking.update(made.id, rankCountPatch(made, ranks)) : made
+    return { success: true, text: describe(project) }
+  }
+
+  /** Changes a ranking: the patch's fields, then the number of ranks when `ranks` is given. */
+  private update(id: string, patch: unknown, ranks: unknown): ToolResult {
+    let parsed: unknown = patch ?? {}
     if (typeof patch === 'string') {
       try {
         parsed = JSON.parse(patch)
@@ -529,7 +543,27 @@ export class RankingAgentTools {
         return { success: false, text: 'patch must be JSON (an object with the fields to change).' }
       }
     }
-    return { success: true, text: describe(this.deps.ranking.update(id, parsed)) }
+    let project = this.deps.ranking.update(id, parsed)
+    if (typeof ranks === 'number')
+      project = this.deps.ranking.update(id, rankCountPatch(project, ranks))
+    return { success: true, text: describe(project) }
+  }
+
+  /** A sound file the user dropped into the chat (or one in the working folder), into their
+   *  sound library. */
+  private async addSound(sessionId: string, file: string, name: unknown): Promise<ToolResult> {
+    const real = this.workingFile(sessionId, file)
+    if (typeof real !== 'string') return real
+    const fileName = path.basename(real)
+    const given = typeof name === 'string' && name.trim() ? name.trim() : ''
+    const sound = await this.deps.sounds.add(
+      await this.toTmp(real, fileName),
+      given ? `${given}${path.extname(fileName)}` : fileName,
+    )
+    return {
+      success: true,
+      text: `Added "${sound.name}" to the sound library (soundId ${sound.id}, ${sound.durationSec} s). It can play now: as the reveal sound, the music bed or an action sound.`,
+    }
   }
 
   /** A file inside the chat's working folder, as a real path, or why it can't be used. */
@@ -548,6 +582,12 @@ export class RankingAgentTools {
       }
     return real
   }
+}
+
+/** The patch that gives a ranking `count` ranks (`withRankCount`): its ranks and reveal order. */
+function rankCountPatch(project: RankingProject, count: number): Record<string, unknown> {
+  const next = withRankCount(project, count)
+  return { items: next.items, reveal: next.reveal, stickers: next.stickers ?? [] }
 }
 
 /**

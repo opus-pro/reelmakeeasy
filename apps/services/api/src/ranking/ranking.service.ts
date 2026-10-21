@@ -36,7 +36,14 @@ import type {
 import type { SoundLibraryService } from '../sound-library/sound-library.service'
 
 import { applyRankingPatch } from './ranking-patch'
-import { probeClip, type RenderPart, renderRanking, type SoundFile, type StickerLayer } from './ranking-render'
+import {
+  photoToClip,
+  probeClip,
+  type RenderPart,
+  renderRanking,
+  type SoundFile,
+  type StickerLayer,
+} from './ranking-render'
 
 const logger = new Logger('RankingService')
 
@@ -44,6 +51,8 @@ const logger = new Logger('RankingService')
 const STORE_FOLDER = 'ranking'
 const PROJECT_ID = /^[\da-f-]{36}$/
 const CLIP_EXT = new Set(['.m4v', '.mkv', '.mov', '.mp4', '.webm'])
+/** Photos a rank can take: each becomes a short clip with a slow zoom. */
+const PHOTO_EXT = new Set(['.jpeg', '.jpg', '.png', '.webp'])
 const STICKER_EXT = new Set(['.gif', '.jpeg', '.jpg', '.png', '.webp'])
 /** The title band height the studio may send (it covers the top of the frame). */
 const BAND_MAX = 960
@@ -115,7 +124,8 @@ export class RankingService {
 
   /**
    * Puts an uploaded video under a rank: the upload (`store://tmp/...`, from a signed upload) is
-   * copied into the project's clips, probed, and set to play its first seconds.
+   * copied into the project's clips, probed, and set to play its first seconds. A photo becomes a
+   * clip first (`photoToClip`).
    */
   async setClip(id: string, itemId: string, upload: unknown, name: unknown): Promise<RankingProject> {
     const project = this.get(id)
@@ -131,11 +141,14 @@ export class RankingService {
     if (!keyIsUnder(key, 'tmp')) throw new RankingInputError('Upload the clip first.')
     const fileName = typeof name === 'string' && name.trim() ? path.basename(name.trim()).slice(0, 120) : 'clip.mp4'
     const ext = path.extname(fileName).toLowerCase()
-    if (!CLIP_EXT.has(ext)) throw new RankingInputError('Use a video: mp4, mov, webm, mkv or m4v.')
-    const target = storeUri(`${STORE_FOLDER}/${id}/clips/${item.id}-${Date.now()}${ext}`)
-    await fileStore.file(source).copyTo(target)
+    const photo = PHOTO_EXT.has(ext)
+    if (!CLIP_EXT.has(ext) && !photo)
+      throw new RankingInputError('Use a video (mp4, mov, webm, mkv or m4v) or a photo (jpg, png or webp).')
+    const target = storeUri(`${STORE_FOLDER}/${id}/clips/${item.id}-${Date.now()}${photo ? '.mp4' : ext}`)
     let probe: { durationSec: number }
     try {
+      if (photo) await this.photoClip(filePath(source), target)
+      else await fileStore.file(source).copyTo(target)
       probe = await probeClip(filePath(target))
     } catch (error) {
       await fileStore.file(target).delete({ ignoreNotFound: true })
@@ -156,6 +169,23 @@ export class RankingService {
     }
     this.write(next)
     return next
+  }
+
+  /** Makes a photo's clip (`photoToClip`) in a scratch folder and stores it at `target`. */
+  private async photoClip(photo: string, target: string): Promise<void> {
+    const scratch = fs.mkdtempSync(path.join(os.tmpdir(), 'ranking-photo-'))
+    try {
+      const out = path.join(scratch, 'clip.mp4')
+      try {
+        await photoToClip(photo, out)
+      } catch (error) {
+        logger.warn(`A photo clip failed: ${ensureError(error).message}`)
+        throw new Error("That photo can't be read: try a jpg or png.")
+      }
+      await fileStore.upload(out, target)
+    } finally {
+      fs.rmSync(scratch, { force: true, recursive: true })
+    }
   }
 
   /**

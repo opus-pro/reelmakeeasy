@@ -97,6 +97,27 @@ export function emptyItems(count: number): RankingItem[] {
 }
 
 /** A new project: the trend's title, five empty ranks, revealed as a countdown. */
+/**
+ * The project with `count` ranks (clamped to 2-10): empty ranks added at the bottom, or the last
+ * ones dropped; the reveal order follows (a custom one goes back to countdown).
+ */
+export function withRankCount(project: RankingProject, count: number): RankingProject {
+  const n = Math.min(RANKING_MAX_ITEMS, Math.max(RANKING_MIN_ITEMS, Math.round(count)))
+  if (n === project.items.length) return project
+  const kept = project.items.slice(0, n)
+  const items = [...kept, ...emptyItems(n - kept.length)].map((item, i) => ({ ...item, rank: i + 1 }))
+  const mode = project.reveal.mode === 'custom' ? 'countdown' : project.reveal.mode
+  return {
+    ...project,
+    items,
+    reveal: { ...project.reveal, mode, order: revealOrder(mode, n) },
+    // A dropped rank's stickers go with it.
+    ...(project.stickers
+      ? { stickers: project.stickers.filter((s) => s.rank === null || s.rank <= n) }
+      : {}),
+  }
+}
+
 export function newRankingProject(id: string, now: string, name = 'Untitled ranking'): RankingProject {
   const items = emptyItems(RANKING_DEFAULT_ITEMS)
   return {

@@ -19,12 +19,25 @@ function tools() {
     })),
     update: jest.fn((_id: string, patch: unknown) => ({ ...project, ...(patch as object) })),
   }
+  const sounds = {
+    add: jest.fn(async (_upload: unknown, name: unknown) => ({
+      addedAt: 'now',
+      durationSec: 1.2,
+      favorite: false,
+      id: 'snd-1',
+      lastUsedAt: null,
+      name: String(name).replace(/\.[^.]+$/, ''),
+      url: 'store://sound-library/snd-1.mp3',
+      uses: 0,
+    })),
+    list: () => [],
+  }
   const t = new RankingAgentTools({
     ranking: ranking as never,
-    sounds: { list: () => [] },
+    sounds,
     workingDir: () => work,
   })
-  return { project, ranking, t, work }
+  return { project, ranking, sounds, t, work }
 }
 
 describe('RankingAgentTools', () => {
@@ -35,6 +48,41 @@ describe('RankingAgentTools', () => {
     expect(r.success).toBe(true)
     expect(r.text).toContain('Before export: Add a clip to rank')
     expect((await t.call('s', 'ranking_update', { id: 'p', patch: '{nope' })).success).toBe(false)
+  })
+
+  it('sets how many ranks a ranking has, on its own or with a patch', async () => {
+    const { ranking, t } = tools()
+    await t.call('s', 'ranking_update', { id: 'p', ranks: 3 })
+    const patch = ranking.update.mock.calls.at(-1)?.[1] as {
+      items: { rank: number }[]
+      reveal: { order: number[] }
+    }
+    expect(patch.items.map((i) => i.rank)).toEqual([1, 2, 3])
+    expect(patch.reveal.order).toEqual([3, 2, 1])
+    ranking.update.mockClear()
+    await t.call('s', 'ranking_create', { name: 'Dogs', ranks: 4 })
+    expect(ranking.create).toHaveBeenCalledWith('Dogs')
+    expect((ranking.update.mock.calls[0]?.[1] as { items: unknown[] }).items).toHaveLength(4)
+  })
+
+  it('adds a sound the user dropped into the chat to the library', async () => {
+    const { sounds, t, work } = tools()
+    fs.mkdirSync(path.join(work, 'attachments'))
+    fs.writeFileSync(path.join(work, 'attachments', 'boom.mp3'), 'mp3')
+    jest
+      .spyOn(require('@reelmakeeasy/common/storage/file-store').fileStore, 'upload')
+      .mockResolvedValue(undefined)
+    const r = await t.call('s', 'ranking_add_sound', {
+      name: 'Vine boom',
+      path: 'attachments/boom.mp3',
+    })
+    expect(r.success).toBe(true)
+    expect(r.text).toContain('soundId snd-1')
+    expect(sounds.add).toHaveBeenCalledWith(
+      expect.stringMatching(/^store:\/\/tmp\/agent-ranking\//),
+      'Vine boom.mp3',
+    )
+    expect((await t.call('s', 'ranking_add_sound', { path: '/etc/hosts' })).success).toBe(false)
   })
 
   it('only takes clips from the chat’s working folder', async () => {
