@@ -6,7 +6,13 @@ import type {
 } from '@shared/types/api/ranking'
 
 import { isMovingSticker, type StickerPose } from './ranking-motion'
-import { RANKING_HEIGHT, RANKING_WIDTH, transitionOf, transitionText } from './ranking-project'
+import {
+  RANKING_HEIGHT,
+  RANKING_WIDTH,
+  slideLook,
+  transitionOf,
+  transitionText,
+} from './ranking-project'
 import { rankingFontFamily, rankMark } from './ranking-type'
 
 /**
@@ -346,22 +352,56 @@ export function drawRankingTransition(
   nextRank: number,
   base: RankingFonts = DEFAULT_RANKING_FONTS,
 ): void {
-  const fonts = projectFonts(project, base)
   const transition = transitionOf(project)
-  const text = transitionText(transition, nextRank)
+  const layout = slideTextLayout(ctx, project, nextRank, base)
   ctx.save()
   ctx.clearRect(0, 0, W, H)
   ctx.fillStyle = transition.background
   ctx.fillRect(0, 0, W, H)
   ctx.textAlign = 'center'
   ctx.textBaseline = 'middle'
-  let size = 150
-  ctx.font = fontOf(size, fonts.title, 900)
-  while (size > 48 && ctx.measureText(text).width > W - SIDE * 2) {
-    size -= 4
-    ctx.font = fontOf(size, fonts.title, 900)
-  }
-  if (text)
-    outlined(ctx, text, W / 2, H / 2, transition.textColor, project.style.outlineColor, size)
+  ctx.font = fontOf(layout.size, layout.family, 900)
+  if (layout.text)
+    outlined(
+      ctx,
+      layout.text,
+      layout.x * W,
+      layout.y * H,
+      transition.textColor,
+      project.style.outlineColor,
+      layout.size,
+    )
   ctx.restore()
+}
+
+/**
+ * Where a slide's text draws, and how big: its font, its size in frame pixels (its set size,
+ * shrunk until it fits the frame's width), its middle and its box as fractions of the frame.
+ * The slide is drawn from it, and the studio's handles use it to fit the text.
+ */
+export function slideTextLayout(
+  ctx: RankingCanvas,
+  project: RankingProject,
+  nextRank: number,
+  base: RankingFonts = DEFAULT_RANKING_FONTS,
+): { family: string; h: number; size: number; text: string; w: number; x: number; y: number } {
+  const transition = transitionOf(project)
+  const look = slideLook(transition)
+  // Its own font when it has one (Montserrat included, which the base fonts are); else the title's.
+  const family = transition.font
+    ? familyFor(transition.font, base.title)
+    : projectFonts(project, base).title
+  const text = transitionText(transition, nextRank)
+  let size = Math.round(look.size * H)
+  const smallest = Math.min(size, 48)
+  ctx.save()
+  ctx.font = fontOf(size, family, 900)
+  while (size > smallest && ctx.measureText(text).width > W - SIDE * 2) {
+    size -= 4
+    ctx.font = fontOf(size, family, 900)
+  }
+  // The outline adds about a tenth of the size on each side.
+  const width = ctx.measureText(text || ' ').width + size * 0.25
+  ctx.restore()
+  return { family, h: (size * 1.25) / H, size, text, w: width / W, x: look.x, y: look.y }
 }

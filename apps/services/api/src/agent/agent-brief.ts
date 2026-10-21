@@ -4,7 +4,12 @@ import {
   beatLoopModelOrder,
 } from '@reelmakeeasy/common/long-take/beat-loop-craft'
 import { type GenerationProvider, modelRegistry } from '@reelmakeeasy/llm/registry'
-import type { AgentHarnessName, AgentMode, AgentSession } from '@shared/types/api/agent'
+import type {
+  AgentHarnessName,
+  AgentMode,
+  AgentQuestion,
+  AgentSession,
+} from '@shared/types/api/agent'
 
 import {
   BEAT_LOOP_DEFAULT_LENGTH,
@@ -100,13 +105,14 @@ export const SOUNDS_GUIDE =
  */
 export const RANKING_EASY_STEPS = [
   '## Easy mode: one step at a time',
-  'The user picked Easy: they want a finished ranking short with as few decisions as possible. Walk them through these steps in this order. Each step is one short message (one to three sentences) and, where it says ask, one {ASK} question whose options are the answers (2-4, the recommended first with " (Recommended)"; the card also lets them type their own). Do the work between steps yourself, and say in one line what you did. Never ask two things at once and never skip a step, except where a step says when.',
-  '1. Topic. The first message asked what the ranking is about. From the answer, make the ranking (ranking_create, a short name) and give it a title in the trend\'s pattern ("Ranking the guiltiest dogs caught in the act", keywords coloured) with ranking_update, so the preview on the right shows it.',
+  'The user picked Easy: they want a finished ranking short with as few decisions as possible, picking rather than typing. Walk them through these steps in this order. Each step is one short message (one to three sentences) and, where it says ask, one {ASK} card whose options are the answers (2-4, the recommended first with " (Recommended)"; the card also lets them type their own). Every question in Easy is such a card: the question goes in the card, never as plain text in your message. Do the work between steps yourself, and say in one line what you did. Never ask two things at once and never skip a step, except where a step says when.',
+  '1. Topic. ReelMakeEasy asks what the ranking is about with its own card; its answer (or the user\'s first message) is the topic. From it, make the ranking (ranking_create, a short name) and give it a title in the trend\'s pattern ("Ranking the guiltiest dogs caught in the act", keywords coloured) with ranking_update, so the preview on the right shows it.',
   '2. Style. Ask whether they have a YouTube Short whose style they want to copy. Options: "Classic look (Recommended)", "Paste a YouTube link", and, for each saved style (ranking_style_list), "Use my style: <name>" (at most two). A link: analyse it, tell them the pattern in three or four lines, save it and apply it (ranking_style_save, ranking_apply_style). If it can\'t be downloaded, say so in one line and offer the video file through the paperclip, or the classic look. A saved style: apply it.',
   '3. Sounds. List the sounds the look uses (the reveal sound at each new rank, an action sound on each funny moment, an optional music bed) and which are already in their library. When some are missing, tell them where to get them and how (see the sound rules above), then ask: "I added them" or "Skip for now (Recommended if you want to see it first)". Skip this step when the library already has a reveal sound and an action sound.',
   '4. Ranks. Ask how many ranks: "5 (Recommended)", "4", "3" (they can type another number, up to 10). Set it with ranking_update ranks.',
   '5. Clips. Ask: "Make them with AI (Recommended)", the quickest way to see the finished short, or "Upload my photos or clips" (one per rank). Upload: ask them to attach them through the paperclip, best first or worst first (say which), then put each under its rank with ranking_add_clip; a photo becomes a short clip with a slow zoom. AI: write one prompt per rank, from the last rank up to #1, show them as a numbered list, then ask the resolution exactly as the skill says (the answers are the resolutions with their totals, 1080p recommended), and make them with ranking_generate_clips.',
-  '6. Build it. Do the rest yourself, following the skill: a short funny label with an emoji per rank, each clip trimmed to its action (ranking_find_moments), the reveal sound and an action sound on each action from their library, the countdown reveal. Then say it is ready in the preview and ask: "Export the video (Recommended)" or "Change something". Export with ranking_export and say where it is. When the clips are AI-made, remind them to label it as AI-generated when they post it. After that, help with whatever they ask, as in Advanced.',
+  '6. Build it. Do the rest yourself, following the skill: a short funny label with an emoji per rank, each clip trimmed to its action (ranking_find_moments), the reveal sound and an action sound on each action from their library, the countdown reveal. Then say it is ready in the preview and ask: "Export the video (Recommended)" or "Change something". Export with ranking_export and say where it is. When the clips are AI-made, remind them to label it as AI-generated when they post it.',
+  '7. What next. After the export, ask: "Make another ranking", "Change something" or "I\'m done". Another: start again at step 1 with a new topic (ask it with {ASK}, a few ideas as its options). Change something: ask what, with the likely changes as options (a label, a clip, a sound, the title), then do it and export again. Done: say goodbye in one line. Keep asking with cards: Easy never ends in an open question.',
 ].join('\n')
 
 /** Developer instructions for a Ranking chat: the skill carries the format and the method. */
@@ -131,10 +137,54 @@ export function rankingKickoff(
     : `[ReelMakeEasy] The user opened ranking ${rankingId} from the studio to work on it here. Read the skill, then the ranking with ranking_get, and in one or two short sentences say what it has so far and ask what to do next.`
   const first = easy
     ? request
-      ? `[ReelMakeEasy] The user chose Ranking, Easy, and wrote what their ranking is about (below). Read the skill, then do step 1 with it (make the ranking and title it) and go on to step 2.\n\n${request}`
-      : '[ReelMakeEasy] The user chose Ranking, Easy. Read the skill. Then, in one short sentence, ask what their ranking is about, with two example topics (like "guiltiest dogs caught in the act"); say you will take it from there, a question at a time. Nothing else yet.'
+      ? `[ReelMakeEasy] The user chose Ranking, Easy, and picked or wrote what their ranking is about (below). Read the skill, then do step 1 with it (make the ranking and title it) and go on to step 2, asking with {ASK}.\n\n${request}`
+      : '[ReelMakeEasy] The user chose Ranking, Easy. Read the skill. Then ask what their ranking is about with {ASK}: four topic ideas as its options (it lets them type their own). Nothing else yet.'
     : "[ReelMakeEasy] The user chose Ranking. Read the skill. Then in two short sentences: ask what the ranking is about, and say they can attach their clips, have you make the clips with AI, or paste a YouTube Short whose style they'd like to copy."
   return fillToolNames(rankingId ? opened : first, harness)
+}
+
+/** The id of the one question on an Easy ranking's first card (`RANKING_TOPIC_QUESTION_PREFIX`). */
+export const RANKING_TOPIC_ID = 'topic'
+
+/**
+ * Topics the first card offers. Each works with the user's own clips or with AI ones, whose
+ * prompts avoid water and fast motion: slow, readable actions.
+ */
+export const RANKING_TOPIC_IDEAS = [
+  'Guiltiest dogs caught in the act',
+  'Funniest cat fails',
+  'Sneakiest snack thieves',
+  'Worst parking jobs ever',
+  'Most dramatic toddler reactions',
+  'Grandparents trying new tech',
+  'Laziest animals at the zoo',
+  "Pets who saw something they shouldn't",
+]
+
+/** The topic the first card recommends: the trend's proven one (and the example ranking's). */
+export const RANKING_TOPIC_RECOMMENDED = 'Guiltiest dogs caught in the act'
+
+/**
+ * An Easy ranking's first card: what it's about. The recommended topic first (so there is
+ * always an obvious pick), then `count - 1` other ideas in a random order, or their own words.
+ */
+export function rankingTopicQuestion(count = 4, random: () => number = Math.random): AgentQuestion {
+  const others = RANKING_TOPIC_IDEAS.filter((idea) => idea !== RANKING_TOPIC_RECOMMENDED)
+    .map((idea) => ({ idea, order: random() }))
+    .toSorted((a, b) => a.order - b.order)
+    .slice(0, count - 1)
+    .map(({ idea }) => idea)
+  return {
+    header: 'Topic',
+    id: RANKING_TOPIC_ID,
+    isOther: true,
+    isSecret: false,
+    options: [
+      { description: '', label: `${RANKING_TOPIC_RECOMMENDED} (Recommended)` },
+      ...others.map((idea) => ({ description: '', label: idea })),
+    ],
+    question: "What's your ranking about? Pick one, or type your own.",
+  }
 }
 
 /** Developer instructions for an Easy (guided) Ranking chat: the Ranking brief, then its steps. */

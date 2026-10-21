@@ -49,6 +49,7 @@ function make(withClips: number[]): RankingProject {
 
 let latest: RankingProject
 let upload: (rank: number) => void = jest.fn()
+const opened = jest.fn()
 
 /** The preview as the studio holds it: a clip upload sets the clip and asks to jump to it. */
 function Host({ start }: { start: RankingProject }) {
@@ -66,9 +67,13 @@ function Host({ start }: { start: RankingProject }) {
     <RankingPreview
       focusRequest={focusRequest}
       fontsReady
+      onEditSlideLook={(look) =>
+        setProject((p) => ({ ...p, transition: { ...transitionOf(p), ...look } }))
+      }
       onEditSlideText={(nextRank, text) =>
         setProject((p) => ({ ...p, transition: withSlideText(transitionOf(p), nextRank, text) }))
       }
+      onOpenSlide={opened}
       project={project}
       sounds={[]}
     />
@@ -157,5 +162,22 @@ describe('editing a slide on the preview', () => {
     fireEvent.keyDown(input, { key: 'Enter', keyCode: 229 })
     expect(editor(1)).not.toBeNull()
     expect(latest.transition).not.toHaveProperty('texts')
+  })
+
+  it('opens its settings on a click, and arrow keys nudge it (every slide moves with it)', () => {
+    opened.mockClear()
+    render(<Host start={make([2, 1])} />)
+    goTo(4)
+    const box = screen.getByRole('button', { name: 'Change the text of the slide before #1' })
+    act(() => box.focus())
+    fireEvent.keyDown(box, { key: 'ArrowRight' })
+    expect(latest.transition?.textX).toBe(0.51)
+    fireEvent.keyDown(box, { key: 'ArrowUp', shiftKey: true })
+    expect(latest.transition?.textY).toBe(0.45)
+    // The arrows moved the text, not the playhead.
+    expect(at()).toBe(4)
+    fireEvent.click(box)
+    expect(opened).toHaveBeenCalledTimes(1)
+    expect(editor(1)).not.toBeNull()
   })
 })

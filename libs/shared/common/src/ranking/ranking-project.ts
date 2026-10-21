@@ -70,6 +70,30 @@ export const DEFAULT_RANKING_SOUNDS: RankingSounds = {
 export const RANKING_TRANSITION_MIN_SEC = 0.5
 export const RANKING_TRANSITION_MAX_SEC = 3
 export const RANKING_TRANSITION_TEXT_MAX = 40
+/** A slide text's size, as a share of the frame's height: the default (150 px of 1920), and the
+ *  range it may be set in. */
+export const RANKING_SLIDE_TEXT_SIZE = { default: 150 / 1920, max: 0.2, min: 0.03 }
+
+/**
+ * A slide text size to keep, to 0.001 as saved: in the allowed range, and no bigger than the text
+ * can be drawn (`fitMax`, rounded down so the size kept still fits). The range wins: a text too
+ * wide even at the smallest size is drawn shrunk anyway, and a size below the range is refused
+ * when the ranking is saved.
+ */
+export function clampSlideTextSize(size: number, fitMax = RANKING_SLIDE_TEXT_SIZE.max): number {
+  const fit = Math.floor(fitMax * 1000 + 1e-9) / 1000
+  const rounded = Math.round(size * 1000) / 1000
+  return Math.max(RANKING_SLIDE_TEXT_SIZE.min, Math.min(RANKING_SLIDE_TEXT_SIZE.max, fit, rounded))
+}
+
+/** Where a slide's text goes and how big, with the defaults for a transition that doesn't say. */
+export function slideLook(transition: RankingTransition): { size: number; x: number; y: number } {
+  return {
+    size: transition.textSize ?? RANKING_SLIDE_TEXT_SIZE.default,
+    x: transition.textX ?? 0.5,
+    y: transition.textY ?? 0.5,
+  }
+}
 
 export const DEFAULT_RANKING_TRANSITION: RankingTransition = {
   background: '#000000',

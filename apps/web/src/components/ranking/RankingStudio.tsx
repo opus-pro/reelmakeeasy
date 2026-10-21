@@ -278,6 +278,9 @@ export function RankingStudio({
             dockWidth="860px"
             focusRequest={focusRequest}
             fontsReady={fontsReady}
+            onEditSlideLook={(look) =>
+              change({ ...project, transition: { ...transitionOf(project), ...look } })
+            }
             onEditSlideText={(nextRank, text, confirmed) => {
               change({
                 ...project,
@@ -288,6 +291,7 @@ export function RankingStudio({
               if (confirmed) setTab('effects')
             }}
             onEditSticker={editSticker}
+            onOpenSlide={() => setTab('effects')}
             onRankOnScreen={setFocusRank}
             onRemoveSticker={(stickerId) => {
               change({

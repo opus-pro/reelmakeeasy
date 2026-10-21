@@ -135,9 +135,11 @@ export type RankingTransition = {
   background: string
   durationSec: number
   enabled: boolean
+  /** The slide text's font (missing: the title's). */
+  font?: RankingFontId
   /** Plays as the slide starts. */
   sound: null | string
-  /** Shown big and centred on every slide; `{rank}` is the next rank's number. */
+  /** Shown big on every slide; `{rank}` is the next rank's number. */
   text: string
   textColor: string
   /**
@@ -145,6 +147,12 @@ export type RankingTransition = {
    * `text` (`{rank}` works here too; empty: a blank slide). Missing: every slide shows `text`.
    */
   texts?: Record<string, string>
+  /** The slide text's size, as a share of the frame's height (missing: 0.078); text too wide
+   *  for the frame shrinks to fit. */
+  textSize?: number
+  /** Where the slide text's middle is, as fractions of the frame (missing: 0.5, the middle). */
+  textX?: number
+  textY?: number
 }
 
 export type RankingProject = {

@@ -70,6 +70,7 @@ import {
   ModeAlreadyChosenError,
   ModeNotChattableError,
   NotResumableError,
+  PickTopicFirstError,
   QuestionNotOpenError,
   ShuttingDownError,
   UnknownAttachmentError,
@@ -448,6 +449,8 @@ export class AgentController {
     } catch (error) {
       if (error instanceof UnknownAttachmentError) throw new BadRequestException(error.message)
       if (error instanceof AgentSessionBusyError) throw new ConflictException(error.message)
+      // Files alone while an Easy ranking's topic card waits: pick the topic first.
+      if (error instanceof PickTopicFirstError) throw new ConflictException(error.message)
       // FlowActiveError's message asks the user to answer the autonomous cards instead.
       if (error instanceof FlowActiveError) throw new ConflictException(error.message)
       // A finished autonomous session: its message says to start a new session.

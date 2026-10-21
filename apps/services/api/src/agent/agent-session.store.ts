@@ -38,7 +38,8 @@ export class AgentSessionStore {
     fs.mkdirSync(root, { recursive: true })
   }
 
-  append(id: string, event: AgentUiEvent): Stored {
+  /** `touch: false`: housekeeping (a restart's), not activity: the chat keeps its place. */
+  append(id: string, event: AgentUiEvent, opts: { touch?: boolean } = {}): Stored {
     assertSessionId(id)
     const next = this.lastId(id) + 1
     this.lastIds.set(id, next)
@@ -49,7 +50,7 @@ export class AgentSessionStore {
       // A `session` event is a status change (often a restart's reconciliation marking a
       // stale session `stopped`), not activity on its own: real activity always comes with
       // some other persisted event too.
-      if (event.type !== 'session') this.touch(id)
+      if (event.type !== 'session' && opts.touch !== false) this.touch(id)
     }
     return stored
   }

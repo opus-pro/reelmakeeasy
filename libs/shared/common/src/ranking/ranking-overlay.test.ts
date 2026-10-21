@@ -1,5 +1,10 @@
-import { drawRankingOverlay, type RankingCanvas } from './ranking-overlay'
-import { newRankingProject } from './ranking-project'
+import {
+  drawRankingOverlay,
+  drawRankingTransition,
+  type RankingCanvas,
+  slideTextLayout,
+} from './ranking-overlay'
+import { DEFAULT_RANKING_TRANSITION, newRankingProject } from './ranking-project'
 
 /** A canvas that measures every character as 0.5 em and records what is written. */
 function fakeCanvas() {
@@ -94,5 +99,53 @@ describe('drawRankingOverlay', () => {
     }
     expect(drawn(1)).toEqual(['😂'])
     expect(drawn(3)).toEqual(['😂', 'NO WAY'])
+  })
+})
+
+describe('slide text', () => {
+  const slide = (over: Partial<typeof DEFAULT_RANKING_TRANSITION> = {}) => {
+    const p = newRankingProject('p', 'now')
+    p.transition = { ...DEFAULT_RANKING_TRANSITION, enabled: true, text: 'Next #{rank}', ...over }
+    return p
+  }
+
+  it('sits in the middle at its default size, in the title font', () => {
+    const { ctx } = fakeCanvas()
+    const layout = slideTextLayout(ctx, slide(), 3)
+    expect(layout).toMatchObject({ size: 150, text: 'Next #3', x: 0.5, y: 0.5 })
+    expect(layout.family).toContain('Montserrat')
+  })
+
+  it('draws where it was placed, at its size and in its font', () => {
+    const { ctx, texts } = fakeCanvas()
+    const p = slide({ font: 'dela', textSize: 0.05, textX: 0.25, textY: 0.8 })
+    drawRankingTransition(ctx, p, 2)
+    const drawn = texts.find((t) => t.text === 'Next #2')
+    expect(drawn).toMatchObject({ x: 0.25 * 1080, y: 0.8 * 1920 })
+    expect(drawn?.font).toContain(`${Math.round(0.05 * 1920)}px`)
+    expect(drawn?.font).toContain('RME dela')
+  })
+
+  it('draws in its own font even when that is Montserrat and the title has another', () => {
+    const { ctx } = fakeCanvas()
+    const p = slide({ font: 'montserrat' })
+    p.style = { ...p.style, titleFont: 'anton' }
+    expect(slideTextLayout(ctx, p, 1).family).not.toContain('RME anton')
+    // No font of its own: the title's.
+    expect(slideTextLayout(ctx, { ...p, transition: slide().transition }, 1).family).toContain(
+      'RME anton',
+    )
+  })
+
+  it('shrinks text too wide for the frame, and its box fits what it draws', () => {
+    const { ctx } = fakeCanvas()
+    const layout = slideTextLayout(
+      ctx,
+      slide({ text: 'A very long slide text that is too wide' }),
+      1,
+    )
+    expect(layout.size).toBeLessThan(150)
+    expect(layout.w).toBeLessThanOrEqual(1)
+    expect(layout.h).toBeCloseTo((layout.size * 1.25) / 1920)
   })
 })

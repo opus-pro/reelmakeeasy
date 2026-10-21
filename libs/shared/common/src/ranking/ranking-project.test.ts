@@ -1,6 +1,7 @@
 import type { RankingProject } from '@shared/types/api/ranking'
 
 import {
+  clampSlideTextSize,
   DEFAULT_RANKING_TRANSITION,
   hasOwnSlideText,
   isPermutation,
@@ -140,6 +141,28 @@ describe('rankingTimeline', () => {
     // Nothing to drop: the same object, so callers can tell.
     expect(pruneSlideTexts(t, 4)).toBe(t)
     expect(slideTextOf('  And   the\twinner… ')).toBe('And the winner…')
+  })
+})
+
+describe('clampSlideTextSize', () => {
+  it('keeps a size in range and no bigger than the text can be drawn', () => {
+    expect(clampSlideTextSize(0.1)).toBe(0.1)
+    expect(clampSlideTextSize(0.5)).toBe(0.2)
+    expect(clampSlideTextSize(0.01)).toBe(0.03)
+    expect(clampSlideTextSize(0.15, 0.08)).toBe(0.08)
+  })
+
+  it('keeps it to 0.001, never rounding up past what fits', () => {
+    expect(clampSlideTextSize(0.0619)).toBe(0.062)
+    // Fits at 120 px of 1920 (0.0625): 0.063 would be 121 px, too wide, and drawn shrunk.
+    expect(clampSlideTextSize(0.07, 120 / 1920)).toBe(0.062)
+    expect(clampSlideTextSize(0.07, 96 / 1920)).toBe(0.05)
+  })
+
+  it('never goes below the range, even for a text that only fits smaller (it is drawn shrunk)', () => {
+    // A long slide text fits only at 48 px of 1920 (0.025): growing or shrinking keeps 0.03.
+    expect(clampSlideTextSize(0.05, 0.025)).toBe(0.03)
+    expect(clampSlideTextSize(0.02, 0.025)).toBe(0.03)
   })
 })
 

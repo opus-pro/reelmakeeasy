@@ -4,14 +4,17 @@ import {
   DEFAULT_RANKING_SOUNDS,
   DEFAULT_RANKING_TRANSITION,
   hasOwnSlideText,
+  RANKING_SLIDE_TEXT_SIZE,
   RANKING_TRANSITION_MAX_SEC,
   RANKING_TRANSITION_MIN_SEC,
   RANKING_TRANSITION_TEXT_MAX,
+  slideLook,
   slideTextOf,
   transitionText,
   withSlideText,
 } from '@reelmakeeasy/common/ranking/ranking-project'
-import type { RankingSounds, RankingTransition } from '@shared/types/api/ranking'
+import { RANKING_FONT_FACES, RANKING_FONT_IDS } from '@reelmakeeasy/common/ranking/ranking-type'
+import type { RankingFontId, RankingSounds, RankingTransition } from '@shared/types/api/ranking'
 import type { LibrarySound } from '@shared/types/api/sound-library'
 import { cn } from '@shared/ui'
 import { useEffect, useRef, useState } from 'react'
@@ -22,6 +25,91 @@ const SECTION = 'flex flex-col gap-2.5'
 const HEADING = 'text-xs font-semibold text-secondary'
 const INPUT =
   'rounded-xs border-0 bg-white/[0.06] px-2.5 py-1 text-[13px] text-primary placeholder:text-white/40 focus:bg-white/10 focus:ring-1 focus:ring-white/30 focus:outline-none'
+
+/**
+ * How the slide text looks and where it sits, on every slide: its font, its size, and its place
+ * (also dragged on the preview; "Centre" puts it back in the middle).
+ */
+function SlideLook({
+  onChange,
+  value,
+}: {
+  onChange: (look: Pick<RankingTransition, 'font' | 'textSize' | 'textX' | 'textY'>) => void
+  value: RankingTransition
+}) {
+  const look = slideLook(value)
+  const { max, min } = RANKING_SLIDE_TEXT_SIZE
+  const percent = (v: number) => Math.round(v * 100)
+  const centred = look.x === 0.5 && look.y === 0.5
+  return (
+    <div className="flex flex-col gap-2 text-xs text-secondary">
+      <label className="flex items-center gap-2">
+        <span className="w-20">Font</span>
+        <select
+          aria-label="Slide font"
+          className={cn(INPUT, 'min-w-0 flex-1 pr-8')}
+          onChange={(e) => onChange({ font: (e.target.value || undefined) as RankingFontId })}
+          value={value.font ?? ''}
+        >
+          <option value="">Like the title</option>
+          {RANKING_FONT_IDS.map((id) => (
+            <option key={id} value={id}>
+              {RANKING_FONT_FACES[id].label}
+            </option>
+          ))}
+        </select>
+      </label>
+      <label className="flex items-center gap-2">
+        <span className="w-20">Size</span>
+        <input
+          aria-label="Slide text size"
+          className="min-w-0 flex-1 accent-white"
+          max={percent(max)}
+          min={percent(min)}
+          onChange={(e) => onChange({ textSize: Number(e.target.value) / 100 })}
+          type="range"
+          value={percent(look.size)}
+        />
+        <span className="w-8 text-right font-mono tabular-nums">{percent(look.size)}</span>
+      </label>
+      <div className="flex items-center gap-2">
+        <span className="w-20">Place</span>
+        <label className="flex min-w-0 flex-1 items-center gap-1.5">
+          X
+          <input
+            aria-label="Slide text across"
+            className="min-w-0 flex-1 accent-white"
+            max={100}
+            min={0}
+            onChange={(e) => onChange({ textX: Number(e.target.value) / 100 })}
+            type="range"
+            value={percent(look.x)}
+          />
+        </label>
+        <label className="flex min-w-0 flex-1 items-center gap-1.5">
+          Y
+          <input
+            aria-label="Slide text down"
+            className="min-w-0 flex-1 accent-white"
+            max={100}
+            min={0}
+            onChange={(e) => onChange({ textY: Number(e.target.value) / 100 })}
+            type="range"
+            value={percent(look.y)}
+          />
+        </label>
+        <button
+          className="shrink-0 rounded-xxs px-1.5 py-0.5 text-[11px] hover:bg-white/[0.06] hover:text-primary disabled:opacity-40"
+          disabled={centred}
+          onClick={() => onChange({ textX: 0.5, textY: 0.5 })}
+          type="button"
+        >
+          Centre
+        </button>
+      </div>
+    </div>
+  )
+}
 
 /**
  * One slide's text: the template's until changed; Reset puts it back. Typing goes into a draft
@@ -273,6 +361,7 @@ export function TransitionPanel({
               ))}
             </div>
           )}
+          <SlideLook onChange={(look) => onChange({ ...v, ...look })} value={v} />
           <div className="flex flex-wrap items-center gap-4 text-xs text-secondary">
             <label className="flex items-center gap-1.5">
               <input

@@ -264,6 +264,7 @@ function AgentWorkspace({
         <div className="min-h-0 min-w-0 flex-1">
           {isRankingMode(mode) ? (
             <RankingChatPanel
+              easy={mode === 'ranking_easy'}
               rankingId={agent.transcript.ranking?.id ?? agent.session?.rankingId ?? null}
               version={agent.transcript.ranking?.version ?? 0}
             />

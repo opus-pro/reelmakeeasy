@@ -63,8 +63,13 @@ describe('chat titles', () => {
     expect(chatTitleFrom('x'.repeat(80))).toBe(`${'x'.repeat(59)}…`)
   })
 
-  it('labels the modes Easy, Advanced and Ranking', () => {
-    expect(AGENT_MODE_LABEL).toEqual({ autonomous: 'Easy', free: 'Advanced', ranking: 'Ranking' })
+  it('labels the modes Easy, Advanced, Ranking and Ranking (Easy)', () => {
+    expect(AGENT_MODE_LABEL).toEqual({
+      autonomous: 'Easy',
+      free: 'Advanced',
+      ranking: 'Ranking',
+      ranking_easy: 'Ranking (Easy)',
+    })
   })
 })
 

@@ -5,14 +5,18 @@ import {
   drawRankingOverlay,
   drawRankingTransition,
   projectFonts,
+  slideTextLayout,
   stickerBox,
 } from '@reelmakeeasy/common/ranking/ranking-overlay'
 import {
+  clampSlideTextSize,
   RANKING_HEIGHT,
+  RANKING_SLIDE_TEXT_SIZE,
   RANKING_TRANSITION_TEXT_MAX,
   RANKING_WIDTH,
   rankingTimeline,
   type RankingTimelinePart,
+  slideLook,
   slideTextOf,
   soundsOf,
   transitionOf,
@@ -53,11 +57,15 @@ export type RankingPreviewProps = {
   focusRequest?: null | RankFocusRequest
   /** Redraw once the fonts arrive. */
   fontsReady: boolean
+  /** The slide text was moved or resized on the stage (its place and size, for every slide). */
+  onEditSlideLook?: (patch: Pick<RankingTransition, 'textSize' | 'textX' | 'textY'>) => void
   /** A slide's text was changed on the stage (null: back to the text every slide shows);
    *  `confirmed` when the user said so (Enter, the reset), not just by clicking elsewhere. */
   onEditSlideText?: (nextRank: number, text: null | string, confirmed: boolean) => void
   /** A sticker was moved, resized or turned on the stage (or nudged with the arrow keys). */
   onEditSticker?: (id: string, patch: Partial<RankingSticker>) => void
+  /** A slide was clicked or dragged on the stage: show its settings. */
+  onOpenSlide?: (nextRank: number) => void
   /** The rank on screen changed (the editor follows it). */
   onRankOnScreen?: (rank: number) => void
   /** The selected sticker was deleted from the stage (Delete key). */
@@ -87,11 +95,13 @@ export function RankingPreview({
   focusRequest,
   dockWidth = '430px',
   fontsReady,
+  onEditSlideLook,
   onEditSlideText,
   onEditSticker,
   onRankOnScreen,
   onRemoveSticker,
   onSelectSticker,
+  onOpenSlide,
   onSlideOnScreen,
   project,
   selectedSticker,
@@ -459,6 +469,19 @@ export function RankingPreview({
     )
     // fontsReady: measured again once the fonts are in.
   }, [fontsReady, images, project])
+  // The slide text's box on the frame (measured in its font), for its handles.
+  const slideLayout = useMemo(() => {
+    const ctx = canvasRef.current?.getContext('2d')
+    if (!ctx || part?.kind !== 'transition') return null
+    const layout = slideTextLayout(ctx, project, part.nextRank, STUDIO_RANKING_FONTS)
+    // The largest size this text can be drawn at (wider shrinks to fit): resizing stops there.
+    const widest = { ...transitionOf(project), textSize: RANKING_SLIDE_TEXT_SIZE.max }
+    const fitMax =
+      slideTextLayout(ctx, { ...project, transition: widest }, part.nextRank, STUDIO_RANKING_FONTS)
+        .size / RANKING_HEIGHT
+    return { ...layout, fitMax }
+    // fontsReady: measured again once the fonts are in.
+  }, [fontsReady, part, project])
   const editing = !!onEditSticker
   const selected = editing ? (selectedSticker ?? null) : null
 
@@ -575,11 +598,14 @@ export function RankingPreview({
         {!playing && onEditSlideText && part?.kind === 'transition' && (
           <SlideTextEditor
             key={part.nextRank}
+            layout={slideLayout}
             nextRank={part.nextRank}
             onEditing={(editing) => {
               editingSlide.current = editing ? part.nextRank : null
               setEditingSlideRank(editingSlide.current)
             }}
+            onLook={onEditSlideLook}
+            onOpen={() => onOpenSlide?.(part.nextRank)}
             onSave={(text, confirmed) => onEditSlideText(part.nextRank, text, confirmed)}
             transition={transitionOf(project)}
           />
@@ -922,6 +948,20 @@ function Timeline({
  * draws: press one to select it and drag to move it. The selected one is outlined in blue, with
  * corner handles to resize it and a handle above to turn it (Shift: in 15 degree steps).
  */
+type SlideDrag = {
+  /** The text's middle and the press, in stage pixels. */
+  cx: number
+  cy: number
+  mode: 'move' | 'scale'
+  /** Moved past a click's wobble: a drag, not a click. */
+  moved: boolean
+  px: number
+  py: number
+  size: number
+  x: number
+  y: number
+}
+
 function StickerHandles({
   boxes,
   dragging,
@@ -1054,27 +1094,40 @@ function StickerHandles({
 }
 
 /**
- * A transition slide's text, edited where it shows: a click on it opens a box over the slide.
- * Enter, or focus leaving the box, keeps it as this slide's own text; Escape leaves it as it
- * was. Typing back the text every slide shows makes this slide follow it again.
+ * A transition slide's text on the stage, in a box fitted to it: drag it to move it, a corner to
+ * resize it (its place and size are every slide's), arrow keys nudge it; a click (or Enter)
+ * opens its words for typing, over the slide. There, Enter or focus leaving keeps them as this
+ * slide's own; Escape leaves them as they were. Typing back the text every slide shows makes
+ * this slide follow it again.
  */
 function SlideTextEditor({
+  layout,
   nextRank,
   onEditing,
+  onLook,
+  onOpen,
   onSave,
   transition,
 }: {
+  /** Where the text is and its box (fractions of the frame), the size it draws at (frame
+   *  pixels) and the largest it can be (a share of the frame's height); null until measured. */
+  layout: null | { fitMax: number; h: number; size: number; w: number; x: number; y: number }
   nextRank: number
   /** The box opened (true) or closed (false). */
   onEditing: (editing: boolean) => void
+  /** Moved or resized; missing where the slide can't be changed (the chat's preview). */
+  onLook?: (patch: Pick<RankingTransition, 'textSize' | 'textX' | 'textY'>) => void
+  /** Clicked or dragged: its settings should show. */
+  onOpen: () => void
   onSave: (text: null | string, confirmed: boolean) => void
   transition: RankingTransition
 }) {
   const shown = transitionText(transition, nextRank)
   const template = transitionText(withSlideText(transition, nextRank, null), nextRank)
   const own = transition.texts?.[String(nextRank)] !== undefined
+  const look = slideLook(transition)
   const [draft, setDraft] = useState<null | string>(null)
-  // Closed from the keyboard: focus goes back to the slide's button, not to the page.
+  // Closed from the keyboard: focus goes back to the slide's box, not to the page.
   const opener = useRef<HTMLButtonElement>(null)
   const refocus = useRef(false)
   useEffect(() => {
@@ -1087,9 +1140,13 @@ function SlideTextEditor({
   const onEditingRef = useRef(onEditing)
   onEditingRef.current = onEditing
   useEffect(() => () => onEditingRef.current(false), [])
+  const drag = useRef<null | SlideDrag>(null)
+  // The press that just ended was a drag: its click isn't a click on the text.
+  const justDragged = useRef(false)
   const open = () => {
     setDraft(shown)
     onEditing(true)
+    onOpen()
   }
   const close = (keep: boolean, confirmed: boolean) => {
     if (draft === null) return
@@ -1098,31 +1155,150 @@ function SlideTextEditor({
     setDraft(null)
     onEditing(false)
   }
-  if (draft === null)
+  const start = (e: React.PointerEvent<HTMLElement>, mode: SlideDrag['mode']) => {
+    justDragged.current = false
+    if (!onLook || !layout || e.button !== 0) return
+    e.stopPropagation()
+    const stage = e.currentTarget.closest('[data-testid="ranking-stage"]')?.getBoundingClientRect()
+    if (!stage) return
+    opener.current?.setPointerCapture?.(e.pointerId)
+    drag.current = {
+      cx: stage.left + look.x * stage.width,
+      cy: stage.top + look.y * stage.height,
+      mode,
+      moved: false,
+      px: e.clientX,
+      py: e.clientY,
+      // From the size it draws at (a text too wide for the frame draws smaller than it is set).
+      size: layout.size / RANKING_HEIGHT,
+      x: look.x,
+      y: look.y,
+    }
+  }
+  const move = (e: React.PointerEvent<HTMLElement>) => {
+    const d = drag.current
+    const stage = e.currentTarget.closest('[data-testid="ranking-stage"]')?.getBoundingClientRect()
+    if (!d || !stage || !onLook) return
+    // Let go somewhere the box didn't hear about it: the drag is over.
+    if ((e.buttons & 1) === 0) {
+      drag.current = null
+      return
+    }
+    if (!d.moved && Math.hypot(e.clientX - d.px, e.clientY - d.py) < 4) return
+    if (!d.moved) onOpen()
+    d.moved = true
+    if (d.mode === 'move')
+      onLook({
+        textX: clamp01(round3(d.x + (e.clientX - d.px) / stage.width)),
+        textY: clamp01(round3(d.y + (e.clientY - d.py) / stage.height)),
+      })
+    else {
+      const from = Math.hypot(d.px - d.cx, d.py - d.cy) || 1
+      const to = Math.hypot(e.clientX - d.cx, e.clientY - d.cy)
+      // No bigger than it can be drawn (the size kept is the size seen), never below the range.
+      onLook({ textSize: clampSlideTextSize(d.size * (to / from), layout?.fitMax) })
+    }
+  }
+  if (draft === null) {
+    const box = layout ?? { h: 0.1, w: 0.8, x: look.x, y: look.y }
     return (
       <>
-        <button
-          aria-label={`Change the text of the slide before #${nextRank}`}
-          className="absolute inset-x-[6%] top-[38%] h-[24%] rounded-xs border border-dashed border-white/0 hover:border-white/50"
-          onClick={open}
-          ref={opener}
-          title="Click to change this slide's text"
-          type="button"
-        />
-        <span className="pointer-events-none absolute inset-x-0 top-[30%] flex justify-center">
+        <span
+          className="pointer-events-none absolute inset-x-0 flex justify-center"
+          style={{ top: `calc(${(box.y - box.h / 2) * 100}% - 34px)` }}
+        >
           <span className="rounded-full bg-black/60 px-2.5 py-1 text-[11px] text-white/80">
-            ✎ Click the text to change this slide{own ? ' · its own text' : ''}
+            {onLook
+              ? 'Click to change the text · drag to move · corners to resize'
+              : 'Click the text to change this slide'}
+            {own ? ' · its own text' : ''}
           </span>
         </span>
+        <button
+          aria-label={`Change the text of the slide before #${nextRank}`}
+          className={cn(
+            'group absolute rounded-[3px] focus-visible:outline-none',
+            onLook ? 'cursor-grab touch-none active:cursor-grabbing' : 'cursor-text',
+          )}
+          onClick={() => {
+            // A drag that just ended isn't a click on the text.
+            if (justDragged.current) {
+              justDragged.current = false
+              return
+            }
+            open()
+          }}
+          onKeyDown={(e) => {
+            if (!onLook || !e.key.startsWith('Arrow')) return
+            // Nudges it (Shift: further) instead of jumping to another rank.
+            e.preventDefault()
+            e.stopPropagation()
+            const step = e.shiftKey ? 0.05 : 0.01
+            const dx = e.key === 'ArrowLeft' ? -step : e.key === 'ArrowRight' ? step : 0
+            const dy = e.key === 'ArrowUp' ? -step : e.key === 'ArrowDown' ? step : 0
+            onLook({ textX: clamp01(round3(look.x + dx)), textY: clamp01(round3(look.y + dy)) })
+          }}
+          onLostPointerCapture={() => {
+            drag.current = null
+          }}
+          onPointerCancel={() => {
+            drag.current = null
+          }}
+          onPointerDown={(e) => start(e, 'move')}
+          onPointerMove={move}
+          onPointerUp={() => {
+            justDragged.current = !!drag.current?.moved
+            drag.current = null
+          }}
+          ref={opener}
+          style={{
+            height: `${box.h * 100}%`,
+            left: `${(box.x - box.w / 2) * 100}%`,
+            top: `${(box.y - box.h / 2) * 100}%`,
+            width: `${box.w * 100}%`,
+          }}
+          title="Click to change this slide's text"
+          type="button"
+        >
+          <span
+            className={cn(
+              'absolute -inset-1 rounded-[3px]',
+              onLook
+                ? 'border-[1.5px] border-[#00b2f8] group-focus-visible:border-2'
+                : 'border border-dashed border-transparent group-hover:border-white/50',
+            )}
+          />
+          {onLook &&
+            (
+              [
+                '-top-[9px] -left-[9px]',
+                '-top-[9px] -right-[9px]',
+                '-bottom-[9px] -left-[9px]',
+                '-bottom-[9px] -right-[9px]',
+              ] as const
+            ).map((corner) => (
+              <span
+                aria-hidden
+                className={cn(
+                  'absolute size-[9px] cursor-nwse-resize rounded-[2px] border-[1.5px] border-[#00b2f8] bg-white',
+                  corner,
+                )}
+                key={corner}
+                onPointerDown={(e) => start(e, 'scale')}
+              />
+            ))}
+        </button>
       </>
     )
+  }
   return (
     <div
-      className="absolute inset-x-[6%] top-[40%] flex flex-col items-center gap-2"
+      className="absolute inset-x-[6%] flex -translate-y-1/2 flex-col items-center gap-2"
       // Focus leaving the box (not moving to its own button) keeps what was typed.
       onBlur={(e) => {
         if (!e.currentTarget.contains(e.relatedTarget as Node | null)) close(true, false)
       }}
+      style={{ top: `${look.y * 100}%` }}
     >
       <input
         aria-label={`Text of the slide before #${nextRank}, on the preview`}
