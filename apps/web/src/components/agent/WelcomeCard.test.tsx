@@ -7,15 +7,23 @@ function option(label: RegExp) {
 }
 
 describe('WelcomeCard', () => {
-  it('offers three modes: Easy (Guided), Advanced (Free chat) and Ranking short', () => {
+  it('offers Easy (Guided) and Advanced (Free chat), then Ranking short below a line', () => {
     render(<WelcomeCard mode={null} onChoose={jest.fn(async () => true)} presetHarness="claude" />)
     const labels = screen.getAllByRole('button').map((b) => b.textContent ?? '')
     expect(labels).toHaveLength(3)
     expect(labels[0]).toMatch(/Easy \(Guided\)/)
     expect(labels[1]).toMatch(/Advanced \(Free chat\)/)
     expect(labels[2]).toMatch(/Ranking short/)
+    expect(screen.getByRole('separator')).toBeTruthy()
     // The old third mode (Medium · Guided) is gone; "Guided" now describes Easy.
     expect(screen.queryByText(/Medium/)).toBeNull()
+  })
+
+  it('chooses Ranking short like the other modes', async () => {
+    const onChoose = jest.fn(async () => true)
+    render(<WelcomeCard mode={null} onChoose={onChoose} presetHarness="claude" />)
+    fireEvent.click(option(/Ranking short/))
+    expect(onChoose).toHaveBeenCalledWith('ranking')
   })
 
   it('locks while the page starts Easy for the user (from the first-video prompt)', () => {

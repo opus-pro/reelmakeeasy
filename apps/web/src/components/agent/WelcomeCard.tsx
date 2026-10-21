@@ -22,12 +22,14 @@ export type WelcomeCardProps = {
   status?: AgentStatusResponse | null
 }
 
-const MODE_OPTIONS: {
+type ModeOption = {
   description: (agent: string) => string
   label: string
   mode: AgentMode
   recommended: boolean
-}[] = [
+}
+
+const MODE_OPTIONS: ModeOption[] = [
   {
     description: () =>
       'We find a fun fact, a news story or a famous figure. You pick one and a style, and we make the whole video.',
@@ -41,14 +43,16 @@ const MODE_OPTIONS: {
     mode: 'free',
     recommended: false,
   },
-  {
-    description: (agent) =>
-      `Build a ranking short with ${agent}: paste a YouTube Short to copy its style, attach your clips, and get the meme sounds on every action.`,
-    label: 'Ranking short',
-    mode: 'ranking',
-    recommended: false,
-  },
 ]
+
+/** Below the line: a different kind of video, made in the same chat. */
+const RANKING_OPTION: ModeOption = {
+  description: (agent) =>
+    `Build a ranking short with ${agent}: paste a YouTube Short to copy its style, attach your clips (or make them with AI), and get the meme sounds on every action.`,
+  label: 'Ranking short',
+  mode: 'ranking',
+  recommended: false,
+}
 
 /**
  * The first thing in every agent chat, rendered locally (no request needed): how
@@ -139,45 +143,83 @@ export function WelcomeCard({
         </div>
       )}
       <div className="flex flex-col gap-1.5">
-        {MODE_OPTIONS.map((option) => {
-          const chosen = mode === option.mode
-          const spinning = mode === null && pending === option.mode
-          return (
-            <button
-              className={cn(
-                'flex items-start gap-2 rounded-lg border px-3 py-2 text-left transition-colors',
-                'disabled:cursor-default',
-                // Every option has the same border, so the Recommended one never looks chosen;
-                // only its badge marks it.
-                'border-white/10',
-                chosen && 'border-white/40 bg-white/10',
-                mode !== null && !chosen && 'opacity-50',
-                !locked && 'hover:bg-white/5',
-              )}
-              disabled={locked}
-              key={option.mode}
-              onClick={() => void choose(option.mode)}
-              type="button"
-            >
-              <span className="flex min-w-0 flex-1 flex-col gap-0.5">
-                <span className="flex flex-wrap items-center gap-1.5">
-                  <span className="text-sm font-semibold text-primary">{option.label}</span>
-                  {option.recommended && (
-                    <span className="rounded bg-accent-green/15 px-1.5 py-0.5 text-[10px] font-medium text-accent-green">
-                      Recommended
-                    </span>
-                  )}
-                </span>
-                <span className="text-xs break-words text-secondary">
-                  {option.description(agent)}
-                </span>
-              </span>
-              {spinning && <Spinner className="mt-1 text-secondary" />}
-              {chosen && <span className="text-sm text-accent-green">✓</span>}
-            </button>
-          )
-        })}
+        {MODE_OPTIONS.map((option) => (
+          <ModeButton
+            agent={agent}
+            key={option.mode}
+            locked={locked}
+            mode={mode}
+            onChoose={(next) => void choose(next)}
+            option={option}
+            pending={pending}
+          />
+        ))}
+        <div className="my-1 flex items-center gap-2" role="separator">
+          <span className="h-px flex-1 bg-white/10" />
+          <span className="text-[10px] font-medium tracking-wider text-secondary uppercase">
+            or make
+          </span>
+          <span className="h-px flex-1 bg-white/10" />
+        </div>
+        <ModeButton
+          agent={agent}
+          locked={locked}
+          mode={mode}
+          onChoose={(next) => void choose(next)}
+          option={RANKING_OPTION}
+          pending={pending}
+        />
       </div>
     </div>
+  )
+}
+
+function ModeButton({
+  agent,
+  locked,
+  mode,
+  onChoose,
+  option,
+  pending,
+}: {
+  agent: string
+  locked: boolean
+  mode: AgentMode | null
+  onChoose: (mode: AgentMode) => void
+  option: ModeOption
+  pending: AgentMode | null
+}) {
+  const chosen = mode === option.mode
+  const spinning = mode === null && pending === option.mode
+  return (
+    <button
+      className={cn(
+        'flex items-start gap-2 rounded-lg border px-3 py-2 text-left transition-colors',
+        'disabled:cursor-default',
+        // Every option has the same border, so the Recommended one never looks chosen;
+        // only its badge marks it.
+        'border-white/10',
+        chosen && 'border-white/40 bg-white/10',
+        mode !== null && !chosen && 'opacity-50',
+        !locked && 'hover:bg-white/5',
+      )}
+      disabled={locked}
+      onClick={() => onChoose(option.mode)}
+      type="button"
+    >
+      <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+        <span className="flex flex-wrap items-center gap-1.5">
+          <span className="text-sm font-semibold text-primary">{option.label}</span>
+          {option.recommended && (
+            <span className="rounded bg-accent-green/15 px-1.5 py-0.5 text-[10px] font-medium text-accent-green">
+              Recommended
+            </span>
+          )}
+        </span>
+        <span className="text-xs break-words text-secondary">{option.description(agent)}</span>
+      </span>
+      {spinning && <Spinner className="mt-1 text-secondary" />}
+      {chosen && <span className="text-sm text-accent-green">✓</span>}
+    </button>
   )
 }

@@ -16,12 +16,20 @@ export const AI_CLIPS_MAX = 6
 export const AI_CLIP_STYLE =
   'Vertical smartphone video, handheld, natural light, realistic, candid viral clip, one continuous shot, no text, no captions, no watermark.'
 
-/** The model that makes clips from text (the user's chosen provider's), and its price per second. */
+/** Resolutions from best to worst. */
+const RESOLUTION_ORDER = ['1080p', '768p', '720p', '480p']
+
+/**
+ * The model that makes clips from text (the user's chosen provider's), at its best resolution,
+ * and its price per second. Ranking clips are always made at the top resolution (1080p on
+ * Hailuo): at lower ones, water, splashes and fast motion smear and give the clip away as AI.
+ */
 export function aiClipModel(): { key: string; resolution: VideoResolution; usdPerSecond: number } {
   const key = videoModelForRole('video.text')
   const caps = videoModelCapabilities(key, 'video.text')
-  const resolution = (caps.resolutions?.find((r) => r === '768p' || r === '720p') ?? caps.resolutions?.[0] ?? '720p') as VideoResolution
-  return { key, resolution, usdPerSecond: caps.usdPerSecond?.[resolution] ?? 0.05 }
+  const offered = caps.resolutions ?? []
+  const resolution = (RESOLUTION_ORDER.find((r) => offered.includes(r as never)) ?? offered[0] ?? '720p') as VideoResolution
+  return { key, resolution, usdPerSecond: caps.usdPerSecond?.[resolution] ?? 0.08 }
 }
 
 /** About what `count` clips of `seconds` cost on the current model. */

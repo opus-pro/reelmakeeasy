@@ -234,7 +234,7 @@ export const AGENT_TOOLS: Record<AgentToolName, DynamicToolSpec> = {
   },
   ranking_generate_clips: {
     description:
-      "Make AI video clips for a ranking short from text, one per rank, and put each under its rank (paid: about $0.20 per 5 s clip on Hailuo; all made at once, about 2-3 minutes). Each prompt is one short continuous scene with one clear funny action and its payoff (who, where, what happens, how it ends). ReelMakeEasy adds the vertical phone-video look. Show the user the prompts and the cost and ask before calling it. The reply gives each clip's contact sheet to look at.",
+      "Make AI video clips for a ranking short from text, one per rank, at 1080p, and put each under its rank (paid: about $0.40 per 5 s clip on Hailuo; all made at once, about 2-3 minutes). Each prompt is one short continuous scene with one clear funny action and its payoff (who, where, what happens, how it ends). Avoid water and fast motion (splashes, pouring, spins, sprints): AI smears them; prefer slow, readable actions and a still camera. ReelMakeEasy adds the vertical phone-video look. Show the user the prompts and the cost and ask before calling it. The reply gives each clip's contact sheet to look at.",
     inputSchema: {
       additionalProperties: false,
       properties: {
