@@ -529,13 +529,18 @@ export class RankingAgentTools {
   private create(name: string, ranks: unknown): ToolResult {
     const made = this.deps.ranking.create(name)
     const project =
-      typeof ranks === 'number' ? this.deps.ranking.update(made.id, rankCountPatch(made, ranks)) : made
+      typeof ranks === 'number'
+        ? this.deps.ranking.update(made.id, rankCountPatch(made, ranks))
+        : made
     return { success: true, text: describe(project) }
   }
 
-  /** Changes a ranking: the patch's fields, then the number of ranks when `ranks` is given. */
+  /**
+   * Changes a ranking: the number of ranks first when `ranks` is given, then the patch's fields,
+   * so a patch about ranks being added (their slide texts, their stickers) finds them there.
+   */
   private update(id: string, patch: unknown, ranks: unknown): ToolResult {
-    let parsed: unknown = patch ?? {}
+    let parsed: unknown = patch
     if (typeof patch === 'string') {
       try {
         parsed = JSON.parse(patch)
@@ -543,9 +548,11 @@ export class RankingAgentTools {
         return { success: false, text: 'patch must be JSON (an object with the fields to change).' }
       }
     }
-    let project = this.deps.ranking.update(id, parsed)
+    let project = this.deps.ranking.get(id)
     if (typeof ranks === 'number')
       project = this.deps.ranking.update(id, rankCountPatch(project, ranks))
+    if (parsed !== undefined || typeof ranks !== 'number')
+      project = this.deps.ranking.update(id, parsed ?? {})
     return { success: true, text: describe(project) }
   }
 
@@ -587,7 +594,14 @@ export class RankingAgentTools {
 /** The patch that gives a ranking `count` ranks (`withRankCount`): its ranks and reveal order. */
 function rankCountPatch(project: RankingProject, count: number): Record<string, unknown> {
   const next = withRankCount(project, count)
-  return { items: next.items, reveal: next.reveal, stickers: next.stickers ?? [] }
+  return {
+    items: next.items,
+    reveal: next.reveal,
+    stickers: next.stickers ?? [],
+    // No transition: saving drops the slide texts of ranks that are gone by itself, and a
+    // transition sent along would have its sound checked again (one since removed from the
+    // library would refuse the whole change).
+  }
 }
 
 /**

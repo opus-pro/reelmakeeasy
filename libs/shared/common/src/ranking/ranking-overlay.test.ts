@@ -53,7 +53,9 @@ describe('drawRankingOverlay', () => {
 
   it('shrinks a long title to fit the width', () => {
     const p = newRankingProject('p', 'now')
-    p.title.lines = [[{ color: '#fff', text: 'An extremely long ranking title that cannot fit at full size' }]]
+    p.title.lines = [
+      [{ color: '#fff', text: 'An extremely long ranking title that cannot fit at full size' }],
+    ]
     const { ctx } = fakeCanvas()
     const layout = drawRankingOverlay(ctx, p, [])
     expect(layout.titleSize).toBeLessThan(86)
@@ -62,8 +64,28 @@ describe('drawRankingOverlay', () => {
   it("draws the whole short's stickers always, and a rank's only while it plays", () => {
     const p = newRankingProject('p', 'now')
     p.stickers = [
-      { color: '#fff', id: 's1', kind: 'text', rank: null, rotation: 0, size: 0.05, text: '😂', x: 0.8, y: 0.2 },
-      { color: '#fff', id: 's2', kind: 'text', rank: 3, rotation: 10, size: 0.05, text: 'NO WAY', x: 0.5, y: 0.5 },
+      {
+        color: '#fff',
+        id: 's1',
+        kind: 'text',
+        rank: null,
+        rotation: 0,
+        size: 0.05,
+        text: '😂',
+        x: 0.8,
+        y: 0.2,
+      },
+      {
+        color: '#fff',
+        id: 's2',
+        kind: 'text',
+        rank: 3,
+        rotation: 10,
+        size: 0.05,
+        text: 'NO WAY',
+        x: 0.5,
+        y: 0.5,
+      },
     ]
     const drawn = (rank: null | number | undefined) => {
       const { ctx, texts } = fakeCanvas()

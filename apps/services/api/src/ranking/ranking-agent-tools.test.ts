@@ -2,12 +2,16 @@ import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
 
-import { newRankingProject } from '@reelmakeeasy/common/ranking/ranking-project'
+import {
+  DEFAULT_RANKING_TRANSITION,
+  newRankingProject,
+} from '@reelmakeeasy/common/ranking/ranking-project'
+import type { RankingProject } from '@shared/types/api/ranking'
 
 import { RankingAgentTools } from './ranking-agent-tools'
 
-function tools() {
-  const project = newRankingProject('11111111-1111-1111-1111-111111111111', 'now')
+function tools(over: Partial<RankingProject> = {}) {
+  const project = { ...newRankingProject('11111111-1111-1111-1111-111111111111', 'now'), ...over }
   const work = fs.mkdtempSync(path.join(os.tmpdir(), 'chat-'))
   const ranking = {
     create: jest.fn(() => project),
@@ -63,6 +67,18 @@ describe('RankingAgentTools', () => {
     await t.call('s', 'ranking_create', { name: 'Dogs', ranks: 4 })
     expect(ranking.create).toHaveBeenCalledWith('Dogs')
     expect((ranking.update.mock.calls[0]?.[1] as { items: unknown[] }).items).toHaveLength(4)
+  })
+
+  it('sets the rank count before the patch, so the patch can speak of ranks it adds', async () => {
+    const texts = { '2': 'Two', '5': 'Five' }
+    const { ranking, t } = tools({ transition: { ...DEFAULT_RANKING_TRANSITION, texts } })
+    await t.call('s', 'ranking_update', { id: 'p', patch: '{"name":"Seven"}', ranks: 7 })
+    const [first, second] = ranking.update.mock.calls.map((c) => c[1] as Record<string, unknown>)
+    expect((first?.['items'] as unknown[]).length).toBe(7)
+    expect(second).toEqual({ name: 'Seven' })
+    // The count's own patch leaves the transition to the save (it drops the texts of ranks
+    // that are gone, without checking the transition's sound again).
+    expect(first).not.toHaveProperty('transition')
   })
 
   it('adds a sound the user dropped into the chat to the library', async () => {

@@ -137,9 +137,14 @@ export type RankingTransition = {
   enabled: boolean
   /** Plays as the slide starts. */
   sound: null | string
-  /** Shown big and centred; `{rank}` is the next rank's number. */
+  /** Shown big and centred on every slide; `{rank}` is the next rank's number. */
   text: string
   textColor: string
+  /**
+   * A slide's own text, by the rank it leads into (`"3"`: the slide before #3), in place of
+   * `text` (`{rank}` works here too; empty: a blank slide). Missing: every slide shows `text`.
+   */
+  texts?: Record<string, string>
 }
 
 export type RankingProject = {
@@ -231,8 +236,9 @@ export type RankingTemplate = {
   style: RankingStyle
   /** The title's look: band colour and coloured words (its text is an example). */
   title: RankingTitle
-  /** The transition slide, without its sound (that is `sounds.transition`). */
-  transition: Omit<RankingTransition, 'sound'>
+  /** The transition slide, without its sound (that is `sounds.transition`) or one slide's own
+   *  text (those belong to a ranking). */
+  transition: Omit<RankingTransition, 'sound' | 'texts'>
   updatedAt: string
 }
 

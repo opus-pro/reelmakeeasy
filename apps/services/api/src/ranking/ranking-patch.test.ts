@@ -99,6 +99,23 @@ describe('applyRankingPatch', () => {
     ).toThrow(/0.5 to 3 s/)
   })
 
+  it("takes single slides' own texts, by the rank each leads into", () => {
+    const base = { background: '#000000', durationSec: 1, enabled: true, sound: null, text: 'Number {rank}', textColor: '#ffffff' }
+    const p = applyRankingPatch(withClip(), { transition: { ...base, texts: { '1': ' And  the winner… ', '3': '' } } }, NOW, () => true)
+    expect(p.transition?.texts).toEqual({ '1': ' And the winner… ', '3': '' })
+    expect(applyRankingPatch(withClip(), { transition: { ...base, texts: {} } }, NOW, () => true).transition).not.toHaveProperty('texts')
+    // Fewer ranks (an item removed in the studio): the slide into the dropped rank loses its text.
+    const two = applyRankingPatch(
+      { ...withClip(), transition: { ...base, texts: { '1': 'One', '5': 'Five' } } },
+      { items: withClip().items.slice(0, 2) },
+      NOW,
+      () => true,
+    )
+    expect(two.transition?.texts).toEqual({ '1': 'One' })
+    for (const texts of [{ '0': 'x' }, { '11': 'x' }, { '01': 'x' }, { two: 'x' }, { '2': 7 }, { '2': 'x'.repeat(41) }, ['x']])
+      expect(() => applyRankingPatch(withClip(), { transition: { ...base, texts } }, NOW, () => true)).toThrow()
+  })
+
   it('takes cues inside the clip, from the library only', () => {
     const p = withClip()
     const has = (id: string) => id === 'bruh'

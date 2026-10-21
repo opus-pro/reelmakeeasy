@@ -11,22 +11,40 @@ import type { RankingSticker, RankingStickerAnimation } from '@shared/types/api/
 export const STICKER_IN_SEC = 0.35
 export const STICKER_OUT_SEC = 0.3
 
-export const STICKER_INS: RankingStickerAnimation['in'][] = ['none', 'fade', 'pop', 'slide-left', 'slide-right', 'slide-up', 'slide-down']
+export const STICKER_INS: RankingStickerAnimation['in'][] = [
+  'none',
+  'fade',
+  'pop',
+  'slide-left',
+  'slide-right',
+  'slide-up',
+  'slide-down',
+]
 export const STICKER_LOOPS: RankingStickerAnimation['loop'][] = ['none', 'shake', 'pulse', 'float']
 export const STICKER_OUTS: RankingStickerAnimation['out'][] = ['none', 'fade', 'pop']
 
 const STILL: RankingStickerAnimation = { in: 'none', loop: 'none', out: 'none' }
 
-export const animationOf = (sticker: RankingSticker): RankingStickerAnimation => sticker.animation ?? STILL
+export const animationOf = (sticker: RankingSticker): RankingStickerAnimation =>
+  sticker.animation ?? STILL
 
 /** A sticker that moves or comes and goes: drawn per frame, not baked into the overlay. */
 export function isMovingSticker(sticker: RankingSticker): boolean {
   const a = animationOf(sticker)
-  return a.in !== 'none' || a.loop !== 'none' || a.out !== 'none' || (sticker.startSec ?? 0) > 0 || sticker.endSec != null
+  return (
+    a.in !== 'none' ||
+    a.loop !== 'none' ||
+    a.out !== 'none' ||
+    (sticker.startSec ?? 0) > 0 ||
+    sticker.endSec != null
+  )
 }
 
 /** When it shows on its clock, which ends at `clockEnd`; null when it never does. */
-export function stickerWindow(sticker: RankingSticker, clockEnd: number): null | { end: number; start: number } {
+export function stickerWindow(
+  sticker: RankingSticker,
+  clockEnd: number,
+): null | { end: number; start: number } {
   const start = Math.max(0, sticker.startSec ?? 0)
   const end = Math.min(clockEnd, sticker.endSec ?? clockEnd)
   return end > start ? { end, start } : null
@@ -48,7 +66,11 @@ const SLIDE_Y = 0.6
  * The sticker's pose `clockSec` into its clock (which ends at `clockEnd`); null while it isn't
  * shown.
  */
-export function stickerPose(sticker: RankingSticker, clockSec: number, clockEnd: number): null | StickerPose {
+export function stickerPose(
+  sticker: RankingSticker,
+  clockSec: number,
+  clockEnd: number,
+): null | StickerPose {
   const window = stickerWindow(sticker, clockEnd)
   if (!window || clockSec < window.start || clockSec >= window.end) return null
   const a = animationOf(sticker)
@@ -79,7 +101,11 @@ export function stickerPose(sticker: RankingSticker, clockSec: number, clockEnd:
  * showed, e.g. `(t-1.2)`), for a window `v` seconds long: its scale, and its offset in fractions
  * of the frame. Opacity is the caller's (FFmpeg's `fade` filter, linear like `stickerPose`).
  */
-export function stickerMotionExpr(sticker: RankingSticker, u: string, v: number): { dx: string; dy: string; scale: string } {
+export function stickerMotionExpr(
+  sticker: RankingSticker,
+  u: string,
+  v: number,
+): { dx: string; dy: string; scale: string } {
   const a = animationOf(sticker)
   const p = `clip(${u}/${STICKER_IN_SEC},0,1)`
   const q = `clip((${u}-${round(v - STICKER_OUT_SEC)})/${STICKER_OUT_SEC},0,1)`

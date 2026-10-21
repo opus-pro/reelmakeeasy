@@ -49,6 +49,11 @@ describe('RankingTemplateService', () => {
     expect(saved.transition).not.toHaveProperty('sound')
     expect(svc.list().map((s) => s.id)).toEqual([saved.id])
     expect(svc.get(saved.id).sounds.onAction[0]).toEqual({ description: 'short low boom', soundId: 'boom' })
+
+    // One ranking's own slide texts never become part of a style.
+    expect(
+      svc.create(input({ transition: { ...DEFAULT_RANKING_TRANSITION, texts: { '1': 'x' } } })).transition,
+    ).not.toHaveProperty('texts')
   })
 
   it('refuses sounds that are not in the library, and a style without a sound plan or name', () => {

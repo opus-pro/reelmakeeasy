@@ -32,7 +32,14 @@ export const RANKING_STICKERS_MAX = 20
 export const RANKING_STICKER_TEXT_MAX = 40
 
 /** Title colours the studio offers first (white, then the trend's red, cyan and yellow). */
-export const RANKING_TITLE_COLORS = ['#ffffff', '#ff2a2a', '#22e5ff', '#ffd400', '#3dff6e', '#ff5fd2']
+export const RANKING_TITLE_COLORS = [
+  '#ffffff',
+  '#ff2a2a',
+  '#22e5ff',
+  '#ffd400',
+  '#3dff6e',
+  '#ff5fd2',
+]
 
 export const DEFAULT_RANKING_STYLE: RankingStyle = {
   labelColor: '#ffffff',
@@ -54,7 +61,11 @@ export const DEFAULT_RANKING_TITLE: RankingTitle = {
   ],
 }
 
-export const DEFAULT_RANKING_SOUNDS: RankingSounds = { music: null, musicVolume: 0.35, reveal: null }
+export const DEFAULT_RANKING_SOUNDS: RankingSounds = {
+  music: null,
+  musicVolume: 0.35,
+  reveal: null,
+}
 
 export const RANKING_TRANSITION_MIN_SEC = 0.5
 export const RANKING_TRANSITION_MAX_SEC = 3
@@ -70,13 +81,49 @@ export const DEFAULT_RANKING_TRANSITION: RankingTransition = {
 }
 
 /** A project's sounds and transition, with defaults for one saved before they existed. */
-export const soundsOf = (project: RankingProject): RankingSounds => project.sounds ?? DEFAULT_RANKING_SOUNDS
+export const soundsOf = (project: RankingProject): RankingSounds =>
+  project.sounds ?? DEFAULT_RANKING_SOUNDS
 export const transitionOf = (project: RankingProject): RankingTransition =>
   project.transition ?? DEFAULT_RANKING_TRANSITION
 
-/** A transition slide's text for the rank it leads into. */
+/** A slide's text as it is saved and compared: runs of spaces as one, no spaces at the ends. */
+export const slideTextOf = (text: string): string => text.replace(/\s+/g, ' ').trim()
+
+/**
+ * A transition slide's text for the rank it leads into: its own text, else the template; spaced
+ * as it is saved (`slideTextOf`), so text being typed and text read back compare alike.
+ */
 export function transitionText(transition: RankingTransition, nextRank: number): string {
-  return transition.text.replaceAll('{rank}', String(nextRank)).trim()
+  const text = transition.texts?.[String(nextRank)] ?? transition.text
+  return slideTextOf(text.replaceAll('{rank}', String(nextRank)))
+}
+
+/**
+ * The transition without the own texts of slides into ranks past `count` (they went with their
+ * ranks). The same object when there were none, so callers can tell nothing changed.
+ */
+export function pruneSlideTexts(transition: RankingTransition, count: number): RankingTransition {
+  const gone = Object.keys(transition.texts ?? {}).filter((rank) => Number(rank) > count)
+  return gone.reduce((t, rank) => withSlideText(t, Number(rank), null), transition)
+}
+
+/** Whether the slide into `nextRank` has its own text (rather than the template's). */
+export const hasOwnSlideText = (transition: RankingTransition, nextRank: number): boolean =>
+  transition.texts?.[String(nextRank)] !== undefined
+
+/**
+ * The transition with the slide into `nextRank` showing `text`, or back on the template when
+ * `text` is null.
+ */
+export function withSlideText(
+  transition: RankingTransition,
+  nextRank: number,
+  text: null | string,
+): RankingTransition {
+  const { [String(nextRank)]: _old, ...rest } = transition.texts ?? {}
+  const texts = text === null ? rest : { ...rest, [String(nextRank)]: text }
+  const { texts: _texts, ...base } = transition
+  return Object.keys(texts).length ? { ...base, texts } : base
 }
 
 let counter = 0
@@ -101,24 +148,11 @@ export function emptyItems(count: number): RankingItem[] {
  * The project with `count` ranks (clamped to 2-10): empty ranks added at the bottom, or the last
  * ones dropped; the reveal order follows (a custom one goes back to countdown).
  */
-export function withRankCount(project: RankingProject, count: number): RankingProject {
-  const n = Math.min(RANKING_MAX_ITEMS, Math.max(RANKING_MIN_ITEMS, Math.round(count)))
-  if (n === project.items.length) return project
-  const kept = project.items.slice(0, n)
-  const items = [...kept, ...emptyItems(n - kept.length)].map((item, i) => ({ ...item, rank: i + 1 }))
-  const mode = project.reveal.mode === 'custom' ? 'countdown' : project.reveal.mode
-  return {
-    ...project,
-    items,
-    reveal: { ...project.reveal, mode, order: revealOrder(mode, n) },
-    // A dropped rank's stickers go with it.
-    ...(project.stickers
-      ? { stickers: project.stickers.filter((s) => s.rank === null || s.rank <= n) }
-      : {}),
-  }
-}
-
-export function newRankingProject(id: string, now: string, name = 'Untitled ranking'): RankingProject {
+export function newRankingProject(
+  id: string,
+  now: string,
+  name = 'Untitled ranking',
+): RankingProject {
   const items = emptyItems(RANKING_DEFAULT_ITEMS)
   return {
     createdAt: now,
@@ -131,6 +165,27 @@ export function newRankingProject(id: string, now: string, name = 'Untitled rank
     title: DEFAULT_RANKING_TITLE,
     transition: DEFAULT_RANKING_TRANSITION,
     updatedAt: now,
+  }
+}
+
+export function withRankCount(project: RankingProject, count: number): RankingProject {
+  const n = Math.min(RANKING_MAX_ITEMS, Math.max(RANKING_MIN_ITEMS, Math.round(count)))
+  if (n === project.items.length) return project
+  const kept = project.items.slice(0, n)
+  const items = [...kept, ...emptyItems(n - kept.length)].map((item, i) => ({
+    ...item,
+    rank: i + 1,
+  }))
+  const mode = project.reveal.mode === 'custom' ? 'countdown' : project.reveal.mode
+  return {
+    ...project,
+    items,
+    reveal: { ...project.reveal, mode, order: revealOrder(mode, n) },
+    // A dropped rank's stickers, and the text of the slide into it, go with it.
+    ...(project.stickers
+      ? { stickers: project.stickers.filter((s) => s.rank === null || s.rank <= n) }
+      : {}),
+    ...(project.transition ? { transition: pruneSlideTexts(project.transition, n) } : {}),
   }
 }
 
@@ -181,7 +236,12 @@ export function clipPlaySec(item: RankingItem): number {
 }
 
 /** One segment of the short: a rank's clip, and how many ranks are revealed while it plays. */
-export type RankingSegment = { item: RankingItem; revealed: number[]; startSec: number; durSec: number }
+export type RankingSegment = {
+  durSec: number
+  item: RankingItem
+  revealed: number[]
+  startSec: number
+}
 
 /**
  * The short as segments, in reveal order: each rank's clip plays while its label (and every
@@ -216,7 +276,12 @@ export function rankingTimeline(project: RankingProject): RankingTimelinePart[] 
   let at = 0
   for (const [i, segment] of rankingSegments(project).entries()) {
     if (i > 0 && transition.enabled) {
-      parts.push({ durSec: transition.durationSec, kind: 'transition', nextRank: segment.item.rank, startSec: at })
+      parts.push({
+        durSec: transition.durationSec,
+        kind: 'transition',
+        nextRank: segment.item.rank,
+        startSec: at,
+      })
       at += transition.durationSec
     }
     parts.push({ durSec: segment.durSec, kind: 'clip', segment, startSec: at })
@@ -237,10 +302,15 @@ export function rankingAdvice(project: RankingProject): string[] {
       `Rank ${long.map((i) => i.rank).join(', ')} play${long.length === 1 ? 's' : ''} over ${RANKING_RANK_TARGET_SEC.max} s: Shorts keep each rank to ${RANKING_RANK_TARGET_SEC.min}-${RANKING_RANK_TARGET_SEC.max} s.`,
     )
   const total = rankingTimeline(project).reduce((sum, part) => sum + part.durSec, 0)
-  if (total > RANKING_SHORT_MAX_SEC) advice.push(`The short is ${Math.round(total)} s: keep it under a minute.`)
-  const silent = project.items.filter((item) => item.clip && !item.cues?.length).map((item) => item.rank)
+  if (total > RANKING_SHORT_MAX_SEC)
+    advice.push(`The short is ${Math.round(total)} s: keep it under a minute.`)
+  const silent = project.items
+    .filter((item) => item.clip && !item.cues?.length)
+    .map((item) => item.rank)
   if (silent.length && silent.length < project.items.length)
-    advice.push(`Rank ${silent.join(', ')} ha${silent.length === 1 ? 's' : 've'} no sound on its action yet.`)
+    advice.push(
+      `Rank ${silent.join(', ')} ha${silent.length === 1 ? 's' : 've'} no sound on its action yet.`,
+    )
   return advice
 }
 

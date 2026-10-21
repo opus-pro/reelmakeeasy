@@ -481,8 +481,8 @@ export class AgentSessionService implements OnModuleDestroy {
     id: string,
     mode: AgentMode,
     picked?: AgentHarnessName,
-    /** A Ranking chat's first message, typed before the chat opened (the studio's "Ask the
-     *  agent"): shown as the user's, and the first turn does it. */
+    /** A Ranking chat's first message, typed before the chat opened (the studio's "Edit with
+     *  agent" box): shown as the user's, and the first turn does it. */
     request?: string,
   ): Promise<void> {
     const session = this.getSession(id)

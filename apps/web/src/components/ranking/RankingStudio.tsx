@@ -14,6 +14,8 @@ import {
   rankingAdvice,
   rankingProblems,
   rankingTimeline,
+  transitionOf,
+  withSlideText,
 } from '@reelmakeeasy/common/ranking/ranking-project'
 import { applyRankingTemplate } from '@reelmakeeasy/common/ranking/ranking-template'
 import type {
@@ -24,20 +26,22 @@ import type {
 } from '@shared/types/api/ranking'
 import { cn } from '@shared/ui'
 import { useAtomValue } from 'jotai'
-import { useRouter } from 'next/navigation'
 import { useCallback, useEffect, useRef, useState } from 'react'
 
 import { apiOriginAtom } from '@/atom/apiOrigin'
-import { agentChatUrl } from '@/components/agent/start-easy'
-import { Sparkle } from '@/components/icons/core'
 import { useSignedUpload } from '@/hooks/useSignedUpload'
 
+import { AgentFab } from './AgentFab'
 import { type RankingApi, useRankingApi } from './ranking-api'
 import { loadRankingFonts, STUDIO_RANKING_FONTS } from './ranking-fonts'
 import { RankingEditor, type RankingEditorTab } from './RankingEditor'
 import { type RankFocusRequest, RankingPreview } from './RankingPreview'
 import { loadStickerImage } from './sticker-images'
 import { useSoundLibrary } from './useSoundLibrary'
+
+/** The room (px) left of the preview the agent button needs to float there. With less, it sits
+ *  in the header. */
+const FAB_FLOAT_ROOM = 68
 
 /** Edits are saved this long after the last change. */
 const SAVE_DELAY_MS = 600
@@ -77,9 +81,28 @@ export function RankingStudio({
   const [tab, setTab] = useState<RankingEditorTab>('ranks')
   const [selectedSticker, setSelectedSticker] = useState<null | string>(null)
   const [ask, setAsk] = useState('')
-  const askRef = useRef<HTMLInputElement>(null)
+  const [askOpen, setAskOpen] = useState(false)
+  const [slideOnScreen, setSlideOnScreen] = useState<null | number>(null)
+  // The room left of the preview, in pixels: the agent button floats there when it fits, and
+  // moves into the header when it doesn't, so it never covers the short.
+  const stageArea = useRef<HTMLElement>(null)
+  const [room, setRoom] = useState(Number.POSITIVE_INFINITY)
+  const loaded = project !== null
+  useEffect(() => {
+    const area = stageArea.current
+    const frame = area?.querySelector('[data-testid="ranking-stage"]')
+    if (!area || !frame) return undefined
+    const measure = () =>
+      setRoom(frame.getBoundingClientRect().left - area.getBoundingClientRect().left)
+    const observer = new ResizeObserver(measure)
+    observer.observe(area)
+    observer.observe(frame)
+    measure()
+    return () => observer.disconnect()
+  }, [loaded])
+  const fabVariant = room >= FAB_FLOAT_ROOM ? 'float' : 'inline'
   const exporter = useExport(api, project)
-  // "/" puts the cursor in the ask bar (unless the user is typing somewhere).
+  // "/" opens the "Edit with agent" box (unless the user is typing somewhere).
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       const target = e.target as HTMLElement | null
@@ -87,7 +110,7 @@ export function RankingStudio({
         target?.isContentEditable || ['INPUT', 'SELECT', 'TEXTAREA'].includes(target?.tagName ?? '')
       if (e.key !== '/' || typing || e.metaKey || e.ctrlKey) return
       e.preventDefault()
-      askRef.current?.focus()
+      setAskOpen(true)
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
@@ -189,8 +212,8 @@ export function RankingStudio({
     })
   return (
     <div className="flex min-h-dvh w-full flex-col pt-14 md:pt-0 lg:h-dvh lg:min-h-0">
-      <header className="flex flex-wrap items-center gap-x-4 gap-y-2 border-b border-white/[0.08] px-4 py-2.5 lg:h-14 lg:flex-nowrap lg:py-0">
-        <div className="flex min-w-0 flex-1 items-center gap-1 lg:w-[430px] lg:flex-none">
+      <header className="relative z-30 flex flex-wrap items-center gap-x-4 gap-y-2 border-b border-white/[0.08] px-4 py-2.5 lg:h-14 lg:flex-nowrap lg:py-0">
+        <div className="flex min-w-0 flex-1 items-center gap-1">
           <button
             className="flex h-8 shrink-0 items-center gap-1 rounded-xs px-2 text-xs text-secondary hover:bg-white/[0.06] hover:text-primary"
             onClick={onBack}
@@ -214,8 +237,18 @@ export function RankingStudio({
             {saving === 'saving' ? 'Saving…' : saving === 'error' ? 'Not saved' : 'Saved'}
           </span>
         </div>
-        <AskAgent api={api} inputRef={askRef} onText={setAsk} project={project} text={ask} />
-        <div className="flex shrink-0 items-center gap-2 lg:ml-0">
+        <div className="flex max-w-full min-w-0 flex-wrap items-center justify-end gap-2 max-sm:w-full lg:ml-0 lg:shrink-0">
+          {fabVariant === 'inline' && (
+            <AgentFab
+              api={api}
+              onOpenChange={setAskOpen}
+              onText={setAsk}
+              open={askOpen}
+              project={project}
+              text={ask}
+              variant="inline"
+            />
+          )}
           <StylePicker
             onApply={(template) =>
               change({ ...project, ...applyRankingTemplate(project, template) })
@@ -226,11 +259,34 @@ export function RankingStudio({
       </header>
       {error && <p className="px-4 pt-2 text-sm text-amber-400">{error}</p>}
       <div className="flex min-h-0 flex-1 flex-col lg:grid lg:grid-cols-[minmax(0,1fr)_400px]">
-        <section className="flex min-h-0 flex-col items-center gap-2 bg-[#131313] px-4 pt-4 pb-3 lg:overflow-hidden">
+        <section
+          className="relative flex min-h-0 flex-col items-center gap-2 bg-[#131313] px-4 pt-4 pb-3 lg:overflow-hidden"
+          ref={stageArea}
+        >
+          {fabVariant !== 'inline' && (
+            <AgentFab
+              api={api}
+              onOpenChange={setAskOpen}
+              onText={setAsk}
+              open={askOpen}
+              project={project}
+              text={ask}
+              variant={fabVariant}
+            />
+          )}
           <RankingPreview
             dockWidth="860px"
             focusRequest={focusRequest}
             fontsReady={fontsReady}
+            onEditSlideText={(nextRank, text, confirmed) => {
+              change({
+                ...project,
+                transition: withSlideText(transitionOf(project), nextRank, text),
+              })
+              // Only when the user said "done": a save made by clicking something else in the
+              // editor must not swap that tab away under the click.
+              if (confirmed) setTab('effects')
+            }}
             onEditSticker={editSticker}
             onRankOnScreen={setFocusRank}
             onRemoveSticker={(stickerId) => {
@@ -245,6 +301,7 @@ export function RankingStudio({
               // Picking one on the preview opens it in Effects.
               if (stickerId) setTab('effects')
             }}
+            onSlideOnScreen={setSlideOnScreen}
             project={project}
             selectedSticker={selectedSticker}
             sounds={sounds}
@@ -255,6 +312,7 @@ export function RankingStudio({
         <aside className="flex min-h-[480px] flex-col border-white/[0.08] bg-panel lg:min-h-0 lg:border-l">
           <RankingEditor
             focusRank={focusRank}
+            focusSlide={slideOnScreen}
             onChange={change}
             onFocusRank={pickRank}
             onOpenLibrary={onOpenLibrary}
@@ -262,7 +320,7 @@ export function RankingStudio({
             onTab={setTab}
             onTryAsk={(example) => {
               setAsk(example)
-              askRef.current?.focus()
+              setAskOpen(true)
             }}
             onUploadClip={uploadClip}
             onUploadStickerImage={uploadStickerImage}
@@ -495,76 +553,5 @@ function ExportNotes({ exporter }: { exporter: Exporter }) {
       {status?.state === 'failed' && <p className="text-amber-400">{status.error}</p>}
       {error && <p className="text-amber-400">{error}</p>}
     </div>
-  )
-}
-
-/**
- * "Ask the agent": what the user types opens a Ranking chat on this ranking with it as the first
- * message, and the agent does it there (with nothing typed, the chat asks what to do next).
- */
-function AskAgent({
-  api,
-  inputRef,
-  onText,
-  project,
-  text,
-}: {
-  api: RankingApi
-  inputRef: React.RefObject<HTMLInputElement | null>
-  onText: (text: string) => void
-  project: RankingProject
-  text: string
-}) {
-  const router = useRouter()
-  const [opening, setOpening] = useState(false)
-  const [error, setError] = useState<null | string>(null)
-  const ask = () => {
-    if (opening) return
-    setOpening(true)
-    setError(null)
-    api
-      .openChat(project.id, project.name, text)
-      .then((sessionId) => router.push(agentChatUrl(sessionId)))
-      .catch((e: unknown) => {
-        setError(errorText(e))
-        setOpening(false)
-      })
-  }
-  return (
-    <form
-      className="order-last flex h-9 w-full items-center gap-2 rounded-sm bg-white/[0.06] pr-1 pl-3 ring-1 ring-white/[0.12] ring-inset focus-within:bg-white/[0.08] focus-within:shadow-[0_0_0_3px_rgba(190,247,55,0.12)] focus-within:ring-white/40 lg:order-none lg:mx-auto lg:max-w-[460px] lg:flex-1"
-      onSubmit={(e) => {
-        e.preventDefault()
-        ask()
-      }}
-      title={error ?? 'Press / to ask'}
-    >
-      <Sparkle className="size-4 shrink-0 text-accent-green" />
-      <input
-        aria-label="Ask the agent"
-        className="min-w-0 flex-1 border-0 bg-transparent p-0 text-[13px] text-primary placeholder:text-secondary focus:ring-0 focus:outline-none"
-        disabled={opening}
-        maxLength={2000}
-        onChange={(e) => onText(e.target.value)}
-        placeholder="Tell the agent what to change: “add a boom when the dog falls on #2”"
-        ref={inputRef}
-        value={text}
-      />
-      {error && <span className="shrink-0 text-xs text-amber-400">Couldn't open the chat</span>}
-      <button
-        aria-label={text.trim() ? 'Ask the agent' : 'Open the chat'}
-        className="flex size-7 shrink-0 items-center justify-center rounded-[7px] bg-white text-[#111] hover:bg-white/85 disabled:opacity-40"
-        disabled={opening}
-        type="submit"
-      >
-        {opening ? (
-          <span className="size-3 animate-spin rounded-full border-2 border-black/30 border-t-black" />
-        ) : (
-          <span aria-hidden className="text-sm leading-none font-bold">
-            ↑
-          </span>
-        )}
-      </button>
-    </form>
   )
 }

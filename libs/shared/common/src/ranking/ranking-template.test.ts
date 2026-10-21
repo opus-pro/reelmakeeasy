@@ -1,6 +1,10 @@
 import type { RankingTemplate } from '@shared/types/api/ranking'
 
-import { DEFAULT_RANKING_STYLE, DEFAULT_RANKING_TRANSITION, newRankingProject } from './ranking-project'
+import {
+  DEFAULT_RANKING_STYLE,
+  DEFAULT_RANKING_TRANSITION,
+  newRankingProject,
+} from './ranking-project'
 import { applyRankingTemplate, missingTemplateSounds, templateSoundIds } from './ranking-template'
 
 const TEMPLATE: RankingTemplate = {
@@ -56,6 +60,31 @@ describe('ranking templates', () => {
     expect(patch.transition?.sound).toBeNull()
   })
 
+  it("keeps a ranking's own slide texts: they are its words, not the style's look", () => {
+    const project = {
+      ...newRankingProject('p', 'now'),
+      transition: { ...DEFAULT_RANKING_TRANSITION, texts: { '1': 'And the winner…' } },
+    }
+    expect(applyRankingTemplate(project, TEMPLATE).transition?.texts).toEqual({
+      '1': 'And the winner…',
+    })
+    // A style that gives a ranking without clips fewer ranks drops the texts of the ranks it drops.
+    const ten = {
+      ...newRankingProject('t', 'now'),
+      items: Array.from({ length: 10 }, (_, i) => ({
+        clip: null,
+        id: `r${i}`,
+        label: '',
+        rank: i + 1,
+      })),
+      transition: { ...DEFAULT_RANKING_TRANSITION, texts: { '3': 'x', '8': 'y' } },
+    }
+    expect(applyRankingTemplate(ten, TEMPLATE).transition?.texts).toEqual({ '3': 'x' })
+    expect(
+      applyRankingTemplate(newRankingProject('q', 'now'), TEMPLATE).transition,
+    ).not.toHaveProperty('texts')
+  })
+
   it("keeps a ranking's own title words and clips, taking only the colours", () => {
     const project = newRankingProject('p', 'now')
     project.title = {
@@ -68,7 +97,10 @@ describe('ranking templates', () => {
         ],
       ],
     }
-    project.items[0] = { ...project.items[0]!, clip: { durationSec: 5, name: 'a.mp4', trimEndSec: 4, trimStartSec: 0, url: 'store://x' } }
+    project.items[0] = {
+      ...project.items[0]!,
+      clip: { durationSec: 5, name: 'a.mp4', trimEndSec: 4, trimStartSec: 0, url: 'store://x' },
+    }
     const patch = applyRankingTemplate(project, TEMPLATE)
     expect(patch.items).toBeUndefined()
     expect(patch.title).toEqual({

@@ -6,7 +6,7 @@ import type {
   RankingTitle,
 } from '@shared/types/api/ranking'
 
-import { DEFAULT_RANKING_TITLE, emptyItems, revealOrder } from './ranking-project'
+import { DEFAULT_RANKING_TITLE, emptyItems, pruneSlideTexts, revealOrder } from './ranking-project'
 
 /** Every library sound a style's plan names (to check they still exist). */
 export function templateSoundIds(template: Pick<RankingTemplate, 'sounds'>): string[] {
@@ -15,7 +15,9 @@ export function templateSoundIds(template: Pick<RankingTemplate, 'sounds'>): str
 }
 
 /** The sounds a style plans that aren't in the library yet: the user's download list. */
-export function missingTemplateSounds(template: Pick<RankingTemplate, 'sounds'>): RankingTemplateSound[] {
+export function missingTemplateSounds(
+  template: Pick<RankingTemplate, 'sounds'>,
+): RankingTemplateSound[] {
   const { music, onAction, reveal, transition } = template.sounds
   return [...onAction, reveal, transition, music].filter(
     (s): s is RankingTemplateSound => !!s && !s.soundId,
@@ -49,12 +51,21 @@ function styledTitle(current: RankingTitle, template: RankingTitle): RankingTitl
  * the style's number of ranks. Labels, trims, action sounds and stickers depend on the clips:
  * the agent (or the user) places those.
  */
-export function applyRankingTemplate(project: RankingProject, template: RankingTemplate): RankingProjectPatch {
+export function applyRankingTemplate(
+  project: RankingProject,
+  template: RankingTemplate,
+): RankingProjectPatch {
   const noClips = project.items.every((item) => !item.clip)
-  const items = noClips && project.items.length !== template.rankCount ? emptyItems(template.rankCount) : project.items
+  const items =
+    noClips && project.items.length !== template.rankCount
+      ? emptyItems(template.rankCount)
+      : project.items
   return {
     ...(items === project.items ? {} : { items }),
-    reveal: { mode: template.reveal, order: revealOrder(template.reveal, items.length, project.reveal.order) },
+    reveal: {
+      mode: template.reveal,
+      order: revealOrder(template.reveal, items.length, project.reveal.order),
+    },
     sounds: {
       music: template.sounds.music?.soundId ?? null,
       musicVolume: template.sounds.musicVolume,
@@ -62,6 +73,14 @@ export function applyRankingTemplate(project: RankingProject, template: RankingT
     },
     style: structuredClone(template.style),
     title: styledTitle(project.title, template.title),
-    transition: { ...template.transition, sound: template.sounds.transition?.soundId ?? null },
+    // The look comes from the style; the ranking's own slide texts stay (for the ranks it keeps).
+    transition: pruneSlideTexts(
+      {
+        ...template.transition,
+        sound: template.sounds.transition?.soundId ?? null,
+        ...(project.transition?.texts ? { texts: project.transition.texts } : {}),
+      },
+      items.length,
+    ),
   }
 }

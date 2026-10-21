@@ -31,7 +31,10 @@ const MEDALS = ['🥇', '🥈', '🥉']
 export const RANKING_NUMBER_MARK_MAX = 12
 
 /** How a rank is marked in the list, by the style's number format. */
-export function rankMark(style: Pick<RankingStyle, 'numberFormat' | 'numberMarks'>, rank: number): string {
+export function rankMark(
+  style: Pick<RankingStyle, 'numberFormat' | 'numberMarks'>,
+  rank: number,
+): string {
   switch (style.numberFormat ?? 'dot') {
     case 'custom': {
       return style.numberMarks?.[rank - 1]?.trim() || `${rank}.`

@@ -9,12 +9,17 @@ import {
 } from '@reelmakeeasy/common/ranking/ranking-overlay'
 import {
   RANKING_HEIGHT,
+  RANKING_TRANSITION_TEXT_MAX,
   RANKING_WIDTH,
   rankingTimeline,
   type RankingTimelinePart,
+  slideTextOf,
   soundsOf,
+  transitionOf,
+  transitionText,
+  withSlideText,
 } from '@reelmakeeasy/common/ranking/ranking-project'
-import type { RankingProject, RankingSticker } from '@shared/types/api/ranking'
+import type { RankingProject, RankingSticker, RankingTransition } from '@shared/types/api/ranking'
 import { type LibrarySound, soundPlayback } from '@shared/types/api/sound-library'
 import { cn } from '@shared/ui'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
@@ -48,6 +53,9 @@ export type RankingPreviewProps = {
   focusRequest?: null | RankFocusRequest
   /** Redraw once the fonts arrive. */
   fontsReady: boolean
+  /** A slide's text was changed on the stage (null: back to the text every slide shows);
+   *  `confirmed` when the user said so (Enter, the reset), not just by clicking elsewhere. */
+  onEditSlideText?: (nextRank: number, text: null | string, confirmed: boolean) => void
   /** A sticker was moved, resized or turned on the stage (or nudged with the arrow keys). */
   onEditSticker?: (id: string, patch: Partial<RankingSticker>) => void
   /** The rank on screen changed (the editor follows it). */
@@ -56,6 +64,8 @@ export type RankingPreviewProps = {
   onRemoveSticker?: (id: string) => void
   /** A sticker was picked on the stage (null: a click beside them). */
   onSelectSticker?: (id: null | string) => void
+  /** The slide paused on, by the rank it leads into (null: a clip, or playing). */
+  onSlideOnScreen?: (nextRank: null | number) => void
   project: RankingProject
   /** The sticker being edited: outlined on the stage. */
   selectedSticker?: null | string
@@ -77,10 +87,12 @@ export function RankingPreview({
   focusRequest,
   dockWidth = '430px',
   fontsReady,
+  onEditSlideText,
   onEditSticker,
   onRankOnScreen,
   onRemoveSticker,
   onSelectSticker,
+  onSlideOnScreen,
   project,
   selectedSticker,
   sounds,
@@ -140,7 +152,14 @@ export function RankingPreview({
   // Scrubbing pauses while the playhead is dragged, then plays on if it was playing.
   const scrubResume = useRef(false)
 
-  const index = partIndexAt(parts, time)
+  // A slide whose text is being typed stays on screen, also through the render in which the
+  // timeline moves under it (a clip arriving before it); the effects then seek to it.
+  const [editingSlideRank, setEditingSlideRank] = useState<null | number>(null)
+  const editedAt =
+    editingSlideRank === null
+      ? -1
+      : parts.findIndex((p) => p.kind === 'transition' && p.nextRank === editingSlideRank)
+  const index = editedAt >= 0 ? editedAt : partIndexAt(parts, time)
   const part: null | RankingTimelinePart = parts[index] ?? null
   const segment = part?.kind === 'clip' ? part.segment : null
   const clipFailed = !!segment?.item.clip && failed.has(segment.item.clip.url)
@@ -344,10 +363,16 @@ export function RankingPreview({
     [],
   )
 
+  // A slide's text being typed on the stage (the rank it leads into): seeks keep it on screen.
+  const editingSlide = useRef<null | number>(null)
+  // The press that ends that typing (by clicking the picture) does nothing else.
+  const endingSlideEdit = useRef(false)
+
   // The timeline changed (a new clip, a trim, a reorder): the playhead stays where it was (inside
-  // the short), with that moment's clip and sounds.
+  // the short), with that moment's clip and sounds; or on the slide whose text is being typed.
   useEffect(() => {
-    seek(Math.min(timeRef.current, total))
+    const slide = parts.find((p) => p.kind === 'transition' && p.nextRank === editingSlide.current)
+    seek(slide ? slide.startSec : Math.min(timeRef.current, total))
     // Only when the timeline itself changes.
   }, [timelineKey])
 
@@ -360,7 +385,8 @@ export function RankingPreview({
   // A rank picked in the editor: jump to its clip (after the timeline effect, so a clip that just
   // arrived is there to jump to).
   useEffect(() => {
-    if (!focusRequest) return
+    // Not away from a slide whose text is being typed (a clip upload finishing asks too).
+    if (!focusRequest || editingSlide.current !== null) return
     const start = rankStarts(parts).find((r) => r.rank === focusRequest.rank)?.startSec
     if (start === undefined) return
     if (partIndexAt(parts, timeRef.current) === partIndexAt(parts, start)) return
@@ -368,12 +394,17 @@ export function RankingPreview({
     // Only when the editor asks.
   }, [focusRequest?.nonce])
 
-  // The editor follows the rank on screen.
+  // The editor follows the rank on screen, and the slide on screen.
   const rankOnScreen = segment?.item.rank ?? null
   useEffect(() => {
     if (rankOnScreen !== null) onRankOnScreen?.(rankOnScreen)
     // Only when the rank on screen changes.
   }, [rankOnScreen])
+  const slideOnScreen = !playing && part?.kind === 'transition' ? part.nextRank : null
+  useEffect(() => {
+    onSlideOnScreen?.(slideOnScreen)
+    // Only when the slide on screen changes.
+  }, [slideOnScreen])
 
   // Draw the overlay for the moment on screen, or the transition slide. Paused, ranks with no
   // clip yet show their labels too, so a label being typed shows at once.
@@ -463,10 +494,17 @@ export function RankingPreview({
         className="relative aspect-[9/16] cursor-pointer overflow-hidden rounded-sm bg-[#111] shadow-[0_20px_60px_rgba(0,0,0,0.5)] ring-1 ring-white/[0.08]"
         data-testid="ranking-stage"
         onClick={(e) => {
+          if (endingSlideEdit.current) {
+            endingSlideEdit.current = false
+            return
+          }
           if (draggingSticker || e.target !== e.currentTarget.querySelector('canvas')) return
           // A click beside the stickers lets go of the one selected; otherwise it plays or pauses.
           if (selected) onSelectSticker?.(null)
           else toggle()
+        }}
+        onPointerDownCapture={() => {
+          endingSlideEdit.current = editingSlide.current !== null
         }}
         style={{ width: `min(100%, calc(${stageHeight} * 9 / 16))` }}
       >
@@ -533,6 +571,18 @@ export function RankingPreview({
               <PlayIcon className="size-3.5 translate-x-px" />
             )}
           </span>
+        )}
+        {!playing && onEditSlideText && part?.kind === 'transition' && (
+          <SlideTextEditor
+            key={part.nextRank}
+            nextRank={part.nextRank}
+            onEditing={(editing) => {
+              editingSlide.current = editing ? part.nextRank : null
+              setEditingSlideRank(editingSlide.current)
+            }}
+            onSave={(text, confirmed) => onEditSlideText(part.nextRank, text, confirmed)}
+            transition={transitionOf(project)}
+          />
         )}
         {!playing && onEditSticker && part?.kind === 'clip' && (
           <StickerHandles
@@ -999,6 +1049,118 @@ function StickerHandles({
           </div>
         )
       })}
+    </div>
+  )
+}
+
+/**
+ * A transition slide's text, edited where it shows: a click on it opens a box over the slide.
+ * Enter, or focus leaving the box, keeps it as this slide's own text; Escape leaves it as it
+ * was. Typing back the text every slide shows makes this slide follow it again.
+ */
+function SlideTextEditor({
+  nextRank,
+  onEditing,
+  onSave,
+  transition,
+}: {
+  nextRank: number
+  /** The box opened (true) or closed (false). */
+  onEditing: (editing: boolean) => void
+  onSave: (text: null | string, confirmed: boolean) => void
+  transition: RankingTransition
+}) {
+  const shown = transitionText(transition, nextRank)
+  const template = transitionText(withSlideText(transition, nextRank, null), nextRank)
+  const own = transition.texts?.[String(nextRank)] !== undefined
+  const [draft, setDraft] = useState<null | string>(null)
+  // Closed from the keyboard: focus goes back to the slide's button, not to the page.
+  const opener = useRef<HTMLButtonElement>(null)
+  const refocus = useRef(false)
+  useEffect(() => {
+    if (draft !== null || !refocus.current) return
+    refocus.current = false
+    opener.current?.focus()
+  }, [draft])
+  // Gone (the preview moved off the slide, or stopped editing): no longer being typed. The
+  // callback is new on every render, so the latest one is kept for the unmount.
+  const onEditingRef = useRef(onEditing)
+  onEditingRef.current = onEditing
+  useEffect(() => () => onEditingRef.current(false), [])
+  const open = () => {
+    setDraft(shown)
+    onEditing(true)
+  }
+  const close = (keep: boolean, confirmed: boolean) => {
+    if (draft === null) return
+    const text = slideTextOf(draft)
+    if (keep && text !== shown) onSave(text === template ? null : text, confirmed)
+    setDraft(null)
+    onEditing(false)
+  }
+  if (draft === null)
+    return (
+      <>
+        <button
+          aria-label={`Change the text of the slide before #${nextRank}`}
+          className="absolute inset-x-[6%] top-[38%] h-[24%] rounded-xs border border-dashed border-white/0 hover:border-white/50"
+          onClick={open}
+          ref={opener}
+          title="Click to change this slide's text"
+          type="button"
+        />
+        <span className="pointer-events-none absolute inset-x-0 top-[30%] flex justify-center">
+          <span className="rounded-full bg-black/60 px-2.5 py-1 text-[11px] text-white/80">
+            ✎ Click the text to change this slide{own ? ' · its own text' : ''}
+          </span>
+        </span>
+      </>
+    )
+  return (
+    <div
+      className="absolute inset-x-[6%] top-[40%] flex flex-col items-center gap-2"
+      // Focus leaving the box (not moving to its own button) keeps what was typed.
+      onBlur={(e) => {
+        if (!e.currentTarget.contains(e.relatedTarget as Node | null)) close(true, false)
+      }}
+    >
+      <input
+        aria-label={`Text of the slide before #${nextRank}, on the preview`}
+        autoFocus
+        className="w-full rounded-xs border-0 bg-black/75 px-3 py-2 text-center text-xl font-black text-white ring-2 ring-[#00b2f8] focus:outline-none"
+        maxLength={RANKING_TRANSITION_TEXT_MAX}
+        onChange={(e) => setDraft(e.target.value)}
+        onKeyDown={(e) => {
+          e.stopPropagation()
+          // Enter that picks an input method's candidate isn't "done".
+          if (e.nativeEvent.isComposing || e.keyCode === 229) return
+          if (e.key !== 'Enter' && e.key !== 'Escape') return
+          refocus.current = true
+          close(e.key === 'Enter', e.key === 'Enter')
+        }}
+        placeholder="(blank slide)"
+        value={draft}
+      />
+      <span className="flex items-center gap-2 text-[11px] text-white/70">
+        Only this slide
+        {own && (
+          <button
+            className="rounded-full bg-black/60 px-2 py-0.5 text-white hover:bg-black/80"
+            // A press keeps the focus in the box (so it doesn't close first); the click resets.
+            onClick={(e) => {
+              // A click made with Enter or Space (detail 0) came from the keyboard.
+              refocus.current = e.detail === 0
+              onSave(null, true)
+              setDraft(null)
+              onEditing(false)
+            }}
+            onMouseDown={(e) => e.preventDefault()}
+            type="button"
+          >
+            Same as every slide
+          </button>
+        )}
+      </span>
     </div>
   )
 }

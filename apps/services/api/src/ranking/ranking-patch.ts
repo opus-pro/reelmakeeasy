@@ -12,6 +12,7 @@ import {
   RANKING_TITLE_WORDS_MAX,
   RANKING_TRANSITION_MAX_SEC,
   RANKING_TRANSITION_MIN_SEC,
+  pruneSlideTexts,
   RANKING_TRANSITION_TEXT_MAX,
   revealOrder,
 } from '@reelmakeeasy/common/ranking/ranking-project'
@@ -189,7 +190,22 @@ export function parseTransition(v: unknown, soundExists: (id: string) => boolean
     sound: soundId(v['sound'], soundExists),
     text: text(v['text'] ?? '', RANKING_TRANSITION_TEXT_MAX, 'the transition text'),
     textColor: color(v['textColor'], 'The transition text'),
+    ...parseSlideTexts(v['texts']),
   }
+}
+
+/** Single slides' own texts, by the rank each leads into (missing or empty: none). */
+function parseSlideTexts(v: unknown): { texts?: Record<string, string> } {
+  if (v === undefined || v === null) return {}
+  if (!isRecord(v)) throw new RankingPatchError('The slide texts must be an object, by rank.')
+  const texts: Record<string, string> = {}
+  for (const [rank, value] of Object.entries(v)) {
+    const n = Number(rank)
+    if (!Number.isInteger(n) || n < 1 || n > RANKING_MAX_ITEMS || String(n) !== rank)
+      throw new RankingPatchError(`A slide's text is keyed by the rank it leads into (1-${RANKING_MAX_ITEMS}).`)
+    texts[rank] = text(value, RANKING_TRANSITION_TEXT_MAX, `the text of the slide into #${rank}`)
+  }
+  return Object.keys(texts).length ? { texts } : {}
 }
 
 /** A rank's sound cues: library sounds, at moments inside the clip as it plays. */
@@ -318,6 +334,8 @@ export function applyRankingPatch(
   if ('sounds' in patch) next.sounds = parseSounds(patch['sounds'], soundExists)
   if ('transition' in patch) next.transition = parseTransition(patch['transition'], soundExists)
   if ('items' in patch) next.items = parseItems(patch['items'], current, soundExists)
+  // Fewer ranks: the own texts of slides into ranks that are gone go with them.
+  if (next.transition) next.transition = pruneSlideTexts(next.transition, next.items.length)
   if ('stickers' in patch) next.stickers = parseStickers(patch['stickers'], next)
   if ('reveal' in patch || 'items' in patch) {
     const raw = isRecord(patch['reveal']) ? patch['reveal'] : current.reveal

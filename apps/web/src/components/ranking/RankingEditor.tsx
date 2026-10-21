@@ -2,6 +2,7 @@
 
 import {
   emptyItems,
+  pruneSlideTexts,
   RANKING_CLIP_MAX_SEC,
   RANKING_CUES_MAX,
   RANKING_LABEL_MAX,
@@ -11,6 +12,7 @@ import {
   RANKING_TITLE_LINES_MAX,
   RANKING_TITLE_WORDS_MAX,
   rankingItemId,
+  rankingTimeline,
   revealOrder,
 } from '@reelmakeeasy/common/ranking/ranking-project'
 import { RANKING_FONT_FACES, RANKING_FONT_IDS } from '@reelmakeeasy/common/ranking/ranking-type'
@@ -62,6 +64,8 @@ const TIPS_HIDDEN_KEY = 'ranking-studio-tips-hidden'
 
 export type RankingEditorProps = {
   focusRank: null | number
+  /** The slide on the preview (by the rank it leads into): its text row is outlined. */
+  focusSlide?: null | number
   onChange: (next: RankingProject) => void
   onFocusRank: (rank: number) => void
   /** Opens the sound library (the Sounds tab). */
@@ -69,7 +73,7 @@ export type RankingEditorProps = {
   /** A sticker picked (in Effects, or on the preview); null: none. */
   onSelectSticker: (id: null | string) => void
   onTab: (tab: RankingEditorTab) => void
-  /** "Try it" on a tip: put this request in the ask bar. */
+  /** "Try it" on a tip: open the "Edit with agent" box with this request filled in. */
   onTryAsk?: (text: string) => void
   /** Uploads a video or a photo under a rank (the studio saves it; a photo becomes a clip). */
   onUploadClip: (itemId: string, file: File) => Promise<void>
@@ -144,7 +148,11 @@ export function RankingEditor(props: RankingEditorProps) {
               />
             </section>
             <TransitionPanel
+              focusSlide={props.focusSlide}
               onChange={(transition) => onChange({ ...project, transition })}
+              slides={rankingTimeline(project).flatMap((p) =>
+                p.kind === 'transition' ? [p.nextRank] : [],
+              )}
               sounds={props.sounds}
               value={project.transition}
             />
@@ -542,7 +550,15 @@ function RankRows({
             project.reveal.mode === 'custom' ? 'countdown' : project.reveal.mode,
             ranked.length,
           )
-    onChange({ ...project, items: ranked, reveal: { ...project.reveal, order } })
+    onChange({
+      ...project,
+      items: ranked,
+      reveal: { ...project.reveal, order },
+      // A rank removed takes the own text of the slide into it along.
+      ...(project.transition
+        ? { transition: pruneSlideTexts(project.transition, ranked.length) }
+        : {}),
+    })
   }
   const move = (i: number, by: number) => {
     const items = [...project.items]

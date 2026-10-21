@@ -100,7 +100,7 @@ export function parseTemplate(v: unknown, soundExists: (id: string) => boolean):
     const title = text(v['source']['title'] ?? '', LINE_MAX, 'the source title').trim()
     source = { url, ...(title ? { title } : {}) }
   }
-  const { sound: _sound, ...transition } = parseTransition({ ...(isRecord(v['transition']) ? v['transition'] : {}), sound: null }, () => false)
+  const { sound: _sound, texts: _texts, ...transition } = parseTransition({ ...(isRecord(v['transition']) ? v['transition'] : {}), sound: null }, () => false)
   return {
     labels: {
       examples: list(labels['examples'], EXAMPLES_MAX, 'Label examples', (x) => text(x, RANKING_LABEL_MAX, 'a label example').trim()),
