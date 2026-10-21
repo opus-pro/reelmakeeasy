@@ -1,91 +1,395 @@
 'use client'
 
 import { isMovingSticker, stickerPose } from '@reelmakeeasy/common/ranking/ranking-motion'
-import { drawRankingOverlay, drawRankingTransition } from '@reelmakeeasy/common/ranking/ranking-overlay'
+import {
+  drawRankingOverlay,
+  drawRankingTransition,
+} from '@reelmakeeasy/common/ranking/ranking-overlay'
 import {
   RANKING_HEIGHT,
   RANKING_WIDTH,
   rankingTimeline,
   type RankingTimelinePart,
   soundsOf,
-  transitionOf,
 } from '@reelmakeeasy/common/ranking/ranking-project'
 import type { RankingProject, RankingSticker } from '@shared/types/api/ranking'
-import type { LibrarySound } from '@shared/types/api/sound-library'
-import { Button, cn } from '@shared/ui'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { type LibrarySound, soundPlayback } from '@shared/types/api/sound-library'
+import { cn } from '@shared/ui'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 import { STUDIO_RANKING_FONTS } from './ranking-fonts'
-import { type PlayingSound, playSoundPart } from './sound-player'
+import {
+  activeCues,
+  type CueWindow,
+  cueWindows,
+  formatTime,
+  jumpTarget,
+  partIndexAt,
+  rankStarts,
+} from './ranking-player'
+import {
+  CueAudio,
+  type PlayingSound,
+  playSoundPart,
+  soundLengthSec,
+  unlockAudio,
+} from './sound-player'
 import { useStickerImages } from './sticker-images'
 
+/** A rank picked in the editor; a new `nonce` asks again, even for the same rank. */
+export type RankFocusRequest = { nonce: number; rank: number }
+
 export type RankingPreviewProps = {
+  /** The rank picked in the editor: the preview jumps to its clip (and plays on if it was playing). */
+  focusRequest?: null | RankFocusRequest
   /** Redraw once the fonts arrive. */
   fontsReady: boolean
-  /** The rank being edited: its clip shows (paused at its start) while not playing. */
-  focusRank: null | number
   /** A sticker was dragged to a new place (fractions of the frame). */
   onMoveSticker?: (id: string, x: number, y: number) => void
+  /** The rank on screen changed (the editor follows it). */
+  onRankOnScreen?: (rank: number) => void
   project: RankingProject
   sounds: LibrarySound[]
 }
 
+/** How long a clip may hold the playhead (loading) before its sounds wait for it too. */
+const STALL_MS = 300
+
 /**
- * The studio's stage: the short at 9:16, the clip under the title band and the overlay drawn by
- * the same functions the export uses. Play runs the whole short: each rank's clip in reveal
- * order, the transition slides between them, the reveal sound and the music bed. Stopped, it
- * shows the focused rank's clip with every label, as an editing view.
+ * The short as it will export: the clip under the title band, the overlay drawn by the same
+ * functions the export uses, each rank's sounds and the music bed. Everything follows one
+ * playhead (seconds into the short): play and pause, scrub the timeline, click a rank to jump
+ * to it. A rank's sounds play only while its clip does, cut where it ends, like the export.
  */
-export function RankingPreview({ focusRank, fontsReady, onMoveSticker, project, sounds }: RankingPreviewProps) {
+export function RankingPreview({
+  focusRequest,
+  fontsReady,
+  onMoveSticker,
+  onRankOnScreen,
+  project,
+  sounds,
+}: RankingPreviewProps) {
   const images = useStickerImages(project.stickers)
   const [draggingSticker, setDraggingSticker] = useState<null | string>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
-  const videoRef = useRef<HTMLVideoElement>(null)
-  const musicRef = useRef<null | PlayingSound>(null)
-  const timeline = useMemo(() => rankingTimeline(project), [project])
-  const [playing, setPlaying] = useState<null | number>(null)
-  const [bandHeight, setBandHeight] = useState(240)
-  const [elapsed, setElapsed] = useState(0)
-
-  const part: RankingTimelinePart | null = playing === null ? null : (timeline[playing] ?? null)
-  const total = timeline.reduce((sum, t) => sum + t.durSec, 0)
-  const hasMoving = (project.stickers ?? []).some(isMovingSticker)
-  const segment = part?.kind === 'clip' ? part.segment : null
-  const focusItem = project.items.find((item) => item.rank === focusRank && item.clip)
-  const clip = part ? (segment?.item.clip ?? null) : (focusItem?.clip ?? null)
-  const revealed = useMemo(
-    () => (segment ? segment.revealed : project.items.map((item) => item.rank)),
-    [project.items, segment],
+  const parts = useMemo(() => rankingTimeline(project), [project])
+  const total = parts.reduce((sum, p) => sum + p.durSec, 0)
+  const soundById = useMemo(() => new Map(sounds.map((s) => [s.id, s])), [sounds])
+  const windows = useMemo(
+    () =>
+      cueWindows(project, parts, (id) => {
+        const sound = soundById.get(id)
+        return sound ? soundLengthSec(sound) : null
+      }),
+    [parts, project, soundById],
   )
-  const play = (id: null | string, opts: { level?: number; loop?: boolean } = {}) => {
-    const sound = sounds.find((s) => s.id === id)
-    return sound ? playSoundPart(sound, opts) : null
+  // What the timeline and the music bed are, as text: edits that change neither (a label, a
+  // sticker) leave the playhead and the sounds alone.
+  const timelineKey = useMemo(
+    () =>
+      JSON.stringify(
+        parts.map((p) =>
+          p.kind === 'clip'
+            ? [p.startSec, p.durSec, p.segment.item.clip?.url, p.segment.item.clip?.trimStartSec]
+            : [p.startSec, p.durSec],
+        ),
+      ),
+    [parts],
+  )
+  const musicKey = useMemo(() => {
+    const chosen = soundsOf(project)
+    const sound = chosen.music ? soundById.get(chosen.music) : undefined
+    return JSON.stringify([chosen.music, chosen.musicVolume, sound && soundPlayback(sound)])
+  }, [project, soundById])
+
+  // The playhead: a ref for the clock, state for what's drawn.
+  const timeRef = useRef(0)
+  const [time, setTime] = useState(0)
+  const [playing, setPlaying] = useState(false)
+  const playingRef = useRef(false)
+  const videos = useRef(new Map<number, HTMLVideoElement>())
+  // Clips that can't play (by URL): the playhead runs over them on the clock instead.
+  const [failed, setFailed] = useState<ReadonlySet<string>>(() => new Set())
+  const failedRef = useRef(failed)
+  failedRef.current = failed
+  // A clip still loading holds the playhead; past STALL_MS its sounds wait with it.
+  const [buffering, setBuffering] = useState(false)
+  const stall = useRef<{ since: null | number; stalled: boolean }>({ since: null, stalled: false })
+  const soundByIdRef = useRef(soundById)
+  soundByIdRef.current = soundById
+  const cueAudio = useRef<CueAudio | null>(null)
+  cueAudio.current ??= new CueAudio((id) => soundByIdRef.current.get(id))
+  const musicRef = useRef<null | PlayingSound>(null)
+  // Scrubbing pauses while the playhead is dragged, then plays on if it was playing.
+  const scrubResume = useRef(false)
+
+  const index = partIndexAt(parts, time)
+  const part: null | RankingTimelinePart = parts[index] ?? null
+  const segment = part?.kind === 'clip' ? part.segment : null
+  const clipFailed = !!segment?.item.clip && failed.has(segment.item.clip.url)
+  const hasMoving = (project.stickers ?? []).some(isMovingSticker)
+
+  const startMusic = useCallback(
+    (t: number) => {
+      musicRef.current?.stop()
+      musicRef.current = null
+      const music = soundsOf(project)
+      const sound = music.music ? soundByIdRef.current.get(music.music) : undefined
+      if (sound)
+        musicRef.current = playSoundPart(sound, {
+          level: music.musicVolume,
+          loop: true,
+          offsetSec: t,
+        })
+    },
+    [project],
+  )
+
+  const markFailed = useCallback((url: string) => {
+    setFailed((s) => (s.has(url) ? s : new Set(s).add(url)))
+  }, [])
+
+  /** Plays a clip's video. A play() cut short by a pause or a seek (jumping) is normal; one the
+   *  browser blocks pauses the preview; a clip it can't play is skipped over. */
+  const playVideo = useCallback(
+    (video: HTMLVideoElement, url: string) => {
+      void video.play().catch((e: unknown) => {
+        const name = (e as DOMException | undefined)?.name
+        if (name === 'AbortError' || !playingRef.current) return
+        if (name === 'NotAllowedError') pause()
+        else markFailed(url)
+      })
+    },
+    // pause only reads refs.
+    [markFailed],
+  )
+
+  /** Shows part `i` at `local` seconds into it: its video there (playing on if playing), the others paused. */
+  const showPart = useCallback(
+    (i: number, local: number) => {
+      for (const [k, video] of videos.current) if (k !== i && !video.paused) video.pause()
+      const p = parts[i]
+      const video = videos.current.get(i)
+      const clip = p?.kind === 'clip' ? p.segment.item.clip : null
+      if (!clip || !video) return
+      const at = clip.trimStartSec + Math.max(0, local)
+      if (Math.abs(video.currentTime - at) > 0.04) video.currentTime = at
+      if (playingRef.current) playVideo(video, clip.url)
+      else if (!video.paused) video.pause()
+    },
+    [parts, playVideo],
+  )
+
+  const seek = useCallback(
+    (to: number) => {
+      const t = Math.min(Math.max(0, to), Math.max(0, total - 0.001))
+      const i = partIndexAt(parts, t)
+      timeRef.current = t
+      setTime(t)
+      showPart(i, t - (parts[i]?.startSec ?? 0))
+      // Every sound restarts from here: none from where the playhead was keeps running.
+      cueAudio.current?.stopAll()
+      stall.current = { since: null, stalled: false }
+      setBuffering(false)
+      if (playingRef.current) {
+        startMusic(t)
+        cueAudio.current?.sync(activeCues(windows, t))
+      }
+    },
+    [parts, showPart, startMusic, total, windows],
+  )
+
+  function pause() {
+    playingRef.current = false
+    setPlaying(false)
+    setBuffering(false)
+    for (const video of videos.current.values()) video.pause()
+    cueAudio.current?.stopAll()
+    musicRef.current?.stop()
+    musicRef.current = null
   }
 
-  // Draw the overlay, or the transition slide while one plays.
+  /** Plays from the playhead; from the top when it's at the end and `fromTopAtEnd`. */
+  function play(fromTopAtEnd = true) {
+    if (total <= 0) return
+    unlockAudio()
+    const atEnd = timeRef.current >= total - 0.05
+    if (atEnd && !fromTopAtEnd) return
+    playingRef.current = true
+    setPlaying(true)
+    seek(atEnd ? 0 : timeRef.current)
+  }
+
+  const toggle = () => (playingRef.current ? pause() : play())
+  const jump = (direction: -1 | 1) => {
+    const target = jumpTarget(parts, timeRef.current, direction)
+    if (target !== null) seek(target)
+  }
+
+  /** Where the playhead is after `dt` more seconds in part `i`; `waiting` while its clip loads. */
+  const advance = useCallback(
+    (i: number, t: number, dt: number): { t: number; waiting: boolean } => {
+      const p = parts[i]
+      if (!p) return { t, waiting: false }
+      const clip = p.kind === 'clip' ? p.segment.item.clip : null
+      const video = clip ? videos.current.get(i) : undefined
+      // A transition slide, or a clip that can't play, runs on the wall clock.
+      if (!clip || !video || failedRef.current.has(clip.url)) return { t: t + dt, waiting: false }
+      // A video that ended early has reached the end of its part.
+      if (video.ended) return { t: p.startSec + p.durSec, waiting: false }
+      if (video.paused) playVideo(video, clip.url)
+      if (video.readyState < 3) return { t, waiting: true }
+      return { t: p.startSec + Math.max(0, video.currentTime - clip.trimStartSec), waiting: false }
+    },
+    [parts, playVideo],
+  )
+
+  /** A clip that keeps loading: its sounds wait for it, then pick up at the playhead. */
+  const holdSounds = useCallback(
+    (waiting: boolean, now: number, t: number) => {
+      if (waiting) {
+        stall.current.since ??= now
+        if (stall.current.stalled || now - stall.current.since <= STALL_MS) return
+        stall.current.stalled = true
+        setBuffering(true)
+        cueAudio.current?.stopAll()
+        musicRef.current?.stop()
+        musicRef.current = null
+        return
+      }
+      stall.current.since = null
+      if (!stall.current.stalled) return
+      stall.current.stalled = false
+      setBuffering(false)
+      startMusic(t)
+    },
+    [startMusic],
+  )
+
+  // The clock: a clip's time comes from its video (so a slow load holds the playhead instead of
+  // racing ahead).
+  useEffect(() => {
+    if (!playing) return undefined
+    let last = performance.now()
+    let shown = partIndexAt(parts, timeRef.current)
+    let frame = requestAnimationFrame(function tick(now) {
+      // Paused from outside a click (a failed play()): stop before anything restarts.
+      if (!playingRef.current) return
+      const dt = (now - last) / 1000
+      last = now
+      let i = partIndexAt(parts, timeRef.current)
+      if (i !== shown) {
+        // The timeline moved under the playhead: show the part it is in now.
+        showPart(i, timeRef.current - (parts[i]?.startSec ?? 0))
+        shown = i
+      }
+      let { t, waiting } = advance(i, timeRef.current, dt)
+      holdSounds(waiting, now, t)
+      const p = parts[i]
+      if (p && t >= p.startSec + p.durSec - 0.01) {
+        if (i + 1 >= parts.length) {
+          timeRef.current = total
+          setTime(total)
+          pause()
+          return
+        }
+        i += 1
+        t = (parts[i] as RankingTimelinePart).startSec
+        showPart(i, 0)
+        shown = i
+      }
+      timeRef.current = t
+      setTime(t)
+      if (!stall.current.stalled) cueAudio.current?.sync(activeCues(windows, t))
+      frame = requestAnimationFrame(tick)
+    })
+    return () => cancelAnimationFrame(frame)
+    // pause only reads refs.
+  }, [advance, holdSounds, parts, playing, showPart, total, windows])
+
+  // A hidden tab stops animation frames (the clock): pause, so no sound plays on unseen.
+  useEffect(() => {
+    const onHide = () => {
+      if (document.hidden && playingRef.current) pause()
+    }
+    document.addEventListener('visibilitychange', onHide)
+    return () => document.removeEventListener('visibilitychange', onHide)
+    // pause only reads refs.
+  }, [])
+
+  // Nothing keeps playing once the preview is gone.
+  useEffect(
+    () => () => {
+      for (const video of videos.current.values()) video.pause()
+      cueAudio.current?.stopAll()
+      musicRef.current?.stop()
+    },
+    [],
+  )
+
+  // The timeline changed (a new clip, a trim, a reorder): the playhead stays where it was (inside
+  // the short), with that moment's clip and sounds.
+  useEffect(() => {
+    seek(Math.min(timeRef.current, total))
+    // Only when the timeline itself changes.
+  }, [timelineKey])
+
+  // The music bed changed while playing: it restarts at the playhead.
+  useEffect(() => {
+    if (playingRef.current && !stall.current.stalled) startMusic(timeRef.current)
+    // Only when the music bed changes.
+  }, [musicKey])
+
+  // A rank picked in the editor: jump to its clip (after the timeline effect, so a clip that just
+  // arrived is there to jump to).
+  useEffect(() => {
+    if (!focusRequest) return
+    const start = rankStarts(parts).find((r) => r.rank === focusRequest.rank)?.startSec
+    if (start === undefined) return
+    if (partIndexAt(parts, timeRef.current) === partIndexAt(parts, start)) return
+    seek(start)
+    // Only when the editor asks.
+  }, [focusRequest?.nonce])
+
+  // The editor follows the rank on screen.
+  const rankOnScreen = segment?.item.rank ?? null
+  useEffect(() => {
+    if (rankOnScreen !== null) onRankOnScreen?.(rankOnScreen)
+    // Only when the rank on screen changes.
+  }, [rankOnScreen])
+
+  // Draw the overlay for the moment on screen, or the transition slide. Paused, ranks with no
+  // clip yet show their labels too, so a label being typed shows at once.
+  const revealed = useMemo(() => {
+    if (!segment) return parts.length ? [] : project.items.map((item) => item.rank)
+    if (playing) return segment.revealed
+    const noClip = project.items.filter((item) => !item.clip).map((item) => item.rank)
+    return [...new Set([...noClip, ...segment.revealed])]
+  }, [parts.length, playing, project.items, segment])
+  const [bandHeight, setBandHeight] = useState(240)
   useEffect(() => {
     const ctx = canvasRef.current?.getContext('2d')
-    if (!ctx) return
+    if (!ctx) return undefined
     if (part?.kind === 'transition') {
       drawRankingTransition(ctx, project, part.nextRank, STUDIO_RANKING_FONTS)
-      return
+      return undefined
     }
-    // Playing: the rank on screen; stopped: the rank being edited.
-    const rank = segment ? segment.item.rank : focusRank
-    // While a clip plays, moving stickers follow its clock (the whole short's ones, the short's);
-    // stopped, they show at rest so they can be placed.
     const clipPart = part?.kind === 'clip' ? part : null
+    // Playing: moving stickers follow the playhead; paused, they rest where they can be placed.
     const moving =
-      clipPart && hasMoving
-        ? (sticker: RankingSticker) => {
-            const video = videoRef.current
-            const sec = video && clip ? Math.max(0, video.currentTime - clip.trimStartSec) : 0
-            return sticker.rank === null
-              ? stickerPose(sticker, clipPart.startSec + sec, total)
-              : stickerPose(sticker, sec, clipPart.durSec)
-          }
+      clipPart && playing && hasMoving
+        ? (sticker: RankingSticker) =>
+            sticker.rank === null
+              ? stickerPose(sticker, timeRef.current, total)
+              : stickerPose(sticker, timeRef.current - clipPart.startSec, clipPart.durSec)
         : ('still' as const)
-    const draw = () => drawRankingOverlay(ctx, project, revealed, { fonts: STUDIO_RANKING_FONTS, images, moving, rank })
+    const draw = () =>
+      drawRankingOverlay(ctx, project, revealed, {
+        fonts: STUDIO_RANKING_FONTS,
+        images,
+        moving,
+        rank: rankOnScreen,
+      })
     setBandHeight(draw().bandHeight)
     if (moving === 'still') return undefined
     let frame = requestAnimationFrame(function tick() {
@@ -93,92 +397,73 @@ export function RankingPreview({ focusRank, fontsReady, onMoveSticker, project, 
       frame = requestAnimationFrame(tick)
     })
     return () => cancelAnimationFrame(frame)
-  }, [clip, focusRank, fontsReady, hasMoving, images, part, project, revealed, segment, total])
-
-  // Each part's sound as it starts; a transition advances on its own clock.
-  useEffect(() => {
-    if (!part) return undefined
-    if (part.kind === 'transition') {
-      play(transitionOf(project).sound)
-      const timer = setTimeout(() => advance(), part.durSec * 1000)
-      return () => clearTimeout(timer)
-    }
-    play(soundsOf(project).reveal)
-    // This rank's meme sounds, each at its moment.
-    const timers = (part.segment.item.cues ?? []).map((cue) =>
-      setTimeout(() => play(cue.soundId), cue.atSec * 1000),
-    )
-    return () => timers.forEach(clearTimeout)
-    // Only when the playing part changes.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [playing])
-
-  // The music bed runs from Play to the end (or Stop).
-  useEffect(() => {
-    if (playing === null) {
-      musicRef.current?.stop()
-      musicRef.current = null
-      return
-    }
-    if (musicRef.current) return
-    const music = soundsOf(project)
-    musicRef.current = play(music.music, { level: music.musicVolume, loop: true })
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [playing])
-  useEffect(() => () => musicRef.current?.stop(), [])
-
-  // A clip (or a new trim): start it at its trim.
-  useEffect(() => {
-    const video = videoRef.current
-    if (!video || !clip) return
-    video.currentTime = clip.trimStartSec
-    if (playing !== null) void video.play().catch(() => setPlaying(null))
-    else video.pause()
-  }, [clip, playing])
-
-  function advance() {
-    setPlaying((p) => (p !== null && p + 1 < timeline.length ? p + 1 : null))
-  }
-
-  const onTimeUpdate = () => {
-    const video = videoRef.current
-    if (!video || !clip) return
-    if (part) setElapsed(part.startSec + Math.max(0, video.currentTime - clip.trimStartSec))
-    if (video.currentTime < clip.trimEndSec - 0.03) return
-    if (playing === null) {
-      video.pause()
-      video.currentTime = clip.trimStartSec
-      return
-    }
-    advance()
-  }
+  }, [fontsReady, hasMoving, images, part, playing, project, rankOnScreen, revealed, total])
 
   const top = (bandHeight / RANKING_HEIGHT) * 100
+  const label = segment
+    ? `#${segment.item.rank} ${segment.item.label}`
+    : part?.kind === 'transition'
+      ? `Next: #${part.nextRank}`
+      : ''
   return (
-    <div className="flex flex-col items-center gap-3">
+    <div
+      aria-label="Ranking preview: Space plays or pauses, the arrow keys jump between ranks"
+      className="flex w-full flex-col items-center gap-2 rounded-xl outline-none focus-visible:ring-2 focus-visible:ring-white/30"
+      onKeyDown={(e) => {
+        const onButton = (e.target as HTMLElement).tagName === 'BUTTON'
+        if (e.target !== e.currentTarget && !onButton) return
+        // Space or Enter on a button presses that button.
+        if (onButton && (e.key === ' ' || e.key === 'Enter')) return
+        if (e.key === ' ') toggle()
+        else if (e.key === 'ArrowRight') jump(1)
+        else if (e.key === 'ArrowLeft') jump(-1)
+        else if (e.key === 'Home') seek(0)
+        else return
+        e.preventDefault()
+      }}
+      tabIndex={0}
+    >
       <div
-        className="relative aspect-[9/16] h-[min(72vh,760px)] overflow-hidden rounded-xl border border-white/10 bg-[#111]"
+        className="relative aspect-[9/16] w-[min(100%,calc(min(72vh,760px)*9/16))] cursor-pointer overflow-hidden rounded-xl border border-white/10 bg-[#111]"
         data-testid="ranking-stage"
+        onClick={(e) => {
+          // A click on the picture plays or pauses (not while placing a sticker).
+          if (!draggingSticker && e.target === e.currentTarget.querySelector('canvas')) toggle()
+        }}
       >
-        {clip && part?.kind !== 'transition' && (
-          // eslint-disable-next-line jsx-a11y/media-has-caption -- the user's own clips
-          <video
-            className="absolute left-0 w-full object-cover"
-            key={clip.url}
-            onEnded={advance}
-            onLoadedMetadata={(e) => {
-              e.currentTarget.currentTime = clip.trimStartSec
-              if (playing !== null) void e.currentTarget.play().catch(() => setPlaying(null))
-            }}
-            onTimeUpdate={onTimeUpdate}
-            playsInline
-            preload="auto"
-            ref={videoRef}
-            src={clip.url}
-            style={{ height: `${100 - top}%`, top: `${top}%` }}
-          />
+        {parts.map((p, i) =>
+          p.kind === 'clip' && p.segment.item.clip ? (
+            <video
+              className={cn(
+                'absolute left-0 w-full object-cover',
+                i === index ? 'opacity-100' : 'opacity-0',
+              )}
+              key={`${i}:${p.segment.item.clip.url}`}
+              onError={() => {
+                const url = p.segment.item.clip?.url
+                if (url) markFailed(url)
+              }}
+              onLoadedData={(e) => {
+                // Every clip waits at its first frame, so switching ranks is instant; the one on
+                // screen goes to the playhead.
+                const clip = p.segment.item.clip
+                if (!clip) return
+                const local =
+                  i === partIndexAt(parts, timeRef.current) ? timeRef.current - p.startSec : 0
+                e.currentTarget.currentTime = clip.trimStartSec + Math.max(0, local)
+              }}
+              playsInline
+              preload="auto"
+              ref={(el) => {
+                if (el) videos.current.set(i, el)
+                else videos.current.delete(i)
+              }}
+              src={p.segment.item.clip.url}
+              style={{ height: `${100 - top}%`, top: `${top}%` }}
+            />
+          ) : null,
         )}
-        {!clip && part?.kind !== 'transition' && (
+        {!parts.length && (
           <div
             className="absolute inset-x-0 flex items-center justify-center text-sm text-white/40"
             style={{ bottom: 0, top: `${top}%` }}
@@ -186,76 +471,277 @@ export function RankingPreview({ focusRank, fontsReady, onMoveSticker, project, 
             Add clips to the ranks
           </div>
         )}
+        {clipFailed && (
+          <div
+            className="pointer-events-none absolute inset-x-0 flex items-center justify-center px-6 text-center text-sm text-amber-300/90"
+            style={{ bottom: 0, top: `${top}%` }}
+          >
+            This clip can't play here. Upload it again or pick another.
+          </div>
+        )}
         <canvas
-          className="pointer-events-none absolute inset-0 size-full"
+          className="absolute inset-0 size-full"
           height={RANKING_HEIGHT}
           ref={canvasRef}
           width={RANKING_WIDTH}
         />
-        {playing === null && onMoveSticker && (
+        {/* Out of the way of the picture: a small badge in the corner, not a disc over the labels. */}
+        {(buffering || (!playing && part && !draggingSticker)) && (
+          <span className="pointer-events-none absolute right-2.5 bottom-2.5 flex size-8 items-center justify-center rounded-full bg-black/60 text-white/90">
+            {buffering ? (
+              <span className="size-3.5 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+            ) : (
+              <PlayIcon className="size-3.5 translate-x-px" />
+            )}
+          </span>
+        )}
+        {!playing && onMoveSticker && part?.kind === 'clip' && (
           <StickerHandles
             dragging={draggingSticker}
             onDragging={setDraggingSticker}
             onMove={onMoveSticker}
-            stickers={(project.stickers ?? []).filter((s) => s.rank === null || s.rank === focusRank)}
+            stickers={(project.stickers ?? []).filter(
+              (s) => s.rank === null || s.rank === rankOnScreen,
+            )}
           />
         )}
       </div>
-      <div className="flex w-full max-w-[430px] items-center gap-3">
-        <Button
-          disabled={!timeline.length}
-          onClick={() => {
-            setElapsed(0)
-            setPlaying(playing === null ? 0 : null)
+      <div className="flex w-full max-w-[430px] flex-col gap-1.5">
+        <Timeline
+          onScrub={(t, phase) => {
+            if (phase === 'start') scrubResume.current = playingRef.current
+            if (phase === 'start' && playingRef.current) pause()
+            seek(t)
+            // Dropped at the very end: stay there rather than start over.
+            if (phase === 'end' && scrubResume.current) play(false)
           }}
-          size="sm"
-          variant="secondary"
-        >
-          {playing === null ? '▶ Play' : '■ Stop'}
-        </Button>
-        <Timeline current={playing} elapsed={playing === null ? 0 : elapsed} parts={timeline} total={total} />
-        <span className="w-12 text-right text-xs text-secondary tabular-nums">{total.toFixed(1)} s</span>
+          onSeek={seek}
+          parts={parts}
+          time={time}
+          total={total}
+          windows={windows}
+        />
+        <div className="flex items-center gap-1.5">
+          <ControlButton
+            disabled={!parts.length}
+            label="Previous rank (←)"
+            onClick={() => jump(-1)}
+          >
+            <SkipIcon className="size-3.5 -scale-x-100" />
+          </ControlButton>
+          <ControlButton
+            disabled={!parts.length}
+            label={playing ? 'Pause (Space)' : 'Play (Space)'}
+            onClick={toggle}
+            primary
+          >
+            {playing ? (
+              <PauseIcon className="size-4" />
+            ) : (
+              <PlayIcon className="size-4 translate-x-px" />
+            )}
+          </ControlButton>
+          <ControlButton disabled={!parts.length} label="Next rank (→)" onClick={() => jump(1)}>
+            <SkipIcon className="size-3.5" />
+          </ControlButton>
+          <span className="ml-1 text-xs text-secondary tabular-nums">
+            {formatTime(time)} <span className="text-white/30">/ {formatTime(total)}</span>
+          </span>
+          <span className="ml-auto min-w-0 truncate text-xs font-medium text-primary">{label}</span>
+        </div>
       </div>
     </div>
   )
 }
 
-function Timeline({
-  current,
-  elapsed,
-  parts,
-  total,
+function ControlButton({
+  children,
+  disabled,
+  label,
+  onClick,
+  primary,
 }: {
-  current: null | number
-  elapsed: number
-  parts: RankingTimelinePart[]
-  total: number
+  children: React.ReactNode
+  disabled?: boolean
+  label: string
+  onClick: () => void
+  primary?: boolean
 }) {
-  if (!total) return <div className="h-6 flex-1 rounded bg-white/5" />
   return (
-    <div className="relative flex h-6 flex-1 overflow-hidden rounded bg-white/5">
-      {parts.map((p, i) => (
-        <div
-          className={cn(
-            'flex items-center justify-center border-r border-black/40 text-[10px] font-semibold',
-            p.kind === 'transition' && 'bg-white/[0.04] text-white/30',
-            p.kind === 'clip' && (i === current ? 'bg-white/25 text-primary' : 'bg-white/10 text-secondary'),
-            p.kind === 'transition' && i === current && 'bg-white/20',
-          )}
-          key={p.kind === 'clip' ? p.segment.item.id : `t-${i}`}
-          style={{ width: `${(p.durSec / total) * 100}%` }}
-          title={p.kind === 'clip' ? `#${p.segment.item.rank} ${p.segment.item.label}` : `Transition to #${p.nextRank}`}
-        >
-          {p.kind === 'clip' ? `#${p.segment.item.rank}` : '›'}
-        </div>
-      ))}
-      <div className="pointer-events-none absolute inset-y-0 w-0.5 bg-white" style={{ left: `${(elapsed / total) * 100}%` }} />
+    <button
+      aria-label={label}
+      className={cn(
+        'flex shrink-0 items-center justify-center rounded-full transition-colors disabled:cursor-not-allowed disabled:opacity-40',
+        primary
+          ? 'size-9 bg-white text-black hover:bg-white/85'
+          : 'size-8 bg-white/10 text-primary hover:bg-white/20',
+      )}
+      disabled={disabled}
+      onClick={onClick}
+      title={label}
+      type="button"
+    >
+      {children}
+    </button>
+  )
+}
+
+function PauseIcon({ className }: { className?: string }) {
+  return (
+    <svg aria-hidden className={className} fill="currentColor" viewBox="0 0 16 16">
+      <rect height="11" rx="1" width="3.5" x="3" y="2.5" />
+      <rect height="11" rx="1" width="3.5" x="9.5" y="2.5" />
+    </svg>
+  )
+}
+
+function PlayIcon({ className }: { className?: string }) {
+  return (
+    <svg aria-hidden className={className} fill="currentColor" viewBox="0 0 16 16">
+      <path d="M4 2.5v11a.5.5 0 0 0 .76.43l9-5.5a.5.5 0 0 0 0-.86l-9-5.5A.5.5 0 0 0 4 2.5Z" />
+    </svg>
+  )
+}
+
+function SkipIcon({ className }: { className?: string }) {
+  return (
+    <svg aria-hidden className={className} fill="currentColor" viewBox="0 0 16 16">
+      <path d="M2.5 3v10a.5.5 0 0 0 .78.42L10 8.9V13a.5.5 0 0 0 .5.5h1.5a.5.5 0 0 0 .5-.5V3a.5.5 0 0 0-.5-.5h-1.5A.5.5 0 0 0 10 3v4.1L3.28 2.58A.5.5 0 0 0 2.5 3Z" />
+    </svg>
+  )
+}
+
+/**
+ * The short's timeline: one block per rank (and slide), a mark at each meme sound, the playhead.
+ * Click anywhere to jump there; press and drag to scrub.
+ */
+function Timeline({
+  onScrub,
+  onSeek,
+  parts,
+  time,
+  total,
+  windows,
+}: {
+  onScrub: (t: number, phase: 'end' | 'move' | 'start') => void
+  onSeek: (t: number) => void
+  parts: RankingTimelinePart[]
+  time: number
+  total: number
+  windows: CueWindow[]
+}) {
+  const [hover, setHover] = useState<null | number>(null)
+  const pressed = useRef(false)
+  const lastAt = useRef(0)
+  if (!total) return <div className="h-9 w-full rounded-md bg-white/5" />
+  const at = (e: React.PointerEvent<HTMLDivElement>) => {
+    const box = e.currentTarget.getBoundingClientRect()
+    lastAt.current = Math.min(1, Math.max(0, (e.clientX - box.left) / box.width)) * total
+    return lastAt.current
+  }
+  // A drag the browser cancels (or that loses the pointer) still ends, so playback resumes.
+  const cancel = () => {
+    if (!pressed.current) return
+    pressed.current = false
+    onScrub(lastAt.current, 'end')
+  }
+  const current = partIndexAt(parts, time)
+  return (
+    <div
+      aria-label="Timeline"
+      aria-valuemax={Math.round(total * 10) / 10}
+      aria-valuemin={0}
+      aria-valuenow={Math.round(time * 10) / 10}
+      aria-valuetext={`${formatTime(time)} of ${formatTime(total)}`}
+      className="relative h-9 w-full cursor-pointer touch-none rounded-md outline-none select-none focus-visible:ring-2 focus-visible:ring-white/30"
+      onKeyDown={(e) => {
+        // A second at a time here (the preview's own arrows jump rank to rank).
+        const to =
+          e.key === 'ArrowRight'
+            ? time + 1
+            : e.key === 'ArrowLeft'
+              ? time - 1
+              : e.key === 'Home'
+                ? 0
+                : e.key === 'End'
+                  ? total
+                  : null
+        if (to === null) return
+        e.preventDefault()
+        e.stopPropagation()
+        onSeek(to)
+      }}
+      onLostPointerCapture={cancel}
+      onPointerCancel={cancel}
+      onPointerDown={(e) => {
+        pressed.current = true
+        e.currentTarget.setPointerCapture(e.pointerId)
+        onScrub(at(e), 'start')
+      }}
+      onPointerLeave={() => setHover(null)}
+      onPointerMove={(e) => {
+        setHover(at(e))
+        if (pressed.current) onScrub(lastAt.current, 'move')
+      }}
+      onPointerUp={(e) => {
+        if (!pressed.current) return
+        pressed.current = false
+        onScrub(at(e), 'end')
+      }}
+      role="slider"
+      tabIndex={0}
+    >
+      <div className="absolute inset-x-0 top-1.5 flex h-6 overflow-hidden rounded-md bg-white/5">
+        {parts.map((p, i) => (
+          <div
+            className={cn(
+              'flex min-w-0 items-center justify-center border-r border-black/50 text-[10px] font-semibold transition-colors',
+              p.kind === 'transition' && 'bg-white/[0.04] text-white/30',
+              p.kind === 'clip' &&
+                (i === current
+                  ? 'bg-white/25 text-primary'
+                  : 'bg-white/10 text-secondary hover:bg-white/15'),
+            )}
+            key={p.kind === 'clip' ? p.segment.item.id : `t-${i}`}
+            style={{ width: `${(p.durSec / total) * 100}%` }}
+            title={
+              p.kind === 'clip'
+                ? `#${p.segment.item.rank} ${p.segment.item.label}`
+                : `Transition to #${p.nextRank}`
+            }
+          >
+            <span className="truncate px-0.5">
+              {p.kind === 'clip' ? `#${p.segment.item.rank}` : '›'}
+            </span>
+          </div>
+        ))}
+      </div>
+      {/* A mark at each meme sound (not the reveal sounds, which open every rank). */}
+      {windows
+        .filter((w) => w.key.includes(':cue'))
+        .map((w) => (
+          <span
+            className="pointer-events-none absolute bottom-0 h-1.5 w-0.5 rounded-full bg-accent-green/80"
+            key={w.key}
+            style={{ left: `${(w.startSec / total) * 100}%` }}
+          />
+        ))}
+      {hover !== null && (
+        <span
+          className="pointer-events-none absolute top-0 h-8 w-px bg-white/40"
+          style={{ left: `${(hover / total) * 100}%` }}
+        />
+      )}
+      <span
+        className="pointer-events-none absolute top-0 h-8 w-0.5 -translate-x-1/2 rounded-full bg-white shadow-[0_0_6px_rgba(255,255,255,0.6)]"
+        style={{ left: `${(Math.min(time, total) / total) * 100}%` }}
+      />
     </div>
   )
 }
 
 /**
- * Invisible handles over the stickers on the stage (while stopped): press one and drag to move
+ * Invisible handles over the stickers on the stage (while paused): press one and drag to move
  * it. The overlay redraws as it moves.
  */
 function StickerHandles({
@@ -279,37 +765,50 @@ function StickerHandles({
   return (
     <div
       className={cn('absolute inset-0', dragging ? 'cursor-grabbing' : '')}
+      onPointerLeave={() => onDragging(null)}
       onPointerMove={(e) => {
         if (!dragging) return
         const { x, y } = at(e)
         onMove(dragging, x, y)
       }}
       onPointerUp={() => onDragging(null)}
-      onPointerLeave={() => onDragging(null)}
       style={{ pointerEvents: dragging ? 'auto' : 'none' }}
     >
       {stickers.map((s) => {
-        const w = s.kind === 'image' ? s.size * 100 : Math.max(8, s.size * 100 * 1.8 * (s.text?.length ?? 1) * 0.35)
+        const w =
+          s.kind === 'image'
+            ? s.size * 100
+            : Math.max(8, s.size * 100 * 1.8 * (s.text?.length ?? 1) * 0.35)
         const h = s.kind === 'image' ? s.size * 100 * 0.5625 : s.size * 100
+        // The box is an estimate of the sticker's size; a margin around it makes it easy to catch.
+        const pad = 2.5
         return (
           <div
             aria-label="Drag sticker"
-            className="absolute cursor-grab rounded border border-dashed border-white/40 hover:border-white"
+            className="group absolute cursor-grab"
             key={s.id}
             onPointerDown={(e) => {
               e.preventDefault()
+              e.stopPropagation()
               e.currentTarget.parentElement?.setPointerCapture?.(e.pointerId)
               onDragging(s.id)
             }}
             style={{
-              height: `${h}%`,
-              left: `${s.x * 100 - w / 2}%`,
+              height: `${h + pad * 2}%`,
+              left: `${s.x * 100 - w / 2 - pad}%`,
               pointerEvents: 'auto',
-              top: `${s.y * 100 - h / 2}%`,
-              width: `${w}%`,
+              top: `${s.y * 100 - h / 2 - pad}%`,
+              width: `${w + pad * 2}%`,
             }}
             title="Drag to move"
-          />
+          >
+            <span
+              className="absolute rounded border border-dashed border-white/40 group-hover:border-white"
+              style={{
+                inset: `${(pad / (h + pad * 2)) * 100}% ${(pad / (w + pad * 2)) * 100}%`,
+              }}
+            />
+          </div>
         )
       })}
     </div>

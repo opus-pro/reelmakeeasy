@@ -18,7 +18,13 @@ const errorText = (error: unknown) => (error instanceof Error ? error.message : 
  * (reloaded after every change the agent makes), its latest export, and the studio link.
  * Before the agent has a ranking: what to do first.
  */
-export function RankingChatPanel({ rankingId, version }: { rankingId: null | string; version: number }) {
+export function RankingChatPanel({
+  rankingId,
+  version,
+}: {
+  rankingId: null | string
+  version: number
+}) {
   const api = useRankingApi()
   const library = useSoundLibrary()
   const apiOrigin = useAtomValue(apiOriginAtom)
@@ -52,7 +58,9 @@ export function RankingChatPanel({ rankingId, version }: { rankingId: null | str
       <div className="flex size-full flex-col items-center justify-center gap-4 p-6 text-center">
         <p className="text-sm font-semibold text-primary">Your ranking shows here</p>
         <ul className="flex max-w-sm flex-col gap-2 text-left text-sm text-secondary">
-          <li>🔗 Paste a YouTube Short to copy its style: timing, title look, labels and sounds.</li>
+          <li>
+            🔗 Paste a YouTube Short to copy its style: timing, title look, labels and sounds.
+          </li>
           <li>🎬 Attach your clips (the paperclip), one per rank, or ask for AI-made clips.</li>
           <li>🔊 Sounds come from your sound library; the agent says which ones to add.</li>
         </ul>
@@ -81,18 +89,21 @@ export function RankingChatPanel({ rankingId, version }: { rankingId: null | str
       {error && <p className="text-sm text-amber-400">{error}</p>}
       {project && (
         <div className="mx-auto w-full max-w-[320px]">
-          <RankingPreview
-            focusRank={project.items.find((item) => item.clip)?.rank ?? null}
-            fontsReady={fontsReady}
-            project={project}
-            sounds={library.sounds ?? []}
-          />
+          <RankingPreview fontsReady={fontsReady} project={project} sounds={library.sounds ?? []} />
         </div>
       )}
       {videoUrl && (
         <div className="mx-auto flex w-full max-w-[320px] flex-col gap-1.5">
-          <p className="text-xs font-semibold tracking-wide text-secondary uppercase">Latest export</p>
-          <video className="w-full rounded-lg bg-black" controls key={videoUrl} playsInline src={videoUrl} />
+          <p className="text-xs font-semibold tracking-wide text-secondary uppercase">
+            Latest export
+          </p>
+          <video
+            className="w-full rounded-lg bg-black"
+            controls
+            key={videoUrl}
+            playsInline
+            src={videoUrl}
+          />
           <a className="text-xs text-accent-green hover:underline" download href={videoUrl}>
             Download MP4
           </a>

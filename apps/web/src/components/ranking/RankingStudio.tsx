@@ -16,7 +16,12 @@ import {
   rankingTimeline,
 } from '@reelmakeeasy/common/ranking/ranking-project'
 import { applyRankingTemplate } from '@reelmakeeasy/common/ranking/ranking-template'
-import type { RankingProject, RankingRenderStatus, RankingSticker, RankingTemplate } from '@shared/types/api/ranking'
+import type {
+  RankingProject,
+  RankingRenderStatus,
+  RankingSticker,
+  RankingTemplate,
+} from '@shared/types/api/ranking'
 import { Button } from '@shared/ui'
 import { useAtomValue } from 'jotai'
 import { useRouter } from 'next/navigation'
@@ -29,7 +34,7 @@ import { useSignedUpload } from '@/hooks/useSignedUpload'
 import { type RankingApi, useRankingApi } from './ranking-api'
 import { loadRankingFonts, STUDIO_RANKING_FONTS } from './ranking-fonts'
 import { RankingEditor } from './RankingEditor'
-import { RankingPreview } from './RankingPreview'
+import { type RankFocusRequest, RankingPreview } from './RankingPreview'
 import { loadStickerImage } from './sticker-images'
 import { useSoundLibrary } from './useSoundLibrary'
 
@@ -61,6 +66,12 @@ export function RankingStudio({
   const [error, setError] = useState<null | string>(null)
   const [saving, setSaving] = useState<'error' | 'saved' | 'saving'>('saved')
   const [focusRank, setFocusRank] = useState<null | number>(1)
+  // A rank picked in the editor (or one whose clip just arrived): the preview jumps to it.
+  const [focusRequest, setFocusRequest] = useState<null | RankFocusRequest>(null)
+  const pickRank = useCallback((rank: null | number) => {
+    setFocusRank(rank)
+    if (rank !== null) setFocusRequest((r) => ({ nonce: (r?.nonce ?? 0) + 1, rank }))
+  }, [])
   const [fontsReady, setFontsReady] = useState(false)
   const [uploading, setUploading] = useState<ReadonlySet<string>>(() => new Set())
   const saveTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
@@ -118,9 +129,11 @@ export function RankingStudio({
         const saved = await api.setClip(id, itemId, fileUri, file.name)
         const clip = saved.items.find((i) => i.id === itemId)?.clip ?? null
         // Only the clip comes from the server: text typed meanwhile stays.
-        setProject((p) => (p ? { ...p, items: p.items.map((i) => (i.id === itemId ? { ...i, clip } : i)) } : p))
+        setProject((p) =>
+          p ? { ...p, items: p.items.map((i) => (i.id === itemId ? { ...i, clip } : i)) } : p,
+        )
         const rank = saved.items.find((i) => i.id === itemId)?.rank
-        if (rank) setFocusRank(rank)
+        if (rank) pickRank(rank)
       } catch (e) {
         setError(errorText(e))
       } finally {
@@ -131,7 +144,7 @@ export function RankingStudio({
         })
       }
     },
-    [api, id, uploadFile],
+    [api, id, pickRank, uploadFile],
   )
 
   const uploadStickerImage = useCallback(
@@ -153,7 +166,11 @@ export function RankingStudio({
   return (
     <div className="flex w-full flex-col gap-4">
       <header className="flex flex-wrap items-center gap-3">
-        <button className="text-sm text-secondary hover:text-primary" onClick={onBack} type="button">
+        <button
+          className="text-sm text-secondary hover:text-primary"
+          onClick={onBack}
+          type="button"
+        >
           ← All rankings
         </button>
         <input
@@ -166,7 +183,9 @@ export function RankingStudio({
         <span className="text-xs text-secondary">
           {saving === 'saving' ? 'Saving…' : saving === 'error' ? 'Not saved' : 'Saved'}
         </span>
-        <StylePicker onApply={(template) => change({ ...project, ...applyRankingTemplate(project, template) })} />
+        <StylePicker
+          onApply={(template) => change({ ...project, ...applyRankingTemplate(project, template) })}
+        />
         <OpenInChat api={api} project={project} />
       </header>
       {error && <p className="text-sm text-amber-400">{error}</p>}
@@ -175,7 +194,7 @@ export function RankingStudio({
           <RankingEditor
             focusRank={focusRank}
             onChange={change}
-            onFocusRank={setFocusRank}
+            onFocusRank={pickRank}
             onOpenLibrary={onOpenLibrary}
             onUploadClip={uploadClip}
             onUploadStickerImage={uploadStickerImage}
@@ -186,16 +205,19 @@ export function RankingStudio({
         </div>
         <div className="flex flex-col items-center gap-4 lg:sticky lg:top-6">
           <RankingPreview
-            focusRank={focusRank}
+            focusRequest={focusRequest}
             fontsReady={fontsReady}
             onMoveSticker={(stickerId, x, y) =>
               change({
                 ...project,
                 stickers: (project.stickers ?? []).map((s) =>
-                  s.id === stickerId ? { ...s, x: Math.round(x * 1000) / 1000, y: Math.round(y * 1000) / 1000 } : s,
+                  s.id === stickerId
+                    ? { ...s, x: Math.round(x * 1000) / 1000, y: Math.round(y * 1000) / 1000 }
+                    : s,
                 ),
               })
             }
+            onRankOnScreen={setFocusRank}
             project={project}
             sounds={sounds}
           />
@@ -230,7 +252,8 @@ export async function drawOverlays(
   if (!ctx) throw new Error("This browser can't draw the overlay.")
   let bandHeight = 0
   const overlays = rankingTimeline(project).map((part) => {
-    if (part.kind === 'transition') drawRankingTransition(ctx, project, part.nextRank, STUDIO_RANKING_FONTS)
+    if (part.kind === 'transition')
+      drawRankingTransition(ctx, project, part.nextRank, STUDIO_RANKING_FONTS)
     else
       bandHeight = drawRankingOverlay(ctx, project, part.segment.revealed, {
         fonts: STUDIO_RANKING_FONTS,
@@ -261,7 +284,13 @@ function stickerPicture(
   images: ReadonlyMap<string, StickerImage>,
 ): string | undefined {
   ctx.clearRect(0, 0, RANKING_WIDTH, RANKING_HEIGHT)
-  drawSticker(ctx, sticker, project.style.outlineColor, projectFonts(project, STUDIO_RANKING_FONTS), images)
+  drawSticker(
+    ctx,
+    sticker,
+    project.style.outlineColor,
+    projectFonts(project, STUDIO_RANKING_FONTS),
+    images,
+  )
   const { data } = ctx.getImageData(0, 0, RANKING_WIDTH, RANKING_HEIGHT)
   const cx = Math.round(sticker.x * RANKING_WIDTH)
   const cy = Math.round(sticker.y * RANKING_HEIGHT)
@@ -277,7 +306,19 @@ function stickerPicture(
   const cut = document.createElement('canvas')
   cut.width = halfW * 2
   cut.height = halfH * 2
-  cut.getContext('2d')?.drawImage(ctx.canvas, cx - halfW, cy - halfH, halfW * 2, halfH * 2, 0, 0, halfW * 2, halfH * 2)
+  cut
+    .getContext('2d')
+    ?.drawImage(
+      ctx.canvas,
+      cx - halfW,
+      cy - halfH,
+      halfW * 2,
+      halfH * 2,
+      0,
+      0,
+      halfW * 2,
+      halfH * 2,
+    )
   return cut.toDataURL('image/png')
 }
 
@@ -314,36 +355,15 @@ function StylePicker({ onApply }: { onApply: (template: RankingTemplate) => void
 }
 
 /** Opens a Ranking chat on this ranking, so the agent carries on with it. */
-function OpenInChat({ api, project }: { api: RankingApi; project: RankingProject }) {
-  const router = useRouter()
-  const [opening, setOpening] = useState(false)
-  const [error, setError] = useState<null | string>(null)
-  return (
-    <>
-      <Button
-        disabled={opening}
-        onClick={() => {
-          setOpening(true)
-          setError(null)
-          api
-            .openChat(project.id, project.name)
-            .then((sessionId) => router.push(agentChatUrl(sessionId)))
-            .catch((e: unknown) => {
-              setError(errorText(e))
-              setOpening(false)
-            })
-        }}
-        size="sm"
-        variant="secondary"
-      >
-        {opening ? 'Opening…' : 'Open in chat'}
-      </Button>
-      {error && <span className="text-xs text-amber-400">{error}</span>}
-    </>
-  )
-}
-
-function ExportPanel({ api, project, saving }: { api: RankingApi; project: RankingProject; saving: boolean }) {
+function ExportPanel({
+  api,
+  project,
+  saving,
+}: {
+  api: RankingApi
+  project: RankingProject
+  saving: boolean
+}) {
   const [status, setStatus] = useState<null | RankingRenderStatus>(null)
   const [error, setError] = useState<null | string>(null)
   const problems = rankingProblems(project)
@@ -375,11 +395,19 @@ function ExportPanel({ api, project, saving }: { api: RankingApi; project: Ranki
   return (
     <div className="flex w-full max-w-[430px] flex-col gap-2 rounded-xl border border-white/10 bg-fill-secondary/40 p-3">
       <div className="flex items-center gap-3">
-        <Button disabled={!!problems.length || rendering || saving} onClick={() => void exportNow()} size="sm">
+        <Button
+          disabled={!!problems.length || rendering || saving}
+          onClick={() => void exportNow()}
+          size="sm"
+        >
           {rendering ? `Rendering… ${Math.round((status?.progress ?? 0) * 100)}%` : 'Export MP4'}
         </Button>
         {status?.state === 'done' && status.videoUrl && (
-          <a className="text-sm text-primary underline underline-offset-2" download href={status.videoUrl}>
+          <a
+            className="text-sm text-primary underline underline-offset-2"
+            download
+            href={status.videoUrl}
+          >
             Download
           </a>
         )}
@@ -393,9 +421,41 @@ function ExportPanel({ api, project, saving }: { api: RankingApi; project: Ranki
       {status?.state === 'failed' && <p className="text-xs text-amber-400">{status.error}</p>}
       {error && <p className="text-xs text-amber-400">{error}</p>}
       {status?.state === 'done' && status.videoUrl && (
-        // eslint-disable-next-line jsx-a11y/media-has-caption -- the user's own render
-        <video className="max-h-[50vh] w-auto self-center rounded-lg" controls src={status.videoUrl} />
+        <video
+          className="max-h-[50vh] w-auto self-center rounded-lg"
+          controls
+          src={status.videoUrl}
+        />
       )}
     </div>
+  )
+}
+
+function OpenInChat({ api, project }: { api: RankingApi; project: RankingProject }) {
+  const router = useRouter()
+  const [opening, setOpening] = useState(false)
+  const [error, setError] = useState<null | string>(null)
+  return (
+    <>
+      <Button
+        disabled={opening}
+        onClick={() => {
+          setOpening(true)
+          setError(null)
+          api
+            .openChat(project.id, project.name)
+            .then((sessionId) => router.push(agentChatUrl(sessionId)))
+            .catch((e: unknown) => {
+              setError(errorText(e))
+              setOpening(false)
+            })
+        }}
+        size="sm"
+        variant="secondary"
+      >
+        {opening ? 'Opening…' : 'Open in chat'}
+      </Button>
+      {error && <span className="text-xs text-amber-400">{error}</span>}
+    </>
   )
 }
