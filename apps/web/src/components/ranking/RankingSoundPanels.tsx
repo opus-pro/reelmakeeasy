@@ -13,10 +13,10 @@ import { cn } from '@shared/ui'
 
 import { previewSound } from './sound-player'
 
-const SECTION = 'flex flex-col gap-2 rounded-xl border border-white/10 bg-fill-secondary/40 p-3'
-const HEADING = 'text-xs font-semibold tracking-wide text-secondary uppercase'
+const SECTION = 'flex flex-col gap-2.5'
+const HEADING = 'text-xs font-semibold text-secondary'
 const INPUT =
-  'rounded-md border border-white/10 bg-black/30 px-2 py-1 text-sm text-primary placeholder:text-tertiary focus:border-white/30 focus:outline-none'
+  'rounded-xs border-0 bg-white/[0.06] px-2.5 py-1 text-[13px] text-primary placeholder:text-white/40 focus:bg-white/10 focus:ring-1 focus:ring-white/30 focus:outline-none'
 
 /** A sound from the library (favourites first, as the library sorts them), with a play button. */
 export function SoundPicker({
@@ -35,7 +35,7 @@ export function SoundPicker({
     <label className="flex flex-wrap items-center gap-2 text-xs text-secondary">
       <span className="w-24">{label}</span>
       <select
-        className={cn(INPUT, 'min-w-0 flex-1')}
+        className={cn(INPUT, 'min-w-0 flex-1 pr-8')}
         onChange={(e) => onChange(e.target.value || null)}
         value={chosen ? chosen.id : ''}
       >
@@ -149,7 +149,7 @@ export function TransitionPanel({
           <label className="flex flex-wrap items-center gap-2 text-xs text-secondary">
             <span className="w-24">Text</span>
             <input
-              className={cn(INPUT, 'min-w-0 flex-1')}
+              className={cn(INPUT, 'min-w-0 flex-1 pr-8')}
               maxLength={RANKING_TRANSITION_TEXT_MAX}
               onChange={(e) => onChange({ ...v, text: e.target.value })}
               placeholder="Number {rank}…"

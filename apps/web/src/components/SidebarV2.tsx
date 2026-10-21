@@ -1,9 +1,9 @@
 import { cn } from '@shared/ui'
+import { ListOrdered } from 'lucide-react'
 import { usePathname, useRouter } from 'next/navigation'
 import React, { memo, useMemo, useState } from 'react'
 
 import {
-  ClipsVertical,
   Compass,
   Cross as X,
   LearningCenter,
@@ -76,7 +76,7 @@ const NAV_ITEMS: NavConfigItem[] = [
   },
   {
     contexts: ['desktop', 'mobile'],
-    icon: ClipsVertical,
+    icon: ListOrdered,
     isActive: (pathname) => pathname.startsWith('/ranking'),
     key: 'ranking',
     label: 'Ranking Builder',

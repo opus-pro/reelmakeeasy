@@ -29,14 +29,16 @@ import type { LibrarySound } from '@shared/types/api/sound-library'
 import { Button, cn } from '@shared/ui'
 import { useRef, useState } from 'react'
 
+import { Sparkle } from '@/components/icons/core'
+
 import { SoundsPanel, TransitionPanel } from './RankingSoundPanels'
 import { previewSound } from './sound-player'
 import { StickersPanel } from './StickersPanel'
 
-const SECTION = 'flex flex-col gap-2 rounded-xl border border-white/10 bg-fill-secondary/40 p-3'
-const HEADING = 'text-xs font-semibold tracking-wide text-secondary uppercase'
+const SECTION = 'flex flex-col gap-2.5'
+const HEADING = 'text-xs font-semibold text-secondary'
 const INPUT =
-  'rounded-md border border-white/10 bg-black/30 px-2 py-1 text-sm text-primary placeholder:text-tertiary focus:border-white/30 focus:outline-none'
+  'rounded-xs border-0 bg-white/[0.06] px-2.5 py-1 text-[13px] text-primary placeholder:text-white/40 focus:bg-white/10 focus:ring-1 focus:ring-white/30 focus:outline-none'
 
 /** The editor's tabs, in order. */
 export type RankingEditorTab = 'effects' | 'look' | 'ranks' | 'sounds' | 'title'
@@ -48,6 +50,16 @@ const TABS: [RankingEditorTab, string][] = [
   ['look', 'Look'],
 ]
 
+/** What each tab's tip suggests asking the agent instead. */
+const TIP: Record<RankingEditorTab, string> = {
+  effects: 'add a 💀 when he falls',
+  look: 'use medals for the top 3',
+  ranks: 'swap #3 and #4',
+  sounds: 'add a vine boom on every fall',
+  title: 'make the second word cyan',
+}
+const TIPS_HIDDEN_KEY = 'ranking-studio-tips-hidden'
+
 export type RankingEditorProps = {
   focusRank: null | number
   onChange: (next: RankingProject) => void
@@ -57,6 +69,8 @@ export type RankingEditorProps = {
   /** A sticker picked (in Effects, or on the preview); null: none. */
   onSelectSticker: (id: null | string) => void
   onTab: (tab: RankingEditorTab) => void
+  /** "Try it" on a tip: put this request in the ask bar. */
+  onTryAsk?: (text: string) => void
   /** Uploads a video or a photo under a rank (the studio saves it; a photo becomes a clip). */
   onUploadClip: (itemId: string, file: File) => Promise<void>
   /** Uploads a sticker picture; resolves its address (null when it failed). */
@@ -76,15 +90,26 @@ export type RankingEditorProps = {
  */
 export function RankingEditor(props: RankingEditorProps) {
   const { onChange, onTab, project, tab } = props
+  const [tipsHidden, setTipsHidden] = useState(() => {
+    try {
+      return window.localStorage.getItem(TIPS_HIDDEN_KEY) === '1'
+    } catch {
+      return false
+    }
+  })
   return (
-    <div className="flex flex-col gap-3">
-      <div aria-label="Editor" className="flex gap-1 rounded-lg bg-black/25 p-1" role="tablist">
+    <div className="flex min-h-0 flex-1 flex-col">
+      <div
+        aria-label="Editor"
+        className="flex h-11 shrink-0 gap-1 overflow-x-auto border-b border-white/[0.08] px-2"
+        role="tablist"
+      >
         {TABS.map(([key, label]) => (
           <button
             aria-selected={tab === key}
             className={cn(
-              'flex-1 rounded-md px-2 py-1.5 text-sm font-medium transition-colors',
-              tab === key ? 'bg-white/15 text-primary' : 'text-secondary hover:text-primary',
+              'relative px-2.5 text-[13px] font-medium transition-colors',
+              tab === key ? 'text-primary' : 'text-secondary hover:text-primary',
             )}
             key={key}
             onClick={() => onTab(key)}
@@ -92,10 +117,13 @@ export function RankingEditor(props: RankingEditorProps) {
             type="button"
           >
             {label}
+            {tab === key && (
+              <span className="absolute inset-x-2.5 bottom-0 h-0.5 rounded-full bg-white" />
+            )}
           </button>
         ))}
       </div>
-      <div className="flex flex-col gap-3" role="tabpanel">
+      <div className="flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto p-4" role="tabpanel">
         {tab === 'ranks' && <RankRows {...props} />}
         {tab === 'title' && (
           <TitleEditor
@@ -106,7 +134,6 @@ export function RankingEditor(props: RankingEditorProps) {
         {tab === 'effects' && (
           <>
             <section className={SECTION}>
-              <span className={HEADING}>Stickers</span>
               <StickersPanel
                 focusRank={props.focusRank}
                 onChange={(stickers) => onChange({ ...project, stickers })}
@@ -145,6 +172,36 @@ export function RankingEditor(props: RankingEditorProps) {
           </>
         )}
       </div>
+      {!tipsHidden && props.onTryAsk && (
+        <div className="flex shrink-0 items-center gap-2 border-t border-white/[0.08] py-2.5 pr-3 pl-4 text-xs text-secondary">
+          <Sparkle className="size-3.5 shrink-0 text-accent-green" />
+          <span className="min-w-0 flex-1 truncate">
+            Tip: ask the agent <b className="text-primary">“{TIP[tab]}”</b>
+          </span>
+          <button
+            className="h-6 shrink-0 rounded-xxs bg-white/[0.06] px-2 text-xs text-primary hover:bg-white/10"
+            onClick={() => props.onTryAsk?.(TIP[tab])}
+            type="button"
+          >
+            Try it
+          </button>
+          <button
+            aria-label="Hide tips"
+            className="shrink-0 px-1 text-white/40 hover:text-primary"
+            onClick={() => {
+              setTipsHidden(true)
+              try {
+                window.localStorage.setItem(TIPS_HIDDEN_KEY, '1')
+              } catch {
+                // Hidden for this visit only.
+              }
+            }}
+            type="button"
+          >
+            ✕
+          </button>
+        </div>
+      )}
     </div>
   )
 }
@@ -415,7 +472,7 @@ function RankRow({
         <span className="w-7 text-lg font-black text-primary tabular-nums">{item.rank}.</span>
         <input
           aria-label={`Rank ${item.rank} label`}
-          className={cn(INPUT, 'min-w-0 flex-1')}
+          className={cn(INPUT, 'min-w-0 flex-1 pr-8')}
           maxLength={RANKING_LABEL_MAX}
           onChange={(e) => onChange({ ...item, label: e.target.value })}
           placeholder="What happens (emoji welcome 😳)"
@@ -927,7 +984,7 @@ function StylePanel({
     <label className="flex items-center gap-1.5 text-xs text-secondary" key={key}>
       {label}
       <select
-        className="rounded-md border border-white/10 bg-black/30 px-1.5 py-0.5 text-xs text-primary"
+        className="h-7 rounded-xs border-0 bg-white/[0.06] py-0 pr-7 pl-2 text-xs text-primary focus:ring-1 focus:ring-white/30"
         onChange={(e) =>
           onChange({ ...style, [key]: (e.target.value || undefined) as RankingFontId | undefined })
         }
@@ -952,7 +1009,7 @@ function StylePanel({
         <label className="flex items-center gap-1.5 text-xs text-secondary">
           Marks
           <select
-            className="rounded-md border border-white/10 bg-black/30 px-1.5 py-0.5 text-xs text-primary"
+            className="h-7 rounded-xs border-0 bg-white/[0.06] py-0 pr-7 pl-2 text-xs text-primary focus:ring-1 focus:ring-white/30"
             onChange={(e) =>
               onChange({ ...style, numberFormat: e.target.value as RankingNumberFormat })
             }

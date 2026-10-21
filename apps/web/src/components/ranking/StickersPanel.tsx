@@ -2,17 +2,20 @@
 
 import {
   animationOf,
-  STICKER_INS,
   STICKER_LOOPS,
   STICKER_OUTS,
 } from '@reelmakeeasy/common/ranking/ranking-motion'
 import {
   RANKING_STICKER_TEXT_MAX,
   RANKING_STICKERS_MAX,
-  RANKING_TITLE_COLORS,
   rankingItemId,
+  rankingTimeline,
 } from '@reelmakeeasy/common/ranking/ranking-project'
-import { RANKING_FONT_FACES, RANKING_FONT_IDS } from '@reelmakeeasy/common/ranking/ranking-type'
+import {
+  RANKING_FONT_FACES,
+  RANKING_FONT_IDS,
+  rankingFontFamily,
+} from '@reelmakeeasy/common/ranking/ranking-type'
 import type {
   RankingFontId,
   RankingProject,
@@ -20,26 +23,50 @@ import type {
   RankingStickerAnimation,
 } from '@shared/types/api/ranking'
 import { cn } from '@shared/ui'
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
+const SUBHEAD = 'flex h-5 items-center justify-between text-xs font-semibold text-secondary'
 const INPUT =
-  'rounded-md border border-white/10 bg-black/30 px-2 py-1 text-sm text-primary placeholder:text-tertiary focus:border-white/30 focus:outline-none'
-const LABEL = 'text-[11px] font-medium tracking-wide text-secondary uppercase'
+  'h-8 rounded-xs border-0 bg-white/[0.06] px-2.5 py-0 text-[13px] text-primary placeholder:text-white/40 focus:bg-white/10 focus:ring-1 focus:ring-white/30 focus:outline-none'
+/** The studio's Montserrat (the labels' font), as the presets show it. */
+const LABEL_FAMILY = '"RME Ranking", "Arial Black", sans-serif'
 
 /** Emoji the trend uses most, one click away. */
 const QUICK_EMOJI = ['😂', '💀', '😳', '🔥', '😱', '🤯', '👀', '😭', '🗿', '💯']
-/** Captions the trend uses most, one click away. */
-const QUICK_TEXT = ['NO WAY', 'WAIT FOR IT', 'BRO 😭', 'HE KNEW', 'CAUGHT 👀', '💀💀💀']
 
-const IN_LABEL: Record<RankingStickerAnimation['in'], string> = {
-  fade: 'Fade',
-  none: 'Appear',
-  pop: 'Pop',
-  'slide-down': 'From top',
-  'slide-left': 'From left',
-  'slide-right': 'From right',
-  'slide-up': 'From bottom',
-}
+/** Captions the trend uses, each in its own look, one click away. */
+const PRESETS: Pick<RankingSticker, 'color' | 'font' | 'italic' | 'text'>[] = [
+  { color: '#ffffff', font: 'dela', italic: true, text: 'NO WAY' },
+  { color: '#ffd23f', text: 'WAIT FOR IT' },
+  { color: '#ff4b3e', text: 'BRUH' },
+  { color: '#2ee6ff', font: 'dela', italic: true, text: 'CAUGHT' },
+]
+
+/** Text colours: white, the trend's red, orange, yellow, cyan, green, pink, black. */
+const SWATCHES = [
+  '#ffffff',
+  '#ff3b30',
+  '#ff9a1f',
+  '#ffd23f',
+  '#2ee6ff',
+  '#4ade80',
+  '#ff5fd2',
+  '#000000',
+]
+
+type Entrance = 'fade' | 'none' | 'pop' | 'slide'
+const ENTRANCES: [Entrance, string][] = [
+  ['none', 'None'],
+  ['pop', 'Pop'],
+  ['fade', 'Fade'],
+  ['slide', 'Slide'],
+]
+const SLIDES: [RankingStickerAnimation['in'], string][] = [
+  ['slide-down', '↓ From top'],
+  ['slide-left', '← From left'],
+  ['slide-right', '→ From right'],
+  ['slide-up', '↑ From bottom'],
+]
 const LOOP_LABEL: Record<RankingStickerAnimation['loop'], string> = {
   float: 'Float',
   none: 'Still',
@@ -52,9 +79,9 @@ const OUT_LABEL: Record<RankingStickerAnimation['out'], string> = {
   pop: 'Pop',
 }
 
-/** A new sticker in the middle of the clip area, slightly up, with a pop. */
+/** A new sticker in the lower middle of the clip area, popping in and fading out. */
 const newSticker = (over: Partial<RankingSticker>): RankingSticker => ({
-  animation: { in: 'pop', loop: 'none', out: 'none' },
+  animation: { in: 'pop', loop: 'none', out: 'fade' },
   color: '#ffffff',
   id: rankingItemId(),
   kind: 'text',
@@ -62,7 +89,7 @@ const newSticker = (over: Partial<RankingSticker>): RankingSticker => ({
   rotation: 0,
   size: 0.06,
   x: 0.5,
-  y: 0.45,
+  y: 0.62,
   ...over,
 })
 
@@ -70,9 +97,29 @@ const newSticker = (over: Partial<RankingSticker>): RankingSticker => ({
 const stickerName = (s: RankingSticker) =>
   s.kind === 'image' ? 'Picture' : s.text?.trim() || 'Text'
 
+/** How a text sticker looks in a tile: its font, colour, slant and outline. */
+const textLook = (s: Pick<RankingSticker, 'color' | 'font' | 'italic'>): React.CSSProperties => ({
+  color: s.color,
+  fontFamily: s.font ? `"${rankingFontFamily(s.font)}", ${LABEL_FAMILY}` : LABEL_FAMILY,
+  fontWeight: 900,
+  paintOrder: 'stroke fill',
+  transform: s.italic ? 'skewX(-10deg)' : undefined,
+  WebkitTextStroke: '3px #000',
+})
+
+/** How long a sticker's span runs: its rank's clip as it plays, or the whole short. */
+function spanOf(project: RankingProject, rank: null | number): number {
+  if (rank === null) return rankingTimeline(project).reduce((sum, p) => sum + p.durSec, 0) || 1
+  const clip = project.items.find((item) => item.rank === rank)?.clip
+  return clip ? Math.max(0.1, clip.trimEndSec - clip.trimStartSec) : 4.5
+}
+
+const seconds = (sec: number) => sec.toFixed(1)
+
 /**
  * Effects: text, emoji and pictures on the frame. One click adds one, to the rank on screen or
- * the whole short; it is then selected, to drag on the preview and fine-tune here.
+ * the whole short; it is then selected, to drag, resize and turn on the preview and to fine-tune
+ * here.
  */
 export function StickersPanel({
   focusRank,
@@ -93,64 +140,62 @@ export function StickersPanel({
 }) {
   const stickers = project.stickers ?? []
   const [wholeShort, setWholeShort] = useState(false)
-  const [text, setText] = useState('')
   const [uploading, setUploading] = useState(false)
+  const [focusText, setFocusText] = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
   const full = stickers.length >= RANKING_STICKERS_MAX
-  const rank = wholeShort || focusRank === null ? null : focusRank
+  const scope = wholeShort || focusRank === null ? null : focusRank
   const add = (over: Partial<RankingSticker>) => {
-    const sticker = newSticker({ rank, ...over })
+    const sticker = newSticker({ rank: scope, ...over })
     onChange([...stickers, sticker])
     onSelect(sticker.id)
   }
-  const addText = () => {
-    if (!text.trim() || full) return
-    add({ text: text.trim() })
-    setText('')
-  }
   const current = stickers.find((s) => s.id === selected) ?? null
-  // The stickers on screen with this rank: its own and the whole short's.
-  const onScreen = stickers.filter((s) => s.rank === null || s.rank === focusRank)
+  const listed = stickers.filter((s) => s.rank === scope)
 
   return (
-    <div className="flex flex-col gap-4">
-      <div className="flex flex-col gap-2">
-        <div className="flex items-center justify-between gap-2">
-          <span className={LABEL}>Add</span>
-          <div className="flex rounded-md bg-black/30 p-0.5 text-xs" role="radiogroup">
-            {focusRank !== null && (
-              <button
-                aria-checked={!wholeShort}
-                className={cn(
-                  'rounded px-2 py-0.5',
-                  wholeShort ? 'text-secondary hover:text-primary' : 'bg-white/15 text-primary',
-                )}
-                onClick={() => setWholeShort(false)}
-                role="radio"
-                type="button"
-              >
-                With #{focusRank}
-              </button>
+    <div className="flex flex-col gap-5">
+      <div className="flex h-8 rounded-sm bg-white/[0.06] p-0.5" role="radiogroup">
+        {focusRank !== null && (
+          <button
+            aria-checked={!wholeShort}
+            className={cn(
+              'flex-1 rounded-xs text-[13px] font-medium',
+              wholeShort ? 'text-secondary hover:text-primary' : 'bg-white/[0.14] text-primary',
             )}
-            <button
-              aria-checked={rank === null}
-              className={cn(
-                'rounded px-2 py-0.5',
-                rank === null ? 'bg-white/15 text-primary' : 'text-secondary hover:text-primary',
-              )}
-              onClick={() => setWholeShort(true)}
-              role="radio"
-              type="button"
-            >
-              Whole short
-            </button>
-          </div>
+            onClick={() => setWholeShort(false)}
+            role="radio"
+            type="button"
+          >
+            This rank (#{focusRank})
+          </button>
+        )}
+        <button
+          aria-checked={scope === null}
+          className={cn(
+            'flex-1 rounded-xs text-[13px] font-medium',
+            scope === null ? 'bg-white/[0.14] text-primary' : 'text-secondary hover:text-primary',
+          )}
+          onClick={() => setWholeShort(true)}
+          role="radio"
+          type="button"
+        >
+          Whole short
+        </button>
+      </div>
+
+      <div className="flex flex-col gap-2">
+        <div className={SUBHEAD}>
+          <span>Add an effect</span>
+          <span className="font-normal text-white/40">
+            {full ? 'That’s the most a short takes' : 'Click to add'}
+          </span>
         </div>
-        <div className="grid grid-cols-5 gap-1.5">
+        <div className="grid grid-cols-10 gap-1">
           {QUICK_EMOJI.map((emoji) => (
             <button
               aria-label={`Add ${emoji}`}
-              className="flex h-10 items-center justify-center rounded-lg bg-white/5 text-xl transition-colors hover:bg-white/15 disabled:opacity-30"
+              className="flex h-8 items-center justify-center rounded-xs bg-white/[0.04] text-lg transition hover:scale-105 hover:bg-white/10 disabled:opacity-30"
               disabled={full}
               key={emoji}
               onClick={() => add({ size: 0.08, text: emoji })}
@@ -160,46 +205,39 @@ export function StickersPanel({
             </button>
           ))}
         </div>
-        <div className="flex flex-wrap gap-1.5">
-          {QUICK_TEXT.map((caption) => (
+        <div className="grid grid-cols-3 gap-1">
+          {PRESETS.map((preset) => (
             <button
-              className="rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-xs font-bold text-primary transition-colors hover:bg-white/15 disabled:opacity-30"
+              aria-label={`Add ${preset.text}`}
+              className="flex h-9 items-center justify-center overflow-hidden rounded-xs bg-[#111] ring-1 ring-white/[0.08] ring-inset hover:ring-white/40 disabled:opacity-30"
               disabled={full}
-              key={caption}
-              onClick={() => add({ text: caption })}
+              key={preset.text}
+              onClick={() => add({ ...preset, size: 0.06 })}
               type="button"
             >
-              {caption}
+              <span className="text-sm" style={textLook(preset)}>
+                {preset.text}
+              </span>
             </button>
           ))}
-        </div>
-        <div className="flex gap-1.5">
-          <input
-            aria-label="Your own text"
-            className={cn(INPUT, 'min-w-0 flex-1')}
-            maxLength={RANKING_STICKER_TEXT_MAX}
-            onChange={(e) => setText(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') addText()
-            }}
-            placeholder="Your own text or emoji"
-            value={text}
-          />
           <button
-            className="rounded-md bg-white/10 px-3 text-xs font-medium text-primary hover:bg-white/20 disabled:opacity-40"
-            disabled={!text.trim() || full}
-            onClick={addText}
+            className="flex h-9 items-center justify-center gap-1.5 rounded-xs text-xs text-secondary ring-1 ring-white/[0.12] ring-inset hover:text-primary hover:ring-white/40 disabled:opacity-30"
+            disabled={full}
+            onClick={() => {
+              add({ text: 'YOUR TEXT' })
+              setFocusText(true)
+            }}
             type="button"
           >
-            Add
+            <span className="font-serif text-sm">T</span> Your text
           </button>
           <button
-            className="rounded-md bg-white/10 px-3 text-xs font-medium text-primary hover:bg-white/20 disabled:opacity-40"
+            className="flex h-9 items-center justify-center gap-1.5 rounded-xs text-xs text-secondary ring-1 ring-white/[0.12] ring-inset hover:text-primary hover:ring-white/40 disabled:opacity-30"
             disabled={uploading || full}
             onClick={() => fileRef.current?.click()}
             type="button"
           >
-            {uploading ? 'Uploading…' : 'Picture'}
+            {uploading ? 'Uploading…' : '🖼 Picture'}
           </button>
           <input
             accept="image/png,image/jpeg,image/webp,image/gif"
@@ -217,55 +255,70 @@ export function StickersPanel({
             type="file"
           />
         </div>
-        {full && (
-          <p className="text-xs text-secondary">
-            That's the most stickers a short takes: remove one first.
+      </div>
+
+      <div className="flex flex-col gap-1">
+        <div className={SUBHEAD}>
+          <span>{scope === null ? 'On the whole short' : `On rank #${scope}`}</span>
+          <span className="font-normal text-white/40">
+            {listed.length} effect{listed.length === 1 ? '' : 's'}
+          </span>
+        </div>
+        {listed.length ? (
+          listed.map((s) => (
+            <button
+              className={cn(
+                'flex h-9 items-center gap-2.5 rounded-xs px-1 text-left text-[13px]',
+                s.id === selected
+                  ? 'bg-white/[0.08] ring-1 ring-[#00b2f8]/60 ring-inset'
+                  : 'hover:bg-white/[0.04]',
+              )}
+              key={s.id}
+              onClick={() => onSelect(s.id === selected ? null : s.id)}
+              type="button"
+            >
+              <span className="flex h-7 w-11 shrink-0 items-center justify-center overflow-hidden rounded-[5px] bg-[#111]">
+                {s.kind === 'image' && s.imageUrl ? (
+                  <img alt="" className="max-h-full max-w-full object-contain" src={s.imageUrl} />
+                ) : (
+                  <span className="truncate px-0.5 text-[9px]" style={textLook(s)}>
+                    {s.text}
+                  </span>
+                )}
+              </span>
+              <span className="min-w-0 flex-1 truncate text-primary">{stickerName(s)}</span>
+              <span className="shrink-0 font-mono text-[11px] text-white/40">
+                {seconds(s.startSec ?? 0)}–{seconds(s.endSec ?? spanOf(project, s.rank))} s
+              </span>
+            </button>
+          ))
+        ) : (
+          <p className="py-1 text-xs text-secondary">
+            No effects {scope === null ? 'over the whole short' : 'on this rank'} yet. Click one
+            above.
           </p>
         )}
       </div>
 
-      <div className="flex flex-col gap-2">
-        <span className={LABEL}>
-          {focusRank === null ? 'On screen' : `On screen with #${focusRank}`}
-        </span>
-        {onScreen.length ? (
-          <div className="flex flex-wrap gap-1.5">
-            {onScreen.map((s) => (
-              <button
-                className={cn(
-                  'flex max-w-[160px] items-center gap-1.5 rounded-md border px-2 py-1 text-xs',
-                  s.id === selected
-                    ? 'border-white/60 bg-white/15 text-primary'
-                    : 'border-white/10 text-secondary hover:text-primary',
-                )}
-                key={s.id}
-                onClick={() => onSelect(s.id === selected ? null : s.id)}
-                type="button"
-              >
-                {s.kind === 'image' && s.imageUrl && (
-                  <img alt="" className="size-4 rounded object-contain" src={s.imageUrl} />
-                )}
-                <span className="truncate font-semibold">{stickerName(s)}</span>
-                {s.rank === null && <span className="text-[10px] text-tertiary">all</span>}
-              </button>
-            ))}
-          </div>
-        ) : (
-          <p className="text-xs text-secondary">Nothing yet: add one above.</p>
-        )}
-      </div>
-
       {current && (
-        <StickerInspector
+        <StickerEditor
+          autoFocus={focusText}
           key={current.id}
           onChange={(patch) =>
             onChange(stickers.map((s) => (s.id === current.id ? { ...s, ...patch } : s)))
           }
+          onDuplicate={() => {
+            if (full) return
+            const copy = { ...current, id: rankingItemId(), y: Math.min(0.95, current.y + 0.05) }
+            onChange([...stickers, copy])
+            onSelect(copy.id)
+          }}
+          onFocused={() => setFocusText(false)}
           onRemove={() => {
             onChange(stickers.filter((s) => s.id !== current.id))
             onSelect(null)
           }}
-          ranks={project.items.map((item) => item.rank)}
+          span={spanOf(project, current.rank)}
           sticker={current}
         />
       )}
@@ -273,236 +326,341 @@ export function StickersPanel({
   )
 }
 
-/** The selected sticker: what it says, where it shows, its size, angle, colour and motion. */
-function Field({ children, label }: { children: React.ReactNode; label: string }) {
+/** The selected sticker: what it says, its look, its size and tilt, how it moves, when it shows. */
+function IconButton({
+  children,
+  label,
+  onClick,
+}: {
+  children: React.ReactNode
+  label: string
+  onClick: () => void
+}) {
   return (
-    <div className="flex items-center gap-2">
-      <span className="w-14 shrink-0 text-xs text-secondary">{label}</span>
-      <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">{children}</div>
+    <button
+      aria-label={label}
+      className="flex size-8 shrink-0 items-center justify-center rounded-xs text-sm text-secondary hover:bg-white/[0.06] hover:text-primary"
+      onClick={onClick}
+      title={label}
+      type="button"
+    >
+      {children}
+    </button>
+  )
+}
+
+function Row({ children, label }: { children: React.ReactNode; label: string }) {
+  return (
+    <div className="flex min-h-7 items-center gap-2">
+      <span className="w-11 shrink-0 text-xs text-secondary">{label}</span>
+      <div className="flex min-w-0 flex-1 items-center gap-2">{children}</div>
     </div>
   )
 }
 
-function StickerInspector({
+function StickerEditor({
+  autoFocus,
   onChange,
+  onDuplicate,
+  onFocused,
   onRemove,
-  ranks,
+  span,
   sticker,
 }: {
+  /** Put the cursor in its text (just added with "Your text"). */
+  autoFocus: boolean
   onChange: (patch: Partial<RankingSticker>) => void
+  onDuplicate: () => void
+  onFocused: () => void
   onRemove: () => void
-  ranks: number[]
+  /** How long its rank (or the whole short) plays: the "Shows" bar's length. */
+  span: number
   sticker: RankingSticker
 }) {
   const animation = animationOf(sticker)
   const setAnimation = (patch: Partial<RankingStickerAnimation>) =>
     onChange({ animation: { ...animation, ...patch } })
-  const seconds = (value: string) => (value.trim() === '' ? undefined : Math.max(0, Number(value)))
+  const textRef = useRef<HTMLInputElement>(null)
+  useEffect(() => {
+    if (!autoFocus) return
+    textRef.current?.select()
+    onFocused()
+  }, [autoFocus, onFocused])
+  const entrance: Entrance = animation.in.startsWith('slide') ? 'slide' : (animation.in as Entrance)
+  const isText = sticker.kind === 'text'
   return (
-    <div className="flex flex-col gap-3 rounded-xl border border-white/15 bg-white/[0.03] p-3">
-      <div className="flex items-center gap-2">
-        {sticker.kind === 'text' ? (
+    <div className="flex flex-col gap-2.5 rounded-xl bg-white/[0.04] p-3 ring-1 ring-white/[0.08] ring-inset">
+      <div className="flex items-center gap-1.5">
+        {isText ? (
           <input
             aria-label="Sticker text"
-            className={cn(INPUT, 'min-w-0 flex-1 font-bold')}
+            className={cn(INPUT, 'min-w-0 flex-1 font-semibold')}
             maxLength={RANKING_STICKER_TEXT_MAX}
             onChange={(e) => onChange({ text: e.target.value })}
-            style={{ color: sticker.color }}
+            ref={textRef}
             value={sticker.text ?? ''}
           />
         ) : (
-          <span className="flex min-w-0 flex-1 items-center gap-2 text-sm text-primary">
+          <span className="flex min-w-0 flex-1 items-center gap-2 text-[13px] text-primary">
             {sticker.imageUrl && (
               <img alt="" className="size-8 rounded object-contain" src={sticker.imageUrl} />
             )}
             Picture
           </span>
         )}
-        <button
-          className="rounded-md px-2 py-1 text-xs text-secondary hover:bg-white/10 hover:text-primary"
-          onClick={onRemove}
-          type="button"
-        >
-          Delete
-        </button>
+        <IconButton label="Duplicate" onClick={onDuplicate}>
+          ⧉
+        </IconButton>
+        <IconButton label="Delete" onClick={onRemove}>
+          ✕
+        </IconButton>
       </div>
-      <p className="text-xs text-secondary">Drag it on the preview to move it.</p>
 
-      <Field label="Shows">
-        <select
-          aria-label="Shows with"
-          className={cn(INPUT, 'py-0.5 text-xs')}
-          onChange={(e) =>
-            onChange({ rank: e.target.value === 'all' ? null : Number(e.target.value) })
-          }
-          value={sticker.rank === null ? 'all' : String(sticker.rank)}
-        >
-          <option value="all">The whole short</option>
-          {ranks.map((rank) => (
-            <option key={rank} value={rank}>
-              With #{rank}
-            </option>
-          ))}
-        </select>
-      </Field>
-      <Field label="Size">
+      {isText && (
+        <Row label="Font">
+          <select
+            aria-label="Sticker font"
+            className={cn(INPUT, 'min-w-0 flex-1 pr-8')}
+            onChange={(e) =>
+              onChange({ font: (e.target.value || undefined) as RankingFontId | undefined })
+            }
+            value={sticker.font ?? ''}
+          >
+            <option value="">Like the labels</option>
+            {RANKING_FONT_IDS.map((id) => (
+              <option key={id} value={id}>
+                {RANKING_FONT_FACES[id].label}
+              </option>
+            ))}
+          </select>
+          <button
+            aria-label="Slant"
+            aria-pressed={!!sticker.italic}
+            className={cn(
+              'flex size-8 shrink-0 items-center justify-center rounded-xs font-serif italic',
+              sticker.italic
+                ? 'bg-white/[0.14] text-primary'
+                : 'bg-white/[0.06] text-secondary hover:text-primary',
+            )}
+            onClick={() => onChange({ italic: !sticker.italic })}
+            title="Slant"
+            type="button"
+          >
+            I
+          </button>
+        </Row>
+      )}
+      {isText && (
+        <Row label="Colour">
+          <div className="flex flex-wrap items-center gap-1.5">
+            {SWATCHES.map((c) => (
+              <button
+                aria-label={`Colour ${c}`}
+                className={cn(
+                  'size-5 rounded-full ring-1 ring-white/20',
+                  c === sticker.color.toLowerCase() &&
+                    'ring-[1.5px] ring-white ring-offset-2 ring-offset-[#1e1e1e]',
+                )}
+                key={c}
+                onClick={() => onChange({ color: c })}
+                style={{ background: c }}
+                type="button"
+              />
+            ))}
+            <label
+              aria-label="Your own colour"
+              className="relative flex size-5 cursor-pointer items-center justify-center rounded-full text-xs text-secondary ring-1 ring-white/20 hover:text-primary"
+            >
+              +
+              <input
+                className="absolute inset-0 cursor-pointer opacity-0"
+                onChange={(e) => onChange({ color: e.target.value })}
+                type="color"
+                value={sticker.color}
+              />
+            </label>
+          </div>
+        </Row>
+      )}
+      <Row label="Size">
         <input
           aria-label="Size"
-          className="flex-1"
-          max={sticker.kind === 'text' ? 20 : 100}
-          min={sticker.kind === 'text' ? 2 : 5}
+          className="min-w-0 flex-1 accent-white"
+          max={isText ? 20 : 100}
+          min={isText ? 2 : 5}
           onChange={(e) => onChange({ size: Number(e.target.value) / 100 })}
           type="range"
           value={Math.round(sticker.size * 100)}
         />
-      </Field>
-      <Field label="Angle">
+        <span className="w-6 font-mono text-xs text-secondary">
+          {Math.round(sticker.size * 100)}
+        </span>
+        <span className="text-xs text-secondary">Tilt</span>
         <input
-          aria-label="Angle"
-          className="flex-1"
+          aria-label="Tilt"
+          className="min-w-0 flex-1 accent-white"
           max={45}
           min={-45}
           onChange={(e) => onChange({ rotation: Number(e.target.value) })}
+          onDoubleClick={() => onChange({ rotation: 0 })}
           type="range"
-          value={sticker.rotation}
+          value={Math.max(-45, Math.min(45, sticker.rotation))}
         />
-        <span className="w-8 text-right text-xs text-secondary tabular-nums">
-          {sticker.rotation}°
-        </span>
-      </Field>
-      {sticker.kind === 'text' && (
-        <>
-          <Field label="Colour">
-            <div className="flex items-center gap-1.5">
-              {RANKING_TITLE_COLORS.map((c) => (
-                <button
-                  aria-label={`Colour ${c}`}
-                  className={cn(
-                    'size-5 rounded-full border',
-                    c === sticker.color.toLowerCase()
-                      ? 'border-white ring-1 ring-white'
-                      : 'border-white/30',
-                  )}
-                  key={c}
-                  onClick={() => onChange({ color: c })}
-                  style={{ background: c }}
-                  type="button"
-                />
-              ))}
-            </div>
-          </Field>
-          <Field label="Font">
-            <select
-              aria-label="Sticker font"
-              className={cn(INPUT, 'py-0.5 text-xs')}
-              onChange={(e) =>
-                onChange({ font: (e.target.value || undefined) as RankingFontId | undefined })
-              }
-              value={sticker.font ?? ''}
-            >
-              <option value="">Like the labels</option>
-              {RANKING_FONT_IDS.map((id) => (
-                <option key={id} value={id}>
-                  {RANKING_FONT_FACES[id].label}
-                </option>
-              ))}
-            </select>
-            <label className="flex items-center gap-1 text-xs text-secondary">
-              <input
-                checked={!!sticker.italic}
-                onChange={(e) => onChange({ italic: e.target.checked })}
-                type="checkbox"
-              />
-              Slant
-            </label>
-          </Field>
-        </>
+        <span className="w-8 text-right font-mono text-xs text-secondary">{sticker.rotation}°</span>
+      </Row>
+      <Row label="In">
+        <Chips
+          onPick={(v) =>
+            setAnimation({ in: v === 'slide' ? 'slide-up' : (v as RankingStickerAnimation['in']) })
+          }
+          options={ENTRANCES}
+          value={entrance}
+        />
+      </Row>
+      {entrance === 'slide' && (
+        <Row label="">
+          <Chips onPick={(v) => setAnimation({ in: v })} options={SLIDES} value={animation.in} />
+        </Row>
       )}
-      <Chips
-        label="In"
-        names={IN_LABEL}
-        onPick={(v) => setAnimation({ in: v })}
-        options={STICKER_INS}
-        value={animation.in}
-      />
-      <Chips
-        label="Move"
-        names={LOOP_LABEL}
-        onPick={(v) => setAnimation({ loop: v })}
-        options={STICKER_LOOPS}
-        value={animation.loop}
-      />
-      <Chips
-        label="Out"
-        names={OUT_LABEL}
-        onPick={(v) => setAnimation({ out: v })}
-        options={STICKER_OUTS}
-        value={animation.out}
-      />
-      <Field label="When">
-        <span className="text-xs text-secondary">from</span>
-        <input
-          aria-label="Shows from (seconds)"
-          className={cn(INPUT, 'w-16 py-0.5 text-xs')}
-          min={0}
-          onChange={(e) => onChange({ startSec: seconds(e.target.value) })}
-          placeholder="0"
-          step={0.1}
-          type="number"
-          value={sticker.startSec ?? ''}
+      <Row label="Loop">
+        <Chips
+          onPick={(v) => setAnimation({ loop: v })}
+          options={STICKER_LOOPS.map((o): [typeof o, string] => [o, LOOP_LABEL[o]])}
+          value={animation.loop}
         />
-        <span className="text-xs text-secondary">to</span>
-        <input
-          aria-label="Shows until (seconds)"
-          className={cn(INPUT, 'w-16 py-0.5 text-xs')}
-          min={0}
-          onChange={(e) => onChange({ endSec: seconds(e.target.value) ?? null })}
-          placeholder="end"
-          step={0.1}
-          type="number"
-          value={sticker.endSec ?? ''}
+      </Row>
+      <Row label="Out">
+        <Chips
+          onPick={(v) => setAnimation({ out: v })}
+          options={STICKER_OUTS.map((o): [typeof o, string] => [o, OUT_LABEL[o]])}
+          value={animation.out}
         />
-        <span className="text-xs text-secondary">s</span>
-      </Field>
+      </Row>
+      <Row label="Shows">
+        <ShowsBar
+          end={sticker.endSec ?? null}
+          onChange={(startSec, endSec) => onChange({ endSec, startSec })}
+          span={span}
+          start={sticker.startSec ?? 0}
+        />
+      </Row>
     </div>
   )
 }
 
 /** One choice as a row of chips (a sticker's entrance, movement or exit). */
 function Chips<T extends string>({
-  label,
-  names,
   onPick,
   options,
   value,
 }: {
-  label: string
-  names: Record<T, string>
   onPick: (value: T) => void
-  options: readonly T[]
+  options: readonly [T, string][]
   value: T
 }) {
   return (
-    <Field label={label}>
-      <div aria-label={label} className="flex flex-wrap gap-1" role="radiogroup">
-        {options.map((option) => (
-          <button
-            aria-checked={option === value}
-            className={cn(
-              'rounded-full px-2.5 py-0.5 text-xs transition-colors',
-              option === value
-                ? 'bg-white text-black'
-                : 'bg-white/5 text-secondary hover:bg-white/15 hover:text-primary',
-            )}
-            key={option}
-            onClick={() => onPick(option)}
-            role="radio"
-            type="button"
-          >
-            {names[option]}
-          </button>
-        ))}
+    <div className="flex flex-wrap gap-1" role="radiogroup">
+      {options.map(([option, name]) => (
+        <button
+          aria-checked={option === value}
+          className={cn(
+            'h-7 rounded-xxs px-2.5 text-xs transition-colors',
+            option === value
+              ? 'bg-white/[0.14] text-primary ring-1 ring-white/40 ring-inset'
+              : 'bg-white/[0.06] text-secondary hover:bg-white/10 hover:text-primary',
+          )}
+          key={option}
+          onClick={() => onPick(option)}
+          role="radio"
+          type="button"
+        >
+          {name}
+        </button>
+      ))}
+    </div>
+  )
+}
+
+/**
+ * When a sticker shows, as a window on a bar the length of its rank (or the whole short): drag
+ * either end, or the middle to slide it. An end dragged to the bar's end means "to the end".
+ */
+function ShowsBar({
+  end,
+  onChange,
+  span,
+  start,
+}: {
+  end: null | number
+  onChange: (startSec: number | undefined, endSec: null | number) => void
+  span: number
+  start: number
+}) {
+  const bar = useRef<HTMLDivElement>(null)
+  const drag = useRef<null | {
+    at: number
+    edge: 'end' | 'move' | 'start'
+    from: [number, number]
+  }>(null)
+  const to = Math.min(span, end ?? span)
+  const from = Math.min(start, to)
+  const secAt = (clientX: number) => {
+    const box = bar.current?.getBoundingClientRect()
+    if (!box) return 0
+    return Math.min(1, Math.max(0, (clientX - box.left) / box.width)) * span
+  }
+  const apply = (s: number, e: number) => {
+    const startSec = Math.round(Math.max(0, Math.min(s, e - 0.2)) * 10) / 10
+    const endSec = Math.round(Math.min(span, Math.max(e, startSec + 0.2)) * 10) / 10
+    onChange(startSec > 0 ? startSec : undefined, endSec >= span - 0.05 ? null : endSec)
+  }
+  const edgeAt = (at: number): 'end' | 'move' | 'start' => {
+    const near = span * 0.06
+    if (Math.abs(at - from) < near) return 'start'
+    if (Math.abs(at - to) < near) return 'end'
+    if (at > from && at < to) return 'move'
+    return at < from ? 'start' : 'end'
+  }
+  return (
+    <div className="flex min-w-0 flex-1 items-center gap-2">
+      <div
+        aria-label="When it shows: drag its ends, or the middle to slide it"
+        className="relative h-6 min-w-0 flex-1 cursor-pointer touch-none rounded-xxs bg-white/[0.06]"
+        onLostPointerCapture={() => (drag.current = null)}
+        onPointerDown={(e) => {
+          const at = secAt(e.clientX)
+          const edge = edgeAt(at)
+          drag.current = { at, edge, from: [from, to] }
+          e.currentTarget.setPointerCapture(e.pointerId)
+          if (edge === 'start') apply(at, to)
+          if (edge === 'end') apply(from, at)
+        }}
+        onPointerMove={(e) => {
+          const d = drag.current
+          if (!d) return
+          const at = secAt(e.clientX)
+          if (d.edge === 'start') apply(at, d.from[1])
+          else if (d.edge === 'end') apply(d.from[0], at)
+          else {
+            const shift = Math.max(-d.from[0], Math.min(span - d.from[1], at - d.at))
+            apply(d.from[0] + shift, d.from[1] + shift)
+          }
+        }}
+        onPointerUp={() => (drag.current = null)}
+        ref={bar}
+        role="group"
+      >
+        <span
+          className="absolute inset-y-0 flex items-center justify-between rounded-xxs bg-[#00b2f8]/[0.28] px-0.5 ring-[1.5px] ring-[#00b2f8] ring-inset"
+          style={{ left: `${(from / span) * 100}%`, width: `${((to - from) / span) * 100}%` }}
+        >
+          <span className="h-3 w-[3px] rounded-full bg-white" />
+          <span className="h-3 w-[3px] rounded-full bg-white" />
+        </span>
       </div>
-    </Field>
+      <span className="shrink-0 font-mono text-xs text-secondary">
+        {seconds(from)}–{seconds(to)} s
+      </span>
+    </div>
   )
 }

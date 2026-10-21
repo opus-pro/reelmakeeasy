@@ -22,7 +22,7 @@ import type {
   RankingSticker,
   RankingTemplate,
 } from '@shared/types/api/ranking'
-import { Button } from '@shared/ui'
+import { cn } from '@shared/ui'
 import { useAtomValue } from 'jotai'
 import { useRouter } from 'next/navigation'
 import { useCallback, useEffect, useRef, useState } from 'react'
@@ -76,6 +76,22 @@ export function RankingStudio({
   const [fontsReady, setFontsReady] = useState(false)
   const [tab, setTab] = useState<RankingEditorTab>('ranks')
   const [selectedSticker, setSelectedSticker] = useState<null | string>(null)
+  const [ask, setAsk] = useState('')
+  const askRef = useRef<HTMLInputElement>(null)
+  const exporter = useExport(api, project)
+  // "/" puts the cursor in the ask bar (unless the user is typing somewhere).
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement | null
+      const typing =
+        target?.isContentEditable || ['INPUT', 'SELECT', 'TEXTAREA'].includes(target?.tagName ?? '')
+      if (e.key !== '/' || typing || e.metaKey || e.ctrlKey) return
+      e.preventDefault()
+      askRef.current?.focus()
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [])
   const [uploading, setUploading] = useState<ReadonlySet<string>>(() => new Set())
   const saveTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
   const { uploadFile } = useSignedUpload({ module: 'media-temp' })
@@ -164,67 +180,66 @@ export function RankingStudio({
     [api, id, uploadFile],
   )
 
-  if (error && !project) return <p className="p-6 text-sm text-amber-400">{error}</p>
-  if (!project) return <p className="p-6 text-sm text-secondary">Loading…</p>
+  if (error && !project) return <p className="p-6 pt-20 text-sm text-amber-400">{error}</p>
+  if (!project) return <p className="p-6 pt-20 text-sm text-secondary md:pt-6">Loading…</p>
+  const editSticker = (stickerId: string, patch: Partial<RankingSticker>) =>
+    change({
+      ...project,
+      stickers: (project.stickers ?? []).map((s) => (s.id === stickerId ? { ...s, ...patch } : s)),
+    })
   return (
-    <div className="flex w-full flex-col gap-4">
-      <header className="flex flex-wrap items-center gap-3">
-        <button
-          className="text-sm text-secondary hover:text-primary"
-          onClick={onBack}
-          type="button"
-        >
-          ← All rankings
-        </button>
-        <input
-          aria-label="Ranking name"
-          className="min-w-0 flex-1 rounded-md border border-transparent bg-transparent px-2 py-1 text-lg font-semibold text-primary hover:border-white/10 focus:border-white/30 focus:outline-none"
-          maxLength={80}
-          onChange={(e) => change({ ...project, name: e.target.value })}
-          value={project.name}
-        />
-        <span className="text-xs text-secondary">
-          {saving === 'saving' ? 'Saving…' : saving === 'error' ? 'Not saved' : 'Saved'}
-        </span>
-        <StylePicker
-          onApply={(template) => change({ ...project, ...applyRankingTemplate(project, template) })}
-        />
-      </header>
-      <AskAgent api={api} project={project} />
-      {error && <p className="text-sm text-amber-400">{error}</p>}
-      <div className="flex flex-col gap-6 lg:flex-row lg:items-start">
-        <div className="min-w-0 flex-1 lg:max-w-[560px]">
-          <RankingEditor
-            focusRank={focusRank}
-            onChange={change}
-            onFocusRank={pickRank}
-            onOpenLibrary={onOpenLibrary}
-            onSelectSticker={setSelectedSticker}
-            onTab={setTab}
-            onUploadClip={uploadClip}
-            onUploadStickerImage={uploadStickerImage}
-            project={project}
-            selectedSticker={selectedSticker}
-            sounds={sounds}
-            tab={tab}
-            uploading={uploading}
+    <div className="flex min-h-dvh w-full flex-col pt-14 md:pt-0 lg:h-dvh lg:min-h-0">
+      <header className="flex flex-wrap items-center gap-x-4 gap-y-2 border-b border-white/[0.08] px-4 py-2.5 lg:h-14 lg:flex-nowrap lg:py-0">
+        <div className="flex min-w-0 flex-1 items-center gap-1 lg:w-[430px] lg:flex-none">
+          <button
+            className="flex h-8 shrink-0 items-center gap-1 rounded-xs px-2 text-xs text-secondary hover:bg-white/[0.06] hover:text-primary"
+            onClick={onBack}
+            type="button"
+          >
+            ← All rankings
+          </button>
+          <input
+            aria-label="Ranking name"
+            className="h-8 min-w-0 flex-1 truncate rounded-xs border-0 bg-transparent px-2 py-0 text-[15px] font-semibold text-primary hover:bg-white/[0.06] focus:bg-white/[0.06] focus:outline-none"
+            maxLength={80}
+            onChange={(e) => change({ ...project, name: e.target.value })}
+            value={project.name}
           />
+          <span
+            className={cn(
+              'shrink-0 text-xs',
+              saving === 'error' ? 'text-amber-400' : 'text-white/40',
+            )}
+          >
+            {saving === 'saving' ? 'Saving…' : saving === 'error' ? 'Not saved' : 'Saved'}
+          </span>
         </div>
-        <div className="flex flex-col items-center gap-4 lg:sticky lg:top-6">
+        <AskAgent api={api} inputRef={askRef} onText={setAsk} project={project} text={ask} />
+        <div className="flex shrink-0 items-center gap-2 lg:ml-0">
+          <StylePicker
+            onApply={(template) =>
+              change({ ...project, ...applyRankingTemplate(project, template) })
+            }
+          />
+          <ExportButton exporter={exporter} saving={saving === 'saving'} />
+        </div>
+      </header>
+      {error && <p className="px-4 pt-2 text-sm text-amber-400">{error}</p>}
+      <div className="flex min-h-0 flex-1 flex-col lg:grid lg:grid-cols-[minmax(0,1fr)_400px]">
+        <section className="flex min-h-0 flex-col items-center gap-2 bg-[#131313] px-4 pt-4 pb-3 lg:overflow-hidden">
           <RankingPreview
+            dockWidth="860px"
             focusRequest={focusRequest}
             fontsReady={fontsReady}
-            onMoveSticker={(stickerId, x, y) =>
+            onEditSticker={editSticker}
+            onRankOnScreen={setFocusRank}
+            onRemoveSticker={(stickerId) => {
               change({
                 ...project,
-                stickers: (project.stickers ?? []).map((s) =>
-                  s.id === stickerId
-                    ? { ...s, x: Math.round(x * 1000) / 1000, y: Math.round(y * 1000) / 1000 }
-                    : s,
-                ),
+                stickers: (project.stickers ?? []).filter((s) => s.id !== stickerId),
               })
-            }
-            onRankOnScreen={setFocusRank}
+              setSelectedSticker(null)
+            }}
             onSelectSticker={(stickerId) => {
               setSelectedSticker(stickerId)
               // Picking one on the preview opens it in Effects.
@@ -233,9 +248,31 @@ export function RankingStudio({
             project={project}
             selectedSticker={selectedSticker}
             sounds={sounds}
+            stageHeight="max(360px, calc(100dvh - 56px - 140px))"
           />
-          <ExportPanel api={api} project={project} saving={saving === 'saving'} />
-        </div>
+          <ExportNotes exporter={exporter} />
+        </section>
+        <aside className="flex min-h-[480px] flex-col border-white/[0.08] bg-panel lg:min-h-0 lg:border-l">
+          <RankingEditor
+            focusRank={focusRank}
+            onChange={change}
+            onFocusRank={pickRank}
+            onOpenLibrary={onOpenLibrary}
+            onSelectSticker={setSelectedSticker}
+            onTab={setTab}
+            onTryAsk={(example) => {
+              setAsk(example)
+              askRef.current?.focus()
+            }}
+            onUploadClip={uploadClip}
+            onUploadStickerImage={uploadStickerImage}
+            project={project}
+            selectedSticker={selectedSticker}
+            sounds={sounds}
+            tab={tab}
+            uploading={uploading}
+          />
+        </aside>
       </div>
     </div>
   )
@@ -336,6 +373,8 @@ function stickerPicture(
 }
 
 /** "Apply style": gives the ranking a saved style's look and sounds (then autosaves). */
+type Exporter = ReturnType<typeof useExport>
+
 function StylePicker({ onApply }: { onApply: (template: RankingTemplate) => void }) {
   const api = useRankingApi()
   const [styles, setStyles] = useState<RankingTemplate[]>([])
@@ -349,7 +388,7 @@ function StylePicker({ onApply }: { onApply: (template: RankingTemplate) => void
   return (
     <select
       aria-label="Apply a style"
-      className="rounded-md border border-white/10 bg-black/30 px-2 py-1 text-xs text-primary"
+      className="h-8 w-[136px] rounded-xs border-0 bg-white/[0.06] py-0 pr-8 pl-2.5 text-[13px] font-medium text-primary hover:bg-white/10 focus:ring-1 focus:ring-white/30"
       onChange={(e) => {
         const template = styles.find((s) => s.id === e.target.value)
         e.target.value = ''
@@ -367,20 +406,10 @@ function StylePicker({ onApply }: { onApply: (template: RankingTemplate) => void
   )
 }
 
-/** Opens a Ranking chat on this ranking, so the agent carries on with it. */
-function ExportPanel({
-  api,
-  project,
-  saving,
-}: {
-  api: RankingApi
-  project: RankingProject
-  saving: boolean
-}) {
+/** The export: what still stops it, the render's progress, and the finished video. */
+function useExport(api: RankingApi, project: null | RankingProject) {
   const [status, setStatus] = useState<null | RankingRenderStatus>(null)
   const [error, setError] = useState<null | string>(null)
-  const problems = rankingProblems(project)
-  const advice = rankingAdvice(project)
 
   useEffect(() => {
     if (status?.state !== 'rendering') return undefined
@@ -394,6 +423,7 @@ function ExportPanel({
   }, [api, status])
 
   const exportNow = async () => {
+    if (!project) return
     setError(null)
     try {
       await document.fonts.ready
@@ -404,42 +434,66 @@ function ExportPanel({
     }
   }
 
+  return {
+    advice: project ? rankingAdvice(project) : [],
+    error,
+    exportNow,
+    problems: project ? rankingProblems(project) : [],
+    status,
+  }
+}
+
+/** "Export MP4": the render, its progress, then "Download". */
+function ExportButton({ exporter, saving }: { exporter: Exporter; saving: boolean }) {
+  const { exportNow, problems, status } = exporter
+  if (status?.state === 'done' && status.videoUrl)
+    return (
+      <span className="flex items-center gap-1.5">
+        <a
+          className="flex h-8 items-center rounded-xs bg-white px-3 text-[13px] font-medium text-[#111] hover:bg-white/85"
+          download
+          href={status.videoUrl}
+        >
+          Download MP4
+        </a>
+        <button
+          className="h-8 rounded-xs px-2 text-xs text-secondary hover:bg-white/[0.06] hover:text-primary"
+          onClick={() => void exportNow()}
+          title="Export again"
+          type="button"
+        >
+          Again
+        </button>
+      </span>
+    )
   const rendering = status?.state === 'rendering'
   return (
-    <div className="flex w-full max-w-[430px] flex-col gap-2 rounded-xl border border-white/10 bg-fill-secondary/40 p-3">
-      <div className="flex items-center gap-3">
-        <Button
-          disabled={!!problems.length || rendering || saving}
-          onClick={() => void exportNow()}
-          size="sm"
-        >
-          {rendering ? `Rendering… ${Math.round((status?.progress ?? 0) * 100)}%` : 'Export MP4'}
-        </Button>
-        {status?.state === 'done' && status.videoUrl && (
-          <a
-            className="text-sm text-primary underline underline-offset-2"
-            download
-            href={status.videoUrl}
-          >
-            Download
-          </a>
-        )}
-      </div>
-      {problems.length > 0 && <p className="text-xs text-secondary">{problems.join(' ')}</p>}
+    <button
+      className="flex h-8 items-center gap-1.5 rounded-xs bg-white px-3 text-[13px] font-medium text-[#111] hover:bg-white/85 disabled:cursor-not-allowed disabled:opacity-40"
+      disabled={!!problems.length || rendering || saving}
+      onClick={() => void exportNow()}
+      title={problems.join(' ') || 'Render a 1080×1920 MP4'}
+      type="button"
+    >
+      {rendering ? `Exporting ${Math.round((status.progress ?? 0) * 100)}%` : 'Export MP4'}
+    </button>
+  )
+}
+
+/** Under the preview: what still stops the export, tips, and a failed export's reason. */
+function ExportNotes({ exporter }: { exporter: Exporter }) {
+  const { advice, error, problems, status } = exporter
+  if (!problems.length && !advice.length && !error && status?.state !== 'failed') return null
+  return (
+    <div className="flex w-full max-w-[860px] flex-col gap-1 text-xs">
+      {problems.length > 0 && <p className="text-secondary">Before export: {problems.join(' ')}</p>}
       {advice.map((tip) => (
-        <p className="text-xs text-amber-300/80" key={tip}>
+        <p className="text-amber-300/80" key={tip}>
           Tip: {tip}
         </p>
       ))}
-      {status?.state === 'failed' && <p className="text-xs text-amber-400">{status.error}</p>}
-      {error && <p className="text-xs text-amber-400">{error}</p>}
-      {status?.state === 'done' && status.videoUrl && (
-        <video
-          className="max-h-[50vh] w-auto self-center rounded-lg"
-          controls
-          src={status.videoUrl}
-        />
-      )}
+      {status?.state === 'failed' && <p className="text-amber-400">{status.error}</p>}
+      {error && <p className="text-amber-400">{error}</p>}
     </div>
   )
 }
@@ -448,9 +502,20 @@ function ExportPanel({
  * "Ask the agent": what the user types opens a Ranking chat on this ranking with it as the first
  * message, and the agent does it there (with nothing typed, the chat asks what to do next).
  */
-function AskAgent({ api, project }: { api: RankingApi; project: RankingProject }) {
+function AskAgent({
+  api,
+  inputRef,
+  onText,
+  project,
+  text,
+}: {
+  api: RankingApi
+  inputRef: React.RefObject<HTMLInputElement | null>
+  onText: (text: string) => void
+  project: RankingProject
+  text: string
+}) {
   const router = useRouter()
-  const [text, setText] = useState('')
   const [opening, setOpening] = useState(false)
   const [error, setError] = useState<null | string>(null)
   const ask = () => {
@@ -466,29 +531,40 @@ function AskAgent({ api, project }: { api: RankingApi; project: RankingProject }
       })
   }
   return (
-    <div className="flex flex-col gap-1">
-      <form
-        className="flex items-center gap-2 rounded-xl border border-accent-green/25 bg-accent-green/[0.06] py-1.5 pr-1.5 pl-3 focus-within:border-accent-green/50"
-        onSubmit={(e) => {
-          e.preventDefault()
-          ask()
-        }}
+    <form
+      className="order-last flex h-9 w-full items-center gap-2 rounded-sm bg-white/[0.06] pr-1 pl-3 ring-1 ring-white/[0.12] ring-inset focus-within:bg-white/[0.08] focus-within:shadow-[0_0_0_3px_rgba(190,247,55,0.12)] focus-within:ring-white/40 lg:order-none lg:mx-auto lg:max-w-[460px] lg:flex-1"
+      onSubmit={(e) => {
+        e.preventDefault()
+        ask()
+      }}
+      title={error ?? 'Press / to ask'}
+    >
+      <Sparkle className="size-4 shrink-0 text-accent-green" />
+      <input
+        aria-label="Ask the agent"
+        className="min-w-0 flex-1 border-0 bg-transparent p-0 text-[13px] text-primary placeholder:text-secondary focus:ring-0 focus:outline-none"
+        disabled={opening}
+        maxLength={2000}
+        onChange={(e) => onText(e.target.value)}
+        placeholder="Tell the agent what to change: “add a boom when the dog falls on #2”"
+        ref={inputRef}
+        value={text}
+      />
+      {error && <span className="shrink-0 text-xs text-amber-400">Couldn't open the chat</span>}
+      <button
+        aria-label={text.trim() ? 'Ask the agent' : 'Open the chat'}
+        className="flex size-7 shrink-0 items-center justify-center rounded-[7px] bg-white text-[#111] hover:bg-white/85 disabled:opacity-40"
+        disabled={opening}
+        type="submit"
       >
-        <Sparkle className="size-4 shrink-0 text-accent-green" />
-        <input
-          aria-label="Ask the agent"
-          className="min-w-0 flex-1 bg-transparent text-sm text-primary placeholder:text-secondary focus:outline-none"
-          disabled={opening}
-          maxLength={2000}
-          onChange={(e) => setText(e.target.value)}
-          placeholder="Ask the agent: “add a 💀 when he falls on #2”, “make the labels funnier”"
-          value={text}
-        />
-        <Button disabled={opening} size="sm" type="submit">
-          {opening ? 'Opening…' : text.trim() ? 'Ask' : 'Open chat'}
-        </Button>
-      </form>
-      {error && <span className="px-1 text-xs text-amber-400">{error}</span>}
-    </div>
+        {opening ? (
+          <span className="size-3 animate-spin rounded-full border-2 border-black/30 border-t-black" />
+        ) : (
+          <span aria-hidden className="text-sm leading-none font-bold">
+            ↑
+          </span>
+        )}
+      </button>
+    </form>
   )
 }

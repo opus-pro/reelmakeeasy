@@ -315,6 +315,36 @@ describe('AgentController', () => {
       expect(() => controller.createSession({ harness: 'gemini' })).toThrow(BadRequestException)
     })
 
+    it('chooses a mode when asked, with what the user typed as its first message', async () => {
+      const stub = makeStubService()
+      const controller = new AgentController(
+        stub as never,
+        NO_AUTONOMOUS,
+        NO_PROJECTS,
+        NO_EDIT,
+        NO_MODELS,
+      )
+      await controller.createSession({ mode: 'ranking_easy', request: '  Funniest dog fails ' })
+      expect(stub.chooseMode).toHaveBeenCalledWith(
+        SESSION.id,
+        'ranking_easy',
+        undefined,
+        'Funniest dog fails',
+      )
+      const rankingId = '11111111-2222-3333-4444-555555555555'
+      await controller.createSession({ rankingId, request: 'add a boom on #2' })
+      expect(stub.chooseMode).toHaveBeenLastCalledWith(
+        SESSION.id,
+        'ranking',
+        undefined,
+        'add a boom on #2',
+      )
+      expect(() => controller.createSession({ mode: 'guided' })).toThrow(BadRequestException)
+      expect(() => controller.createSession({ request: 'x'.repeat(2001) })).toThrow(
+        BadRequestException,
+      )
+    })
+
     it('creates the session with no title', async () => {
       const stub = makeStubService()
       const controller = new AgentController(

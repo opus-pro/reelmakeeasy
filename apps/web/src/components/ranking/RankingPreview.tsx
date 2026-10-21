@@ -4,6 +4,8 @@ import { isMovingSticker, stickerPose } from '@reelmakeeasy/common/ranking/ranki
 import {
   drawRankingOverlay,
   drawRankingTransition,
+  projectFonts,
+  stickerBox,
 } from '@reelmakeeasy/common/ranking/ranking-overlay'
 import {
   RANKING_HEIGHT,
@@ -40,20 +42,26 @@ import { useStickerImages } from './sticker-images'
 export type RankFocusRequest = { nonce: number; rank: number }
 
 export type RankingPreviewProps = {
+  /** The transport and timeline span this width (a CSS length) under the frame. */
+  dockWidth?: string
   /** The rank picked in the editor: the preview jumps to its clip (and plays on if it was playing). */
   focusRequest?: null | RankFocusRequest
   /** Redraw once the fonts arrive. */
   fontsReady: boolean
-  /** A sticker was dragged to a new place (fractions of the frame). */
-  onMoveSticker?: (id: string, x: number, y: number) => void
+  /** A sticker was moved, resized or turned on the stage (or nudged with the arrow keys). */
+  onEditSticker?: (id: string, patch: Partial<RankingSticker>) => void
   /** The rank on screen changed (the editor follows it). */
   onRankOnScreen?: (rank: number) => void
+  /** The selected sticker was deleted from the stage (Delete key). */
+  onRemoveSticker?: (id: string) => void
   /** A sticker was picked on the stage (null: a click beside them). */
   onSelectSticker?: (id: null | string) => void
   project: RankingProject
   /** The sticker being edited: outlined on the stage. */
   selectedSticker?: null | string
   sounds: LibrarySound[]
+  /** How tall the 9:16 frame may be (a CSS length); its width follows, up to the space it has. */
+  stageHeight?: string
 }
 
 /** How long a clip may hold the playhead (loading) before its sounds wait for it too. */
@@ -67,13 +75,16 @@ const STALL_MS = 300
  */
 export function RankingPreview({
   focusRequest,
+  dockWidth = '430px',
   fontsReady,
-  onMoveSticker,
+  onEditSticker,
   onRankOnScreen,
+  onRemoveSticker,
   onSelectSticker,
   project,
   selectedSticker,
   sounds,
+  stageHeight = 'min(72vh, 760px)',
 }: RankingPreviewProps) {
   const images = useStickerImages(project.stickers)
   const [draggingSticker, setDraggingSticker] = useState<null | string>(null)
@@ -405,6 +416,21 @@ export function RankingPreview({
     return () => cancelAnimationFrame(frame)
   }, [fontsReady, hasMoving, images, part, playing, project, rankOnScreen, revealed, total])
 
+  // Each sticker's size on the frame (measured in the overlay's fonts), for its handles.
+  const boxes = useMemo(() => {
+    const ctx = canvasRef.current?.getContext('2d')
+    const fonts = projectFonts(project, STUDIO_RANKING_FONTS)
+    return new Map(
+      (project.stickers ?? []).map((sticker) => [
+        sticker.id,
+        ctx ? stickerBox(ctx, sticker, fonts, images) : { h: sticker.size, w: sticker.size },
+      ]),
+    )
+    // fontsReady: measured again once the fonts are in.
+  }, [fontsReady, images, project])
+  const editing = !!onEditSticker
+  const selected = editing ? (selectedSticker ?? null) : null
+
   const top = (bandHeight / RANKING_HEIGHT) * 100
   const label = segment
     ? `#${segment.item.rank} ${segment.item.label}`
@@ -420,6 +446,10 @@ export function RankingPreview({
         if (e.target !== e.currentTarget && !onButton) return
         // Space or Enter on a button presses that button.
         if (onButton && (e.key === ' ' || e.key === 'Enter')) return
+        if (selected && editSelected(e)) {
+          e.preventDefault()
+          return
+        }
         if (e.key === ' ') toggle()
         else if (e.key === 'ArrowRight') jump(1)
         else if (e.key === 'ArrowLeft') jump(-1)
@@ -430,12 +460,15 @@ export function RankingPreview({
       tabIndex={0}
     >
       <div
-        className="relative aspect-[9/16] w-[min(100%,calc(min(72vh,760px)*9/16))] cursor-pointer overflow-hidden rounded-xl border border-white/10 bg-[#111]"
+        className="relative aspect-[9/16] cursor-pointer overflow-hidden rounded-sm bg-[#111] shadow-[0_20px_60px_rgba(0,0,0,0.5)] ring-1 ring-white/[0.08]"
         data-testid="ranking-stage"
         onClick={(e) => {
-          // A click on the picture plays or pauses (not while placing a sticker).
-          if (!draggingSticker && e.target === e.currentTarget.querySelector('canvas')) toggle()
+          if (draggingSticker || e.target !== e.currentTarget.querySelector('canvas')) return
+          // A click beside the stickers lets go of the one selected; otherwise it plays or pauses.
+          if (selected) onSelectSticker?.(null)
+          else toggle()
         }}
+        style={{ width: `min(100%, calc(${stageHeight} * 9 / 16))` }}
       >
         {parts.map((p, i) =>
           p.kind === 'clip' && p.segment.item.clip ? (
@@ -492,7 +525,7 @@ export function RankingPreview({
           width={RANKING_WIDTH}
         />
         {/* Out of the way of the picture: a small badge in the corner, not a disc over the labels. */}
-        {(buffering || (!playing && part && !draggingSticker)) && (
+        {(buffering || (!playing && part && !draggingSticker && !selected)) && (
           <span className="pointer-events-none absolute right-2.5 bottom-2.5 flex size-8 items-center justify-center rounded-full bg-black/60 text-white/90">
             {buffering ? (
               <span className="size-3.5 animate-spin rounded-full border-2 border-white/30 border-t-white" />
@@ -501,22 +534,69 @@ export function RankingPreview({
             )}
           </span>
         )}
-        {!playing && onMoveSticker && part?.kind === 'clip' && (
+        {!playing && onEditSticker && part?.kind === 'clip' && (
           <StickerHandles
+            boxes={boxes}
             dragging={draggingSticker}
             onDragging={(id) => {
               setDraggingSticker(id)
               if (id) onSelectSticker?.(id)
             }}
-            onMove={onMoveSticker}
-            selected={selectedSticker ?? null}
+            onEdit={onEditSticker}
+            selected={selected}
             stickers={(project.stickers ?? []).filter(
               (s) => s.rank === null || s.rank === rankOnScreen,
             )}
           />
         )}
       </div>
-      <div className="flex w-full max-w-[430px] flex-col gap-1.5">
+      <div className="flex w-full flex-col gap-2" style={{ maxWidth: dockWidth }}>
+        <div className="grid h-9 grid-cols-[1fr_auto_1fr] items-center gap-2">
+          <span className="font-mono text-xs text-primary tabular-nums">
+            {formatTime(time)} <span className="text-white/40">/ {formatTime(total)}</span>
+          </span>
+          <div className="flex items-center gap-1.5">
+            <ControlButton
+              disabled={!parts.length}
+              label="Previous rank (←)"
+              onClick={() => jump(-1)}
+            >
+              <SkipIcon className="size-3.5 -scale-x-100" />
+            </ControlButton>
+            <ControlButton
+              disabled={!parts.length}
+              label={playing ? 'Pause (Space)' : 'Play (Space)'}
+              onClick={toggle}
+              primary
+            >
+              {playing ? (
+                <PauseIcon className="size-4" />
+              ) : (
+                <PlayIcon className="size-4 translate-x-px" />
+              )}
+            </ControlButton>
+            <ControlButton disabled={!parts.length} label="Next rank (→)" onClick={() => jump(1)}>
+              <SkipIcon className="size-3.5" />
+            </ControlButton>
+          </div>
+          {label ? (
+            <span className="ml-auto flex h-7 max-w-full min-w-0 items-center gap-1 rounded-xs bg-white/[0.06] px-2 text-xs font-medium text-primary">
+              {segment && (
+                <span
+                  className="font-bold"
+                  style={{ color: rankColor(project, segment.item.rank) }}
+                >
+                  #{segment.item.rank}
+                </span>
+              )}
+              <span className="truncate">
+                {segment ? segment.item.label || 'No label yet' : label}
+              </span>
+            </span>
+          ) : (
+            <span />
+          )}
+        </div>
         <Timeline
           onScrub={(t, phase) => {
             if (phase === 'start') scrubResume.current = playingRef.current
@@ -527,43 +607,50 @@ export function RankingPreview({
           }}
           onSeek={seek}
           parts={parts}
+          project={project}
           time={time}
           total={total}
           windows={windows}
         />
-        <div className="flex items-center gap-1.5">
-          <ControlButton
-            disabled={!parts.length}
-            label="Previous rank (←)"
-            onClick={() => jump(-1)}
-          >
-            <SkipIcon className="size-3.5 -scale-x-100" />
-          </ControlButton>
-          <ControlButton
-            disabled={!parts.length}
-            label={playing ? 'Pause (Space)' : 'Play (Space)'}
-            onClick={toggle}
-            primary
-          >
-            {playing ? (
-              <PauseIcon className="size-4" />
-            ) : (
-              <PlayIcon className="size-4 translate-x-px" />
-            )}
-          </ControlButton>
-          <ControlButton disabled={!parts.length} label="Next rank (→)" onClick={() => jump(1)}>
-            <SkipIcon className="size-3.5" />
-          </ControlButton>
-          <span className="ml-1 text-xs text-secondary tabular-nums">
-            {formatTime(time)} <span className="text-white/30">/ {formatTime(total)}</span>
-          </span>
-          <span className="ml-auto min-w-0 truncate text-xs font-medium text-primary">{label}</span>
-        </div>
       </div>
     </div>
   )
+
+  /** Arrow keys nudge the selected sticker (Shift: further), Delete removes it, Escape lets go.
+   *  True when the key was one of those. */
+  function editSelected(e: React.KeyboardEvent): boolean {
+    const sticker = (project.stickers ?? []).find((s) => s.id === selected)
+    if (!sticker || !onEditSticker) return false
+    const step = e.shiftKey ? 0.05 : 0.01
+    const nudge = {
+      ArrowDown: [0, step],
+      ArrowLeft: [-step, 0],
+      ArrowRight: [step, 0],
+      ArrowUp: [0, -step],
+    }[e.key as 'ArrowDown']
+    if (nudge) {
+      onEditSticker(sticker.id, {
+        x: clamp01(round3(sticker.x + (nudge[0] ?? 0))),
+        y: clamp01(round3(sticker.y + (nudge[1] ?? 0))),
+      })
+      return true
+    }
+    if (e.key === 'Delete' || e.key === 'Backspace') {
+      onRemoveSticker?.(sticker.id)
+      return true
+    }
+    if (e.key === 'Escape') {
+      onSelectSticker?.(null)
+      return true
+    }
+    return false
+  }
 }
 
+const clamp01 = (v: number) => Math.min(1, Math.max(0, v))
+const round3 = (v: number) => Math.round(v * 1000) / 1000
+
+/** A rank's colour on the overlay: the top three have their own, the rest share one. */
 function ControlButton({
   children,
   disabled,
@@ -613,6 +700,10 @@ function PlayIcon({ className }: { className?: string }) {
   )
 }
 
+function rankColor(project: RankingProject, rank: number): string {
+  return project.style.numberColors[Math.min(rank, 4) - 1] ?? '#ffffff'
+}
+
 function SkipIcon({ className }: { className?: string }) {
   return (
     <svg aria-hidden className={className} fill="currentColor" viewBox="0 0 16 16">
@@ -625,10 +716,22 @@ function SkipIcon({ className }: { className?: string }) {
  * The short's timeline: one block per rank (and slide), a mark at each meme sound, the playhead.
  * Click anywhere to jump there; press and drag to scrub.
  */
+type StickerDrag = {
+  /** The sticker's centre and the press, in stage pixels. */
+  cx: number
+  cy: number
+  id: string
+  mode: 'move' | 'rotate' | 'scale'
+  px: number
+  py: number
+  sticker: RankingSticker
+}
+
 function Timeline({
   onScrub,
   onSeek,
   parts,
+  project,
   time,
   total,
   windows,
@@ -636,6 +739,7 @@ function Timeline({
   onScrub: (t: number, phase: 'end' | 'move' | 'start') => void
   onSeek: (t: number) => void
   parts: RankingTimelinePart[]
+  project: RankingProject
   time: number
   total: number
   windows: CueWindow[]
@@ -643,7 +747,7 @@ function Timeline({
   const [hover, setHover] = useState<null | number>(null)
   const pressed = useRef(false)
   const lastAt = useRef(0)
-  if (!total) return <div className="h-9 w-full rounded-md bg-white/5" />
+  if (!total) return <div className="h-12 w-full rounded-xs bg-white/5" />
   const at = (e: React.PointerEvent<HTMLDivElement>) => {
     const box = e.currentTarget.getBoundingClientRect()
     lastAt.current = Math.min(1, Math.max(0, (e.clientX - box.left) / box.width)) * total
@@ -656,6 +760,7 @@ function Timeline({
     onScrub(lastAt.current, 'end')
   }
   const current = partIndexAt(parts, time)
+  const pct = (sec: number) => `${(Math.min(sec, total) / total) * 100}%`
   return (
     <div
       aria-label="Timeline"
@@ -663,7 +768,7 @@ function Timeline({
       aria-valuemin={0}
       aria-valuenow={Math.round(time * 10) / 10}
       aria-valuetext={`${formatTime(time)} of ${formatTime(total)}`}
-      className="relative h-9 w-full cursor-pointer touch-none rounded-md outline-none select-none focus-visible:ring-2 focus-visible:ring-white/30"
+      className="relative h-12 w-full cursor-pointer touch-none rounded-xs outline-none select-none focus-visible:ring-2 focus-visible:ring-white/30"
       onKeyDown={(e) => {
         // A second at a time here (the preview's own arrows jump rank to rank).
         const to =
@@ -701,131 +806,196 @@ function Timeline({
       role="slider"
       tabIndex={0}
     >
-      <div className="absolute inset-x-0 top-1.5 flex h-6 overflow-hidden rounded-md bg-white/5">
+      <div className="absolute inset-x-0 top-1.5 flex h-10">
         {parts.map((p, i) => (
           <div
-            className={cn(
-              'flex min-w-0 items-center justify-center border-r border-black/50 text-[10px] font-semibold transition-colors',
-              p.kind === 'transition' && 'bg-white/[0.04] text-white/30',
-              p.kind === 'clip' &&
-                (i === current
-                  ? 'bg-white/25 text-primary'
-                  : 'bg-white/10 text-secondary hover:bg-white/15'),
-            )}
+            className="h-full min-w-0 px-px"
             key={p.kind === 'clip' ? p.segment.item.id : `t-${i}`}
-            style={{ width: `${(p.durSec / total) * 100}%` }}
+            style={{ width: pct(p.durSec) }}
             title={
               p.kind === 'clip'
                 ? `#${p.segment.item.rank} ${p.segment.item.label}`
-                : `Transition to #${p.nextRank}`
+                : `Slide to #${p.nextRank}`
             }
           >
-            <span className="truncate px-0.5">
-              {p.kind === 'clip' ? `#${p.segment.item.rank}` : '›'}
-            </span>
+            {p.kind === 'clip' ? (
+              <div
+                className={cn(
+                  'flex h-full min-w-0 items-start gap-1 rounded-xxs px-[7px] py-[5px] text-[11px] leading-tight transition-colors',
+                  i === current
+                    ? 'bg-white/10 ring-[1.5px] ring-white/55 ring-inset'
+                    : 'bg-white/[0.08] hover:bg-white/[0.12]',
+                )}
+              >
+                <span
+                  className="shrink-0 font-bold"
+                  style={{ color: rankColor(project, p.segment.item.rank) }}
+                >
+                  #{p.segment.item.rank}
+                </span>
+                <span className="truncate text-secondary">{p.segment.item.label}</span>
+              </div>
+            ) : (
+              <div className="h-full rounded-[4px] bg-[repeating-linear-gradient(135deg,rgba(255,255,255,0.12)_0_3px,transparent_3px_6px)]" />
+            )}
           </div>
         ))}
       </div>
-      {/* A mark at each meme sound (not the reveal sounds, which open every rank). */}
+      {/* A tick at each meme sound (not the reveal sounds, which open every rank). */}
       {windows
         .filter((w) => w.key.includes(':cue'))
         .map((w) => (
           <span
-            className="pointer-events-none absolute bottom-0 h-1.5 w-0.5 rounded-full bg-accent-green/80"
+            className="pointer-events-none absolute bottom-2.5 h-[9px] w-0.5 rounded-full bg-accent-green"
             key={w.key}
-            style={{ left: `${(w.startSec / total) * 100}%` }}
+            style={{ left: pct(w.startSec) }}
           />
         ))}
       {hover !== null && (
         <span
-          className="pointer-events-none absolute top-0 h-8 w-px bg-white/40"
-          style={{ left: `${(hover / total) * 100}%` }}
+          className="pointer-events-none absolute top-0 h-12 w-px bg-white/40"
+          style={{ left: pct(hover) }}
         />
       )}
       <span
-        className="pointer-events-none absolute top-0 h-8 w-0.5 -translate-x-1/2 rounded-full bg-white shadow-[0_0_6px_rgba(255,255,255,0.6)]"
-        style={{ left: `${(Math.min(time, total) / total) * 100}%` }}
-      />
+        className="pointer-events-none absolute top-0 flex h-12 w-0.5 -translate-x-1/2 flex-col items-center bg-white"
+        style={{ left: pct(time) }}
+      >
+        <span className="-mt-1 size-2.5 shrink-0 rounded-full bg-white" />
+      </span>
     </div>
   )
 }
 
 /**
- * Invisible handles over the stickers on the stage (while paused): press one and drag to move
- * it. The overlay redraws as it moves.
+ * Handles over the stickers on the stage (while paused). Each has a box the size of what it
+ * draws: press one to select it and drag to move it. The selected one is outlined in blue, with
+ * corner handles to resize it and a handle above to turn it (Shift: in 15 degree steps).
  */
 function StickerHandles({
+  boxes,
   dragging,
   onDragging,
-  onMove,
+  onEdit,
   selected,
   stickers,
 }: {
+  boxes: ReadonlyMap<string, { h: number; w: number }>
   dragging: null | string
   onDragging: (id: null | string) => void
-  onMove: (id: string, x: number, y: number) => void
-  /** The sticker being edited: a solid outline. */
+  onEdit: (id: string, patch: Partial<RankingSticker>) => void
   selected: null | string
   stickers: RankingSticker[]
 }) {
-  const at = (e: React.PointerEvent<HTMLDivElement>) => {
-    const box = e.currentTarget.getBoundingClientRect()
-    return {
-      x: Math.min(1, Math.max(0, (e.clientX - box.left) / box.width)),
-      y: Math.min(1, Math.max(0, (e.clientY - box.top) / box.height)),
+  const drag = useRef<null | StickerDrag>(null)
+  const layer = useRef<HTMLDivElement>(null)
+  const start = (e: React.PointerEvent, sticker: RankingSticker, mode: StickerDrag['mode']) => {
+    e.preventDefault()
+    e.stopPropagation()
+    const box = layer.current?.getBoundingClientRect()
+    if (!box) return
+    layer.current?.setPointerCapture?.(e.pointerId)
+    drag.current = {
+      cx: box.left + sticker.x * box.width,
+      cy: box.top + sticker.y * box.height,
+      id: sticker.id,
+      mode,
+      px: e.clientX,
+      py: e.clientY,
+      sticker,
     }
+    onDragging(sticker.id)
+  }
+  const move = (e: React.PointerEvent) => {
+    const d = drag.current
+    const box = layer.current?.getBoundingClientRect()
+    if (!d || !box) return
+    if (d.mode === 'move') {
+      onEdit(d.id, {
+        x: clamp01(round3(d.sticker.x + (e.clientX - d.px) / box.width)),
+        y: clamp01(round3(d.sticker.y + (e.clientY - d.py) / box.height)),
+      })
+    } else if (d.mode === 'scale') {
+      const from = Math.hypot(d.px - d.cx, d.py - d.cy) || 1
+      const to = Math.hypot(e.clientX - d.cx, e.clientY - d.cy)
+      onEdit(d.id, { size: round3(Math.min(1, Math.max(0.02, d.sticker.size * (to / from)))) })
+    } else {
+      // The handle sits above the sticker: straight up is 0 degrees.
+      let angle = (Math.atan2(e.clientY - d.cy, e.clientX - d.cx) * 180) / Math.PI + 90
+      if (angle > 180) angle -= 360
+      if (e.shiftKey) angle = Math.round(angle / 15) * 15
+      onEdit(d.id, { rotation: Math.round(angle) })
+    }
+  }
+  const end = () => {
+    drag.current = null
+    onDragging(null)
   }
   return (
     <div
       className={cn('absolute inset-0', dragging ? 'cursor-grabbing' : '')}
-      onPointerLeave={() => onDragging(null)}
-      onPointerMove={(e) => {
-        if (!dragging) return
-        const { x, y } = at(e)
-        onMove(dragging, x, y)
-      }}
-      onPointerUp={() => onDragging(null)}
+      onLostPointerCapture={end}
+      onPointerCancel={end}
+      onPointerMove={move}
+      onPointerUp={end}
+      ref={layer}
       style={{ pointerEvents: dragging ? 'auto' : 'none' }}
     >
       {stickers.map((s) => {
-        const w =
-          s.kind === 'image'
-            ? s.size * 100
-            : Math.max(8, s.size * 100 * 1.8 * (s.text?.length ?? 1) * 0.35)
-        const h = s.kind === 'image' ? s.size * 100 * 0.5625 : s.size * 100
-        // The box is an estimate of the sticker's size; a margin around it makes it easy to catch.
-        const pad = 2.5
+        const size = boxes.get(s.id) ?? { h: s.size, w: s.size }
+        const isSelected = s.id === selected
         return (
           <div
             aria-label="Drag sticker"
             className="group absolute cursor-grab"
             key={s.id}
-            onPointerDown={(e) => {
-              e.preventDefault()
-              e.stopPropagation()
-              e.currentTarget.parentElement?.setPointerCapture?.(e.pointerId)
-              onDragging(s.id)
-            }}
+            onPointerDown={(e) => start(e, s, 'move')}
             style={{
-              height: `${h + pad * 2}%`,
-              left: `${s.x * 100 - w / 2 - pad}%`,
+              height: `${size.h * 100}%`,
+              left: `${s.x * 100}%`,
               pointerEvents: 'auto',
-              top: `${s.y * 100 - h / 2 - pad}%`,
-              width: `${w + pad * 2}%`,
+              top: `${s.y * 100}%`,
+              transform: `translate(-50%, -50%) rotate(${s.rotation}deg)`,
+              width: `${size.w * 100}%`,
             }}
             title="Drag to move"
           >
             <span
               className={cn(
-                'absolute rounded',
-                s.id === selected
-                  ? 'border-2 border-white shadow-[0_0_0_1px_rgba(0,0,0,0.5)]'
-                  : 'border border-dashed border-white/40 group-hover:border-white',
+                'absolute -inset-1 rounded-[3px]',
+                isSelected
+                  ? 'border-[1.5px] border-[#00b2f8]'
+                  : 'border border-dashed border-transparent group-hover:border-white/40',
               )}
-              style={{
-                inset: `${(pad / (h + pad * 2)) * 100}% ${(pad / (w + pad * 2)) * 100}%`,
-              }}
             />
+            {isSelected && (
+              <>
+                {(
+                  [
+                    '-top-[9px] -left-[9px]',
+                    '-top-[9px] -right-[9px]',
+                    '-bottom-[9px] -left-[9px]',
+                    '-bottom-[9px] -right-[9px]',
+                  ] as const
+                ).map((corner) => (
+                  <span
+                    aria-label="Resize"
+                    className={cn(
+                      'absolute size-[9px] cursor-nwse-resize rounded-[2px] border-[1.5px] border-[#00b2f8] bg-white',
+                      corner,
+                    )}
+                    key={corner}
+                    onPointerDown={(e) => start(e, s, 'scale')}
+                  />
+                ))}
+                <span className="pointer-events-none absolute top-[-22px] left-1/2 h-[14px] w-[1.5px] -translate-x-1/2 bg-[#00b2f8]" />
+                <span
+                  aria-label="Turn"
+                  className="absolute top-[-32px] left-1/2 size-3 -translate-x-1/2 cursor-grab rounded-full border-[1.5px] border-[#00b2f8] bg-white"
+                  onPointerDown={(e) => start(e, s, 'rotate')}
+                />
+              </>
+            )}
           </div>
         )
       })}

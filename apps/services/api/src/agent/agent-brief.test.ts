@@ -168,6 +168,10 @@ describe('Ranking chats', () => {
     expect(easy).toContain('chose Ranking, Easy')
     expect(easy).toMatch(/ask what their ranking is about/)
     expect(rankingKickoff('claude')).not.toContain('chose Ranking, Easy')
+    // A topic typed on Ranking Builder's home: step 1 straight away, with it.
+    const withTopic = rankingKickoff('claude', undefined, true, 'Funniest dog fails')
+    expect(withTopic).toMatch(/do step 1 with it/)
+    expect(withTopic.endsWith('Funniest dog fails')).toBe(true)
     expect(rankingKickoff('codex', '11111111-1111-1111-1111-111111111111', true)).toContain(
       'opened ranking 11111111-1111-1111-1111-111111111111',
     )

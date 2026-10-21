@@ -9,9 +9,8 @@ import {
   toolOfMode,
 } from '@shared/types/api/agent'
 import { cn } from '@shared/ui'
+import { ArrowRight, Check, Film, ListOrdered, MessagesSquare, WandSparkles } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
-
-import { ClipsVertical, Film } from '@/components/icons/core'
 
 import { HARNESS_LABEL, HARNESS_SHORT, harnessChoices, initialHarness } from './agent-harness'
 import { Spinner } from './Spinner'
@@ -72,7 +71,7 @@ const SHORT_VIDEO: ToolOption = {
 const TOOLS: ToolOption[] = [
   SHORT_VIDEO,
   {
-    icon: ClipsVertical,
+    icon: ListOrdered,
     key: 'ranking',
     label: 'Ranking',
     modes: [
@@ -143,16 +142,19 @@ export function WelcomeCard({
   }
 
   return (
-    <div className="flex w-full max-w-xl flex-col gap-3 rounded-xl border border-white/10 bg-fill-secondary/50 p-3">
+    <div className="flex w-full max-w-xl flex-col gap-3.5 rounded-xl bg-white/5 p-4 ring-1 ring-white/10 ring-inset">
       <div className="flex flex-col gap-1">
-        <p className="text-sm font-semibold text-primary">What would you like to make?</p>
+        <p className="text-[15px] font-semibold text-primary">What would you like to make?</p>
         <p className="text-xs text-secondary">
           {agent} is your creative partner here. New to this? Start with Easy.
         </p>
       </div>
       <div
         aria-label="Tool"
-        className="flex w-full gap-1 rounded-lg bg-black/25 p-1"
+        className={cn(
+          'flex w-full gap-0.5 rounded-sm bg-white/[0.06] p-0.5',
+          locked && 'pointer-events-none',
+        )}
         role="tablist"
       >
         {TOOLS.map((option) => {
@@ -162,10 +164,12 @@ export function WelcomeCard({
             <button
               aria-selected={selected}
               className={cn(
-                'flex flex-1 items-center justify-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors disabled:cursor-default',
-                selected ? 'bg-white/15 text-primary' : 'text-secondary',
-                !locked && !selected && 'hover:bg-white/5 hover:text-primary',
-                locked && !selected && 'opacity-50',
+                'flex h-8 flex-1 items-center justify-center gap-1.5 rounded-xs text-[13px] font-medium transition-colors disabled:cursor-default',
+                selected
+                  ? 'bg-white/[0.14] text-primary shadow-[0_1px_2px_rgba(0,0,0,0.35)]'
+                  : 'text-secondary',
+                !locked && !selected && 'hover:text-primary',
+                locked && !selected && 'opacity-45',
               )}
               disabled={locked}
               key={option.key}
@@ -173,50 +177,12 @@ export function WelcomeCard({
               role="tab"
               type="button"
             >
-              <Icon className="size-4" />
+              <Icon className="size-[15px]" />
               {option.label}
             </button>
           )
         })}
       </div>
-      {mode === null && presetHarness && (
-        <p className="text-xs text-secondary">Running on {HARNESS_LABEL[presetHarness]}</p>
-      )}
-      {mode === null && !presetHarness && choices.length > 1 && (
-        <div className="flex flex-col gap-1">
-          <div className="flex w-fit rounded-lg border border-white/10 p-0.5" role="radiogroup">
-            {choices.map((choice) => (
-              <button
-                aria-checked={harness === choice.harness}
-                className={cn(
-                  'rounded-md px-3 py-1 text-xs transition-colors disabled:cursor-not-allowed disabled:opacity-40',
-                  harness === choice.harness
-                    ? 'bg-white/15 text-primary'
-                    : 'text-secondary hover:text-primary',
-                )}
-                disabled={locked || !!choice.disabledReason}
-                key={choice.harness}
-                onClick={() => {
-                  pickedRef.current = true
-                  setHarness(choice.harness)
-                }}
-                role="radio"
-                title={choice.disabledReason}
-                type="button"
-              >
-                {HARNESS_LABEL[choice.harness]}
-              </button>
-            ))}
-          </div>
-          {choices
-            .filter((c) => c.disabledReason)
-            .map((c) => (
-              <p className="text-xs text-secondary" key={c.harness}>
-                {c.disabledReason}
-              </p>
-            ))}
-        </div>
-      )}
       <div className="flex flex-col gap-1.5" role="tabpanel">
         {tool.modes.map((option) => (
           <ModeButton
@@ -230,6 +196,49 @@ export function WelcomeCard({
           />
         ))}
       </div>
+      {(presetHarness || mode !== null) && (
+        <p className="border-t border-white/[0.08] pt-3 text-xs text-white/40">
+          Running on {HARNESS_LABEL[chosenHarness ?? presetHarness ?? harness]}
+        </p>
+      )}
+      {mode === null && !presetHarness && choices.length > 1 && (
+        <div className="flex flex-col gap-1 border-t border-white/[0.08] pt-3">
+          <div className="flex items-center gap-2 text-xs text-white/40">
+            Runs on
+            <div className="flex rounded-xs bg-white/[0.06] p-0.5" role="radiogroup">
+              {choices.map((choice) => (
+                <button
+                  aria-checked={harness === choice.harness}
+                  className={cn(
+                    'h-6 rounded-xxs px-2.5 text-xs transition-colors disabled:cursor-not-allowed disabled:opacity-40',
+                    harness === choice.harness
+                      ? 'bg-white/[0.14] text-primary'
+                      : 'text-secondary hover:text-primary',
+                  )}
+                  disabled={locked || !!choice.disabledReason}
+                  key={choice.harness}
+                  onClick={() => {
+                    pickedRef.current = true
+                    setHarness(choice.harness)
+                  }}
+                  role="radio"
+                  title={choice.disabledReason}
+                  type="button"
+                >
+                  {HARNESS_LABEL[choice.harness]}
+                </button>
+              ))}
+            </div>
+          </div>
+          {choices
+            .filter((c) => c.disabledReason)
+            .map((c) => (
+              <p className="text-xs text-secondary" key={c.harness}>
+                {c.disabledReason}
+              </p>
+            ))}
+        </div>
+      )}
     </div>
   )
 }
@@ -251,35 +260,52 @@ function ModeButton({
 }) {
   const chosen = mode === option.mode
   const spinning = mode === null && pending === option.mode
+  // Once one is picked (or being picked), the other fades.
+  const faded = (mode ?? pending) !== null && !chosen && !spinning
+  const Icon = option.recommended ? WandSparkles : MessagesSquare
   return (
     <button
       className={cn(
-        'flex items-start gap-2 rounded-lg border px-3 py-2 text-left transition-colors',
+        'flex items-center gap-3 rounded-sm p-3 text-left ring-1 ring-white/10 transition-colors ring-inset',
         'disabled:cursor-default',
-        // Every option has the same border, so the Recommended one never looks chosen;
-        // only its badge marks it.
-        'border-white/10',
-        chosen && 'border-white/40 bg-white/10',
-        mode !== null && !chosen && 'opacity-50',
-        !locked && 'hover:bg-white/5',
+        chosen && 'bg-white/10 ring-white/40',
+        faded && 'opacity-40',
+        !locked && 'hover:bg-white/[0.04]',
       )}
       disabled={locked}
       onClick={() => onChoose(option.mode)}
       type="button"
     >
+      <span
+        className={cn(
+          'flex size-9 shrink-0 items-center justify-center self-start rounded-[9px]',
+          option.recommended
+            ? 'bg-accent-green/15 text-accent-green'
+            : 'bg-white/[0.06] text-secondary',
+        )}
+      >
+        <Icon className="size-[18px]" />
+      </span>
       <span className="flex min-w-0 flex-1 flex-col gap-0.5">
         <span className="flex flex-wrap items-center gap-1.5">
           <span className="text-sm font-semibold text-primary">{option.label}</span>
           {option.recommended && (
-            <span className="rounded bg-accent-green/15 px-1.5 py-0.5 text-[10px] font-medium text-accent-green">
+            <span className="flex h-[18px] items-center rounded bg-accent-green/15 px-1.5 text-[10px] font-semibold text-accent-green">
               Recommended
             </span>
           )}
         </span>
-        <span className="text-xs break-words text-secondary">{option.description(agent)}</span>
+        <span className="text-xs leading-[1.45] break-words text-secondary">
+          {option.description(agent)}
+        </span>
       </span>
-      {spinning && <Spinner className="mt-1 text-secondary" />}
-      {chosen && <span className="text-sm text-accent-green">✓</span>}
+      {spinning ? (
+        <Spinner className="text-secondary" />
+      ) : chosen ? (
+        <Check aria-label="Chosen" className="size-[18px] text-accent-green" />
+      ) : (
+        <ArrowRight aria-hidden className="size-4 text-white/40" />
+      )}
     </button>
   )
 }

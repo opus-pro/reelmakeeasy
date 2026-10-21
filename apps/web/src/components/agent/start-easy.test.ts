@@ -31,7 +31,9 @@ describe('agentChatUrl', () => {
   })
 
   it("chooses a tool's mode, or only shows its tool first", () => {
-    expect(agentChatUrl('s1', { start: 'ranking_easy' })).toBe('/agent?sessionId=s1&start=ranking_easy')
+    expect(agentChatUrl('s1', { start: 'ranking_easy' })).toBe(
+      '/agent?sessionId=s1&start=ranking_easy',
+    )
     expect(agentChatUrl('s1', { tool: 'ranking' })).toBe('/agent?sessionId=s1&tool=ranking')
     expect(startModeOf(new URLSearchParams('start=ranking_easy'))).toBe('ranking_easy')
     expect(startModeOf(new URLSearchParams('start=easy'))).toBe('autonomous')

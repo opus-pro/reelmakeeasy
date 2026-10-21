@@ -1,4 +1,9 @@
-import type { RankingFontId, RankingProject, RankingSticker, RankingTitleWord } from '@shared/types/api/ranking'
+import type {
+  RankingFontId,
+  RankingProject,
+  RankingSticker,
+  RankingTitleWord,
+} from '@shared/types/api/ranking'
 
 import { isMovingSticker, type StickerPose } from './ranking-motion'
 import { RANKING_HEIGHT, RANKING_WIDTH, transitionOf, transitionText } from './ranking-project'
@@ -62,9 +67,9 @@ const WORD_GAP = 0.28
 
 export type RankingLayout = {
   bandHeight: number
+  numberSize: number
   /** Where each rank's row sits (its text's middle), by rank. */
   rowY: Map<number, number>
-  numberSize: number
   titleLineHeight: number
   titleSize: number
 }
@@ -85,11 +90,19 @@ export function projectFonts(project: RankingProject, fonts: RankingFonts): Rank
   }
 }
 
-function lineWidth(ctx: RankingCanvas, line: RankingTitleWord[], size: number, family: string): number {
+function lineWidth(
+  ctx: RankingCanvas,
+  line: RankingTitleWord[],
+  size: number,
+  family: string,
+): number {
   ctx.font = fontOf(size, family)
   const words = line.filter((w) => w.text.trim())
   const gap = size * WORD_GAP
-  return words.reduce((sum, w) => sum + ctx.measureText(w.text.trim()).width, 0) + gap * Math.max(0, words.length - 1)
+  return (
+    words.reduce((sum, w) => sum + ctx.measureText(w.text.trim()).width, 0) +
+    gap * Math.max(0, words.length - 1)
+  )
 }
 
 /** Sizes and positions for a project: the title shrinks to fit the width, rows spread to fit. */
@@ -121,7 +134,15 @@ export function rankingLayout(
   return { bandHeight, numberSize, rowY, titleLineHeight, titleSize }
 }
 
-function outlined(ctx: RankingCanvas, text: string, x: number, y: number, fill: string, outline: string, size: number) {
+function outlined(
+  ctx: RankingCanvas,
+  text: string,
+  x: number,
+  y: number,
+  fill: string,
+  outline: string,
+  size: number,
+) {
   ctx.lineJoin = 'round'
   ctx.miterLimit = 2
   ctx.lineWidth = Math.max(4, size * 0.16)
@@ -155,7 +176,7 @@ function fitLabel(ctx: RankingCanvas, text: string, size: number, family: string
 export function drawRankingOverlay(
   ctx: RankingCanvas,
   project: RankingProject,
-  revealed: ReadonlySet<number> | readonly number[],
+  revealed: readonly number[] | ReadonlySet<number>,
   opts: {
     background?: string
     fonts?: RankingFonts
@@ -208,12 +229,34 @@ export function drawRankingOverlay(
     if (y === undefined) continue
     ctx.font = fontOf(layout.numberSize, fonts.number, 900)
     const number = rankMark(project.style, item.rank)
-    outlined(ctx, number, LIST_LEFT, y, numberColor(item.rank), project.style.outlineColor, layout.numberSize)
+    outlined(
+      ctx,
+      number,
+      LIST_LEFT,
+      y,
+      numberColor(item.rank),
+      project.style.outlineColor,
+      layout.numberSize,
+    )
     if (!shown.has(item.rank) || !item.label.trim()) continue
     const labelX = LIST_LEFT + ctx.measureText(number).width + layout.numberSize * 0.12
-    const label = fitLabel(ctx, item.label.trim(), Math.round(layout.numberSize * 0.8), fonts.label, W - labelX - SIDE)
+    const label = fitLabel(
+      ctx,
+      item.label.trim(),
+      Math.round(layout.numberSize * 0.8),
+      fonts.label,
+      W - labelX - SIDE,
+    )
     ctx.font = fontOf(label.size, fonts.label)
-    outlined(ctx, label.text, labelX, y, project.style.labelColor, project.style.outlineColor, label.size)
+    outlined(
+      ctx,
+      label.text,
+      labelX,
+      y,
+      project.style.labelColor,
+      project.style.outlineColor,
+      label.size,
+    )
   }
 
   // Stickers on top: the whole short's, and the playing rank's.
@@ -270,6 +313,30 @@ export function drawSticker(
 }
 
 /**
+ * A sticker's size at rest, before its angle, as fractions of the frame's width and height: the
+ * box to select and drag it by. A picture not loaded yet is taken as 16:9.
+ */
+export function stickerBox(
+  ctx: RankingCanvas,
+  sticker: RankingSticker,
+  fonts: RankingFonts = DEFAULT_RANKING_FONTS,
+  images?: ReadonlyMap<string, StickerImage>,
+): { h: number; w: number } {
+  if (sticker.kind === 'image') {
+    const image = sticker.imageUrl ? images?.get(sticker.imageUrl) : undefined
+    const ratio = image && image.width > 0 ? image.height / image.width : 9 / 16
+    return { h: (sticker.size * W * ratio) / H, w: sticker.size }
+  }
+  const size = Math.round(sticker.size * H)
+  ctx.save()
+  ctx.font = fontOf(size, familyFor(sticker.font, fonts.label), 900)
+  // The outline adds about a tenth of the size on each side; a slant leans the top out.
+  const width = ctx.measureText(sticker.text ?? '').width + size * (sticker.italic ? 0.45 : 0.25)
+  ctx.restore()
+  return { h: (size * 1.25) / H, w: width / W }
+}
+
+/**
  * A transition slide: the whole frame in the slide's colour, its text big and centred (shrunk to
  * fit, outlined like the labels). Drawn into the same 1080x1920 frame as the overlay.
  */
@@ -294,6 +361,7 @@ export function drawRankingTransition(
     size -= 4
     ctx.font = fontOf(size, fonts.title, 900)
   }
-  if (text) outlined(ctx, text, W / 2, H / 2, transition.textColor, project.style.outlineColor, size)
+  if (text)
+    outlined(ctx, text, W / 2, H / 2, transition.textColor, project.style.outlineColor, size)
   ctx.restore()
 }

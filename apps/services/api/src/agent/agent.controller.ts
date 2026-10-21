@@ -263,11 +263,13 @@ export class AgentController {
   /**
    * A new chat, on the agent picked in the Agent dialog when `harness` is given. With
    * `rankingId` (the studio's "Ask the agent"), a Ranking chat on that ranking, its mode chosen;
-   * `request` is what the user typed there, the chat's first message.
+   * with `mode`, that mode chosen (Ranking Builder's "Make one with the agent"). `request` is
+   * what the user typed before the chat opened: a Ranking chat's first message.
    */
   @Post('sessions')
   createSession(
-    @Body() body: { harness?: unknown; rankingId?: unknown; request?: unknown; title?: string },
+    @Body()
+    body: { harness?: unknown; mode?: unknown; rankingId?: unknown; request?: unknown; title?: string },
   ): Promise<AgentSession> {
     // Checked before anything starts, so a bad request throws here (400) rather than later.
     const harness = body?.harness
@@ -276,6 +278,9 @@ export class AgentController {
     const rankingId = body?.rankingId
     if (rankingId !== undefined && (typeof rankingId !== 'string' || !/^[\da-f-]{36}$/.test(rankingId)))
       throw new BadRequestException('rankingId must be a ranking id')
+    const mode = body?.mode
+    if (mode !== undefined && !AGENT_MODES.includes(mode as AgentMode))
+      throw new BadRequestException(`mode must be one of ${MODE_NAMES}`)
     const request = typeof body?.request === 'string' ? body.request.trim() : ''
     if (request.length > MAX_REQUEST_CHARS)
       throw new BadRequestException(`request must be at most ${MAX_REQUEST_CHARS} characters`)
@@ -286,9 +291,10 @@ export class AgentController {
     return this.sessions.createSession(rankingId ? { ...opts, rankingId } : opts).then(async (session) => {
       // Lists the harness's models now, so the chat's first message already runs on the right one.
       void this.chatModels.catalog(session.harness ?? 'codex')
-      if (!rankingId) return session
+      const chosen = rankingId ? 'ranking' : (mode as AgentMode | undefined)
+      if (!chosen) return session
       try {
-        await this.sessions.chooseMode(session.id, 'ranking', undefined, request || undefined)
+        await this.sessions.chooseMode(session.id, chosen, undefined, request || undefined)
       } catch (error) {
         // Not ready (not signed in): the chat opens on its welcome card, which says why.
         if (error instanceof HarnessNotReadyError) return session

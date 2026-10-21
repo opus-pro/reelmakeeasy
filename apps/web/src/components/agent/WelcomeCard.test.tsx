@@ -18,7 +18,7 @@ describe('WelcomeCard', () => {
     expect(modes).toHaveLength(2)
     expect(modes[0]).toMatch(/Easy \(Guided\).*Recommended/)
     expect(modes[1]).toMatch(/Advanced \(Free chat\)/)
-    // The old third mode (Medium · Guided) is gone; "Guided" now describes Easy.
+    // The old third mode (Medium, Guided) is gone; "Guided" now describes Easy.
     expect(screen.queryByText(/Medium/)).toBeNull()
   })
 
@@ -33,17 +33,23 @@ describe('WelcomeCard', () => {
 
   it('shows the tool a link asks for first, and Advanced Ranking chooses the free Ranking chat', () => {
     const onChoose = jest.fn(async () => true)
-    render(<WelcomeCard firstTool="ranking" mode={null} onChoose={onChoose} presetHarness="claude" />)
+    render(
+      <WelcomeCard firstTool="ranking" mode={null} onChoose={onChoose} presetHarness="claude" />,
+    )
     expect(screen.getByRole('tab', { name: /Ranking/ }).getAttribute('aria-selected')).toBe('true')
     fireEvent.click(option(/Advanced \(Free chat\)/))
     expect(onChoose).toHaveBeenCalledWith('ranking')
   })
 
   it("shows a chosen mode's tool, locked", () => {
-    render(<WelcomeCard mode="ranking" onChoose={jest.fn(async () => true)} presetHarness="claude" />)
+    render(
+      <WelcomeCard mode="ranking" onChoose={jest.fn(async () => true)} presetHarness="claude" />,
+    )
     expect(screen.getByRole('tab', { name: /Ranking/ }).getAttribute('aria-selected')).toBe('true')
-    expect((screen.getByRole('tab', { name: /Short video/ }) as HTMLButtonElement).disabled).toBe(true)
-    expect(option(/Advanced \(Free chat\)/).textContent).toContain('✓')
+    expect((screen.getByRole('tab', { name: /Short video/ }) as HTMLButtonElement).disabled).toBe(
+      true,
+    )
+    expect(option(/Advanced \(Free chat\)/).querySelector('[aria-label="Chosen"]')).toBeTruthy()
   })
 
   it('locks while the page starts Easy for the user (from the first-video prompt)', () => {
@@ -70,6 +76,6 @@ describe('WelcomeCard', () => {
 
   it('marks a Free chat as chosen (also one first saved in Guided mode)', () => {
     render(<WelcomeCard mode="free" onChoose={jest.fn(async () => true)} presetHarness="claude" />)
-    expect(option(/Advanced \(Free chat\)/).textContent).toContain('✓')
+    expect(option(/Advanced \(Free chat\)/).querySelector('[aria-label="Chosen"]')).toBeTruthy()
   })
 })
