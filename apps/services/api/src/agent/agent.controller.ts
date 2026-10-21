@@ -44,6 +44,7 @@ import type { Request, Response } from 'express'
 import { Observable } from 'rxjs'
 
 import { ProjectService } from '../projects/projects.service'
+import { RankingService } from '../ranking/ranking.service'
 
 import {
   AutonomousService,
@@ -112,6 +113,7 @@ export class AgentController {
     private readonly projects: ProjectService,
     private readonly edit: AgentEditService,
     private readonly chatModels: ChatModelService,
+    private readonly rankings: RankingService,
   ) {}
 
   @Post('sessions/:id/questions/:questionId/answer')
@@ -410,7 +412,7 @@ export class AgentController {
         `Couldn't load project summaries for the agent chat list: ${ensureError(error).message}`,
       )
     }
-    return buildAgentSessionList(sessions, summaries)
+    return buildAgentSessionList(sessions, summaries, (id) => this.rankings.coverOf(id))
   }
 
   /** "Pick up where you left off": carries on an Easy flow a restart cut off, from its first

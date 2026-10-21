@@ -117,6 +117,12 @@ export class RankingService {
     return project
   }
 
+  /** A ranking's cover (its address), or null: none drawn yet, or no such ranking. */
+  coverOf(id: string): null | string {
+    if (!PROJECT_ID.test(id)) return null
+    return this.read(id)?.cover?.url ?? null
+  }
+
   get(id: string): RankingProject {
     const project = this.read(id)
     if (!project) throw new RankingNotFoundError(`No ranking ${id}`)

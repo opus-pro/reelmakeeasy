@@ -357,6 +357,8 @@ export interface AgentSessionListItem {
   id: string
   mode: AgentMode | null
   project: AgentSessionProject | null
+  /** The cover of the ranking a Ranking chat works on, when it has one. */
+  rankingCoverUrl: null | string
   status: AgentSessionStatus
   /** The live project's name when there is one, else the chat's own title. */
   title: string
