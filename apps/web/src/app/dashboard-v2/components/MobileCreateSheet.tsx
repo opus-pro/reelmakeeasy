@@ -1,6 +1,6 @@
 'use client'
 import { VisuallyHidden } from '@radix-ui/react-visually-hidden'
-import { Button, cn, Sheet, SheetContent } from '@shared/ui'
+import { Button, cn, Sheet, SheetContent, SheetTitle } from '@shared/ui'
 import { useAtomValue } from 'jotai'
 import { useCallback, useEffect, useState } from 'react'
 
@@ -84,6 +84,8 @@ export function MobileCreateSheet({
   return (
     <Sheet onOpenChange={(o) => !o && onClose()} open={open}>
       <SheetContent
+        // No description: says so, so Radix doesn't warn about a missing one.
+        aria-describedby={undefined}
         className={cn(
           'z-[70] flex flex-col gap-2 overflow-hidden bg-panel px-4 pt-4 pb-[calc(env(safe-area-inset-bottom,0px)+16px)] backdrop-blur-none rounded-none',
           // The sheet is the whole /create page (reached via navigation, behind the
@@ -100,8 +102,10 @@ export function MobileCreateSheet({
         overlayClassName="z-[69]"
         showClose={false}
       >
+        {/* The sheet's name for screen readers: Radix wants its own Title here (a plain heading
+            doesn't count, and it logs an error on every open without one). */}
         <VisuallyHidden>
-          <h2>Create video</h2>
+          <SheetTitle>Create video</SheetTitle>
         </VisuallyHidden>
 
         {!composeMode && (
