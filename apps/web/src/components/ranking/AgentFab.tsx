@@ -97,11 +97,11 @@ export function AgentFab({
         aria-expanded={open}
         aria-label="Edit with agent"
         className={cn(
-          'group flex items-center overflow-hidden rounded-full bg-[#20231a] text-primary ring-[1.5px] ring-accent-green/60 transition-shadow ring-inset hover:ring-accent-green focus-visible:ring-2 focus-visible:ring-accent-green focus-visible:outline-none',
+          // Lime with a deep green star and label (no outline, no inner disc).
+          'group flex items-center overflow-hidden rounded-full bg-accent-green text-[#1c3300] transition hover:brightness-105 focus-visible:ring-2 focus-visible:ring-white/80 focus-visible:ring-offset-2 focus-visible:ring-offset-[#131313] focus-visible:outline-none',
           inline
             ? 'h-8 gap-1.5 pr-3 pl-2.5 max-sm:px-2'
-            : 'h-12 shadow-[0_0_0_4px_rgba(190,247,55,0.08),0_8px_24px_rgba(0,0,0,0.45)]',
-          open && 'ring-accent-green/80',
+            : 'h-12 min-w-12 shadow-[0_8px_24px_rgba(0,0,0,0.45)]',
         )}
         onClick={() => onOpenChange(!open)}
         title="Edit with agent (/)"
@@ -110,19 +110,20 @@ export function AgentFab({
         <span
           className={cn('flex shrink-0 items-center justify-center', inline ? 'size-4' : 'size-12')}
         >
-          <Sparkle className={cn('text-accent-green', inline ? 'size-4' : 'size-5')} />
+          <Sparkle className={inline ? 'size-4' : 'size-5'} />
         </span>
         <span
           className={cn(
             'font-semibold whitespace-nowrap',
             inline
               ? 'text-[13px] max-sm:sr-only'
-              : // Folded away until hovered or focused (or open): it slides out of the circle.
+              : // Folded away until hovered or focused (or open): it slides out of the circle,
+                // which stays a true circle (48 x 48, the star in its middle) while folded.
                 cn(
-                  '-ml-1 max-w-0 text-sm opacity-0 transition-[max-width,opacity,padding] duration-200 ease-out',
-                  'group-hover:max-w-40 group-hover:pr-4 group-hover:opacity-100',
-                  'group-focus-visible:max-w-40 group-focus-visible:pr-4 group-focus-visible:opacity-100',
-                  open && 'max-w-40 pr-4 opacity-100',
+                  'max-w-0 text-sm opacity-0 transition-[max-width,opacity,padding,margin] duration-200 ease-out',
+                  'group-hover:-ml-1 group-hover:max-w-40 group-hover:pr-4 group-hover:opacity-100',
+                  'group-focus-visible:-ml-1 group-focus-visible:max-w-40 group-focus-visible:pr-4 group-focus-visible:opacity-100',
+                  open && '-ml-1 max-w-40 pr-4 opacity-100',
                 ),
           )}
         >
