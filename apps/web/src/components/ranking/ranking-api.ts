@@ -28,6 +28,15 @@ export function useRankingApi() {
             pathParams: { id },
           })
         ).data,
+      /** Makes a ranking's cover from its overlay (`drawCoverOverlay`); answers its URL. */
+      cover: async (id: string, cover: { bandHeight: number; key: string; overlay: string }) =>
+        (
+          await fetchApiDomain<{ coverUrl: string }>('/api/ranking/projects/{id}/cover', {
+            data: cover,
+            method: 'POST',
+            pathParams: { id },
+          })
+        ).data.coverUrl,
       create: async (name?: string) =>
         (
           await fetchApiDomain<RankingProject>('/api/ranking/projects', {

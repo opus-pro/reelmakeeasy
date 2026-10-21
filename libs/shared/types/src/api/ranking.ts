@@ -182,6 +182,12 @@ export type RankingProjectPatch = Partial<
 
 /** `GET /api/ranking/projects`: the list, newest first. */
 export type RankingProjectSummary = {
+  /** What the ranking looks like now, as a key: a cover is made for it (`POST .../cover`). */
+  coverKey: string
+  /** The cover is missing or shows an older version of the ranking: draw it again. */
+  coverStale: boolean
+  /** Its cover (the short at its payoff, 360x640), when one was drawn. */
+  coverUrl: null | string
   id: string
   itemCount: number
   /** The latest render, when there is one. */

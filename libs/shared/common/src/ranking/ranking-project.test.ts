@@ -1,5 +1,6 @@
 import type { RankingProject } from '@shared/types/api/ranking'
 
+import { rankingCoverKey, rankingCoverShot } from './ranking-cover'
 import {
   clampSlideTextSize,
   DEFAULT_RANKING_TRANSITION,
@@ -12,6 +13,7 @@ import {
   rankingTimeline,
   revealOrder,
   slideTextOf,
+  transitionOf,
   transitionText,
   withRankCount,
   withSlideText,
@@ -213,5 +215,70 @@ describe('withRankCount', () => {
     )
     expect(slides.transition?.texts).toEqual({ '2': 'Two' })
     expect(withRankCount(project, 1).items).toHaveLength(2)
+  })
+})
+
+describe('ranking covers', () => {
+  const withClips = (): RankingProject => {
+    const base = newRankingProject('p1', '2026-10-21T00:00:00Z')
+    return {
+      ...base,
+      items: base.items.map((item) => ({
+        ...item,
+        clip: {
+          durationSec: 6,
+          name: `c${item.rank}`,
+          trimEndSec: 5,
+          trimStartSec: 1,
+          url: `store://ranking/p1/clips/c${item.rank}.mp4`,
+        },
+        label: `L${item.rank}`,
+      })),
+    }
+  }
+
+  it('shows the rank revealed last (#1 in a countdown), a little into its trim', () => {
+    const shot = rankingCoverShot(withClips())
+    expect(shot?.item.rank).toBe(1)
+    expect(shot?.atSec).toBeCloseTo(1 + 4 * 0.4)
+    // #1 without a clip: the last revealed rank that has one.
+    const project = withClips()
+    const noOne = {
+      ...project,
+      items: project.items.map((i) => (i.rank === 1 ? { ...i, clip: null } : i)),
+    }
+    expect(rankingCoverShot(noOne)?.item.rank).toBe(2)
+    expect(rankingCoverShot(newRankingProject('p2', '2026-10-21T00:00:00Z'))).toBeNull()
+  })
+
+  it('keys what the cover shows: the same for a new name, date, sound or slide, not for a label or trim', () => {
+    const project = withClips()
+    const key = rankingCoverKey(project)
+    expect(rankingCoverKey({ ...project, name: 'Other', updatedAt: '2027-01-01T00:00:00Z' })).toBe(
+      key,
+    )
+    expect(
+      rankingCoverKey({ ...project, transition: { ...transitionOf(project), text: 'Next' } }),
+    ).toBe(key)
+    expect(
+      rankingCoverKey({
+        ...project,
+        items: project.items.map((i) => ({ ...i, cues: [{ atSec: 1, id: 'c', soundId: 's' }] })),
+      }),
+    ).toBe(key)
+    expect(
+      rankingCoverKey({
+        ...project,
+        items: project.items.map((i) => (i.rank === 3 ? { ...i, label: 'New' } : i)),
+      }),
+    ).not.toBe(key)
+    expect(
+      rankingCoverKey({
+        ...project,
+        items: project.items.map((i) =>
+          i.rank === 1 && i.clip ? { ...i, clip: { ...i.clip, trimStartSec: 2 } } : i,
+        ),
+      }),
+    ).not.toBe(key)
   })
 })

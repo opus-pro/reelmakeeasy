@@ -22,6 +22,12 @@ import {
   stickerMotionExpr,
   stickerWindow,
 } from '@reelmakeeasy/common/ranking/ranking-motion'
+import {
+  RANKING_COVER_HEIGHT,
+  RANKING_COVER_WIDTH,
+  rankingCoverKey,
+  rankingCoverShot,
+} from '@reelmakeeasy/common/ranking/ranking-cover'
 import { keyIsUnder, parseStoreUri, storeUri, toSavedAddress } from '@reelmakeeasy/common/storage/address'
 import { dataDir, filePath, fileStore } from '@reelmakeeasy/common/storage/file-store'
 import { ensureError } from '@reelmakeeasy/common/utils/error-handler'
@@ -37,11 +43,13 @@ import type { SoundLibraryService } from '../sound-library/sound-library.service
 
 import { applyRankingPatch } from './ranking-patch'
 import {
+  coverArgs,
   photoToClip,
   probeClip,
   type RenderPart,
   renderRanking,
   type SoundFile,
+  run,
   type StickerLayer,
 } from './ranking-render'
 
@@ -63,11 +71,17 @@ export class RankingInputError extends Error {}
 
 type RenderJob = RankingRenderStatus & { projectId: string }
 
+/** What a saved ranking keeps beside the project itself: its latest render, and its cover (with
+ *  the key of the ranking it shows, `rankingCoverKey`). */
+type Saved = RankingProject & { cover?: { key: string; url: string }; lastRender?: string }
+
 /**
  * Ranking Builder projects: saved as JSON in `<DATA_DIR>/ranking/`, clips and renders in the
  * file store under `ranking/<projectId>/`. Renders run here, one at a time per project.
  */
 export class RankingService {
+  /** Rankings whose cover is being made (one at a time each). */
+  private readonly covering = new Set<string>()
   private readonly jobs = new Map<string, RenderJob>()
 
   constructor(
@@ -82,9 +96,12 @@ export class RankingService {
       .readdirSync(this.root)
       .filter((name) => name.endsWith('.json'))
       .map((name) => this.read(name.slice(0, -5)))
-      .filter((p): p is RankingProject & { lastRender?: string } => p !== null)
+      .filter((p): p is Saved => p !== null)
       .toSorted((a, b) => b.updatedAt.localeCompare(a.updatedAt))
       .map((p) => ({
+        coverKey: rankingCoverKey(p),
+        coverStale: p.cover?.key !== rankingCoverKey(p),
+        coverUrl: p.cover?.url ?? null,
         id: p.id,
         itemCount: p.items.length,
         lastRenderUrl: p.lastRender ?? null,
@@ -207,6 +224,66 @@ export class RankingService {
     const target = storeUri(`${STORE_FOLDER}/${id}/stickers/${randomUUID()}${ext}`)
     await fileStore.file(source).copyTo(target)
     return { imageUrl: target }
+  }
+
+  /**
+   * Makes a ranking's cover from the overlay the browser drew for it (`{ key, bandHeight,
+   * overlay }`: the full frame with every label, PNG base64) and a frame of its payoff clip.
+   * `key` is the ranking's `coverKey` from the list, read before it was drawn: one for an older
+   * version is refused (the ranking changed meanwhile; draw it again). Answers its address.
+   */
+  async setCover(id: string, body: unknown): Promise<{ coverUrl: string }> {
+    const project = this.get(id)
+    const b = (body ?? {}) as Record<string, unknown>
+    const key = rankingCoverKey(project)
+    if (b['key'] !== key) throw new RankingInputError('The ranking changed: draw its cover again.')
+    const bandHeight = Number(b['bandHeight'])
+    if (!Number.isInteger(bandHeight) || bandHeight < 0 || bandHeight > BAND_MAX)
+      throw new RankingInputError('The title band height is missing.')
+    const overlay = pngOf(b['overlay'], 'The cover overlay')
+    if (this.covering.has(id)) throw new RankingInputError('Its cover is being made already.')
+    this.covering.add(id)
+    const workDir = fs.mkdtempSync(path.join(os.tmpdir(), 'ranking-cover-'))
+    try {
+      const png = path.join(workDir, 'overlay.png')
+      fs.writeFileSync(png, overlay)
+      const out = path.join(workDir, 'cover.jpg')
+      const shot = rankingCoverShot(project)
+      const clipFile = shot?.item.clip ? filePath(shot.item.clip.url) : null
+      const args = (clip: null | string) =>
+        coverArgs({
+          atSec: shot?.atSec ?? 0,
+          bandHeight,
+          clipFile: clip,
+          height: RANKING_COVER_HEIGHT,
+          out,
+          overlay: png,
+          width: RANKING_COVER_WIDTH,
+        })
+      // A clip that can't be read, or has no picture at that moment (its sound outlasts it, and
+      // ffmpeg then writes nothing yet succeeds), still gets a cover: the overlay alone.
+      const made = () => fs.existsSync(out) && fs.statSync(out).size > 0
+      try {
+        await run('ffmpeg', args(clipFile), workDir)
+        if (clipFile && !made()) throw new Error(`no picture at ${shot?.atSec ?? 0} s`)
+      } catch (error) {
+        if (!clipFile) throw error
+        logger.warn(`A cover frame failed: ${ensureError(error).message}`)
+        await run('ffmpeg', args(null), workDir)
+      }
+      const target = storeUri(`${STORE_FOLDER}/${id}/covers/${key}.jpg`)
+      await fileStore.upload(out, target)
+      const saved = this.read(id)
+      if (saved) {
+        const old = saved.cover?.url
+        this.write({ ...saved, cover: { key, url: target } } as RankingProject)
+        if (old && old !== target) fs.rmSync(filePath(old), { force: true })
+      }
+      return { coverUrl: target }
+    } finally {
+      this.covering.delete(id)
+      fs.rmSync(workDir, { force: true, recursive: true })
+    }
   }
 
   /**
@@ -363,9 +440,9 @@ export class RankingService {
     return path.join(this.root, `${id}.json`)
   }
 
-  private read(id: string): (RankingProject & { lastRender?: string }) | null {
+  private read(id: string): null | Saved {
     try {
-      return JSON.parse(fs.readFileSync(this.file(id), 'utf8')) as RankingProject
+      return JSON.parse(fs.readFileSync(this.file(id), 'utf8')) as Saved
     } catch {
       return null
     }

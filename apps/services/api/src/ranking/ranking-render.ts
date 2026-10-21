@@ -40,6 +40,42 @@ export function run(command: string, args: string[], cwd: string): Promise<strin
   })
 }
 
+/**
+ * The ffmpeg arguments for a ranking's cover: a frame of the clip at `atSec`, placed as the
+ * render places it (cover-fit under the title band), the overlay on top, scaled to `width` x
+ * `height` as a JPEG. No clip: the overlay on the dark frame alone.
+ */
+export function coverArgs(o: {
+  atSec: number
+  bandHeight: number
+  clipFile: null | string
+  height: number
+  out: string
+  overlay: string
+  width: number
+}): string[] {
+  const area = RANKING_HEIGHT - o.bandHeight
+  const finish = `scale=${o.width}:${o.height},format=yuvj420p[v]`
+  const output = ['-map', '[v]', '-frames:v', '1', '-q:v', '4', o.out]
+  if (!o.clipFile)
+    return [
+      '-v', 'error', '-y', '-f', 'lavfi', '-i', `color=c=#111111:s=${RANKING_WIDTH}x${RANKING_HEIGHT}`,
+      '-i', o.overlay, '-filter_complex', `[0:v][1:v]overlay=0:0,${finish}`, ...output,
+    ]
+  // The clip is the base itself (padded down under the band), as in a segment: laid over a colour
+  // source instead, its first frame comes a moment after the source's and the one frame written
+  // would be the background alone.
+  return [
+    '-v', 'error', '-y',
+    '-ss', String(o.atSec), '-i', o.clipFile,
+    '-i', o.overlay,
+    '-filter_complex',
+    `[0:v]scale=${RANKING_WIDTH}:${area}:force_original_aspect_ratio=increase,crop=${RANKING_WIDTH}:${area},setsar=1,` +
+      `pad=${RANKING_WIDTH}:${RANKING_HEIGHT}:0:${o.bandHeight}:color=#111111[base];[base][1:v]overlay=0:0,${finish}`,
+    ...output,
+  ]
+}
+
 /** How long a photo plays as a clip. */
 export const PHOTO_CLIP_SEC = 5
 

@@ -2,19 +2,88 @@
 
 import type { RankingProjectSummary } from '@shared/types/api/ranking'
 import { cn } from '@shared/ui'
+import { useAtomValue } from 'jotai'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 
+import { apiOriginAtom } from '@/atom/apiOrigin'
 import { useStartAgentSession } from '@/components/agent/useStartAgentSession'
 import { Edit, Sparkle } from '@/components/icons/core'
 
-import { useRankingApi } from './ranking-api'
-import { RankingStudio } from './RankingStudio'
+import { type RankingApi, useRankingApi } from './ranking-api'
+import { loadRankingFonts } from './ranking-fonts'
+import { drawCoverOverlay, RankingStudio } from './RankingStudio'
 import { SoundLibraryPanel } from './SoundLibraryPanel'
 import { StylesPanel } from './StylesPanel'
 import { useSoundLibrary } from './useSoundLibrary'
 
 const errorText = (error: unknown) => (error instanceof Error ? error.message : String(error))
+
+/**
+ * Draws the covers the list says are missing or out of date, one at a time, and puts each on its
+ * card as it lands. A ranking changes all the time (the agent, the studio), so its cover catches
+ * up whenever its card is looked at. One that fails keeps its old cover and isn't tried again on
+ * this visit; without the ranking fonts nothing is drawn (a cover in a stand-in font would pass
+ * for current).
+ */
+function useCoverRefresh(
+  api: RankingApi,
+  rankings: null | RankingProjectSummary[],
+  setRankings: (
+    update: (list: null | RankingProjectSummary[]) => null | RankingProjectSummary[],
+  ) => void,
+) {
+  const apiOrigin = useAtomValue(apiOriginAtom)
+  // Each ranking version (`id:key`) is queued once; one loop works through the queue, and keeps
+  // going as covers land (only leaving the page stops it).
+  const queued = useRef(new Set<string>())
+  const queue = useRef<string[]>([])
+  const running = useRef(false)
+  const live = useRef(true)
+  useEffect(() => {
+    live.current = true
+    return () => {
+      live.current = false
+    }
+  }, [])
+  useEffect(() => {
+    for (const item of rankings ?? []) {
+      const entry = `${item.id}:${item.coverKey}`
+      if (!item.coverStale || queued.current.has(entry)) continue
+      queued.current.add(entry)
+      queue.current.push(entry)
+    }
+    if (running.current || !queue.current.length) return
+    running.current = true
+    void (async () => {
+      try {
+        if (!(await loadRankingFonts(apiOrigin))) return
+        await document.fonts.ready
+        for (let entry = queue.current.shift(); entry; entry = queue.current.shift()) {
+          if (!live.current) return
+          const [id = '', key = ''] = entry.split(':')
+          try {
+            const drawn = await drawCoverOverlay(await api.get(id))
+            const coverUrl = await api.cover(id, { ...drawn, key })
+            if (!live.current) return
+            setRankings(
+              (list) =>
+                list?.map((item) =>
+                  item.id === id && item.coverKey === key
+                    ? { ...item, coverStale: false, coverUrl }
+                    : item,
+                ) ?? null,
+            )
+          } catch {
+            // Changed meanwhile, or couldn't be drawn: it stays as it was.
+          }
+        }
+      } finally {
+        running.current = false
+      }
+    })()
+  }, [api, apiOrigin, rankings, setRankings])
+}
 
 /** Topics to start from, one click away (a click fills the box; it doesn't start). */
 const IDEAS = ['Funniest dog fails', 'Guiltiest cats', 'Worst parking jobs']
@@ -44,6 +113,7 @@ export function RankingHome() {
   const [styleCount, setStyleCount] = useState<null | number>(null)
   const [error, setError] = useState<null | string>(null)
   const [creating, setCreating] = useState(false)
+  useCoverRefresh(api, rankings, setRankings)
 
   useEffect(() => {
     if (id) return
@@ -264,12 +334,12 @@ function RankingGrid({
     <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
       {items.map((item) => (
         <button
-          className="grid grid-cols-[54px_1fr] gap-3.5 rounded-xl bg-white/[0.04] p-3 text-left ring-1 ring-white/[0.08] ring-inset transition-colors hover:bg-white/[0.08]"
+          className="grid grid-cols-[72px_1fr] gap-3.5 rounded-xl bg-white/[0.04] p-3 text-left ring-1 ring-white/[0.08] ring-inset transition-colors hover:bg-white/[0.08]"
           key={item.id}
           onClick={() => onOpen(item.id)}
           type="button"
         >
-          <Thumb />
+          <Cover url={item.coverUrl} />
           <span className="flex min-w-0 flex-col gap-1">
             <span className="line-clamp-2 text-sm font-semibold text-primary">{item.name}</span>
             <span className="text-xs text-white/40">
@@ -290,6 +360,23 @@ function RankingGrid({
         </button>
       ))}
     </div>
+  )
+}
+
+/** A ranking's cover (the short at its payoff), or the miniature until it has one. */
+function Cover({ url }: { url: null | string }) {
+  const [failed, setFailed] = useState(false)
+  if (!url || failed) return <Thumb className="h-32 w-[72px]" />
+  return (
+    // eslint-disable-next-line @next/next/no-img-element -- a 360x640 cover from the API
+    <img
+      alt=""
+      className="h-32 w-[72px] shrink-0 rounded-[6px] bg-[#111] object-cover ring-1 ring-white/10"
+      decoding="async"
+      loading="lazy"
+      onError={() => setFailed(true)}
+      src={url}
+    />
   )
 }
 

@@ -104,6 +104,12 @@ export class RankingController {
     return answer(() => this.ranking.startRender(id, body))
   }
 
+  /** Makes its cover: `{ key, bandHeight, overlay }` (the overlay with every label, as a PNG). */
+  @Post('projects/:id/cover')
+  setCover(@Param('id') id: string, @Body() body: unknown): Promise<{ coverUrl: string }> {
+    return answerAsync(() => this.ranking.setCover(id, body))
+  }
+
   /** Exports without a studio open (headless): answers the render's status to poll. */
   @Post('projects/:id/export')
   exportHeadless(@Param('id') id: string): Promise<RankingRenderStatus> {

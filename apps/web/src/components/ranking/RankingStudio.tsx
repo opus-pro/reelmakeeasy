@@ -1,5 +1,6 @@
 'use client'
 
+import { rankingCoverShot } from '@reelmakeeasy/common/ranking/ranking-cover'
 import { isMovingSticker } from '@reelmakeeasy/common/ranking/ranking-motion'
 import {
   drawRankingOverlay,
@@ -340,13 +341,9 @@ export function RankingStudio({
   )
 }
 
-/** Each timeline part's picture as a PNG (data URL), drawn exactly as the preview draws it: a
- *  clip's overlay, or a transition slide. */
-export async function drawOverlays(
-  project: RankingProject,
-): Promise<{ bandHeight: number; overlays: string[]; stickers: Record<string, string> }> {
-  // Every sticker picture loaded first: the export waits for them.
-  const images = new Map(
+/** Every sticker picture of a ranking, loaded (one that can't be is left out). */
+async function loadProjectImages(project: RankingProject): Promise<Map<string, StickerImage>> {
+  return new Map(
     (
       await Promise.all(
         (project.stickers ?? []).flatMap((s) =>
@@ -357,11 +354,51 @@ export async function drawOverlays(
       )
     ).flatMap(([url, img]) => (img ? [[url, img] as const] : [])),
   )
+}
+
+/** A full-frame canvas to draw the overlays on. */
+function frameCanvas(): CanvasRenderingContext2D {
   const canvas = document.createElement('canvas')
   canvas.width = RANKING_WIDTH
   canvas.height = RANKING_HEIGHT
   const ctx = canvas.getContext('2d')
   if (!ctx) throw new Error("This browser can't draw the overlay.")
+  return ctx
+}
+
+/**
+ * The overlay of a ranking's cover (the short at its payoff: every label shown, the stickers of
+ * the rank it shows, moving ones at rest) as a PNG data URL, with the band height. The API puts
+ * a frame of that rank's clip under it.
+ */
+export async function drawCoverOverlay(
+  project: RankingProject,
+): Promise<{ bandHeight: number; overlay: string }> {
+  const images = await loadProjectImages(project)
+  const ctx = frameCanvas()
+  const { bandHeight } = drawRankingOverlay(
+    ctx,
+    project,
+    project.items.map((item) => item.rank),
+    {
+      fonts: STUDIO_RANKING_FONTS,
+      images,
+      moving: 'still',
+      rank: rankingCoverShot(project)?.item.rank ?? null,
+    },
+  )
+  return { bandHeight, overlay: ctx.canvas.toDataURL('image/png') }
+}
+
+/** Each timeline part's picture as a PNG (data URL), drawn exactly as the preview draws it: a
+ *  clip's overlay, or a transition slide. */
+export async function drawOverlays(
+  project: RankingProject,
+): Promise<{ bandHeight: number; overlays: string[]; stickers: Record<string, string> }> {
+  // Every sticker picture loaded first: the export waits for them.
+  const images = await loadProjectImages(project)
+  const ctx = frameCanvas()
+  const canvas = ctx.canvas
   let bandHeight = 0
   const overlays = rankingTimeline(project).map((part) => {
     if (part.kind === 'transition')
