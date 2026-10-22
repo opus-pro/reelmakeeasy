@@ -176,7 +176,7 @@ describe('RankingAgentTools', () => {
     const t = new RankingAgentTools({
       onRanking: (_s, id) => followed.push(id),
       ranking: ranking as never,
-      sounds: { list: () => [] },
+      sounds: { add: jest.fn(), list: () => [] },
       templates: templates as never,
       workingDir: () => work,
     })
@@ -230,7 +230,7 @@ describe('RankingAgentTools', () => {
     const t = new RankingAgentTools({
       ai: { contactSheet, generate },
       ranking: ranking as never,
-      sounds: { list: () => [] },
+      sounds: { add: jest.fn(), list: () => [] },
       workingDir: () => work,
     })
     const clips = JSON.stringify([
