@@ -117,6 +117,21 @@ describe('AgentSessionStore', () => {
     expect(updated.updatedAt).toBe(created.updatedAt)
   })
 
+  it('does not bump updatedAt for an event appended with touch: false', () => {
+    jest.useFakeTimers({ now: new Date('2026-10-02T00:00:00.000Z') })
+    try {
+      const store = new AgentSessionStore(root)
+      const id = randomUUID()
+      store.create({ id, title: 'x' })
+      jest.setSystemTime(new Date('2026-10-02T00:01:00.000Z'))
+      store.append(id, { questionId: 'q', type: 'question_expired' }, { touch: false })
+      expect(store.get(id)?.updatedAt).toBe('2026-10-02T00:00:00.000Z')
+      expect(store.eventsAfter(id, 0)).toHaveLength(1)
+    } finally {
+      jest.useRealTimers()
+    }
+  })
+
   it('does not bump updatedAt for a session event', () => {
     jest.useFakeTimers({ now: new Date('2026-10-02T00:00:00.000Z') })
     try {

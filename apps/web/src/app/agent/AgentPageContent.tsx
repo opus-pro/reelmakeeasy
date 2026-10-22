@@ -5,6 +5,7 @@ import {
   FLOW_CANCELLED_NOTICE,
   type TranscriptEntry,
 } from '@reelmakeeasy/common/codex-agent/agent-transcript'
+import { type AgentMode, type AgentTool, isRankingMode } from '@shared/types/api/agent'
 import { Button, cn } from '@shared/ui'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { type ReactNode, useEffect, useMemo, useState } from 'react'
@@ -13,8 +14,15 @@ import { AgentChat } from '@/components/agent/AgentChat'
 import { useAgentPicker } from '@/components/agent/AgentPickerDialog'
 import { AgentSessionSidebar } from '@/components/agent/AgentSessionSidebar'
 import { ProjectProgressProvider } from '@/components/agent/ProjectProgressProvider'
+import { RankingChatPanel } from '@/components/agent/ranking/RankingChatPanel'
 import { useSidebarProjectActions } from '@/components/agent/SidebarProjectActions'
-import { START_EASY_PARAM, startsEasy, useStartEasyOnce } from '@/components/agent/start-easy'
+import {
+  START_EASY_PARAM,
+  startModeOf,
+  TOOL_PARAM,
+  toolOf,
+  useStartEasyOnce,
+} from '@/components/agent/start-easy'
 import { StoryboardPanel } from '@/components/agent/StoryboardPanel'
 import { useAgentSession } from '@/components/agent/useAgentSession'
 import { useAgentSessions, useRefreshAgentSessions } from '@/components/agent/useAgentSessions'
@@ -40,8 +48,10 @@ export function AgentPageContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const sessionId = searchParams?.get('sessionId') ?? null
-  // The home page's first-video prompt opens a new chat with Easy to be chosen for the user.
-  const startEasy = startsEasy(searchParams)
+  // The home page's first-video prompt (Easy) and Ranking Builder (Ranking, Easy) open a new chat
+  // with its mode to be chosen for the user; `tool` only picks the tool the card shows first.
+  const startMode = startModeOf(searchParams)
+  const firstTool = toolOf(searchParams)
   const actions = useSidebarProjectActions()
   const [collapsed, setCollapsed] = useState(false)
   const [drawerOpen, setDrawerOpen] = useState(false)
@@ -110,10 +120,11 @@ export function AgentPageContent() {
         <h1 className="sr-only">Agent chat</h1>
         {sessionId ? (
           <AgentWorkspace
+            firstTool={firstTool}
             key={sessionId}
             sessionId={sessionId}
             sidebarButton={sidebarButton}
-            startEasy={startEasy}
+            startMode={startMode}
           />
         ) : (
           <EmptyState sidebarButton={sidebarButton} />
@@ -161,13 +172,17 @@ function SidebarProgress({ children }: { children: ReactNode }) {
  * `startEasy` (the URL's marker): chooses Easy once the chat has loaded, then drops the marker.
  */
 function AgentWorkspace({
+  firstTool,
   sessionId,
   sidebarButton,
-  startEasy,
+  startMode,
 }: {
+  /** The tool the welcome card shows first. */
+  firstTool: AgentTool | null
   sessionId: string
   sidebarButton: ReactNode
-  startEasy: boolean
+  /** The mode the page chooses for the user once the chat loads. */
+  startMode: AgentMode | null
 }) {
   const agent = useAgentSession(sessionId)
   const { removeQuery } = useMutateQuery()
@@ -186,13 +201,16 @@ function AgentWorkspace({
   )
   const mode = agent.transcript.mode ?? agent.session?.mode ?? null
   // Dropped with replace, so a reload or Back doesn't choose again.
-  const dropStartEasy = useRefCallback(() => removeQuery([START_EASY_PARAM], { mode: 'replace' }))
+  const dropStartEasy = useRefCallback(() =>
+    removeQuery([START_EASY_PARAM, TOOL_PARAM], { mode: 'replace' }),
+  )
   const startingMode = useStartEasyOnce({
     chooseMode: agent.chooseMode,
-    marked: startEasy,
+    marked: startMode !== null,
     mode,
     onConsumed: dropStartEasy,
     session: agent.session,
+    ...(startMode ? { start: startMode } : {}),
   })
   const hasUserMessage = entries.some((e) => e.kind === 'user')
   const pickedIdea = entries.some(
@@ -220,6 +238,7 @@ function AgentWorkspace({
       <div className="size-full">
         <AgentChat
           agent={agent}
+          firstTool={firstTool}
           headerStart={sidebarButton}
           sessionId={sessionId}
           startingMode={startingMode}
@@ -235,6 +254,7 @@ function AgentWorkspace({
         <div className="min-h-0 min-w-0 flex-1 border-b border-white/10 md:border-r md:border-b-0">
           <AgentChat
             agent={agent}
+            firstTool={firstTool}
             headerStart={sidebarButton}
             sessionId={sessionId}
             startingMode={startingMode}
@@ -242,7 +262,15 @@ function AgentWorkspace({
           />
         </div>
         <div className="min-h-0 min-w-0 flex-1">
-          <StoryboardPanel mode={mode} sessionId={sessionId} transcript={agent.transcript} />
+          {isRankingMode(mode) ? (
+            <RankingChatPanel
+              easy={mode === 'ranking_easy'}
+              rankingId={agent.transcript.ranking?.id ?? agent.session?.rankingId ?? null}
+              version={agent.transcript.ranking?.version ?? 0}
+            />
+          ) : (
+            <StoryboardPanel mode={mode} sessionId={sessionId} transcript={agent.transcript} />
+          )}
         </div>
       </div>
     </ProjectProgressProvider>

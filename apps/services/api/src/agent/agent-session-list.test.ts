@@ -56,11 +56,30 @@ describe('buildAgentSessionList', () => {
         stage: 'FINISHED',
         thumbnail: 'http://x/thumb.jpg',
       },
+      rankingCoverUrl: null,
       status: 'idle',
       title: 'Comet tonight',
       updatedAt: '2026-10-02T00:00:00.000Z',
     })
     expect(list[1]).toMatchObject({ mode: null, project: null, title: 'Old' })
+  })
+
+  it("shows a Ranking chat's ranking cover, when it has one", () => {
+    const covers: Record<string, string> = { r1: 'store://ranking/r1/covers/k.jpg' }
+    const list = buildAgentSessionList(
+      [
+        session({ id: 'a', rankingId: 'r1' }),
+        session({ id: 'b', rankingId: 'r2' }),
+        session({ id: 'c' }),
+      ],
+      [],
+      (id) => covers[id] ?? null,
+    )
+    expect(Object.fromEntries(list.map((i) => [i.id, i.rankingCoverUrl]))).toEqual({
+      a: 'store://ranking/r1/covers/k.jpg',
+      b: null,
+      c: null,
+    })
   })
 
   it('falls back to createdAt for legacy rows', () => {

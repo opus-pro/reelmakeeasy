@@ -1,12 +1,17 @@
 /** Question id -> the chosen option labels and/or typed text. */
 export type AgentAnswers = Record<string, string[]>
 
-/** How a session's chat is driven: an autonomous run (Easy) or free chat (Advanced). Chosen
- *  once, right after the session is created. A third mode, 'guided', was removed: chats saved
- *  with it load as 'free' (`agentModeFromStored`). */
-export type AgentMode = 'autonomous' | 'free'
+/** How a session's chat is driven, per tool: a short video's autonomous run (Easy) or free chat
+ *  (Advanced); a ranking short's guided chat (Easy: one question at a time, then the agent builds
+ *  it) or free chat (Advanced), both in the Ranking Builder. Chosen once, right after the session
+ *  is created. A former mode, 'guided', was removed: chats saved with it load as 'free'
+ *  (`agentModeFromStored`). */
+export type AgentMode = 'autonomous' | 'free' | 'ranking' | 'ranking_easy'
 
 export type AgentPlanStep = { status: 'completed' | 'inProgress' | 'pending'; step: string }
+
+/** What a chat makes: a tool, each with an Easy and an Advanced mode. */
+export type AgentTool = 'ranking' | 'short'
 
 /** A short silent clip that shows what an option looks like (ReelMakeEasy's own cards only). The
  *  chat's transcript keeps their addresses; the browser gets the URLs. */
@@ -215,6 +220,9 @@ export interface AgentSession {
   mode?: AgentMode
   /** The project an autonomous session started its video in. */
   projectId: null | string
+  /** A Ranking chat's ranking (the one its tools last read or changed, or the one it was opened
+   *  from in the studio). */
+  rankingId?: string
   /** Only in the API's view of a chat that can pick up where it left off
    *  (`GET /api/agent/sessions/:id`), never saved: what picking up does. */
   resume?: AgentResumeAction
@@ -301,6 +309,8 @@ export type AgentUiEvent = { id?: number } & (
    *  expires it. */
   | { questionId: string; questions: AgentQuestion[]; server?: true; type: 'question' }
   | { questionId: string; type: 'question_expired' }
+  /** A Ranking chat follows this ranking now, and it just changed (the preview reloads it). */
+  | { rankingId: string; type: 'ranking' }
   | { reason?: string; status: AgentSessionStatus; type: 'session' }
   | { steps: AgentPlanStep[]; type: 'plan' }
   | { styleId: string; styleName: string; thumbnailUrl?: string; type: 'style_chosen' }
@@ -347,6 +357,8 @@ export interface AgentSessionListItem {
   id: string
   mode: AgentMode | null
   project: AgentSessionProject | null
+  /** The cover of the ranking a Ranking chat works on, when it has one. */
+  rankingCoverUrl: null | string
   status: AgentSessionStatus
   /** The live project's name when there is one, else the chat's own title. */
   title: string
@@ -423,3 +435,26 @@ export interface BeatLoopStoryboard {
   /** The voice the writer had in mind; the tool's `voice` argument picks the real one. */
   voice?: string
 }
+
+/** Each tool's modes: Easy (guided) first, then Advanced (free chat). */
+export const AGENT_TOOL_MODES: Record<AgentTool, { advanced: AgentMode; easy: AgentMode }> = {
+  ranking: { advanced: 'ranking', easy: 'ranking_easy' },
+  short: { advanced: 'free', easy: 'autonomous' },
+}
+
+/** The tool a mode belongs to. */
+export function toolOfMode(mode: AgentMode): AgentTool {
+  return mode === 'ranking' || mode === 'ranking_easy' ? 'ranking' : 'short'
+}
+
+/** A Ranking chat, Easy or Advanced: it builds ranking shorts with the ranking tools. */
+export function isRankingMode(mode: AgentMode | null | undefined): boolean {
+  return !!mode && toolOfMode(mode) === 'ranking'
+}
+
+/** The start of the id of an Easy ranking's first card (ReelMakeEasy's own: what it's about). */
+export const RANKING_TOPIC_QUESTION_PREFIX = 'ranking-topic'
+
+/** Whether a question id is an Easy ranking's topic card. */
+export const isRankingTopicQuestion = (id: string | undefined): boolean =>
+  !!id?.startsWith(RANKING_TOPIC_QUESTION_PREFIX)

@@ -55,6 +55,8 @@ function projectOf(
 export function buildAgentSessionList(
   sessions: AgentSession[],
   rows: AgentProjectSummaryRow[] | null,
+  /** A ranking's cover (its address), or null. */
+  rankingCover: (rankingId: string) => null | string = () => null,
 ): AgentSessionListItem[] {
   const byId = rows ? new Map(rows.map((r) => [r.id, r])) : null
   return sortSessionsByActivity(
@@ -67,6 +69,7 @@ export function buildAgentSessionList(
         id: s.id,
         mode: s.mode ?? null,
         project,
+        rankingCoverUrl: s.rankingId ? rankingCover(s.rankingId) : null,
         status: s.status,
         // A legacy/unset chat title ("Untitled video", or unset) shows as "New chat" here
         // without touching what's stored -- see isUnsetChatTitle.

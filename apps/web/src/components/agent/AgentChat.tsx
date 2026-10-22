@@ -5,7 +5,12 @@ import {
   type Transcript,
   type TranscriptEntry,
 } from '@reelmakeeasy/common/codex-agent/agent-transcript'
-import type { AgentAnswers, AgentMode } from '@shared/types/api/agent'
+import {
+  type AgentAnswers,
+  type AgentMode,
+  type AgentTool,
+  isRankingTopicQuestion,
+} from '@shared/types/api/agent'
 import { Button, cn, Textarea } from '@shared/ui'
 import Link from 'next/link'
 import {
@@ -52,6 +57,8 @@ import { WelcomeCard } from './WelcomeCard'
 export type AgentChatProps = {
   /** The page's one `useAgentSession`, shared with the storyboard panel. */
   agent: AgentSessionState
+  /** The tool the welcome card shows first (a link from Ranking Builder: Ranking). */
+  firstTool?: AgentTool | null
   /** Shown at the start of the header (the agent page's sidebar button). */
   headerStart?: ReactNode
   sessionId: string
@@ -362,7 +369,14 @@ function useClearWhenDisabled(disabled: boolean, setInput: (value: string) => vo
  * restart cut the flow off before its video, when "Pick up where you left off" under the
  * last card carries it on.
  */
-export function AgentChat({ agent, headerStart, sessionId, startingMode, title }: AgentChatProps) {
+export function AgentChat({
+  agent,
+  firstTool,
+  headerStart,
+  sessionId,
+  startingMode,
+  title,
+}: AgentChatProps) {
   const {
     answer,
     chooseMode,
@@ -438,7 +452,11 @@ export function AgentChat({ agent, headerStart, sessionId, startingMode, title }
   // Nothing to type before a mode is chosen, nor during autonomous mode with no card the
   // composer can answer, nor once autonomous mode is over; text left in the box then counts for nothing.
   const inputDisabled = !modeChosen || flowFinished || (flowActive && !singleQuestion)
-  const canAttach = takesFiles(inputDisabled, flowActive)
+  // An Easy ranking's topic card takes words only (what it's about): files come later.
+  const canAttach = takesFiles(
+    inputDisabled,
+    flowActive || isRankingTopicQuestion(openQuestion?.id),
+  )
   useClearWhenDisabled(inputDisabled, setInput)
   // Edit clicked: the user is told what to say, so the composer takes focus - once the
   // session re-fetch has unlocked it (a disabled textarea can't be focused).
@@ -523,11 +541,16 @@ export function AgentChat({ agent, headerStart, sessionId, startingMode, title }
     // Files still uploading go with the message once they're saved: wait for them.
     if (sendWaits(text, canAttach, files)) return
     const attached = files.ready
+    const taken = files.take()
     setInput('')
-    files.clear()
     // Sending your own message always brings you back to the bottom.
     atBottomRef.current = true
-    void send(text, attached)
+    void send(text, attached).then((sent) => {
+      if (sent) return taken.release()
+      // Refused (the notice says why): the text and files are back in the box, to try again.
+      taken.restore()
+      setInput((now) => now || text)
+    })
   }, [
     answerMode,
     answerQuestion,
@@ -601,6 +624,7 @@ export function AgentChat({ agent, headerStart, sessionId, startingMode, title }
         <div className="flex flex-col gap-3" ref={contentRef}>
           <WelcomeCard
             chosenHarness={chosenHarnessOf(session)}
+            firstTool={firstTool}
             mode={mode}
             onChoose={chooseMode}
             presetHarness={presetHarnessOf(session)}

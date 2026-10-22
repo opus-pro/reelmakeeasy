@@ -36,10 +36,10 @@ const isSseNotFound = (error: Error) => /^SSE open failed: 404\b/.test(error.mes
 const isSseForbidden = (error: Error) => /^SSE open failed: 403\b/.test(error.message)
 const FORBIDDEN_NOTICE =
   'Agent mode only works on the computer running ReelMakeEasy. Open http://localhost:3000 there.'
-/** The API refuses chat in an autonomous session (its flow runs, or is over) with a 409 whose
- *  message says why; it is shown as is. */
-const AUTONOMOUS_REFUSAL_RE =
-  /^(Autonomous mode is making your video|This autonomous session is finished)\b/
+/** Refusals (409) whose message says why, shown as is: chat in an autonomous session (its flow
+ *  runs, or is over), and files sent before an Easy ranking's topic is picked. */
+const SHOWN_REFUSAL_RE =
+  /^(Autonomous mode is making your video|This autonomous session is finished|Pick what the ranking is about first)\b/
 
 /**
  * Loads an agent session, streams its transcript over SSE (replaying from
@@ -76,6 +76,8 @@ export function useAgentSession(sessionId: string | undefined) {
 
   const transcriptRef = useRef<Transcript>(transcript)
   transcriptRef.current = transcript
+  /** The id of the newest message of the user's the server has sent the chat. */
+  const lastUserMessageRef = useRef(0)
 
   const connectionRef = useRef<null | ReturnType<CreateSSEConnection>>(null)
   // The stream opened once already: a later open is a reconnect (e.g. after a restart).
@@ -166,6 +168,9 @@ export function useAgentSession(sessionId: string | undefined) {
       return
     }
     trackFlow(event)
+    // As the event arrives, not at the next render: a send's outcome reads it.
+    if (event.type === 'user_message' && (event.id ?? 0) > lastUserMessageRef.current)
+      lastUserMessageRef.current = event.id ?? 0
     dispatch(event)
   })
 
@@ -264,6 +269,7 @@ export function useAgentSession(sessionId: string | undefined) {
   useEffect(() => {
     stoppedRef.current = false
     streamedRef.current = false
+    lastUserMessageRef.current = 0
     setNotFound(false)
     setAutonomousEnded(false)
     streamModeRef.current = null
@@ -283,10 +289,12 @@ export function useAgentSession(sessionId: string | undefined) {
   }, [sessionId])
 
   /** Sends a message; `attachments` are the saved names of files attached to it (it may be
-   *  only files). */
+   *  only files). Resolves to whether it went (the chat shows it): false when it was refused or
+   *  never reached the API, so the composer can give the user their text and files back. */
   const send = useRefCallback(async (text: string, attachments: string[] = []) => {
     const trimmed = text.trim()
-    if ((!trimmed && !attachments.length) || !sessionId || sendingRef.current) return
+    if ((!trimmed && !attachments.length) || !sessionId || sendingRef.current) return false
+    const shownBefore = lastUserMessageRef.current
     sendingRef.current = true
     setSending(true)
     try {
@@ -295,16 +303,17 @@ export function useAgentSession(sessionId: string | undefined) {
         pathParams: { id: sessionId },
         data: { ...(attachments.length ? { attachments } : {}), text: trimmed },
       })
+      return true
     } catch (error) {
       const status = error instanceof ApiError ? error.status : undefined
       if (status === 404) {
         markNotFound()
       } else if (status === 409) {
-        // An autonomous flow still runs (its own message says so), or the turn in flight
-        // does; don't touch `working`.
+        // An autonomous flow still runs, or the topic isn't picked yet (their own messages say
+        // so), or the turn in flight does; don't touch `working`.
         const message = error instanceof Error ? error.message : ''
         addLocalNotice(
-          AUTONOMOUS_REFUSAL_RE.test(message)
+          SHOWN_REFUSAL_RE.test(message)
             ? message
             : `${HARNESS_SHORT[session?.harness ?? 'codex']} is still working on the previous message.`,
         )
@@ -313,6 +322,9 @@ export function useAgentSession(sessionId: string | undefined) {
         // reported the failure as an event (turn failed / session stopped).
         addLocalNotice('Failed to send the message.')
       }
+      // A 5xx usually comes after the message was taken: the server sent it to the chat before
+      // trying to start the turn (and the failure follows it). If it never came, it never went.
+      return status !== undefined && status >= 500 && lastUserMessageRef.current > shownBefore
     } finally {
       sendingRef.current = false
       setSending(false)

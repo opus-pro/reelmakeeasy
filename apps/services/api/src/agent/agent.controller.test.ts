@@ -103,6 +103,7 @@ function makeStubService(overrides: Partial<StubService> = {}): StubService {
 
 /** `ChatModelService`, for tests that never pick a model. */
 const NO_MODELS = { catalog: jest.fn().mockResolvedValue(null) } as never
+const NO_RANKINGS = { coverOf: () => null } as never
 
 /** `ProjectService`, for tests that never list or delete chats. */
 const NO_PROJECTS = {
@@ -134,6 +135,7 @@ describe('AgentController', () => {
         NO_PROJECTS,
         NO_EDIT,
         NO_MODELS,
+        NO_RANKINGS,
       )
 
       const { events } = collect(controller.events(S1))
@@ -154,6 +156,7 @@ describe('AgentController', () => {
         NO_PROJECTS,
         NO_EDIT,
         NO_MODELS,
+        NO_RANKINGS,
       )
 
       collect(controller.events(S1))
@@ -169,6 +172,7 @@ describe('AgentController', () => {
         NO_PROJECTS,
         NO_EDIT,
         NO_MODELS,
+        NO_RANKINGS,
       )
 
       collect(controller.events(S1, '7'))
@@ -184,6 +188,7 @@ describe('AgentController', () => {
         NO_PROJECTS,
         NO_EDIT,
         NO_MODELS,
+        NO_RANKINGS,
       )
 
       collect(controller.events(S1, '7', '12'))
@@ -205,6 +210,7 @@ describe('AgentController', () => {
         NO_PROJECTS,
         NO_EDIT,
         NO_MODELS,
+        NO_RANKINGS,
       )
 
       const { sub } = collect(controller.events(S1))
@@ -220,6 +226,7 @@ describe('AgentController', () => {
         NO_PROJECTS,
         NO_EDIT,
         NO_MODELS,
+        NO_RANKINGS,
       )
 
       const { events } = collect(controller.events(S1, '7'))
@@ -241,6 +248,7 @@ describe('AgentController', () => {
         NO_PROJECTS,
         NO_EDIT,
         NO_MODELS,
+        NO_RANKINGS,
       )
       let completed = false
 
@@ -258,6 +266,7 @@ describe('AgentController', () => {
         NO_PROJECTS,
         NO_EDIT,
         NO_MODELS,
+        NO_RANKINGS,
       )
 
       expect(() => controller.events('..%2F..%2Fetc')).toThrow(BadRequestException)
@@ -272,6 +281,7 @@ describe('AgentController', () => {
       NO_PROJECTS,
       NO_EDIT,
       NO_MODELS,
+      NO_RANKINGS,
     )
     const body = await controller.status('1')
     expect(body).toMatchObject({
@@ -295,6 +305,7 @@ describe('AgentController', () => {
         NO_PROJECTS,
         NO_EDIT,
         NO_MODELS,
+        NO_RANKINGS,
       )
 
       await expect(controller.createSession({ title: 'Bees' })).resolves.toEqual(SESSION)
@@ -309,10 +320,42 @@ describe('AgentController', () => {
         NO_PROJECTS,
         NO_EDIT,
         NO_MODELS,
+        NO_RANKINGS,
       )
       await controller.createSession({ harness: 'claude', title: 'Bees' })
       expect(stub.createSession).toHaveBeenCalledWith({ harness: 'claude', title: 'Bees' })
       expect(() => controller.createSession({ harness: 'gemini' })).toThrow(BadRequestException)
+    })
+
+    it('chooses a mode when asked, with what the user typed as its first message', async () => {
+      const stub = makeStubService()
+      const controller = new AgentController(
+        stub as never,
+        NO_AUTONOMOUS,
+        NO_PROJECTS,
+        NO_EDIT,
+        NO_MODELS,
+        NO_RANKINGS,
+      )
+      await controller.createSession({ mode: 'ranking_easy', request: '  Funniest dog fails ' })
+      expect(stub.chooseMode).toHaveBeenCalledWith(
+        SESSION.id,
+        'ranking_easy',
+        undefined,
+        'Funniest dog fails',
+      )
+      const rankingId = '11111111-2222-3333-4444-555555555555'
+      await controller.createSession({ rankingId, request: 'add a boom on #2' })
+      expect(stub.chooseMode).toHaveBeenLastCalledWith(
+        SESSION.id,
+        'ranking',
+        undefined,
+        'add a boom on #2',
+      )
+      expect(() => controller.createSession({ mode: 'guided' })).toThrow(BadRequestException)
+      expect(() => controller.createSession({ request: 'x'.repeat(2001) })).toThrow(
+        BadRequestException,
+      )
     })
 
     it('creates the session with no title', async () => {
@@ -323,6 +366,7 @@ describe('AgentController', () => {
         NO_PROJECTS,
         NO_EDIT,
         NO_MODELS,
+        NO_RANKINGS,
       )
 
       await controller.createSession({})
@@ -339,6 +383,7 @@ describe('AgentController', () => {
         NO_PROJECTS,
         NO_EDIT,
         NO_MODELS,
+        NO_RANKINGS,
       )
 
       await expect(controller.chooseMode(S1, { mode: 'free' })).resolves.toEqual({ ok: true })
@@ -353,6 +398,7 @@ describe('AgentController', () => {
         NO_PROJECTS,
         NO_EDIT,
         NO_MODELS,
+        NO_RANKINGS,
       )
       await expect(controller.chooseMode(S1, { mode: 'guided' })).resolves.toEqual({ ok: true })
       await expect(
@@ -372,6 +418,7 @@ describe('AgentController', () => {
         NO_PROJECTS,
         NO_EDIT,
         NO_MODELS,
+        NO_RANKINGS,
       )
       await expect(controller.chooseMode(S1, { harness: 'claude', mode: 'free' })).resolves.toEqual(
         { ok: true },
@@ -395,6 +442,7 @@ describe('AgentController', () => {
         NO_PROJECTS,
         NO_EDIT,
         NO_MODELS,
+        NO_RANKINGS,
       )
       await expect(
         controller.chooseMode(S1, { harness: 'claude', mode: 'free' }),
@@ -409,6 +457,7 @@ describe('AgentController', () => {
         NO_PROJECTS,
         NO_EDIT,
         NO_MODELS,
+        NO_RANKINGS,
       )
 
       for (const mode of ['free', 'autonomous'])
@@ -423,6 +472,7 @@ describe('AgentController', () => {
         NO_PROJECTS,
         NO_EDIT,
         NO_MODELS,
+        NO_RANKINGS,
       )
 
       await expect(controller.chooseMode(S1, { mode: 'x' })).rejects.toBeInstanceOf(
@@ -443,6 +493,7 @@ describe('AgentController', () => {
         NO_PROJECTS,
         NO_EDIT,
         NO_MODELS,
+        NO_RANKINGS,
       )
 
       await expect(controller.chooseMode('../x', { mode: 'free' })).rejects.toBeInstanceOf(
@@ -461,6 +512,7 @@ describe('AgentController', () => {
         NO_PROJECTS,
         NO_EDIT,
         NO_MODELS,
+        NO_RANKINGS,
       )
 
       await expect(controller.chooseMode(S1, { mode: 'free' })).rejects.toBeInstanceOf(
@@ -476,6 +528,7 @@ describe('AgentController', () => {
         NO_PROJECTS,
         edit as never,
         NO_MODELS,
+        NO_RANKINGS,
       )
       await expect(controller.startEditing(S1)).rejects.toBeInstanceOf(ConflictException)
       await expect(controller.startEditing(S1)).rejects.toMatchObject({ message: 'not yet' })
@@ -493,6 +546,7 @@ describe('AgentController', () => {
         NO_PROJECTS,
         NO_EDIT,
         NO_MODELS,
+        NO_RANKINGS,
       )
 
       await expect(controller.chooseMode(S1, { mode: 'free' })).rejects.toBeInstanceOf(
@@ -511,6 +565,7 @@ describe('AgentController', () => {
         NO_PROJECTS,
         NO_EDIT,
         NO_MODELS,
+        NO_RANKINGS,
       )
 
       await expect(controller.chooseMode(S1, { mode: 'autonomous' })).resolves.toEqual({
@@ -529,6 +584,7 @@ describe('AgentController', () => {
         NO_PROJECTS,
         NO_EDIT,
         NO_MODELS,
+        NO_RANKINGS,
       )
 
       expect(controller.resume(S1)).toEqual({ ok: true })
@@ -554,6 +610,7 @@ describe('AgentController', () => {
         NO_PROJECTS,
         NO_EDIT,
         NO_MODELS,
+        NO_RANKINGS,
       )
 
       expect(() => controller.resume(S1)).toThrow(
@@ -575,6 +632,7 @@ describe('AgentController', () => {
         NO_PROJECTS,
         NO_EDIT,
         NO_MODELS,
+        NO_RANKINGS,
       )
 
       expect(() => controller.resume(S1)).toThrow(
@@ -598,6 +656,7 @@ describe('AgentController', () => {
         NO_PROJECTS,
         NO_EDIT,
         NO_MODELS,
+        NO_RANKINGS,
       )
 
       expect(controller.getSession(S1)).toBe(view)
@@ -615,6 +674,7 @@ describe('AgentController', () => {
         NO_PROJECTS,
         NO_EDIT,
         NO_MODELS,
+        NO_RANKINGS,
       )
 
       expect(() => controller.resume('../x')).toThrow(BadRequestException)
@@ -636,6 +696,7 @@ describe('AgentController', () => {
         NO_PROJECTS,
         NO_EDIT,
         NO_MODELS,
+        NO_RANKINGS,
       )
 
       await expect(controller.chooseStyle(S1, { styleId: '3d-animation' })).resolves.toEqual({
@@ -652,6 +713,7 @@ describe('AgentController', () => {
         NO_PROJECTS,
         NO_EDIT,
         NO_MODELS,
+        NO_RANKINGS,
       )
       const bodies = [
         {},
@@ -681,6 +743,7 @@ describe('AgentController', () => {
         NO_PROJECTS,
         NO_EDIT,
         NO_MODELS,
+        NO_RANKINGS,
       )
 
       await expect(controller.chooseStyle(S1, { styleId: 'nope' })).rejects.toBeInstanceOf(
@@ -701,6 +764,7 @@ describe('AgentController', () => {
         NO_PROJECTS,
         NO_EDIT,
         NO_MODELS,
+        NO_RANKINGS,
       )
 
       await expect(controller.chooseStyle(S1, { styleId: 'a' })).rejects.toBeInstanceOf(
@@ -717,6 +781,7 @@ describe('AgentController', () => {
         NO_PROJECTS,
         NO_EDIT,
         NO_MODELS,
+        NO_RANKINGS,
       )
 
       await expect(controller.chooseStyle(S1, { styleId: 'a' })).rejects.toBeInstanceOf(
@@ -746,6 +811,7 @@ describe('AgentController', () => {
         NO_PROJECTS,
         NO_EDIT,
         NO_MODELS,
+        NO_RANKINGS,
       )
       const saved = await controller.attach(S1, 'My Photo.png', upload([Buffer.from('png bytes')]))
       expect(saved).toMatchObject({ kind: 'image', size: 9 })
@@ -761,6 +827,7 @@ describe('AgentController', () => {
         NO_PROJECTS,
         NO_EDIT,
         NO_MODELS,
+        NO_RANKINGS,
       )
       await expect(
         controller.attach(
@@ -805,6 +872,7 @@ describe('AgentController', () => {
         NO_PROJECTS,
         NO_EDIT,
         NO_MODELS,
+        NO_RANKINGS,
       )
       const sendFile = jest.fn()
       controller.attachment(S1, 'um-a1.mp3', { sendFile } as never)
@@ -835,6 +903,7 @@ describe('AgentController', () => {
         NO_PROJECTS,
         NO_EDIT,
         NO_MODELS,
+        NO_RANKINGS,
       )
       await controller.sendMessage(S1, { attachments: ['a-1.png'], text: '  look  ' })
       expect(stub.sendMessage).toHaveBeenCalledWith(S1, 'look', ['a-1.png'])
@@ -852,6 +921,7 @@ describe('AgentController', () => {
         NO_PROJECTS,
         NO_EDIT,
         NO_MODELS,
+        NO_RANKINGS,
       )
       await expect(
         controller.sendMessage(S1, { attachments: 'a.png', text: 'hi' }),
@@ -889,6 +959,7 @@ describe('AgentController', () => {
         NO_PROJECTS,
         NO_EDIT,
         chatModels as never,
+        NO_RANKINGS,
       )
       await expect(controller.chatModel(S1, '1')).resolves.toBe(state)
       expect(chatModels.state).toHaveBeenCalledWith(
@@ -907,6 +978,7 @@ describe('AgentController', () => {
         NO_PROJECTS,
         NO_EDIT,
         chatModels as never,
+        NO_RANKINGS,
       )
       await controller.setChatModel(S1, { effort: 'high', model: 'gpt-6-sol' })
       expect((stub as never as { setChatModel: jest.Mock }).setChatModel).toHaveBeenCalledWith(S1, {
@@ -932,6 +1004,7 @@ describe('AgentController', () => {
         NO_PROJECTS,
         NO_EDIT,
         chatModels as never,
+        NO_RANKINGS,
       )
       await controller.setDefaultChatModel(S1, { model: 'gpt-6.1-sol' })
       expect(chatModels.setDefault).toHaveBeenCalledWith('codex', { model: 'gpt-6.1-sol' })
@@ -949,6 +1022,7 @@ describe('AgentController', () => {
         NO_PROJECTS,
         NO_EDIT,
         NO_MODELS,
+        NO_RANKINGS,
       )
 
       await expect(controller.sendMessage(S1, { text: '' })).rejects.toBeInstanceOf(
@@ -965,6 +1039,7 @@ describe('AgentController', () => {
         NO_PROJECTS,
         NO_EDIT,
         NO_MODELS,
+        NO_RANKINGS,
       )
 
       await expect(controller.sendMessage(S1, { text: '   ' })).rejects.toBeInstanceOf(
@@ -983,6 +1058,7 @@ describe('AgentController', () => {
         NO_PROJECTS,
         NO_EDIT,
         NO_MODELS,
+        NO_RANKINGS,
       )
 
       await expect(controller.sendMessage(S1, { text: 'hi' })).rejects.toBeInstanceOf(
@@ -1000,6 +1076,7 @@ describe('AgentController', () => {
         NO_PROJECTS,
         NO_EDIT,
         NO_MODELS,
+        NO_RANKINGS,
       )
 
       const error = await controller.sendMessage(S1, { text: 'hi' }).catch((e: unknown) => e)
@@ -1019,6 +1096,7 @@ describe('AgentController', () => {
         NO_PROJECTS,
         NO_EDIT,
         NO_MODELS,
+        NO_RANKINGS,
       )
 
       const error = await controller.sendMessage(S1, { text: 'hi' }).catch((e: unknown) => e)
@@ -1036,6 +1114,7 @@ describe('AgentController', () => {
         NO_PROJECTS,
         NO_EDIT,
         NO_MODELS,
+        NO_RANKINGS,
       )
 
       await expect(controller.sendMessage(S1, { text: '  hi  ' })).resolves.toEqual({ ok: true })
@@ -1052,6 +1131,7 @@ describe('AgentController', () => {
         NO_PROJECTS,
         NO_EDIT,
         NO_MODELS,
+        NO_RANKINGS,
       )
 
       expect(controller.answerQuestion(S1, 'q-turn-1', { answers: { tone: ['Serious'] } })).toEqual(
@@ -1069,6 +1149,7 @@ describe('AgentController', () => {
         NO_PROJECTS,
         NO_EDIT,
         NO_MODELS,
+        NO_RANKINGS,
       )
       const ok = { answers: { tone: ['x'] } }
 
@@ -1094,6 +1175,7 @@ describe('AgentController', () => {
         NO_PROJECTS,
         NO_EDIT,
         NO_MODELS,
+        NO_RANKINGS,
       )
 
       expect(() => controller.answerQuestion(S1, 'q-1', { answers: { tone: ['x'] } })).toThrow(
@@ -1115,6 +1197,7 @@ describe('AgentController', () => {
           NO_PROJECTS,
           NO_EDIT,
           NO_MODELS,
+          NO_RANKINGS,
         ).answerQuestion(S1, 'q-1', {
           answers: {},
         }),
@@ -1132,6 +1215,7 @@ describe('AgentController', () => {
           NO_PROJECTS,
           NO_EDIT,
           NO_MODELS,
+          NO_RANKINGS,
         ).answerQuestion(S1, 'q-1', {
           answers: {},
         }),
@@ -1161,6 +1245,7 @@ describe('AgentController', () => {
         NO_PROJECTS,
         NO_EDIT,
         NO_MODELS,
+        NO_RANKINGS,
       )
       const res = { sendFile: jest.fn() } as unknown as Response
       const outsideImage = path.join(outsideDir, 'a.png')
@@ -1178,6 +1263,7 @@ describe('AgentController', () => {
         NO_PROJECTS,
         NO_EDIT,
         NO_MODELS,
+        NO_RANKINGS,
       )
       const res = { sendFile: jest.fn() } as unknown as Response
 
@@ -1192,6 +1278,7 @@ describe('AgentController', () => {
         NO_PROJECTS,
         NO_EDIT,
         NO_MODELS,
+        NO_RANKINGS,
       )
       const res = { sendFile: jest.fn() } as unknown as Response
       const hiddenDir = path.join(sessionDir, '.hidden')
@@ -1216,6 +1303,7 @@ describe('AgentController', () => {
         NO_PROJECTS,
         NO_EDIT,
         NO_MODELS,
+        NO_RANKINGS,
       )
       let sendFileCallback: ((err?: Error) => void) | undefined
       const res = {
@@ -1244,6 +1332,7 @@ describe('AgentController', () => {
         NO_PROJECTS,
         NO_EDIT,
         NO_MODELS,
+        NO_RANKINGS,
       )
       let sendFileCallback: ((err?: Error) => void) | undefined
       const res = {
@@ -1272,6 +1361,7 @@ describe('AgentController', () => {
         NO_PROJECTS,
         NO_EDIT,
         NO_MODELS,
+        NO_RANKINGS,
       )
       const res = { sendFile: jest.fn() } as unknown as Response
       const image = path.join(outsideDir, 'a.png')
@@ -1291,6 +1381,7 @@ describe('AgentController', () => {
         NO_PROJECTS,
         NO_EDIT,
         NO_MODELS,
+        NO_RANKINGS,
       )
       const res = { sendFile: jest.fn() } as unknown as Response
 
@@ -1310,6 +1401,7 @@ describe('AgentController', () => {
         NO_PROJECTS,
         NO_EDIT,
         NO_MODELS,
+        NO_RANKINGS,
       )
       const res = { sendFile: jest.fn() } as unknown as Response
 
@@ -1327,6 +1419,7 @@ describe('AgentController', () => {
         NO_PROJECTS,
         NO_EDIT,
         NO_MODELS,
+        NO_RANKINGS,
       )
       const res = { sendFile: jest.fn() } as unknown as Response
       const target = path.join(sessionDir, 'real.png')
@@ -1371,6 +1464,7 @@ describe('AgentController', () => {
         projects as never,
         NO_EDIT,
         NO_MODELS,
+        NO_RANKINGS,
       )
       const list = await controller.listSessions()
       expect(projects.getProjectSummaries).toHaveBeenCalledWith(['p1'])
@@ -1400,6 +1494,7 @@ describe('AgentController', () => {
         projects as never,
         NO_EDIT,
         NO_MODELS,
+        NO_RANKINGS,
       )
 
       const list = await controller.listSessions()
@@ -1417,6 +1512,7 @@ describe('AgentController', () => {
         projects as never,
         NO_EDIT,
         NO_MODELS,
+        NO_RANKINGS,
       )
       await controller.deleteSession(S1)
       expect(stub.deleteSession).toHaveBeenCalledWith(S1)
@@ -1432,6 +1528,7 @@ describe('AgentController', () => {
         projects as never,
         NO_EDIT,
         NO_MODELS,
+        NO_RANKINGS,
       )
       await expect(controller.deleteSession(S1)).resolves.toBeUndefined()
       expect(stub.deleteSession).toHaveBeenCalledWith(S1)
@@ -1450,6 +1547,7 @@ describe('AgentController', () => {
           NO_PROJECTS,
           NO_EDIT,
           NO_MODELS,
+          NO_RANKINGS,
         )
         await expect(controller.deleteSession(S1)).rejects.toBeInstanceOf(ConflictException)
       }
@@ -1459,6 +1557,7 @@ describe('AgentController', () => {
         NO_PROJECTS,
         NO_EDIT,
         NO_MODELS,
+        NO_RANKINGS,
       )
       // `checkSessionId` (the controller's existing id check) throws BadRequestException for a
       // malformed id, not NotFoundException: keep that existing contract here.

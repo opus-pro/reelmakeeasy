@@ -8,13 +8,15 @@ import type {
   AgentAnswers,
   AgentMode,
   AgentResumeAction,
+  AgentSession,
   AgentUiEvent,
 } from '@shared/types/api/agent'
+import { isRankingTopicQuestion } from '@shared/types/api/agent'
 
 import type { AgentAppServer } from './claude/agent-app-server'
 import { buildAppServerArgs } from './codex/codex-config'
 import { CodexRpcClient } from './codex/codex-rpc'
-import { briefFor, kickoffFor } from './agent-brief'
+import { briefFor, kickoffFor, rankingKickoff } from './agent-brief'
 
 const AUTONOMOUS_BRIEF = briefFor({ mode: 'autonomous' }, 'codex')
 const FREE_CHAT_BRIEF = briefFor({ mode: 'free' }, 'codex')
@@ -30,6 +32,7 @@ import {
   ModeAlreadyChosenError,
   ModeNotChattableError,
   NotResumableError,
+  PickTopicFirstError,
   QuestionNotOpenError,
   QuestionReplacedError,
   ShuttingDownError,
@@ -51,6 +54,13 @@ const never = (): never => {
 let services: AgentSessionService[] = []
 /** Every `spawnCodex` call's options, in order, across the services `makeService` built. */
 let spawnOpts: { mode: AgentMode | undefined }[] = []
+
+/** Every event a chat has so far (its subscription replays them at once). */
+function eventsOf(svc: AgentSessionService, id: string): AgentUiEvent[] {
+  const events: AgentUiEvent[] = []
+  svc.subscribe(id, 0, (e) => events.push(e))()
+  return events
+}
 
 function makeService(
   root: string,
@@ -347,6 +357,256 @@ describe('AgentSessionService', () => {
       expect(threadStart?.params?.['developerInstructions']).toBe(FREE_CHAT_BRIEF)
       expect(threadStart?.params?.['sandbox']).toBe('workspace-write')
       expect(spawnOpts).toEqual([{ mode: 'free' }])
+    })
+
+    it('ranking: runs its kickoff (on the ranking it was opened on) with the ranking brief and tools', async () => {
+      const log = path.join(
+        fs.mkdtempSync(path.join(os.tmpdir(), 'agent-svc-ranking-')),
+        'log.jsonl',
+      )
+      const svc = makeService(root, [], { FAKE_LOG: log })
+      const rankingId = '11111111-2222-3333-4444-555555555555'
+      const session = await svc.createSession({ rankingId })
+      const events: string[] = []
+      svc.subscribe(session.id, 0, (e) => events.push(e.type))
+
+      await svc.chooseMode(session.id, 'ranking')
+      await waitFor(() => svc.getSession(session.id).status === 'idle')
+
+      const entries = readLog(log)
+      const turnStart = entries.find((e) => e.method === 'turn/start')
+      expect(turnStart?.params?.['input']).toEqual([
+        { text: rankingKickoff('codex', rankingId), type: 'text' },
+      ])
+      const threadStart = entries.find((e) => e.method === 'thread/start')
+      expect(threadStart?.params?.['developerInstructions']).toBe(
+        briefFor({ mode: 'ranking' }, 'codex'),
+      )
+      const tools = (threadStart?.params?.['dynamicTools'] as { name: string }[]).map((t) => t.name)
+      expect(tools.every((t) => t.startsWith('ranking_'))).toBe(true)
+
+      svc.followRanking(session.id, '99999999-2222-3333-4444-555555555555')
+      expect(svc.getSession(session.id).rankingId).toBe('99999999-2222-3333-4444-555555555555')
+      expect(events).toContain('ranking')
+    })
+
+    it('ranking: a request typed in the studio is the first message, and the first turn does it', async () => {
+      const log = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'agent-svc-ask-')), 'log.jsonl')
+      const svc = makeService(root, [], { FAKE_LOG: log })
+      const rankingId = '11111111-2222-3333-4444-555555555555'
+      const session = await svc.createSession({ rankingId })
+      const shown: string[] = []
+      svc.subscribe(session.id, 0, (e) => {
+        if (e.type === 'user_message') shown.push(e.text)
+      })
+
+      await svc.chooseMode(session.id, 'ranking', undefined, 'Add a boom when the dog falls on #2')
+      await waitFor(() => svc.getSession(session.id).status === 'idle')
+
+      expect(shown).toEqual(['Add a boom when the dog falls on #2'])
+      expect(svc.getSession(session.id).title).toBe('Add a boom when the dog falls on #2')
+      const turnStart = readLog(log).find((e) => e.method === 'turn/start')
+      expect(turnStart?.params?.['input']).toEqual([
+        {
+          text: rankingKickoff('codex', rankingId, false, 'Add a boom when the dog falls on #2'),
+          type: 'text',
+        },
+      ])
+    })
+
+    it('ranking easy: asks the topic with its own card, then starts the agent on the answer', async () => {
+      const log = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'agent-svc-easy-')), 'log.jsonl')
+      const svc = makeService(root, [], { FAKE_LOG: log })
+      const session = await svc.createSession()
+      const events: AgentUiEvent[] = []
+      svc.subscribe(session.id, 0, (e) => events.push(e))
+
+      await svc.chooseMode(session.id, 'ranking_easy')
+      const card = events.find((e) => e.type === 'question')
+      expect(card).toMatchObject({ server: true })
+      const cardId = card?.type === 'question' ? card.questionId : ''
+      expect(isRankingTopicQuestion(cardId)).toBe(true)
+      const question = card?.type === 'question' ? card.questions[0] : undefined
+      expect(question?.isOther).toBe(true)
+      expect(question?.options).toHaveLength(4)
+      // Nothing runs until it is answered: no agent has even started.
+      expect(fs.existsSync(log)).toBe(false)
+
+      // The recommended pick: its mark stays on the card, not in the topic.
+      const recommended = question?.options[0]?.label ?? ''
+      expect(recommended).toMatch(/ \(Recommended\)$/)
+      svc.answerQuestion(session.id, cardId, { topic: [recommended] })
+      await waitFor(() => fs.existsSync(log) && readLog(log).some((e) => e.method === 'turn/start'))
+      await waitFor(() => svc.getSession(session.id).status === 'idle')
+
+      const entries = readLog(log)
+      expect(entries.find((e) => e.method === 'turn/start')?.params?.['input']).toEqual([
+        {
+          text: rankingKickoff('codex', undefined, true, 'Guiltiest dogs caught in the act'),
+          type: 'text',
+        },
+      ])
+      expect(svc.getSession(session.id).title).toBe('Guiltiest dogs caught in the act')
+      const threadStart = entries.find((e) => e.method === 'thread/start')
+      expect(threadStart?.params?.['developerInstructions']).toBe(
+        briefFor({ mode: 'ranking_easy' }, 'codex'),
+      )
+      const tools = (threadStart?.params?.['dynamicTools'] as { name: string }[]).map((t) => t.name)
+      expect(tools).toContain('ranking_add_sound')
+    })
+
+    it('ranking easy: a message typed instead of answering the topic card is the topic', async () => {
+      const log = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'agent-svc-easy2-')), 'log.jsonl')
+      const svc = makeService(root, [], { FAKE_LOG: log })
+      const session = await svc.createSession()
+      const events: AgentUiEvent[] = []
+      svc.subscribe(session.id, 0, (e) => events.push(e))
+
+      await svc.chooseMode(session.id, 'ranking_easy')
+      const card = events.find((e) => e.type === 'question')
+      const cardId = card?.type === 'question' ? card.questionId : ''
+      // Files alone can't say what it's about: refused, and the card stays.
+      await expect(svc.sendMessage(session.id, '')).rejects.toBeInstanceOf(PickTopicFirstError)
+      expect(events.some((e) => e.type === 'question_expired')).toBe(false)
+
+      await svc.sendMessage(session.id, 'Cats who steal food')
+      await waitFor(() => svc.getSession(session.id).status === 'idle')
+
+      expect(events).toContainEqual(
+        expect.objectContaining({ questionId: cardId, type: 'question_expired' }),
+      )
+      // It starts the guided flow exactly as a picked topic does.
+      const starts = readLog(log).filter((e) => e.method === 'turn/start')
+      expect(starts).toHaveLength(1)
+      expect(starts[0]?.params?.['input']).toEqual([
+        { text: rankingKickoff('codex', undefined, true, 'Cats who steal food'), type: 'text' },
+      ])
+    })
+
+    it('ranking easy: a picked topic the agent never got goes ahead of the next message', async () => {
+      // The agent can't start, so the picked topic never reaches it.
+      const broken = makeService(root, ['--fail-start'])
+      const session = await broken.createSession()
+      await broken.chooseMode(session.id, 'ranking_easy')
+      const card = eventsOf(broken, session.id).find((e) => e.type === 'question')
+      const cardId = card?.type === 'question' ? card.questionId : ''
+      broken.answerQuestion(session.id, cardId, { topic: ['Worst parking jobs ever'] })
+      await waitFor(() =>
+        eventsOf(broken, session.id).some((e) => e.type === 'session' && e.status === 'stopped'),
+      )
+
+      const log = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'agent-svc-lost-')), 'log.jsonl')
+      const svc = makeService(root, [], { FAKE_LOG: log })
+      await svc.sendMessage(session.id, 'Use my clips')
+      await waitFor(() => svc.getSession(session.id).status === 'idle')
+      await svc.sendMessage(session.id, 'Make it 4 ranks')
+      await waitFor(() => svc.getSession(session.id).status === 'idle')
+
+      const inputs = readLog(log)
+        .filter((e) => e.method === 'turn/start')
+        .map((e) => e.params?.['input'])
+      expect(inputs).toEqual([
+        [
+          {
+            text: `${rankingKickoff('codex', undefined, true, 'Worst parking jobs ever')}\n\nUse my clips`,
+            type: 'text',
+          },
+        ],
+        // Once a turn completed, the agent has it: later messages go as they are.
+        [{ text: 'Make it 4 ranks', type: 'text' }],
+      ])
+    })
+
+    it('ranking easy: a topic whose turn started but failed goes again with the next message', async () => {
+      // A Claude turn says it started before its query runs; the query can then fail before
+      // the agent ever saw the topic.
+      const log = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'agent-svc-fail1-')), 'log.jsonl')
+      const svc = makeService(root, ['--fail-first-turn'], { FAKE_LOG: log })
+      const session = await svc.createSession()
+      await svc.chooseMode(session.id, 'ranking_easy')
+      const card = eventsOf(svc, session.id).find((e) => e.type === 'question')
+      const cardId = card?.type === 'question' ? card.questionId : ''
+      svc.answerQuestion(session.id, cardId, { topic: ['Worst parking jobs ever'] })
+      await waitFor(() =>
+        eventsOf(svc, session.id).some((e) => e.type === 'turn' && e.status === 'failed'),
+      )
+      await waitFor(() => svc.getSession(session.id).status === 'idle')
+
+      await svc.sendMessage(session.id, 'go')
+      await waitFor(() => svc.getSession(session.id).status === 'idle')
+
+      const inputs = readLog(log)
+        .filter((e) => e.method === 'turn/start')
+        .map((e) => e.params?.['input'])
+      const kickoff = rankingKickoff('codex', undefined, true, 'Worst parking jobs ever')
+      expect(inputs).toEqual([
+        [{ text: kickoff, type: 'text' }],
+        [{ text: `${kickoff}\n\ngo`, type: 'text' }],
+      ])
+    })
+
+    /** Backdates a chat's `updatedAt` on disk, so a bump would show. */
+    const backdate = (id: string, updatedAt: string) => {
+      const file = path.join(root, 'sessions.json')
+      const all = JSON.parse(fs.readFileSync(file, 'utf8')) as Record<string, AgentSession>
+      fs.writeFileSync(file, JSON.stringify({ ...all, [id]: { ...all[id], updatedAt } }))
+    }
+
+    it('ranking easy: after a restart, a chat still waiting on its topic keeps its card, answerable', async () => {
+      const svc = makeService(root)
+      const session = await svc.createSession()
+      await svc.chooseMode(session.id, 'ranking_easy')
+      const before = eventsOf(svc, session.id)
+      const first = before.find((e) => e.type === 'question')
+      const firstId = first?.type === 'question' ? first.questionId : ''
+      backdate(session.id, '2026-09-01T00:00:00.000Z')
+
+      // A new process on the same data (the old one died without a clean shutdown), twice:
+      // the same card stays, nothing is added, and the chat keeps its place in the list.
+      makeService(root)
+      const again = makeService(root)
+      expect(eventsOf(again, session.id)).toEqual(before)
+      expect(again.getSession(session.id).updatedAt).toBe('2026-09-01T00:00:00.000Z')
+
+      // The card still answers, and an answered one is not asked again on the next start.
+      const log = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'agent-svc-rearm-')), 'log.jsonl')
+      const answering = makeService(root, [], { FAKE_LOG: log })
+      answering.answerQuestion(session.id, firstId, { topic: ['Worst parking jobs ever'] })
+      await waitFor(() => fs.existsSync(log) && readLog(log).some((e) => e.method === 'turn/start'))
+      await waitFor(() => answering.getSession(session.id).status === 'idle')
+      const third = makeService(root)
+      expect(eventsOf(third, session.id).filter((e) => e.type === 'question')).toHaveLength(1)
+    })
+
+    it('ranking easy: a clean shutdown leaves the topic card for the next start', async () => {
+      const svc = makeService(root)
+      const session = await svc.createSession()
+      await svc.chooseMode(session.id, 'ranking_easy')
+      svc.onModuleDestroy()
+      expect(eventsOf(svc, session.id).some((e) => e.type === 'question_expired')).toBe(false)
+    })
+
+    it('ranking easy: after a restart, a chat whose topic card had expired gets a new one, quietly', async () => {
+      const svc = makeService(root)
+      const session = await svc.createSession()
+      await svc.chooseMode(session.id, 'ranking_easy')
+      const first = eventsOf(svc, session.id).find((e) => e.type === 'question')
+      const firstId = first?.type === 'question' ? first.questionId : ''
+      // An older build expired it on shutdown.
+      svc['store'].append(session.id, { questionId: firstId, type: 'question_expired' })
+      backdate(session.id, '2026-09-01T00:00:00.000Z')
+
+      const again = makeService(root)
+      const asked = eventsOf(again, session.id).filter((e) => e.type === 'question')
+      expect(asked).toHaveLength(2)
+      const newId = asked[1]?.type === 'question' ? asked[1].questionId : ''
+      expect(isRankingTopicQuestion(newId)).toBe(true)
+      expect(newId).not.toBe(firstId)
+      expect(again.getSession(session.id).updatedAt).toBe('2026-09-01T00:00:00.000Z')
+      // The next start keeps that one.
+      expect(
+        eventsOf(makeService(root), session.id).filter((e) => e.type === 'question'),
+      ).toHaveLength(2)
     })
 
     it('sends attached files: their paths in the text, pictures as localImage, shown with the message', async () => {
@@ -2047,6 +2307,21 @@ describe('dynamic tools', () => {
       'render_video',
       'set_music',
       'use_image_as_keyframe',
+      'ranking_list',
+      'ranking_create',
+      'ranking_get',
+      'ranking_update',
+      'ranking_add_clip',
+      'ranking_add_sound',
+      'ranking_add_sticker_image',
+      'ranking_export',
+      'ranking_analyze_reference',
+      'ranking_find_moments',
+      'ranking_generate_clips',
+      'ranking_style_list',
+      'ranking_style_get',
+      'ranking_style_save',
+      'ranking_apply_style',
     ])
     expect(calls).toEqual([{ args: { x: 'hi' }, tool: 'ping' }])
     // The fake finishes the turn with the tool's answer as the agent message.
@@ -2224,6 +2499,21 @@ describe('review fixes: edit mode robustness', () => {
       'render_video',
       'set_music',
       'use_image_as_keyframe',
+      'ranking_list',
+      'ranking_create',
+      'ranking_get',
+      'ranking_update',
+      'ranking_add_clip',
+      'ranking_add_sound',
+      'ranking_add_sticker_image',
+      'ranking_export',
+      'ranking_analyze_reference',
+      'ranking_find_moments',
+      'ranking_generate_clips',
+      'ranking_style_list',
+      'ranking_style_get',
+      'ranking_style_save',
+      'ranking_apply_style',
     ])
     expect(svc.getSession(session.id).threadId).not.toBe('thread-old')
     expect(events.some((e) => e.type === 'session' && /tools/i.test(e.reason ?? ''))).toBe(true)

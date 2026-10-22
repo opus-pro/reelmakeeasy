@@ -27,6 +27,8 @@ import { ProjectsModule } from './projects/projects.module'
 import { SetupModule } from './setup/setup.module'
 import { SpeechModule } from './speech/speech.module'
 import { SharedModule } from './shared/shared.module'
+import { RankingModule } from './ranking/ranking.module'
+import { SoundLibraryModule } from './sound-library/sound-library.module'
 import { SourcePreferencesModule } from './source-preferences/source-preferences.module'
 import { StyleManagementModule } from './style-management/style-management.module'
 import { UipModule } from './uip/uip.module'
@@ -64,6 +66,8 @@ import { VoiceOverModule } from './voice-over/voice-over.module'
     ImageModelsModule,
     ModelsModule,
     CaptionFontsModule,
+    RankingModule,
+    SoundLibraryModule,
   ],
   providers: [
     {

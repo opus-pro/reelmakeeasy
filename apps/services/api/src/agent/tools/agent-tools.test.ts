@@ -39,6 +39,21 @@ describe('agent tools', () => {
       'render_video',
       'set_music',
       'use_image_as_keyframe',
+      'ranking_list',
+      'ranking_create',
+      'ranking_get',
+      'ranking_update',
+      'ranking_add_clip',
+      'ranking_add_sound',
+      'ranking_add_sticker_image',
+      'ranking_export',
+      'ranking_analyze_reference',
+      'ranking_find_moments',
+      'ranking_generate_clips',
+      'ranking_style_list',
+      'ranking_style_get',
+      'ranking_style_save',
+      'ranking_apply_style',
     ])
     expect(AGENT_TOOLS.set_music.inputSchema).toMatchObject({ required: ['enabled'] })
     expect(AGENT_TOOLS.set_music.inputSchema).toMatchObject({
@@ -94,6 +109,21 @@ describe('use_image_as_keyframe', () => {
   })
 })
 
+describe('a Ranking chat', () => {
+  it('gets the ranking tools only, on either agent', () => {
+    for (const harness of ['codex', 'claude'] as const) {
+      for (const mode of ['ranking', 'ranking_easy'] as const) {
+        const names = toolsForSession({ mode }, harness).map((t) => t.name)
+        expect(names.every((n) => n.startsWith('ranking_'))).toBe(true)
+        expect(names).toContain('ranking_analyze_reference')
+        expect(names).toContain('ranking_add_sound')
+        expect(names).toContain('ranking_style_save')
+        expect(names).toHaveLength(15)
+      }
+    }
+  })
+})
+
 describe('toolsForSession by harness', () => {
   const names = (s: Parameters<typeof toolsForSession>[0], h?: 'claude' | 'codex') =>
     toolsForSession(s, h).map((t) => t.name)
@@ -113,6 +143,21 @@ describe('toolsForSession by harness', () => {
       'render_video',
       'set_music',
       'use_image_as_keyframe',
+      'ranking_list',
+      'ranking_create',
+      'ranking_get',
+      'ranking_update',
+      'ranking_add_clip',
+      'ranking_add_sound',
+      'ranking_add_sticker_image',
+      'ranking_export',
+      'ranking_analyze_reference',
+      'ranking_find_moments',
+      'ranking_generate_clips',
+      'ranking_style_list',
+      'ranking_style_get',
+      'ranking_style_save',
+      'ranking_apply_style',
     ])
     expect(names({ editing: true, mode: 'autonomous' })).toEqual([
       'regenerate_clip',

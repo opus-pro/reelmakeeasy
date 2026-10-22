@@ -44,6 +44,7 @@ import type { Request, Response } from 'express'
 import { Observable } from 'rxjs'
 
 import { ProjectService } from '../projects/projects.service'
+import { RankingService } from '../ranking/ranking.service'
 
 import {
   AutonomousService,
@@ -70,6 +71,7 @@ import {
   ModeAlreadyChosenError,
   ModeNotChattableError,
   NotResumableError,
+  PickTopicFirstError,
   QuestionNotOpenError,
   ShuttingDownError,
   UnknownAttachmentError,
@@ -82,11 +84,14 @@ import { LoopbackOnlyGuard } from './loopback-only.guard'
 
 /** A Codex item id, or a stringified JSON-RPC request id. */
 const QUESTION_ID = /^[\w.:-]{1,200}$/
-const AGENT_MODES: AgentMode[] = ['autonomous', 'free']
+const AGENT_MODES: AgentMode[] = ['autonomous', 'free', 'ranking', 'ranking_easy']
+const MODE_NAMES = AGENT_MODES.map((m) => JSON.stringify(m)).join(', ')
 /** Guided mode was removed. A page still offering it (open since before the update) starts Free
  *  chat instead of failing. */
 const LEGACY_GUIDED_MODE = 'guided'
 const MAX_STYLE_ID_CHARS = 200
+/** What the studio's "Edit with agent" box may send as a chat's first message. */
+const MAX_REQUEST_CHARS = 2000
 
 /** 400 for anything that is not a session id, before it can reach a path or a lookup. */
 function checkSessionId(id: string): string {
@@ -108,6 +113,7 @@ export class AgentController {
     private readonly projects: ProjectService,
     private readonly edit: AgentEditService,
     private readonly chatModels: ChatModelService,
+    private readonly rankings: RankingService,
   ) {}
 
   @Post('sessions/:id/questions/:questionId/answer')
@@ -219,7 +225,7 @@ export class AgentController {
     checkSessionId(id)
     const mode = body?.mode === LEGACY_GUIDED_MODE ? 'free' : body?.mode
     if (!AGENT_MODES.includes(mode as AgentMode))
-      throw new BadRequestException('mode must be "free" or "autonomous"')
+      throw new BadRequestException(`mode must be one of ${MODE_NAMES}`)
     const harness = body?.harness
     if (harness !== undefined && !AGENT_HARNESSES.includes(harness as AgentHarnessName))
       throw new BadRequestException('harness must be "codex" or "claude"')
@@ -257,21 +263,59 @@ export class AgentController {
     return { ok: true }
   }
 
-  /** A new chat, on the agent picked in the Agent dialog when `harness` is given. */
+  /**
+   * A new chat, on the agent picked in the Agent dialog when `harness` is given. With
+   * `rankingId` (the studio's "Edit with agent" button), a Ranking chat on that ranking, its mode chosen;
+   * with `mode`, that mode chosen (Ranking Builder's "Make one with the agent"). `request` is
+   * what the user typed before the chat opened: a Ranking chat's first message.
+   */
   @Post('sessions')
-  createSession(@Body() body: { harness?: unknown; title?: string }): Promise<AgentSession> {
+  createSession(
+    @Body()
+    body: {
+      harness?: unknown
+      mode?: unknown
+      rankingId?: unknown
+      request?: unknown
+      title?: string
+    },
+  ): Promise<AgentSession> {
+    // Checked before anything starts, so a bad request throws here (400) rather than later.
     const harness = body?.harness
     if (harness !== undefined && !AGENT_HARNESSES.includes(harness as AgentHarnessName))
       throw new BadRequestException('harness must be "codex" or "claude"')
+    const rankingId = body?.rankingId
+    if (
+      rankingId !== undefined &&
+      (typeof rankingId !== 'string' || !/^[\da-f-]{36}$/.test(rankingId))
+    )
+      throw new BadRequestException('rankingId must be a ranking id')
+    const mode = body?.mode
+    if (mode !== undefined && !AGENT_MODES.includes(mode as AgentMode))
+      throw new BadRequestException(`mode must be one of ${MODE_NAMES}`)
+    const request = typeof body?.request === 'string' ? body.request.trim() : ''
+    if (request.length > MAX_REQUEST_CHARS)
+      throw new BadRequestException(`request must be at most ${MAX_REQUEST_CHARS} characters`)
     const opts =
       harness === undefined
         ? { title: body?.title }
         : { harness: harness as AgentHarnessName, title: body?.title }
-    return this.sessions.createSession(opts).then((session) => {
-      // Lists the harness's models now, so the chat's first message already runs on the right one.
-      void this.chatModels.catalog(session.harness ?? 'codex')
-      return session
-    })
+    return this.sessions
+      .createSession(rankingId ? { ...opts, rankingId } : opts)
+      .then(async (session) => {
+        // Lists the harness's models now, so the chat's first message already runs on the right one.
+        void this.chatModels.catalog(session.harness ?? 'codex')
+        const chosen = rankingId ? 'ranking' : (mode as AgentMode | undefined)
+        if (!chosen) return session
+        try {
+          await this.sessions.chooseMode(session.id, chosen, undefined, request || undefined)
+        } catch (error) {
+          // Not ready (not signed in): the chat opens on its welcome card, which says why.
+          if (error instanceof HarnessNotReadyError) return session
+          throw error
+        }
+        return this.sessions.getSession(session.id)
+      })
   }
 
   /** Deletes a chat. Its project stays (with its Agent tag) and only forgets the chat. */
@@ -368,7 +412,7 @@ export class AgentController {
         `Couldn't load project summaries for the agent chat list: ${ensureError(error).message}`,
       )
     }
-    return buildAgentSessionList(sessions, summaries)
+    return buildAgentSessionList(sessions, summaries, (id) => this.rankings.coverOf(id))
   }
 
   /** "Pick up where you left off": carries on an Easy flow a restart cut off, from its first
@@ -407,6 +451,8 @@ export class AgentController {
     } catch (error) {
       if (error instanceof UnknownAttachmentError) throw new BadRequestException(error.message)
       if (error instanceof AgentSessionBusyError) throw new ConflictException(error.message)
+      // Files alone while an Easy ranking's topic card waits: pick the topic first.
+      if (error instanceof PickTopicFirstError) throw new ConflictException(error.message)
       // FlowActiveError's message asks the user to answer the autonomous cards instead.
       if (error instanceof FlowActiveError) throw new ConflictException(error.message)
       // A finished autonomous session: its message says to start a new session.

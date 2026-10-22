@@ -1,4 +1,4 @@
-import type { AgentHarnessName, AgentMode } from '@shared/types/api/agent'
+import { type AgentHarnessName, type AgentMode, isRankingMode } from '@shared/types/api/agent'
 
 import { MAKE_LOOP_LABEL } from '../craft/beat-loop-skill'
 
@@ -6,6 +6,21 @@ export type AgentToolName =
   | 'generate_image'
   | 'make_beat_loop'
   | 'make_video'
+  | 'ranking_add_clip'
+  | 'ranking_add_sound'
+  | 'ranking_add_sticker_image'
+  | 'ranking_analyze_reference'
+  | 'ranking_apply_style'
+  | 'ranking_create'
+  | 'ranking_export'
+  | 'ranking_find_moments'
+  | 'ranking_generate_clips'
+  | 'ranking_get'
+  | 'ranking_list'
+  | 'ranking_style_get'
+  | 'ranking_style_list'
+  | 'ranking_style_save'
+  | 'ranking_update'
   | 'regenerate_clip'
   | 'render_video'
   | 'set_music'
@@ -97,6 +112,240 @@ export const AGENT_TOOLS: Record<AgentToolName, DynamicToolSpec> = {
       type: 'object',
     },
     name: 'make_video',
+  },
+  ranking_add_clip: {
+    description:
+      "Put a video or a photo from your working folder (the user's attachments are in attachments/) under a rank of a ranking short. A photo (jpg, png, webp) becomes a 5 s clip with a slow zoom. It plays its first 4.5 s until you trim it (items[].clip.trimStartSec/trimEndSec with ranking_update).",
+    inputSchema: {
+      additionalProperties: false,
+      properties: {
+        id: { description: 'The ranking id.', type: 'string' },
+        path: {
+          description: 'The file, relative to your working folder, e.g. attachments/cat.mp4.',
+          type: 'string',
+        },
+        rank: {
+          description: 'The rank it goes under (1 is the top).',
+          minimum: 1,
+          type: 'integer',
+        },
+      },
+      required: ['id', 'rank', 'path'],
+      type: 'object',
+    },
+    name: 'ranking_add_clip',
+  },
+  ranking_add_sound: {
+    description:
+      "Add a sound file the user dropped into the chat (or one in your working folder) to their sound library: mp3, wav, m4a, ogg, flac or aac, under 10 minutes. Answers its soundId, ready to use as the reveal sound, the music bed or an action sound.",
+    inputSchema: {
+      additionalProperties: false,
+      properties: {
+        name: {
+          description: 'A short name for the library, e.g. Vine boom (default: the file name).',
+          type: 'string',
+        },
+        path: {
+          description: 'The file, relative to your working folder, e.g. attachments/boom.mp3.',
+          type: 'string',
+        },
+      },
+      required: ['path'],
+      type: 'object',
+    },
+    name: 'ranking_add_sound',
+  },
+  ranking_add_sticker_image: {
+    description:
+      'Make a picture (png, jpg, webp or gif) in your working folder usable as a sticker on a ranking short. Answers its imageUrl: put it in a stickers entry with kind "image" (size is its width as a share of the frame, e.g. 0.3) with ranking_update.',
+    inputSchema: {
+      additionalProperties: false,
+      properties: {
+        id: { description: 'The ranking id.', type: 'string' },
+        path: {
+          description: 'The picture, relative to your working folder, e.g. attachments/logo.png.',
+          type: 'string',
+        },
+      },
+      required: ['id', 'path'],
+      type: 'object',
+    },
+    name: 'ranking_add_sticker_image',
+  },
+  ranking_analyze_reference: {
+    description:
+      "Learn a ranking short's pattern from a reference: a YouTube link the user pasted (downloaded for analysis only, never used in a video), or a video file in your working folder. Takes about a minute. Answers its shots, its sound effects (when each fires, what it is like, and the user's library sound it matches, or 'not in the library'), and frames to look at (title frame, contact sheet, a frame per shot and per sound). Look at the frames before describing the style.",
+    inputSchema: {
+      additionalProperties: false,
+      properties: {
+        path: {
+          description: 'Or: a video in your working folder, e.g. attachments/ref.mp4.',
+          type: 'string',
+        },
+        url: {
+          description:
+            'A YouTube link (youtube.com, youtu.be or a Shorts link). TikTok is not supported.',
+          type: 'string',
+        },
+      },
+      type: 'object',
+    },
+    name: 'ranking_analyze_reference',
+  },
+  ranking_apply_style: {
+    description:
+      "Give a ranking a saved style's look and sound: title colours (and its title, if the ranking still has the default one), overlay colours, reveal order, transition and the reveal/music sounds; a ranking without clips also takes its number of ranks. Then place the labels, trims, action sounds and stickers per clip yourself.",
+    inputSchema: {
+      additionalProperties: false,
+      properties: {
+        id: { description: 'The ranking id.', type: 'string' },
+        styleId: { description: 'The style id (ranking_style_list).', type: 'string' },
+      },
+      required: ['id', 'styleId'],
+      type: 'object',
+    },
+    name: 'ranking_apply_style',
+  },
+  ranking_find_moments: {
+    description:
+      "Find a clip's action moments: its strongest sound onsets (with what they sound like) and its shot changes, in seconds from the file's start. Give a video in your working folder (path), or a ranking and rank to read the clip already under it. Use it to trim to the action and to time the action sound.",
+    inputSchema: {
+      additionalProperties: false,
+      properties: {
+        id: { description: 'Or: the ranking id (with rank).', type: 'string' },
+        path: {
+          description: 'A video in your working folder, e.g. attachments/cat.mp4.',
+          type: 'string',
+        },
+        rank: { description: 'With id: the rank whose clip to read.', minimum: 1, type: 'integer' },
+      },
+      type: 'object',
+    },
+    name: 'ranking_find_moments',
+  },
+  ranking_style_get: {
+    description:
+      'Read a saved ranking style in full, with the sounds it plans that are not in the library yet.',
+    inputSchema: {
+      additionalProperties: false,
+      properties: { id: { description: 'The style id.', type: 'string' } },
+      required: ['id'],
+      type: 'object',
+    },
+    name: 'ranking_style_get',
+  },
+  ranking_style_list: {
+    description:
+      "The user's saved ranking styles (patterns learned from references), with their ids.",
+    inputSchema: { additionalProperties: false, properties: {}, type: 'object' },
+    name: 'ranking_style_list',
+  },
+  ranking_style_save: {
+    description:
+      'Save a ranking style (new), or change one (with id: whole fields to replace). style is a JSON object; the reelmakeeasy-ranking skill lists its fields. Sounds are { description, soundId }: soundId from the library, or null for one the user still has to download.',
+    inputSchema: {
+      additionalProperties: false,
+      properties: {
+        id: {
+          description: 'To change a saved style: its id. Leave out to save a new one.',
+          type: 'string',
+        },
+        style: { description: 'The style as a JSON object (see the skill).', type: 'string' },
+      },
+      required: ['style'],
+      type: 'object',
+    },
+    name: 'ranking_style_save',
+  },
+  ranking_create: {
+    description:
+      'Start a new ranking short (empty ranks, a default title). Answers the project to fill in.',
+    inputSchema: {
+      additionalProperties: false,
+      properties: {
+        name: {
+          description: 'A name for the user’s list, e.g. Funniest cat fails.',
+          type: 'string',
+        },
+        ranks: { description: 'How many ranks (2-10, default 5).', maximum: 10, minimum: 2, type: 'integer' },
+      },
+      required: ['name'],
+      type: 'object',
+    },
+    name: 'ranking_create',
+  },
+  ranking_export: {
+    description:
+      'Render a ranking short to a 1080x1920 MP4 (free; about a minute) without the studio open, and wait for it. Only once it has every clip, label and title; the reply says where the video is.',
+    inputSchema: {
+      additionalProperties: false,
+      properties: { id: { description: 'The ranking id.', type: 'string' } },
+      required: ['id'],
+      type: 'object',
+    },
+    name: 'ranking_export',
+  },
+  ranking_generate_clips: {
+    description:
+      "Make AI video clips for a ranking short from text, one per rank, and put each under its rank (paid; all made at once, about 2-3 minutes). Each prompt is one short continuous scene with one clear funny action and its payoff (who, where, what happens, how it ends). Avoid water and fast motion (splashes, pouring, spins, sprints): AI smears them; prefer slow, readable actions and a still camera. ReelMakeEasy adds the vertical phone-video look. Before calling it, show the user the prompts and ask which resolution (each with its cost; 1080p recommended). Called without a resolution it makes nothing and answers the choices with their prices. The reply gives each clip's contact sheet to look at.",
+    inputSchema: {
+      additionalProperties: false,
+      properties: {
+        clips: {
+          description:
+            'JSON list: [{ "rank": 1, "prompt": "A fluffy orange cat misjudges a jump onto the kitchen counter and slides into the laundry basket below." }, ...] (1-6).',
+          type: 'string',
+        },
+        id: { description: 'The ranking id.', type: 'string' },
+        resolution: {
+          description:
+            'The resolution the user picked. Hailuo (fal) makes "480p" (cheapest, softest), "768p" or "1080p" (recommended: sharpest, smears least), about $0.13, $0.20 or $0.40 per 5 s clip; Gemini makes "720p" only.',
+          enum: ['480p', '720p', '768p', '1080p'],
+          type: 'string',
+        },
+        seconds: {
+          description: "Each clip's length, 4-8 s (default 5).",
+          maximum: 8,
+          minimum: 4,
+          type: 'integer',
+        },
+      },
+      required: ['id', 'clips'],
+      type: 'object',
+    },
+    name: 'ranking_generate_clips',
+  },
+  ranking_get: {
+    description:
+      'Read a ranking short: every field you can change, what still stops its export, and tips.',
+    inputSchema: {
+      additionalProperties: false,
+      properties: { id: { description: 'The ranking id.', type: 'string' } },
+      required: ['id'],
+      type: 'object',
+    },
+    name: 'ranking_get',
+  },
+  ranking_list: {
+    description:
+      "List the user's ranking shorts and their sound library (sound ids, names, lengths; starred first).",
+    inputSchema: { additionalProperties: false, properties: {}, type: 'object' },
+    name: 'ranking_list',
+  },
+  ranking_update: {
+    description:
+      'Change a ranking short: patch is a JSON object with any of title, items, reveal, sounds, stickers, transition, style, name (whole fields, as ranking_get shows them). The reelmakeeasy-ranking skill explains each field. ranks changes how many ranks it has (empty ones added at the bottom, or the last ones dropped with their clips).',
+    inputSchema: {
+      additionalProperties: false,
+      properties: {
+        id: { description: 'The ranking id.', type: 'string' },
+        patch: { description: 'A JSON object of the fields to replace.', type: 'string' },
+        ranks: { description: 'How many ranks (2-10).', maximum: 10, minimum: 2, type: 'integer' },
+      },
+      required: ['id'],
+      type: 'object',
+    },
+    name: 'ranking_update',
   },
   regenerate_clip: {
     description:
@@ -198,6 +447,25 @@ export const AGENT_TOOLS: Record<AgentToolName, DynamicToolSpec> = {
   },
 }
 
+/** The Ranking Builder, for ranking shorts (a Ranking chat's only tools; Free chat has them too). */
+const RANKING_TOOLS: AgentToolName[] = [
+  'ranking_list',
+  'ranking_create',
+  'ranking_get',
+  'ranking_update',
+  'ranking_add_clip',
+  'ranking_add_sound',
+  'ranking_add_sticker_image',
+  'ranking_export',
+  'ranking_analyze_reference',
+  'ranking_find_moments',
+  'ranking_generate_clips',
+  'ranking_style_list',
+  'ranking_style_get',
+  'ranking_style_save',
+  'ranking_apply_style',
+]
+
 const EDIT_TOOLS: AgentToolName[] = [
   'regenerate_clip',
   'render_video',
@@ -217,8 +485,9 @@ export function toolsForSession(
       (n) => AGENT_TOOLS[n],
     )
   if (session.mode === 'autonomous') return session.editing ? withImage(EDIT_TOOLS) : []
+  if (isRankingMode(session.mode)) return RANKING_TOOLS.map((n) => AGENT_TOOLS[n])
   if (session.mode !== 'free') return []
-  return withImage(['make_video', 'make_beat_loop', ...EDIT_TOOLS])
+  return withImage(['make_video', 'make_beat_loop', ...EDIT_TOOLS, ...RANKING_TOOLS])
 }
 
 /** The chat pill's text for a call. */
@@ -233,6 +502,19 @@ export function toolSummary(tool: string, args: unknown): string {
   if (tool === 'use_image_as_keyframe')
     return `Putting the new picture in as keyframe ${String(a.keyframe ?? '')}`.trim()
   if (tool === 'generate_image') return 'Making a preview image'
+  if (tool === 'ranking_list') return 'Looking at your rankings and sounds'
+  if (tool === 'ranking_create') return `Starting a ranking: ${String(a.name ?? '')}`.trim()
+  if (tool === 'ranking_get') return 'Reading the ranking'
+  if (tool === 'ranking_update') return 'Changing the ranking'
+  if (tool === 'ranking_add_sticker_image') return 'Adding a picture sticker'
+  if (tool === 'ranking_analyze_reference') return 'Watching the reference video'
+  if (tool === 'ranking_find_moments') return 'Finding the action in a clip'
+  if (tool === 'ranking_generate_clips') return 'Making the clips with AI'
+  if (tool === 'ranking_style_save') return 'Saving the ranking style'
+  if (tool === 'ranking_apply_style') return 'Applying the ranking style'
+  if (tool === 'ranking_style_list' || tool === 'ranking_style_get') return 'Reading ranking styles'
+  if (tool === 'ranking_add_clip') return `Adding a clip to rank ${String(a.rank ?? '')}`.trim()
+  if (tool === 'ranking_export') return 'Exporting the ranking short'
   if (tool === 'make_video')
     return `Starting the video: ${String(a.title ?? '')}`.trim().replace(/:$/, '')
   if (tool === 'make_beat_loop')

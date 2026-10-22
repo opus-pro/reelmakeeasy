@@ -7,6 +7,7 @@ import {
   DEFAULT_CHAT_TITLE,
   isUnsetChatTitle,
 } from '@reelmakeeasy/common/codex-agent/agent-sessions'
+import { splitRecommended } from '@reelmakeeasy/common/codex-agent/agent-storyboard'
 import { REELMAKEEASY_MESSAGE_PREFIX } from '@reelmakeeasy/common/codex-agent/agent-transcript'
 import { Logger } from '@reelmakeeasy/common/logger'
 import { dataDir } from '@reelmakeeasy/common/storage/file-store'
@@ -23,6 +24,11 @@ import type {
   AgentUiEvent,
   ChatModelChoice,
   HarnessStatus,
+} from '@shared/types/api/agent'
+import {
+  isRankingMode,
+  isRankingTopicQuestion,
+  RANKING_TOPIC_QUESTION_PREFIX,
 } from '@shared/types/api/agent'
 
 import type { AgentAppServer } from './claude/agent-app-server'
@@ -41,7 +47,14 @@ import {
   resolveAttachment,
   turnInput,
 } from './agent-attachments'
-import { briefFor, EDIT_INTRO, kickoffFor } from './agent-brief'
+import {
+  briefFor,
+  EDIT_INTRO,
+  kickoffFor,
+  RANKING_TOPIC_ID,
+  rankingKickoff,
+  rankingTopicQuestion,
+} from './agent-brief'
 import { AgentSessionStore } from './agent-session.store'
 
 /** Drives an autonomous session once the user picks that mode (`AutonomousService`
@@ -193,6 +206,14 @@ export class InvalidAnswerError extends Error {
   constructor(message: string) {
     super(message)
     this.name = 'InvalidAnswerError'
+  }
+}
+
+/** Files sent while an Easy ranking's topic card is open: they can't say what it's about. */
+export class PickTopicFirstError extends Error {
+  constructor() {
+    super('Pick what the ranking is about first (the card above), then attach your clips.')
+    this.name = 'PickTopicFirstError'
   }
 }
 
@@ -370,6 +391,7 @@ export class AgentSessionService implements OnModuleDestroy {
     for (const session of this.store.list()) {
       if (session.status !== 'running' && !session.flowActive) {
         this.markEarlierCutOff(session)
+        this.reopenServerCards(session)
         continue
       }
       // A restart is not activity: don't bump `updatedAt` for a session that crashed long ago.
@@ -385,7 +407,7 @@ export class AgentSessionService implements OnModuleDestroy {
       )
       // Its open cards lived in memory too: they expire, as Stop and a shutdown expire them.
       for (const questionId of openServerQuestionIds(this.store.eventsAfter(session.id, 0)))
-        this.emit(session.id, { questionId, type: 'question_expired' })
+        this.emit(session.id, { questionId, type: 'question_expired' }, { touch: false })
       this.emit(session.id, { reason: RESTARTED_REASON, status: 'stopped', type: 'session' })
     }
   }
@@ -429,6 +451,9 @@ export class AgentSessionService implements OnModuleDestroy {
     id: string,
     questionId: string,
     questions: AgentQuestion[],
+    /** `show: false`: the chat already shows this card (a restart re-arms it); `touch: false`:
+     *  posting it isn't activity (a restart asking again). */
+    opts: { show?: boolean; touch?: boolean } = {},
   ): Promise<AgentAnswers> {
     // Everything up to the card's `question` event runs synchronously, at the call.
     this.getSession(id)
@@ -444,7 +469,8 @@ export class AgentSessionService implements OnModuleDestroy {
         secretIds: new Set(questions.filter((q) => q.isSecret).map((q) => q.id)),
       })
       // `server`: the chat keeps it open when the agent's turn ends (it is answered here).
-      this.emit(id, { questionId, questions, server: true, type: 'question' })
+      if (opts.show !== false)
+        this.emit(id, { questionId, questions, server: true, type: 'question' }, opts)
     })
   }
 
@@ -476,7 +502,14 @@ export class AgentSessionService implements OnModuleDestroy {
    *  `harness` (default: the one picked when the chat was created, else `AGENT_HARNESS`) is fixed
    *  with the mode; a harness that isn't ready throws `HarnessNotReadyError` and leaves the mode
    *  unchosen. */
-  async chooseMode(id: string, mode: AgentMode, picked?: AgentHarnessName): Promise<void> {
+  async chooseMode(
+    id: string,
+    mode: AgentMode,
+    picked?: AgentHarnessName,
+    /** A Ranking chat's first message, typed before the chat opened (the studio's "Edit with
+     *  agent" box): shown as the user's, and the first turn does it. */
+    request?: string,
+  ): Promise<void> {
     const session = this.getSession(id)
     if (session.mode) throw new ModeAlreadyChosenError(id)
     const harness = picked ?? session.harness ?? defaultHarness()
@@ -490,8 +523,22 @@ export class AgentSessionService implements OnModuleDestroy {
       mode === 'autonomous' ? { flowActive: true, harness, mode } : { harness, mode },
     )
     this.emit(id, { mode, type: 'mode' })
-    if (mode === 'free') {
-      const prompt = kickoffFor(harness)
+    // Easy ranking with nothing to go on yet: ReelMakeEasy asks what it's about with its own
+    // card (topic ideas, or their own words), and the agent starts once it is answered.
+    if (mode === 'ranking_easy' && !request?.trim() && !session.rankingId) {
+      void this.askRankingTopic(id, harness)
+      return
+    }
+    if (mode === 'free' || isRankingMode(mode)) {
+      const asked = isRankingMode(mode) ? request?.trim() : undefined
+      if (asked) {
+        if (isUnsetChatTitle(session.title))
+          this.store.update(id, { title: chatTitleFrom(asked) }, { touch: false })
+        this.emit(id, { text: asked, type: 'user_message' })
+      }
+      const prompt = isRankingMode(mode)
+        ? rankingKickoff(harness, session.rankingId, mode === 'ranking_easy', asked)
+        : kickoffFor(harness)
       void this.startKickoff(id, prompt).catch((error: unknown) =>
         this.logger.warn(`Kickoff for ${id} failed: ${ensureError(error).message}`),
       )
@@ -512,13 +559,14 @@ export class AgentSessionService implements OnModuleDestroy {
   /** A new chat; `harness` is the agent picked before opening it (the Agent dialog), which its
    *  mode card then uses without asking again. */
   async createSession(
-    input: { harness?: AgentHarnessName; title?: string } = {},
+    input: { harness?: AgentHarnessName; rankingId?: string; title?: string } = {},
   ): Promise<AgentSession> {
     const session = this.store.create({
       id: randomUUID(),
       title: input.title?.trim() || DEFAULT_CHAT_TITLE,
     })
     if (input.harness) this.store.update(session.id, { harness: input.harness })
+    if (input.rankingId) this.store.update(session.id, { rankingId: input.rankingId })
     return this.getSession(session.id)
   }
 
@@ -621,6 +669,15 @@ export class AgentSessionService implements OnModuleDestroy {
     )
   }
 
+  /** A Ranking chat's tools read or changed this ranking: the chat follows it, and its preview
+   *  reloads. */
+  followRanking(id: string, rankingId: string): void {
+    const session = this.store.get(id)
+    if (!session || !isRankingMode(session.mode)) return
+    if (session.rankingId !== rankingId) this.store.update(id, { rankingId }, { touch: false })
+    this.emit(id, { rankingId, type: 'ranking' })
+  }
+
   getSession(id: string): AgentSession {
     const session = this.store.get(id)
     if (!session) throw new NotFoundException(`Unknown agent session ${id}`)
@@ -643,7 +700,7 @@ export class AgentSessionService implements OnModuleDestroy {
     }
     // Editing, or a Free chat (whose tools may be waiting on a clip or a render): the
     // waiting tool sees the flag and cancels its workflow.
-    if (editing || mode === 'free') this.cancelledFlows.add(id)
+    if (editing || mode === 'free' || isRankingMode(mode)) this.cancelledFlows.add(id)
     this.expireServerQuestions(id)
     if (!live?.currentTurnId || !threadId) return
     await live.client.request('turn/interrupt', { threadId, turnId: live.currentTurnId })
@@ -685,7 +742,7 @@ export class AgentSessionService implements OnModuleDestroy {
   notifyAgent(id: string, text: string): void {
     const session = this.store.get(id)
     if (!session || this.destroyed || !text.trim()) return
-    const chat = session.mode === 'free' || !!session.editing
+    const chat = session.mode === 'free' || isRankingMode(session.mode) || !!session.editing
     if (!chat) return
     this.notes.set(id, [...(this.notes.get(id) ?? []), text.trim()])
     this.sendNotes(id)
@@ -700,7 +757,7 @@ export class AgentSessionService implements OnModuleDestroy {
       live.client.close()
       this.live.delete(id)
     }
-    for (const id of this.serverQuestions.keys()) this.expireServerQuestions(id)
+    for (const id of this.serverQuestions.keys()) this.expireServerQuestions(id, { shutdown: true })
     // Includes sessions still starting (not yet in `live`), and autonomous sessions idle on a
     // card: their flow lives in memory and ends here. An Easy flow the user didn't stop can
     // pick up where it left off on the next start (`resumeFlow`).
@@ -821,6 +878,16 @@ export class AgentSessionService implements OnModuleDestroy {
     if (session.mode === 'autonomous' && !session.editing)
       throw session.flowActive ? new FlowActiveError(id) : new ModeNotChattableError(id)
     if (session.status === 'running') throw new AgentSessionBusyError(id)
+    // An Easy ranking's topic card still open: a message answers it instead; files alone can't
+    // say what it's about (the card stays, and the user is asked to pick first).
+    const topicCard = [...(this.serverQuestions.get(id)?.keys() ?? [])].find(isRankingTopicQuestion)
+    if (topicCard && !text.trim()) throw new PickTopicFirstError()
+    if (topicCard)
+      this.closeServerQuestion(
+        id,
+        topicCard,
+        new AgentFlowCancelledError('Answered with a message'),
+      )
     // Claim the session and show the message before the (possibly ~5 s) cold start, all
     // synchronously: a concurrent send now sees `running` and gets the busy error, and the
     // user sees their message and the working state right away.
@@ -830,7 +897,16 @@ export class AgentSessionService implements OnModuleDestroy {
       ...(isUnsetChatTitle(session.title) && text ? { title: chatTitleFrom(text) } : {}),
     })
     this.emit(id, { ...(attachments.length ? { attachments } : {}), text, type: 'user_message' })
-    await this.runTurn(id, turnInput(text, attachments))
+    // An Easy ranking's start: a message typed instead of the topic card is the topic; a picked
+    // topic that never reached the agent goes first, ahead of this message.
+    const harness = session.harness ?? defaultHarness()
+    const topic = topicCard ? null : topicNotSent(session, this.store.eventsAfter(id, 0))
+    const prompt = topicCard
+      ? rankingKickoff(harness, undefined, true, text)
+      : topic
+        ? `${rankingKickoff(harness, undefined, true, topic)}\n\n${text}`
+        : text
+    await this.runTurn(id, turnInput(prompt, attachments))
   }
 
   sessionDir(id: string): string {
@@ -923,6 +999,46 @@ export class AgentSessionService implements OnModuleDestroy {
         ),
       )
     }, this.deps.idleMs)
+  }
+
+  /**
+   * An Easy ranking's first card: what it's about (a few ideas, or their own words). Its answer
+   * starts the agent on it (`rankingKickoff` with the topic). Typing a message instead withdraws
+   * the card (`sendMessage`), and the agent takes that message as the topic.
+   */
+  private async askRankingTopic(
+    id: string,
+    harness: AgentHarnessName,
+    /** After a restart: the card the chat still shows (`card`, re-armed as it is) or none (a new
+     *  one is posted); either way not activity. */
+    restart?: { card?: { questionId: string; questions: AgentQuestion[] } },
+  ): Promise<void> {
+    let answers: AgentAnswers
+    // Its own id each time a card is posted (two in the same millisecond too).
+    const questionId =
+      restart?.card?.questionId ?? `${RANKING_TOPIC_QUESTION_PREFIX}-${randomUUID().slice(0, 8)}`
+    const questions = restart?.card?.questions ?? [rankingTopicQuestion()]
+    try {
+      answers = await this.askServerQuestion(
+        id,
+        questionId,
+        questions,
+        restart ? { show: !restart.card, touch: false } : {},
+      )
+    } catch {
+      // Stopped, deleted, or answered with a message instead.
+      return
+    }
+    // The picked label without its " (Recommended)" mark, or the words typed.
+    const picked = answers[RANKING_TOPIC_ID]?.find((answer) => answer.trim())
+    const topic = picked && splitRecommended(picked).text.trim()
+    if (!topic || this.getSession(id).status === 'running') return
+    if (isUnsetChatTitle(this.getSession(id).title))
+      this.store.update(id, { title: chatTitleFrom(topic) }, { touch: false })
+    await this.startKickoff(id, rankingKickoff(harness, undefined, true, topic)).catch(
+      (error: unknown) =>
+        this.logger.warn(`Kickoff for ${id} failed: ${ensureError(error).message}`),
+    )
   }
 
   /** Shows Codex's questions to the user; the promise settles with their answer. */
@@ -1030,6 +1146,16 @@ export class AgentSessionService implements OnModuleDestroy {
     return { contentItems: [{ text: result.text, type: 'inputText' }], success: result.success }
   }
 
+  /** Closes one of ReelMakeEasy's open cards, if it is open: its asker stops waiting (with
+   *  `error`) and the chat shows it expired. */
+  private closeServerQuestion(id: string, questionId: string, error: Error): void {
+    const question = this.serverQuestions.get(id)?.get(questionId)
+    if (!question) return
+    this.dropServerQuestion(id, questionId)
+    question.reject(error)
+    this.emit(id, { questionId, type: 'question_expired' })
+  }
+
   /** Forgets an answered server question, and the session's map once it is empty. */
   private dropServerQuestion(id: string, questionId: string): void {
     const open = this.serverQuestions.get(id)
@@ -1037,8 +1163,8 @@ export class AgentSessionService implements OnModuleDestroy {
     if (open?.size === 0) this.serverQuestions.delete(id)
   }
 
-  private emit(id: string, event: AgentUiEvent): void {
-    const stored = this.store.append(id, event)
+  private emit(id: string, event: AgentUiEvent, opts: { touch?: boolean } = {}): void {
+    const stored = this.store.append(id, event, opts)
     for (const { fn } of this.subscribers.get(id) ?? []) {
       try {
         fn(stored)
@@ -1082,13 +1208,16 @@ export class AgentSessionService implements OnModuleDestroy {
 
   /** Closes every open ReelMakeEasy-made question of the session: its asker gets
    *  `AgentFlowCancelledError`, the user sees it expire. */
-  private expireServerQuestions(id: string): void {
+  /** At a `shutdown`, an Easy ranking's topic card stays shown for the next start to re-arm (its
+   *  asker still stops waiting), and the others expire without counting as activity. */
+  private expireServerQuestions(id: string, opts: { shutdown?: boolean } = {}): void {
     const open = this.serverQuestions.get(id)
     if (!open) return
     this.serverQuestions.delete(id)
     for (const [questionId, q] of open) {
       q.reject(new AgentFlowCancelledError())
-      this.emit(id, { questionId, type: 'question_expired' })
+      if (opts.shutdown && isRankingTopicQuestion(questionId)) continue
+      this.emit(id, { questionId, type: 'question_expired' }, { touch: !opts.shutdown })
     }
   }
 
@@ -1108,6 +1237,27 @@ export class AgentSessionService implements OnModuleDestroy {
     if (this.destroyed) throw new Error(SHUTDOWN_REASON)
     this.live.set(id, live)
     return live
+  }
+
+  /**
+   * After a restart, an idle chat's open ReelMakeEasy cards: they lived in memory, so they can't
+   * be answered and expire. An Easy ranking still waiting on what it's about keeps its topic
+   * card (asked again: re-armed if the chat still shows it, else a new one). None of it is
+   * activity.
+   */
+  private reopenServerCards(session: AgentSession): void {
+    const events = this.store.eventsAfter(session.id, 0)
+    const waiting = waitingOnTopic(session, events)
+    const open = openServerQuestionIds(events)
+    const topicId = waiting ? open.findLast(isRankingTopicQuestion) : undefined
+    for (const questionId of open)
+      if (questionId !== topicId)
+        this.emit(session.id, { questionId, type: 'question_expired' }, { touch: false })
+    if (!waiting) return
+    const shown = topicId ? questionsOf(events, topicId) : null
+    void this.askRankingTopic(session.id, session.harness ?? defaultHarness(), {
+      ...(topicId && shown ? { card: { questionId: topicId, questions: shown } } : {}),
+    })
   }
 
   /** Starts one turn (a real user message, the hidden kickoff, or a quiet turn); resolves once
@@ -1357,6 +1507,41 @@ function openServerQuestionIds(events: AgentUiEvent[]): string[] {
       open.delete(event.questionId)
   }
   return [...open]
+}
+
+/** The questions of a card the chat shows, from its `question` event. */
+function questionsOf(events: AgentUiEvent[], questionId: string): AgentQuestion[] | null {
+  const event = events.findLast((e) => e.type === 'question' && e.questionId === questionId)
+  return event?.type === 'question' ? event.questions : null
+}
+
+/**
+ * An Easy ranking's topic that may never have reached the agent: the topic card was answered,
+ * but no turn has completed and no ranking was made (ReelMakeEasy stopped, or the agent failed
+ * to start, in between). A turn that only started doesn't count: a Claude turn says it started
+ * before its query runs, and can fail before the agent ever saw the message.
+ */
+function topicNotSent(session: AgentSession, events: AgentUiEvent[]): null | string {
+  if (session.mode !== 'ranking_easy' || session.rankingId) return null
+  if (events.some((e) => e.type === 'turn' && e.status === 'completed')) return null
+  const answered = events.findLast(
+    (e) => e.type === 'question_answered' && isRankingTopicQuestion(e.questionId),
+  )
+  const picked =
+    answered?.type === 'question_answered'
+      ? answered.answers[RANKING_TOPIC_ID]?.find((answer) => answer.trim())
+      : undefined
+  return picked ? splitRecommended(picked).text.trim() || null : null
+}
+
+/** An Easy ranking that never got its topic: no message, no answered topic card, no agent turn. */
+function waitingOnTopic(session: AgentSession, events: AgentUiEvent[]): boolean {
+  if (session.mode !== 'ranking_easy' || session.rankingId || session.threadId) return false
+  return !events.some(
+    (e) =>
+      e.type === 'user_message' ||
+      (e.type === 'question_answered' && isRankingTopicQuestion(e.questionId)),
+  )
 }
 
 /** An Easy chat whose flow runs, hasn't started its video and wasn't stopped by the user:

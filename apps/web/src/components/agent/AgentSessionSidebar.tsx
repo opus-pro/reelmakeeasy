@@ -72,6 +72,10 @@ function Row({
     <span className="flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-md bg-white/5">
       {item.project?.thumbnail && !item.project.deleted ? (
         <img alt="" className="size-full object-cover" src={item.project.thumbnail} />
+      ) : item.rankingCoverUrl ? (
+        // A Ranking chat: its ranking's cover, cut to its middle (the clip shows best there; the
+        // title band is too small to read at this size).
+        <img alt="" className="size-full object-cover" src={item.rankingCoverUrl} />
       ) : (
         <Chat aria-hidden className="size-4.5 text-secondary" />
       )}

@@ -17,6 +17,11 @@ import {
   FREE_CHAT_BRIEF,
   FREE_CHAT_KICKOFF,
   kickoffFor,
+  RANKING_TOPIC_ID,
+  RANKING_TOPIC_IDEAS,
+  RANKING_TOPIC_RECOMMENDED,
+  rankingKickoff,
+  rankingTopicQuestion,
 } from './agent-brief'
 
 describe('Guided mode is gone', () => {
@@ -115,6 +120,8 @@ describe('briefFor / kickoffFor', () => {
     { mode: 'free' },
     { mode: 'autonomous' },
     { editing: true, mode: 'autonomous' },
+    { mode: 'ranking' },
+    { mode: 'ranking_easy' },
   ] as const
 
   it.each(sessions)('fills the tool names for each harness (%o)', (s) => {
@@ -133,6 +140,83 @@ describe('briefFor / kickoffFor', () => {
   it('kicks off Free chat on either harness', () => {
     for (const h of ['codex', 'claude'] as const) expect(kickoffFor(h)).toBe(FREE_CHAT_KICKOFF)
     expect(FREE_CHAT_KICKOFF).toContain('Free chat')
+  })
+})
+
+describe('Ranking chats', () => {
+  it('walks an Easy ranking through its steps in order, one question at a time', () => {
+    const easy = briefFor({ mode: 'ranking_easy' }, 'claude')
+    // The Ranking brief first (the skill, the tools), then the steps.
+    expect(easy).toContain('read the `reelmakeeasy-ranking` skill')
+    expect(easy.indexOf('read the `reelmakeeasy-ranking` skill')).toBeLessThan(
+      easy.indexOf('## Easy mode'),
+    )
+    const steps = [
+      '1. Topic.',
+      '2. Style.',
+      '3. Sounds.',
+      '4. Ranks.',
+      '5. Clips.',
+      '6. Build it.',
+      '7. What next.',
+    ]
+    const at = steps.map((step) => easy.indexOf(step))
+    expect(at.every((i) => i > 0)).toBe(true)
+    expect(at).toEqual(at.toSorted((a, b) => a - b))
+    expect(easy).toContain('"5 (Recommended)", "4", "3"')
+    // It ends on a card too, never in an open question.
+    expect(easy).toContain('"Make another ranking", "Change something" or "I\'m done"')
+    expect(easy).toContain('with AskUserQuestion')
+    expect(briefFor({ mode: 'ranking' }, 'claude')).not.toContain('## Easy mode')
+  })
+
+  it('sends both kinds to free sound libraries and the chat for sounds, never to copied ones', () => {
+    for (const mode of ['ranking', 'ranking_easy'] as const) {
+      const brief = briefFor({ mode }, 'codex')
+      expect(brief).toContain('Pixabay')
+      expect(brief).toContain('ranking_add_sound')
+      expect(brief).toMatch(/Never point them to sites that copy sounds/)
+    }
+  })
+
+  it('opens an Easy ranking on its topic, always with a card', () => {
+    const easy = rankingKickoff('claude', undefined, true)
+    expect(easy).toContain('chose Ranking, Easy')
+    expect(easy).toMatch(/ask what their ranking is about with AskUserQuestion/)
+    expect(rankingKickoff('claude')).not.toContain('chose Ranking, Easy')
+    // A topic typed on Ranking Builder's home: step 1 straight away, with it.
+    const withTopic = rankingKickoff('claude', undefined, true, 'Funniest dog fails')
+    expect(withTopic).toMatch(/do step 1 with it/)
+    expect(withTopic).toMatch(/go on to step 2, asking with AskUserQuestion/)
+    expect(withTopic.endsWith('Funniest dog fails')).toBe(true)
+    expect(rankingKickoff('codex', '11111111-1111-1111-1111-111111111111', true)).toContain(
+      'opened ranking 11111111-1111-1111-1111-111111111111',
+    )
+  })
+})
+
+describe("an Easy ranking's topic card", () => {
+  it('recommends one topic first, then three other ideas, and lets them type their own', () => {
+    const q = rankingTopicQuestion()
+    expect(q.id).toBe(RANKING_TOPIC_ID)
+    expect(q.isOther).toBe(true)
+    expect(q.options).toHaveLength(4)
+    expect(q.options[0]?.label).toBe(`${RANKING_TOPIC_RECOMMENDED} (Recommended)`)
+    expect(q.options.filter((o) => o.label.endsWith('(Recommended)'))).toHaveLength(1)
+    for (const o of q.options.slice(1)) expect(RANKING_TOPIC_IDEAS).toContain(o.label)
+    expect(new Set(q.options.map((o) => o.label)).size).toBe(4)
+    // A different draw gives a different set.
+    const first = rankingTopicQuestion(4, () => 0.5).options.map((o) => o.label)
+    let n = 0
+    const other = rankingTopicQuestion(4, () => (n++ % 8) / 8).options.map((o) => o.label)
+    expect(first).toHaveLength(4)
+    expect(other).toHaveLength(4)
+  })
+
+  it('tells the agent every Easy question is a card, never plain text', () => {
+    expect(briefFor({ mode: 'ranking_easy' }, 'codex')).toMatch(
+      /Every question in Easy is such a card: the question goes in the card, never as plain text/,
+    )
   })
 })
 

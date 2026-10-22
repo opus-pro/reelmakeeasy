@@ -1,0 +1,88 @@
+---
+name: reelmakeeasy-ranking
+description: How to build a ranking short (a Ranking the funniest ... reel) in ReelMakeEasy with the ranking_* tools. Use whenever the user wants a ranking video, a top-5 of clips, or to change, add sound to or export one.
+---
+
+# Ranking shorts
+
+A ranking short is a 9:16 Short: a title band at the top with its keywords in colour, ranks 1 to N down the left, and one clip per rank playing under them. As each clip plays its label appears next to its number and stays. What makes them work: funny clips that fit the title, very short ranks, and a meme sound on every action.
+
+## The format
+
+- **3-5 s per rank.** A Short moves fast: trim every clip to its moment, starting just before the action and ending just after the payoff. New clips play 4.5 s until trimmed. 5 or 6 ranks, about 20-30 s in all; never over a minute.
+- **Title:** two lines, `Ranking` + an angle word (`Best`, `Funniest`, `Craziest`) on the first, the topic + `Moments`, `Trend` or `Fails` on the second. Colour the angle word and the topic, nothing else.
+  Colours: #ffffff, #ff2a2a, #22e5ff, #ffd400, #3dff6e, #ff5fd2 (white, red, cyan, yellow, green, pink). The usual look: `Ranking` white, the angle word red, the topic cyan, the last word white.
+- **Labels:** 1-4 words and one emoji, what happens or the reaction (`Got bitten 😳`, `Pure chaos 💀`). No sentences, no rank numbers.
+- **Order:** rank by how funny or impressive the moment is; #1 makes people replay. Reveal `shuffle` (blind: the viewer never knows which rank fills next; #1 always last) or `countdown`.
+- **Sound is half the joke.** Every rank gets at least one meme sound **on the action** (the fall, the bite, the surprise), from the user's sound library. A reveal sound on every clip start is optional; a short background bed under it all is optional.
+- **Stickers** add punch on the big moments: an emoji or a short word (`NO WAY`, `💀`, `"MAMA!"`) near the action, only while that rank plays, timed to it: they pop in on the action (`startSec` at its moment), vibrate on a scream, fade out before the cut. Use them sparingly: one or two per rank at most.
+- **Blind rankings keep #1 last** (`shuffle`): its clip plays last, so the viewer stays to the end; many creators label it only at the payoff, which drives replays and comments.
+
+## The tools
+
+- `ranking_list`: the user's rankings and their **sound library** (ids, names, lengths; starred and most used first). Read it before choosing sounds: use only these ids.
+- `ranking_create` → a project with empty ranks (5, or `ranks`). `ranking_get` reads one back, with what still stops its export and tips.
+- `ranking_add_clip`: a video or a photo from your working folder under a rank (the user's attachments are in `attachments/`); a photo becomes a 5 s clip with a slow zoom.
+- `ranking_add_sound`: a sound file the user dropped into the chat, into their sound library (it answers the new soundId).
+- `ranking_find_moments`: a clip's action moments (strongest sound onsets, with what they sound like, and shot changes), from a file in your working folder or the clip under a rank. Use it to trim and to time the action sound.
+- `ranking_analyze_reference`: learn the pattern of a reference Short, from a YouTube link the user pasted or a video in your working folder (about a minute). It answers the shots, the sound effects (time, what each is like, and the library sound it matches or "not in the library") and frames to look at.
+- `ranking_style_save` / `ranking_style_list` / `ranking_style_get` / `ranking_apply_style`: saved styles (patterns any ranking can take on), and giving a ranking one.
+- `ranking_generate_clips`: no clips? Make them with AI from text, one per rank (paid; show the prompts and ask which resolution first). Each comes with a contact sheet to look at.
+- `ranking_add_sticker_image`: a picture from your working folder (png, jpg, webp, gif) for an image sticker; answers its `imageUrl`.
+- `ranking_update`: `patch` is a JSON object of whole fields to replace (send each field in full, as `ranking_get` shows it); `ranks` sets how many ranks it has.
+- `ranking_export`: renders the MP4 (about a minute) once every rank has a clip and a label.
+
+## The fields
+
+- `title`: `{ "band": "#000000", "lines": [[{ "text": "Ranking", "color": "#ffffff" }, { "text": "Funniest", "color": "#ff2a2a" }], [...]] }` (1-3 lines).
+- `items`: every rank, top first: `{ "id", "rank", "label", "clip", "cues" }`. Keep each `id` and `clip` as `ranking_get` shows them; change `clip.trimStartSec` / `clip.trimEndSec` to trim. Reorder ranks by reordering the array (ranks renumber 1..N).
+- `cues` on an item: up to 8 `{ "id", "soundId", "atSec" }`, `atSec` in seconds from where the clip starts playing (after its trim), within its play time.
+- `reveal`: `{ "mode": "shuffle" | "countdown" | "countup" | "custom", "order": [ranks in play order] }`.
+- `style`: `{ "labelColor", "numberColors": [#1, #2, #3, others], "outlineColor" }`, plus optional fonts `"titleFont"`, `"numberFont"`, `"labelFont"` (alegreya, anton, dela, dmsans, montserrat, ptserif, roboto; montserrat is the trend's look, dela is chunky like comic lettering, anton tall) and rank marks `"numberFormat"`: `dot` (1.), `hash` (#1), `plain`, `keycap` (1️⃣), `medal` (🥇🥈🥉 then 4.) or `custom` with `"numberMarks": ["👑", "🔥", ...]` (one per rank, any text or emoji).
+- `sounds`: `{ "reveal": soundId | null, "music": soundId | null, "musicVolume": 0-1 }`.
+- `stickers`: up to 20 `{ "id", "kind": "text", "text": "💀", "color": "#ffffff", "x": 0-1, "y": 0-1, "size": 0.04-0.12 (text height / frame height), "rotation": degrees, "rank": a rank or null (the whole short) }`. Keep them in the clip area (y 0.25-0.9) and clear of the rank list on the left (x 0.55-0.9 is usually free). A picture: `"kind": "image", "imageUrl"` from `ranking_add_sticker_image`, `size` its width as a share of the frame (0.1-1).
+  Text stickers may also take `"font"` (as above) and `"italic": true` (slanted, comic style). Any sticker may take `"startSec"` / `"endSec"` (seconds into its rank's clip as it plays, or into the short for a whole-short sticker; missing: the whole time) and `"animation": { "in": "none" | "fade" | "pop" | "slide-left" | "slide-right" | "slide-up" | "slide-down", "loop": "none" | "shake" | "pulse" | "float", "out": "none" | "fade" | "pop" }` (`shake` is the vibrate). A reaction word: `pop` in at the action, `shake` while someone screams, `fade` out.
+- `transition`: `{ "enabled", "text": "Number {rank}…", "texts": { "1": "And the guiltiest…" }, "background", "textColor", "font": fontId?, "textSize": 0.03-0.2?, "textX": 0-1?, "textY": 0-1?, "durationSec": 0.5-3, "sound": soundId | null }`: a slide between ranks. `text` is every slide's; `texts` gives single slides their own (by the rank the slide leads into; leave a rank out to use `text`). `font`, `textSize` (a share of the frame's height, 0.078 by default) and `textX`/`textY` (the text's middle, 0.5 by default) set every slide's look; leave them out for the defaults. Off by default; Shorts usually go straight cut to cut.
+
+## Styles
+
+A style is the pattern of a kind of ranking short. Save one after analysing a reference (or when the user describes a look to reuse). `style` is a JSON object:
+
+- `name`, `notes` (a few lines: what makes it work, e.g. "sound lands on the impact, label pops 0.3 s before the cut"), `source` (`{ "url", "title" }` of the reference, or null).
+- `rankCount`, `perRankSec` (median seconds per rank), `reveal` (`shuffle`, `countdown`, `countup`).
+- `title`: as on a ranking, its words an example (`Ranking`, `Craziest`, `Cat Moments`) in the reference's colours; `style`: as on a ranking (label colour, number colours, outline).
+- `labels`: `{ "tone", "examples": [...] }`; `stickers`: `{ "habit", "examples": [{ "text", "color", "x", "y", "size", "rotation" }] }`.
+- `sounds`: `{ "onAction": [sound...], "reveal": sound | null, "transition": sound | null, "music": sound | null, "musicVolume" }`, each sound `{ "description", "soundId" }`: the library id a reference sound matched, or null with a description to search for ("short low boom, like a vine boom").
+- `transition`: as on a ranking, without `sound`.
+
+## Copying a reference
+
+1. `ranking_analyze_reference` with the link. Read the title frame and the contact sheet (and shot or sound frames where you need detail): the title band and its colours, how labels look and when they appear, stickers, how many ranks, how long each.
+2. Match sounds to moments: which sound fires on the action, on each new rank, under everything. Note the ones the library has (their soundId) and the ones it lacks.
+3. Tell the user the pattern in a few lines, and list the missing sounds plainly ("a deep boom on each fail: not in your library, get one free from Pixabay sound effects and drop it in this chat"). Missing sounds are fine: the style keeps a slot for them.
+4. `ranking_style_save`. Then it can build from the user's clips with `ranking_apply_style`.
+
+A reference is only studied: never use its footage or cut its sounds out.
+
+## Making the clips with AI
+
+When the user has no clips (or asks for AI ones), write one prompt per rank: a single continuous shot, one subject, one clear funny action and its payoff, where it happens and how it ends ("A chubby ginger cat squeezes into a tiny shoebox; the box tips over with its tail sticking out"). Physical comedy reads best: falls, jumps, startles, stares, things knocked over. No text, no famous people or characters. Plan the most outrageous one for #1.
+
+AI video still gives itself away on water and on fast motion: splashes, pouring, waves, wet fur, spins, sprints and quick tumbles smear or melt. Build each action around a clear, readable motion instead: a slow topple, a startled freeze, a slide onto something soft, a stare. Keep water out of the shot, or calm and small in the background, and keep the camera still. When a contact sheet shows smearing on the action, offer to make that clip again with a calmer version of it.
+
+Before making them, ask in this shape:
+1. A message listing the prompts, one line per rank, from #5 up to #1.
+2. One question whose answers ARE the resolutions, each with the total for this ranking: "1080p (Recommended): about $2.00", "768p: about $1.00", "480p: about $0.63", then "Change some scenes first". 1080p is the sharpest, and AI smears water and fast motion least; 480p is the cheapest and softest. Get the exact totals by calling `ranking_generate_clips` without a resolution (it makes nothing and answers them), or work them out: on Hailuo a 5 s clip is about $0.13 at 480p, $0.20 at 768p, $0.40 at 1080p.
+
+Then `ranking_generate_clips` with the resolution they picked (all ranks in one call), look at every contact sheet, and re-rank by what actually came out (reorder `items`; an AI clip can miss its action: say so and offer to make that one again). Trim each to its action, put a meme sound from the library on it, label it, add a sticker on the big moments, and export.
+
+AI clips are made up: YouTube and TikTok ask creators to label realistic AI video when posting; mention it once when handing over.
+
+## How to work
+
+1. Ask what the ranking is about and where the clips are (attachments in the chat), and whether to follow a saved style or a reference. Look at each clip: what happens and when (`ranking_find_moments`; `ffmpeg` to pull a frame to look at).
+2. Pick the ranks, write the title and labels, and choose a sound for each action from the library. Show the user the plan in a few lines (rank, clip, label, sound and its moment) and ask before building.
+3. Build: `ranking_create`, `ranking_apply_style` when there is a style, `ranking_add_clip` for each rank, then one `ranking_update` with the title words, items (labels, trims to the style's seconds per rank or 3-5 s, cues on each action), and any stickers.
+4. `ranking_export`, then tell the user it's ready and that they can fine-tune it in the studio (Ranking Builder). Say what you can change: a trim, a sound and its moment, a label.
+
+When the library has no sound that fits, say what to look for and where to get it free (Pixabay sound effects, the YouTube Audio Library, Freesound), and that they can drop the file into the chat for `ranking_add_sound` or add it in Ranking Builder > Sound library. Never invent sound ids.

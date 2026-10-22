@@ -1,6 +1,12 @@
 'use client'
 
-import type { AgentHarnessName, AgentSession, AgentStatusResponse } from '@shared/types/api/agent'
+import type {
+  AgentHarnessName,
+  AgentMode,
+  AgentSession,
+  AgentStatusResponse,
+  AgentTool,
+} from '@shared/types/api/agent'
 import { toast } from '@shared/ui'
 import { useRouter } from 'next/navigation'
 import { useCallback, useRef, useState } from 'react'
@@ -30,9 +36,20 @@ export function useStartAgentSession({ hard }: { hard: boolean }) {
   const inFlight = useRef(false)
 
   /** `harness`: the agent picked in the Agent dialog (which already checked it is ready).
-   *  `easy`: the chat opens with Easy already chosen (the home page's first-video prompt). */
+   *  `easy`: the chat opens with Easy already chosen (the home page's first-video prompt);
+   *  `mode`: with that mode chosen as it is made (Ranking Builder's "Make one with the agent"),
+   *  `request` being what the user typed there (a Ranking chat's first message); `tool`: its
+   *  welcome card shows that tool first. */
   const start = useCallback(
-    async (harness?: AgentHarnessName, { easy = false }: { easy?: boolean } = {}) => {
+    async (
+      harness?: AgentHarnessName,
+      {
+        easy = false,
+        mode,
+        request,
+        tool,
+      }: { easy?: boolean; mode?: AgentMode; request?: string; tool?: AgentTool } = {},
+    ) => {
       if (inFlight.current) return false
       inFlight.current = true
       setStarting(true)
@@ -50,10 +67,14 @@ export function useStartAgentSession({ hard }: { hard: boolean }) {
           }
         }
         const { data: session } = await fetchApiDomain<AgentSession>('/api/agent/sessions', {
-          data: harness ? { harness } : {},
+          data: {
+            ...(harness ? { harness } : {}),
+            ...(mode ? { mode } : {}),
+            ...(request?.trim() ? { request: request.trim() } : {}),
+          },
           method: 'POST',
         })
-        const url = agentChatUrl(session.id, { easy })
+        const url = agentChatUrl(session.id, { easy, ...(tool ? { tool } : {}) })
         if (hard) {
           leaving = true
           hardNavigate(url)

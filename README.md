@@ -93,6 +93,7 @@ Generation is billed by those providers to your own accounts. Open **Setup** in 
 - **Narrated story videos (text-to-video, script-to-video).** 30 to 60 seconds, vertical 9:16, from an idea, a script or a news topic. Pick one of 25 visual styles (watercolor, claymation, pen and ink, 3D animation and more) and a camera: **Calm** (steady, longer shots) or **Dynamic** (bold moves, quicker cuts).
 - **Beat loops.** 24 to 32-second shorts that replay seamlessly: every 4-second clip hits, hits, freezes and cuts, with narration, word-level captions and fact stamps.
 - **Captions, voices and music.** Word-timed caption styles with highlights; ElevenLabs, MiniMax, Gemini or free local Kokoro and Qwen3 voices, including voice cloning; library music or a track made for the video.
+- **Ranking shorts.** The **Ranking Builder** studio makes the "Ranking the funniest ..." format: a title with coloured keywords, ranks 1 to N, a clip per rank and its label revealed as it plays (countdown, top-first or blind order), with a live preview and a 1080×1920 MP4 export.
 - **Edits after the fact.** Change a clip, a line of narration, a caption style or the music from the editor or by asking the agent, without making the whole video again.
 - **Posting.** Publish or schedule the finished video to YouTube, TikTok, Instagram, X, LinkedIn or Facebook through the [`publish-social`](skills/publish-social/SKILL.md) skill.
 
@@ -160,6 +161,7 @@ ReelMakeEasy is built to be driven by AI coding agents. Agent mode runs your own
 | --- | --- | --- |
 | [`reelmakeeasy-camera`](skills/reelmakeeasy-camera/SKILL.md) | Planning shots, storyboards, transitions or camera moves, or when the user asks for a more dynamic or calmer video | Every agent-mode chat |
 | [`reelmakeeasy-beat-loop`](skills/reelmakeeasy-beat-loop/SKILL.md) | Writing a loop short: 4-second clips with a 1-2-3-4 attention beat, narration, word-level captions and fact stamps | Every agent-mode chat |
+| [`ranking-short`](skills/ranking-short/SKILL.md) | Building a ranking short ("Ranking the funniest ...", a top-5 of clips) in the Ranking Builder from the user's clips | An agent in this repo, with ReelMakeEasy running |
 | [`publish-social`](skills/publish-social/SKILL.md) | Posting, publishing or scheduling a finished video to social accounts through the OpusClip MCP | An agent in this repo, with the OpusClip MCP connected |
 
 ### Where an agent should look

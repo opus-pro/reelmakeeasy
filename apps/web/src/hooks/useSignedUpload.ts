@@ -36,6 +36,8 @@ interface SingleFileUploadParams {
   tempScope?:
     | 'inpaint-references'
     | 'music-track'
+    | 'ranking'
+    | 'sound-library'
     | 'story-mode-audio'
     | 'story-mode-images'
     | 'style-video'

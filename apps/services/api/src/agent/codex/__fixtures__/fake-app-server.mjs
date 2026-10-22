@@ -165,7 +165,11 @@ function onToolAnswered(msg) {
   out({ method: 'item/completed', params: { item, threadId: p.threadId, turnId } })
   out({
     method: 'item/completed',
-    params: { item: { id: 'msg-' + turnId, text, type: 'agentMessage' }, threadId: p.threadId, turnId },
+    params: {
+      item: { id: 'msg-' + turnId, text, type: 'agentMessage' },
+      threadId: p.threadId,
+      turnId,
+    },
   })
   out(p.turnDone)
 }
@@ -283,6 +287,23 @@ function startTurn(msg) {
     out(response)
     out(started)
     return ask(msg.params.threadId, turnId, turnDone)
+  }
+  // `--fail-first-turn`: the first turn says it started, then fails (as a Claude turn whose query
+  // throws before the agent saw the message).
+  if (flags.has('--fail-first-turn') && turnSeq === 1) {
+    out(response)
+    out(started)
+    return out({
+      method: 'turn/completed',
+      params: {
+        threadId: msg.params.threadId,
+        turn: {
+          error: { message: 'Claude Code process exited with code 1' },
+          id: turnId,
+          status: 'failed',
+        },
+      },
+    })
   }
   if (flags.has('--tool-call')) {
     out(response)
