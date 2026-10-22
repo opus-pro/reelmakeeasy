@@ -51,8 +51,7 @@ type ToolOption = {
   icon: React.ComponentType<{ className?: string }>
   key: AgentTool
   label: string
-  /** Easy first; Advanced when the tool has one. */
-  modes: [ModeOption, ...ModeOption[]]
+  modes: [ModeOption, ModeOption]
 }
 
 const SHORT_VIDEO: ToolOption = {
@@ -76,7 +75,7 @@ const SHORT_VIDEO: ToolOption = {
   ],
 }
 
-/** The tools, each with its Easy (guided) mode and, most, an Advanced (free chat) one. */
+/** The tools, each with its Easy (guided) and Advanced (free chat) mode. */
 const TOOLS: ToolOption[] = [
   SHORT_VIDEO,
   {
@@ -107,10 +106,17 @@ const TOOLS: ToolOption[] = [
     modes: [
       {
         description: (agent) =>
-          `Motion graphics on the beat: a launch, a showreel, a website demo. Pick a style and the music, and ${agent} plans it and builds it in Remotion, on this computer. Needs Claude Opus or GPT Astra.`,
-        label: 'Guided',
+          `Motion graphics on the beat: a launch, a showreel, a website demo. Pick a style and the music on one card, and ${agent} plans it and builds it in Remotion, on this computer. Needs Claude Opus or GPT Astra.`,
+        label: 'Easy (Guided)',
         mode: AGENT_TOOL_MODES.motion.easy,
         recommended: true,
+      },
+      {
+        description: (agent) =>
+          `Talk it through with ${agent}: what it's for, the style, the music, a site or video to borrow the look from. ${agent} sets it up and builds it. Needs Claude Opus or GPT Astra.`,
+        label: 'Advanced (Free chat)',
+        mode: AGENT_TOOL_MODES.motion.advanced,
+        recommended: false,
       },
     ],
   },

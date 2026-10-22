@@ -52,15 +52,27 @@ describe('WelcomeCard', () => {
     expect(option(/Advanced \(Free chat\)/).querySelector('[aria-label="Chosen"]')).toBeTruthy()
   })
 
-  it('offers Motion Reel as a tool with its one guided mode, and chooses it', () => {
+  it("offers Motion Reel's Easy (its setup card) and Advanced (the agent sets it up)", () => {
     const onChoose = jest.fn(async () => true)
     render(<WelcomeCard mode={null} onChoose={onChoose} presetHarness="claude" />)
     fireEvent.click(screen.getByRole('tab', { name: /Motion Reel/ }))
-    const modes = within(screen.getByRole('tabpanel')).getAllByRole('button')
-    expect(modes).toHaveLength(1)
-    expect(modes[0]?.textContent).toMatch(/Guided.*Recommended/)
-    fireEvent.click(option(/Motion graphics on the beat/))
+    const modes = within(screen.getByRole('tabpanel'))
+      .getAllByRole('button')
+      .map((b) => b.textContent ?? '')
+    expect(modes).toHaveLength(2)
+    expect(modes[0]).toMatch(/Easy \(Guided\).*Recommended.*one card/)
+    expect(modes[1]).toMatch(/Advanced \(Free chat\).*Talk it through/)
+    fireEvent.click(option(/Pick a style and the music on one card/))
     expect(onChoose).toHaveBeenCalledWith('motion')
+  })
+
+  it("chooses Motion Reel's Advanced, the free chat", () => {
+    const onChoose = jest.fn(async () => true)
+    render(
+      <WelcomeCard firstTool="motion" mode={null} onChoose={onChoose} presetHarness="claude" />,
+    )
+    fireEvent.click(option(/Talk it through/))
+    expect(onChoose).toHaveBeenCalledWith('motion_free')
   })
 
   it('locks while the page starts Easy for the user (from the first-video prompt)', () => {

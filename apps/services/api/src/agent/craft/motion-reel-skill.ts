@@ -7,6 +7,7 @@ export const MOTION_REEL_SKILL_NAME = 'reelmakeeasy-motion-reel'
 export const MOTION_STILL_TOOL = 'motion_still'
 export const MOTION_RENDER_TOOL = 'motion_render'
 export const MOTION_MUSIC_TOOL = 'motion_music'
+export const MOTION_SETUP_TOOL = 'motion_setup'
 
 /**
  * The `reelmakeeasy-motion-reel` skill: how a Motion Reel is planned and built, on the music's beat
@@ -26,7 +27,7 @@ export function renderMotionReelSkill(): string {
     '',
     '## The project',
     '',
-    'ReelMakeEasy sets the project up in `reel/` before your first turn:',
+    `ReelMakeEasy sets the project up in \`reel/\`: before your first turn when the user filled in the setup card, or when you call \`${MOTION_SETUP_TOOL}\` in an Advanced chat (which has no card; call it with no arguments to list the styles and music first). Either way you get:`,
     '- `reel/brief.md`: what the user asked for (style, subject, length, ratio, music, reference).',
     '- `reel/style.md`: the chosen style card (look, type, motion, pacing and sound, build notes). Follow it.',
     "- `reel/public/reel.json`: size, frame rate, length in whole bars, tempo, and the music's beats, bar starts and strongest hits, in seconds from the reel's first frame.",

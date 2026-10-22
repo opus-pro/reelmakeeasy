@@ -8,6 +8,7 @@ export type AgentToolName =
   | 'make_video'
   | 'motion_music'
   | 'motion_render'
+  | 'motion_setup'
   | 'motion_still'
   | 'ranking_add_clip'
   | 'ranking_add_sound'
@@ -145,6 +146,47 @@ export const AGENT_TOOLS: Record<AgentToolName, DynamicToolSpec> = {
       'Render the Motion Reel in reel/ to a video (free, about a minute): type-checks it, renders it with its music, evens out the loudness, shows it to the user in the chat and reports how many cuts land on the beat grid. Call it when the stills look right, and again after each change the user asks for.',
     inputSchema: { additionalProperties: false, properties: {}, type: 'object' },
     name: 'motion_render',
+  },
+  motion_setup: {
+    description:
+      'Set up an Advanced Motion Reel (free, quick; the first time it also installs Remotion, a few minutes): readies reel/ with the style card, the brief, the music trimmed to whole bars and its beat grid, exactly as the setup card does in Easy. Call it with no arguments to get the styles, lengths, frames and library tracks. Call it with everything once the user has settled it, and again only when they change the style, length, frame, music or reference (the scenes and plan are kept). The reply says what to read next.',
+    inputSchema: {
+      additionalProperties: false,
+      properties: {
+        lengthSec: {
+          description: 'About how long, in seconds (the reel is whole bars of its music).',
+          enum: [10, 15, 30, 60],
+          type: 'integer',
+        },
+        music: {
+          description:
+            "library: a library track (musicId: its id); upload: the user's own file (musicId: its path, e.g. attachments/song.mp3); agent: you compose it with motion_music right after (paid); none: no music.",
+          enum: ['library', 'upload', 'agent', 'none'],
+          type: 'string',
+        },
+        musicId: {
+          description: "The library track's id, or the user's file's path.",
+          type: 'string',
+        },
+        ratio: { description: 'The frame.', enum: ['16:9', '9:16', '1:1'], type: 'string' },
+        referenceUrl: {
+          description:
+            'Optional: a YouTube video or a website the user pasted in this chat, to take the look from.',
+          type: 'string',
+        },
+        styleId: {
+          description: 'The style id (from the list this tool answers with no arguments).',
+          type: 'string',
+        },
+        subject: {
+          description:
+            'What the reel is about: the words, names and facts it may show (up to 600 characters).',
+          type: 'string',
+        },
+      },
+      type: 'object',
+    },
+    name: 'motion_setup',
   },
   motion_still: {
     description:
@@ -523,8 +565,9 @@ const EDIT_TOOLS: AgentToolName[] = [
 ]
 
 /** Easy sessions get the edit tools only once editing; Free chat declares make_video,
- *  make_beat_loop and the edit tools; a Motion Reel chat, its two render tools. Claude (which has no image tool of its own) gets
- *  generate_image wherever it chats with the user, editing included: it fixes a keyframe. */
+ *  make_beat_loop and the edit tools; a Motion Reel chat, its music and render tools (and an
+ *  Advanced one, motion_setup). Claude (which has no image tool of its own) gets generate_image
+ *  wherever it chats with the user, editing included: it fixes a keyframe. */
 export function toolsForSession(
   session: { editing?: boolean; mode?: AgentMode },
   harness: AgentHarnessName = 'codex',
@@ -536,6 +579,13 @@ export function toolsForSession(
   if (session.mode === 'autonomous') return session.editing ? withImage(EDIT_TOOLS) : []
   if (session.mode === 'motion')
     return [AGENT_TOOLS.motion_music, AGENT_TOOLS.motion_still, AGENT_TOOLS.motion_render]
+  if (session.mode === 'motion_free')
+    return [
+      AGENT_TOOLS.motion_setup,
+      AGENT_TOOLS.motion_music,
+      AGENT_TOOLS.motion_still,
+      AGENT_TOOLS.motion_render,
+    ]
   if (isRankingMode(session.mode)) return RANKING_TOOLS.map((n) => AGENT_TOOLS[n])
   if (session.mode !== 'free') return []
   return withImage(['make_video', 'make_beat_loop', ...EDIT_TOOLS, ...RANKING_TOOLS])
@@ -553,6 +603,10 @@ export function toolSummary(tool: string, args: unknown): string {
   if (tool === 'use_image_as_keyframe')
     return `Putting the new picture in as keyframe ${String(a.keyframe ?? '')}`.trim()
   if (tool === 'generate_image') return 'Making a preview image'
+  if (tool === 'motion_setup')
+    return typeof a.styleId === 'string' && a.styleId.trim()
+      ? 'Setting up the reel'
+      : 'Looking at the styles and music'
   if (tool === 'motion_music') return 'Composing the music'
   if (tool === 'motion_still') return 'Looking at frames of the reel'
   if (tool === 'motion_render') return 'Rendering the reel'

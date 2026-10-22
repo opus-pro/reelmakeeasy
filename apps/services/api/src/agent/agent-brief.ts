@@ -92,6 +92,18 @@ export const MOTION_REEL_BRIEF = [
   SHOW_THE_USER_RULE,
 ].join('\n')
 
+/**
+ * Developer instructions for an Advanced (free chat) Motion Reel: there is no setup card, so the
+ * agent talks the reel through with the user and sets it up itself with motion_setup.
+ */
+export const MOTION_REEL_FREE_BRIEF = [
+  MOTION_REEL_BRIEF,
+  '',
+  '## Advanced: you set the reel up',
+  "The user picked Advanced: there is no setup card, and `reel/` doesn't exist until you call motion_setup. Call it with no arguments first: it answers the styles, lengths, frames and music tracks. Then settle with the user what the reel needs, one question at a time, as a card with {ASK} wherever there are options (the best first, with \" (Recommended)\"): what it is about (the words and facts it may show), the style (the 2-4 that suit the subject), the length, the frame, and the music (a library track that suits the style, their own file through the paperclip, one you compose with motion_music, or none). A reference is optional: a YouTube video to copy the look and rhythm from, or a website (its colours, words and screenshots when it is the subject's own). Only a link the user pasted in this chat can be a reference. Don't ask what they already told you, and suggest the rest.",
+  'Then call motion_setup with all of it: it readies `reel/` (the first time it also installs Remotion, a few minutes) and says what to read next. From there, work as the skill says. Call motion_setup again only when the user changes the style, length, frame, music or reference: the scenes and plan you wrote are kept, so re-check them against the new grid and style card.',
+].join('\n')
+
 /** The tool names the briefs use, per harness: Codex asks with request_user_input and has its
  *  own image tool; Claude asks with AskUserQuestion and makes images with generate_image. */
 export const BRIEF_TOOL_NAMES: Record<AgentHarnessName, { ask: string; image: string }> = {
@@ -201,6 +213,7 @@ const BRIEF_BY_MODE: Record<AgentMode, string> = {
   autonomous: AUTONOMOUS_BRIEF,
   free: FREE_CHAT_BRIEF,
   motion: MOTION_REEL_BRIEF,
+  motion_free: MOTION_REEL_FREE_BRIEF,
   ranking: RANKING_BRIEF,
   ranking_easy: RANKING_EASY_BRIEF,
 }
@@ -271,10 +284,20 @@ export function motionReelKickoff(
   hasReference: boolean,
   composeMusic = false,
 ): string {
+  return `[ReelMakeEasy] The user filled in the Motion Reel card and \`reel/\` is ready. ${motionReelNextSteps(harness, hasReference, composeMusic, true)}`
+}
+
+/** What a Motion Reel's agent does once `reel/` is ready: read, compose when asked, plan, ask.
+ *  `readSkill`: read the skill first (a chat's first turn). */
+export function motionReelNextSteps(
+  harness: AgentHarnessName,
+  hasReference: boolean,
+  composeMusic = false,
+  readSkill = false,
+): string {
   return fillToolNames(
     [
-      '[ReelMakeEasy] The user filled in the Motion Reel card and `reel/` is ready.',
-      `Read the skill, then \`reel/brief.md\`, \`reel/style.md\` and \`reel/public/reel.json\`${hasReference ? ', and the files in `reel/public/reference/` (look at the images)' : ''}.`,
+      `${readSkill ? 'Read the skill, then' : 'Read'} \`reel/brief.md\`, \`reel/style.md\` and \`reel/public/reel.json\`${hasReference ? ', and the files in `reel/public/reference/` (look at the images)' : ''}.`,
       ...(composeMusic
         ? [
             "The user asked you to make the music: before planning, compose it with motion_music (one description written for this reel, its style and subject, at a tempo in the style card's range), then read `reel/public/reel.json` again: the grid is the new track's.",
@@ -282,6 +305,14 @@ export function motionReelKickoff(
         : []),
       'Then write `reel/plan.md`, and write the plan in your reply too: one short line per scene (its bars, what is on screen, the sound on its cut), so the user reads it in the chat. Then ask with {ASK} whether to build it (options: build it, or change something).',
     ].join(' '),
+    harness,
+  )
+}
+
+/** The hidden first turn of an Advanced Motion Reel chat (it has no setup card). */
+export function motionReelFreeKickoff(harness: AgentHarnessName): string {
+  return fillToolNames(
+    '[ReelMakeEasy] The user chose Motion Reel, Advanced (free chat). Read the skill, and call motion_setup with no arguments to see the styles and music. Then, in one or two short sentences, ask what the reel is for (a product launch, a showreel, a website demo, a promo) and say they can paste a website or a YouTube video whose look to borrow, or drop in their own music. Nothing else yet.',
     harness,
   )
 }

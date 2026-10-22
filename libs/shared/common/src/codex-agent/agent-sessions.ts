@@ -15,7 +15,8 @@ export const PROJECT_CREATED_VIA_AGENT = 'agent'
 export const AGENT_MODE_LABEL: Record<AgentMode, string> = {
   autonomous: 'Easy',
   free: 'Advanced',
-  motion: 'Motion Reel',
+  motion: 'Motion Reel (Easy)',
+  motion_free: 'Motion Reel',
   ranking: 'Ranking',
   ranking_easy: 'Ranking (Easy)',
 }
@@ -48,6 +49,7 @@ export function agentModeFromStored(mode: unknown): AgentMode | undefined {
   return mode === 'autonomous' ||
     mode === 'free' ||
     mode === 'motion' ||
+    mode === 'motion_free' ||
     mode === 'ranking' ||
     mode === 'ranking_easy'
     ? mode

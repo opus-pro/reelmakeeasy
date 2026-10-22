@@ -40,6 +40,7 @@ import {
   type AgentStatusResponse,
   type ChatModelChoice,
   type ChatModelState,
+  isMotionMode,
 } from '@shared/types/api/agent'
 import type { Request, Response } from 'express'
 import { Observable } from 'rxjs'
@@ -88,7 +89,14 @@ import { LoopbackOnlyGuard } from './loopback-only.guard'
 
 /** A Codex item id, or a stringified JSON-RPC request id. */
 const QUESTION_ID = /^[\w.:-]{1,200}$/
-const AGENT_MODES: AgentMode[] = ['autonomous', 'free', 'motion', 'ranking', 'ranking_easy']
+const AGENT_MODES: AgentMode[] = [
+  'autonomous',
+  'free',
+  'motion',
+  'motion_free',
+  'ranking',
+  'ranking_easy',
+]
 const MODE_NAMES = AGENT_MODES.map((m) => JSON.stringify(m)).join(', ')
 /** Guided mode was removed. A page still offering it (open since before the update) starts Free
  *  chat instead of failing. */
@@ -217,7 +225,7 @@ export class AgentController {
   @Get('sessions/:id/model')
   chatModel(@Param('id') id: string, @Query('refresh') refresh?: string): Promise<ChatModelState> {
     const session = this.sessions.getSession(checkSessionId(id))
-    if (session.mode === 'motion')
+    if (isMotionMode(session.mode))
       return this.chatModels.motionState(session.harness ?? 'codex', session.chatModel)
     return this.chatModels.state(session.harness ?? 'codex', session.chatModel, {
       refresh: refresh === '1' || refresh === 'true',
@@ -236,7 +244,7 @@ export class AgentController {
     const harness = body?.harness
     if (harness !== undefined && !AGENT_HARNESSES.includes(harness as AgentHarnessName))
       throw new BadRequestException('harness must be "codex" or "claude"')
-    if (mode === 'motion') {
+    if (isMotionMode(mode as AgentMode)) {
       // A Motion Reel runs only on Opus (Claude Code) or Astra (Codex): refused before the mode
       // is taken, so the user can pick another agent or mode.
       const session = this.sessions.getSession(id)
@@ -322,6 +330,13 @@ export class AgentController {
         void this.chatModels.catalog(session.harness ?? 'codex')
         const chosen = rankingId ? 'ranking' : (mode as AgentMode | undefined)
         if (!chosen) return session
+        // A Motion Reel on another model: the chat opens on its welcome card, which says why
+        // when the mode is picked there (`chooseMode`).
+        if (
+          isMotionMode(chosen) &&
+          (await this.chatModels.motionGate(session.harness ?? defaultHarness()))
+        )
+          return session
         try {
           await this.sessions.chooseMode(session.id, chosen, undefined, request || undefined)
         } catch (error) {
@@ -491,7 +506,7 @@ export class AgentController {
     const session = this.sessions.getSession(checkSessionId(id))
     const harness = session.harness ?? 'codex'
     const choice = await this.choiceFrom(harness, body)
-    if (session.mode === 'motion') {
+    if (isMotionMode(session.mode)) {
       if (choice && !(await this.chatModels.motionOffers(harness, choice)))
         throw new BadRequestException('A Motion Reel runs only on Claude Opus or GPT Astra.')
       return this.chatModels.motionState(harness, this.sessions.setChatModel(id, choice).chatModel)

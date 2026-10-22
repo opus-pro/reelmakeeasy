@@ -63,11 +63,12 @@ describe('chat titles', () => {
     expect(chatTitleFrom('x'.repeat(80))).toBe(`${'x'.repeat(59)}…`)
   })
 
-  it('labels the modes Easy, Advanced, Motion Reel, Ranking and Ranking (Easy)', () => {
+  it('labels the modes: a tool and, for its Easy one, "(Easy)"', () => {
     expect(AGENT_MODE_LABEL).toEqual({
       autonomous: 'Easy',
       free: 'Advanced',
-      motion: 'Motion Reel',
+      motion: 'Motion Reel (Easy)',
+      motion_free: 'Motion Reel',
       ranking: 'Ranking',
       ranking_easy: 'Ranking (Easy)',
     })
@@ -80,6 +81,7 @@ describe('agentModeFromStored', () => {
     expect(agentModeFromStored('free')).toBe('free')
     expect(agentModeFromStored('ranking')).toBe('ranking')
     expect(agentModeFromStored('motion')).toBe('motion')
+    expect(agentModeFromStored('motion_free')).toBe('motion_free')
   })
 
   it('reads a chat saved in the removed Guided mode as Free chat', () => {

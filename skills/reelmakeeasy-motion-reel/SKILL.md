@@ -9,7 +9,7 @@ A Motion Reel is a short motion-graphics video (an intro, a launch, a showreel) 
 
 ## The project
 
-ReelMakeEasy sets the project up in `reel/` before your first turn:
+ReelMakeEasy sets the project up in `reel/`: before your first turn when the user filled in the setup card, or when you call `motion_setup` in an Advanced chat (which has no card; call it with no arguments to list the styles and music first). Either way you get:
 - `reel/brief.md`: what the user asked for (style, subject, length, ratio, music, reference).
 - `reel/style.md`: the chosen style card (look, type, motion, pacing and sound, build notes). Follow it.
 - `reel/public/reel.json`: size, frame rate, length in whole bars, tempo, and the music's beats, bar starts and strongest hits, in seconds from the reel's first frame.

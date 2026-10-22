@@ -27,6 +27,7 @@ import type {
   HarnessStatus,
 } from '@shared/types/api/agent'
 import {
+  isMotionMode,
   isRankingMode,
   isRankingTopicQuestion,
   RANKING_TOPIC_QUESTION_PREFIX,
@@ -52,6 +53,7 @@ import {
   briefFor,
   EDIT_INTRO,
   kickoffFor,
+  motionReelFreeKickoff,
   RANKING_TOPIC_ID,
   rankingKickoff,
   rankingTopicQuestion,
@@ -546,16 +548,14 @@ export class AgentSessionService implements OnModuleDestroy {
       void this.askRankingTopic(id, harness)
       return
     }
-    if (mode === 'free' || isRankingMode(mode)) {
+    if (mode === 'free' || mode === 'motion_free' || isRankingMode(mode)) {
       const asked = isRankingMode(mode) ? request?.trim() : undefined
       if (asked) {
         if (isUnsetChatTitle(session.title))
           this.store.update(id, { title: chatTitleFrom(asked) }, { touch: false })
         this.emit(id, { text: asked, type: 'user_message' })
       }
-      const prompt = isRankingMode(mode)
-        ? rankingKickoff(harness, session.rankingId, mode === 'ranking_easy', asked)
-        : kickoffFor(harness)
+      const prompt = firstTurnPrompt(mode, harness, session.rankingId, asked)
       void this.startKickoff(id, prompt).catch((error: unknown) =>
         this.logger.warn(`Kickoff for ${id} failed: ${ensureError(error).message}`),
       )
@@ -729,7 +729,7 @@ export class AgentSessionService implements OnModuleDestroy {
     }
     // Editing, or a Free chat (whose tools may be waiting on a clip or a render): the
     // waiting tool sees the flag and cancels its workflow.
-    if (editing || mode === 'free' || mode === 'motion' || isRankingMode(mode))
+    if (editing || mode === 'free' || isMotionMode(mode) || isRankingMode(mode))
       this.cancelledFlows.add(id)
     this.expireServerQuestions(id)
     if (!live?.currentTurnId || !threadId) return
@@ -774,7 +774,7 @@ export class AgentSessionService implements OnModuleDestroy {
     if (!session || this.destroyed || !text.trim()) return
     const chat =
       session.mode === 'free' ||
-      session.mode === 'motion' ||
+      isMotionMode(session.mode) ||
       isRankingMode(session.mode) ||
       !!session.editing
     if (!chat) return
@@ -975,14 +975,6 @@ export class AgentSessionService implements OnModuleDestroy {
     return this.store.update(id, { chatModel: choice ?? undefined }, { touch: false })
   }
 
-  /** A Motion Reel's setup changed after it started (the agent composed its music): saved, and
-   *  the setup card shows the new length, tempo and track. */
-  updateMotionReel(id: string, setup: AgentMotionSetupView): void {
-    if (this.getSession(id).mode !== 'motion') return
-    this.store.update(id, { motionReel: setup }, { touch: false })
-    this.emit(id, { setup, type: 'motion_setup' })
-  }
-
   /** Shows (or ends) the working state while the autonomous flow works outside a Codex turn
    *  (writing the script, starting the video). A turn already running (a Free chat's
    *  card answered mid-turn) keeps the state as its own: the flow neither claims it nor ends
@@ -1036,6 +1028,45 @@ export class AgentSessionService implements OnModuleDestroy {
     const trimmed = chatTitleFrom(title)
     if (!trimmed || !isUnsetChatTitle(this.getSession(id).title)) return
     this.store.update(id, { title: trimmed })
+  }
+
+  /** A Motion Reel's setup changed after it started (the agent composed its music, or set an
+   *  Advanced reel up again), or an Advanced reel was set up: saved, and the chat's setup card
+   *  shows it. An unnamed chat is named after what the reel is about. */
+  updateMotionReel(id: string, setup: AgentMotionSetupView): void {
+    const session = this.getSession(id)
+    if (!isMotionMode(session.mode)) return
+    this.store.update(
+      id,
+      {
+        motionReel: setup,
+        ...(isUnsetChatTitle(session.title) ? { title: chatTitleFrom(setup.subject) } : {}),
+      },
+      { touch: false },
+    )
+    this.emit(id, { setup, type: 'motion_setup' })
+  }
+
+  /** What the user typed in a chat, oldest first: their messages, and what they typed into a
+   *  question card (an option they picked is the agent's words, not theirs). */
+  userTexts(id: string): string[] {
+    this.getSession(id)
+    const options = new Map<string, Set<string>>()
+    const texts: string[] = []
+    for (const event of this.store.eventsAfter(id, 0)) {
+      if (event.type === 'user_message') texts.push(event.text)
+      else if (event.type === 'question')
+        options.set(
+          event.questionId,
+          new Set(event.questions.flatMap((q) => (q.options ?? []).map((o) => o.label.trim()))),
+        )
+      else if (event.type === 'question_answered') {
+        const offered = options.get(event.questionId) ?? new Set<string>()
+        for (const answer of Object.values(event.answers).flat())
+          if (!offered.has(answer)) texts.push(answer)
+      }
+    }
+    return texts
   }
 
   /** Where a session's Codex runs: `<sessionDir>/edit` while editing (it holds the `project`
@@ -1548,7 +1579,7 @@ export class AgentSessionService implements OnModuleDestroy {
     const session = this.getSession(id)
     const harness = session.harness ?? 'codex'
     const choice =
-      session.mode === 'motion' && this.deps.chatModels.motionChoiceFor
+      isMotionMode(session.mode) && this.deps.chatModels.motionChoiceFor
         ? this.deps.chatModels.motionChoiceFor(harness, session.chatModel)
         : this.deps.chatModels.choiceFor(harness, session.chatModel)
     if (!choice) return {}
@@ -1572,6 +1603,18 @@ function openServerQuestionIds(events: AgentUiEvent[]): string[] {
       open.delete(event.questionId)
   }
   return [...open]
+}
+
+/** The hidden first turn of a chat whose agent starts at once: a Free chat, a Ranking chat (on
+ *  `rankingId`, with what the user `asked` for), or an Advanced Motion Reel. */
+function firstTurnPrompt(
+  mode: AgentMode,
+  harness: AgentHarnessName,
+  rankingId: string | undefined,
+  asked: string | undefined,
+): string {
+  if (isRankingMode(mode)) return rankingKickoff(harness, rankingId, mode === 'ranking_easy', asked)
+  return mode === 'motion_free' ? motionReelFreeKickoff(harness) : kickoffFor(harness)
 }
 
 /** The questions of a card the chat shows, from its `question` event. */

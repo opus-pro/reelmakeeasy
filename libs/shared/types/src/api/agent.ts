@@ -3,11 +3,17 @@ export type AgentAnswers = Record<string, string[]>
 
 /** How a session's chat is driven, per tool: a short video's autonomous run (Easy) or free chat
  *  (Advanced); a ranking short's guided chat (Easy: one question at a time, then the agent builds
- *  it) or free chat (Advanced), both in the Ranking Builder; a Motion Reel (a setup card, then a
- *  chat that builds a motion-graphics reel in Remotion). Chosen once, right after the session is
- *  created. A former mode, 'guided', was removed: chats saved with it load as 'free'
- *  (`agentModeFromStored`). */
-export type AgentMode = 'autonomous' | 'free' | 'motion' | 'ranking' | 'ranking_easy'
+ *  it) or free chat (Advanced), both in the Ranking Builder; a Motion Reel's setup card, then a
+ *  chat that builds it in Remotion (Easy, `motion`), or a free chat in which the agent sets it up
+ *  itself (Advanced, `motion_free`). Chosen once, right after the session is created. A former
+ *  mode, 'guided', was removed: chats saved with it load as 'free' (`agentModeFromStored`). */
+export type AgentMode =
+  | 'autonomous'
+  | 'free'
+  | 'motion'
+  | 'motion_free'
+  | 'ranking'
+  | 'ranking_easy'
 
 /** What the Motion Reel setup card sends (`POST /api/agent/sessions/:id/motion-reel`). */
 export type AgentMotionSetup = {
@@ -57,7 +63,7 @@ export type AgentMotionSetupView = AgentMotionSetup & {
 
 export type AgentPlanStep = { status: 'completed' | 'inProgress' | 'pending'; step: string }
 
-/** What a chat makes: a tool, each with an Easy mode and (most) an Advanced one. */
+/** What a chat makes: a tool, each with an Easy and an Advanced mode. */
 export type AgentTool = 'motion' | 'ranking' | 'short'
 
 /** A short silent clip that shows what an option looks like (ReelMakeEasy's own cards only). The
@@ -491,18 +497,22 @@ export interface BeatLoopStoryboard {
   voice?: string
 }
 
-/** Each tool's modes: Easy (guided) first, then Advanced (free chat). Motion Reel has only its
- *  guided one (a setup card, then the plan and the build). */
-export const AGENT_TOOL_MODES = {
-  motion: { easy: 'motion' },
+/** Each tool's modes: Easy (guided) first, then Advanced (free chat). */
+export const AGENT_TOOL_MODES: Record<AgentTool, { advanced: AgentMode; easy: AgentMode }> = {
+  motion: { advanced: 'motion_free', easy: 'motion' },
   ranking: { advanced: 'ranking', easy: 'ranking_easy' },
   short: { advanced: 'free', easy: 'autonomous' },
-} as const satisfies Record<AgentTool, { advanced?: AgentMode; easy: AgentMode }>
+}
 
 /** The tool a mode belongs to. */
 export function toolOfMode(mode: AgentMode): AgentTool {
-  if (mode === 'motion') return 'motion'
+  if (mode === 'motion' || mode === 'motion_free') return 'motion'
   return mode === 'ranking' || mode === 'ranking_easy' ? 'ranking' : 'short'
+}
+
+/** A Motion Reel chat, Easy (its setup card) or Advanced (the agent sets it up). */
+export function isMotionMode(mode: AgentMode | null | undefined): boolean {
+  return !!mode && toolOfMode(mode) === 'motion'
 }
 
 /** A Ranking chat, Easy or Advanced: it builds ranking shorts with the ranking tools. */

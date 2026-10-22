@@ -5,7 +5,12 @@ import {
   FLOW_CANCELLED_NOTICE,
   type TranscriptEntry,
 } from '@reelmakeeasy/common/codex-agent/agent-transcript'
-import { type AgentMode, type AgentTool, isRankingMode } from '@shared/types/api/agent'
+import {
+  type AgentMode,
+  type AgentTool,
+  isMotionMode,
+  isRankingMode,
+} from '@shared/types/api/agent'
 import { Button, cn } from '@shared/ui'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { type ReactNode, useEffect, useMemo, useState } from 'react'
@@ -263,7 +268,7 @@ function AgentWorkspace({
           />
         </div>
         <div className="min-h-0 min-w-0 flex-1">
-          {mode === 'motion' ? (
+          {isMotionMode(mode) ? (
             <MotionReelPanel transcript={agent.transcript} />
           ) : isRankingMode(mode) ? (
             <RankingChatPanel

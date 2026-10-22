@@ -434,6 +434,46 @@ describe('AgentController', () => {
       expect(stub.chooseMode).toHaveBeenCalledWith(S1, 'motion', 'codex')
     })
 
+    it('refuses an Advanced Motion Reel the same way, and pins its model too', async () => {
+      const stub = makeStubService()
+      const models = { motionGate: jest.fn().mockResolvedValue('Motion Reel needs Claude Opus.') }
+      const controller = new AgentController(
+        stub as never,
+        NO_AUTONOMOUS,
+        NO_PROJECTS,
+        NO_EDIT,
+        models as never,
+        NO_RANKINGS,
+        NO_MOTION,
+      )
+      await expect(
+        controller.chooseMode(S1, { harness: 'claude', mode: 'motion_free' }),
+      ).rejects.toThrow('Motion Reel needs Claude Opus.')
+      expect(stub.chooseMode).not.toHaveBeenCalled()
+    })
+
+    it('opens a chat made for a Motion Reel on its welcome card when the model is missing', async () => {
+      const stub = makeStubService()
+      const models = {
+        catalog: jest.fn().mockResolvedValue(null),
+        motionGate: jest.fn().mockResolvedValue('Motion Reel needs GPT Astra.'),
+      }
+      const controller = new AgentController(
+        stub as never,
+        NO_AUTONOMOUS,
+        NO_PROJECTS,
+        NO_EDIT,
+        models as never,
+        NO_RANKINGS,
+        NO_MOTION,
+      )
+      await expect(controller.createSession({ mode: 'motion_free' })).resolves.toEqual(SESSION)
+      expect(stub.chooseMode).not.toHaveBeenCalled()
+      models.motionGate.mockResolvedValue(null)
+      await controller.createSession({ mode: 'motion' })
+      expect(stub.chooseMode).toHaveBeenCalledWith(SESSION.id, 'motion', undefined, undefined)
+    })
+
     it('answers a Motion Reel setup card: 400 for a bad card, 409 once it is taken', () => {
       const motion = { setup: jest.fn() }
       const controller = new AgentController(
