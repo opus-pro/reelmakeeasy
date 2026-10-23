@@ -34,11 +34,13 @@ import {
   type AgentAttachment,
   type AgentHarnessName,
   type AgentMode,
+  type AgentMotionOptions,
   type AgentSession,
   type AgentSessionListItem,
   type AgentStatusResponse,
   type ChatModelChoice,
   type ChatModelState,
+  isMotionMode,
 } from '@shared/types/api/agent'
 import type { Request, Response } from 'express'
 import { Observable } from 'rxjs'
@@ -55,6 +57,8 @@ import { defaultHarness } from './claude/claude-config'
 import { getClaudeStatus } from './claude/claude-locator'
 import { getCodexStatus } from './codex/codex-locator'
 import { AgentEditService, EditNotReadyError } from './edit/agent-edit.service'
+import { MotionReelService, MotionSetupTakenError } from './motion-reel/motion-reel.service'
+import { MotionSetupError } from './motion-reel/motion-setup'
 import {
   attachmentFileName,
   MAX_ATTACHMENT_BYTES,
@@ -70,6 +74,7 @@ import {
   InvalidAnswerError,
   ModeAlreadyChosenError,
   ModeNotChattableError,
+  MotionSetupPendingError,
   NotResumableError,
   PickTopicFirstError,
   QuestionNotOpenError,
@@ -84,7 +89,14 @@ import { LoopbackOnlyGuard } from './loopback-only.guard'
 
 /** A Codex item id, or a stringified JSON-RPC request id. */
 const QUESTION_ID = /^[\w.:-]{1,200}$/
-const AGENT_MODES: AgentMode[] = ['autonomous', 'free', 'ranking', 'ranking_easy']
+const AGENT_MODES: AgentMode[] = [
+  'autonomous',
+  'free',
+  'motion',
+  'motion_free',
+  'ranking',
+  'ranking_easy',
+]
 const MODE_NAMES = AGENT_MODES.map((m) => JSON.stringify(m)).join(', ')
 /** Guided mode was removed. A page still offering it (open since before the update) starts Free
  *  chat instead of failing. */
@@ -114,6 +126,7 @@ export class AgentController {
     private readonly edit: AgentEditService,
     private readonly chatModels: ChatModelService,
     private readonly rankings: RankingService,
+    private readonly motion: MotionReelService,
   ) {}
 
   @Post('sessions/:id/questions/:questionId/answer')
@@ -212,6 +225,8 @@ export class AgentController {
   @Get('sessions/:id/model')
   chatModel(@Param('id') id: string, @Query('refresh') refresh?: string): Promise<ChatModelState> {
     const session = this.sessions.getSession(checkSessionId(id))
+    if (isMotionMode(session.mode))
+      return this.chatModels.motionState(session.harness ?? 'codex', session.chatModel)
     return this.chatModels.state(session.harness ?? 'codex', session.chatModel, {
       refresh: refresh === '1' || refresh === 'true',
     })
@@ -229,6 +244,14 @@ export class AgentController {
     const harness = body?.harness
     if (harness !== undefined && !AGENT_HARNESSES.includes(harness as AgentHarnessName))
       throw new BadRequestException('harness must be "codex" or "claude"')
+    if (isMotionMode(mode as AgentMode)) {
+      // A Motion Reel runs only on Opus (Claude Code) or Astra (Codex): refused before the mode
+      // is taken, so the user can pick another agent or mode.
+      const session = this.sessions.getSession(id)
+      const which = (harness as AgentHarnessName | undefined) ?? session.harness ?? defaultHarness()
+      const gate = await this.chatModels.motionGate(which)
+      if (gate) throw new ConflictException(gate)
+    }
     try {
       await (harness === undefined
         ? this.sessions.chooseMode(id, mode as AgentMode)
@@ -307,6 +330,13 @@ export class AgentController {
         void this.chatModels.catalog(session.harness ?? 'codex')
         const chosen = rankingId ? 'ranking' : (mode as AgentMode | undefined)
         if (!chosen) return session
+        // A Motion Reel on another model: the chat opens on its welcome card, which says why
+        // when the mode is picked there (`chooseMode`).
+        if (
+          isMotionMode(chosen) &&
+          (await this.chatModels.motionGate(session.harness ?? defaultHarness()))
+        )
+          return session
         try {
           await this.sessions.chooseMode(session.id, chosen, undefined, request || undefined)
         } catch (error) {
@@ -415,6 +445,12 @@ export class AgentController {
     return buildAgentSessionList(sessions, summaries, (id) => this.rankings.coverOf(id))
   }
 
+  /** What the Motion Reel setup card offers: the styles, the music, the lengths and shapes. */
+  @Get('motion-reel/options')
+  motionReelOptions(): AgentMotionOptions {
+    return this.motion.options()
+  }
+
   /** "Pick up where you left off": carries on an Easy flow a restart cut off, from its first
    *  unanswered card. Answers at once (the flow goes on in the background, shown by its
    *  events); 409, with a plain reason, when there is nothing to pick up or it already runs;
@@ -457,6 +493,7 @@ export class AgentController {
       if (error instanceof FlowActiveError) throw new ConflictException(error.message)
       // A finished autonomous session: its message says to start a new session.
       if (error instanceof ModeNotChattableError) throw new ConflictException(error.message)
+      if (error instanceof MotionSetupPendingError) throw new ConflictException(error.message)
       throw error
     }
     return { ok: true }
@@ -469,6 +506,11 @@ export class AgentController {
     const session = this.sessions.getSession(checkSessionId(id))
     const harness = session.harness ?? 'codex'
     const choice = await this.choiceFrom(harness, body)
+    if (isMotionMode(session.mode)) {
+      if (choice && !(await this.chatModels.motionOffers(harness, choice)))
+        throw new BadRequestException('A Motion Reel runs only on Claude Opus or GPT Astra.')
+      return this.chatModels.motionState(harness, this.sessions.setChatModel(id, choice).chatModel)
+    }
     const updated = this.sessions.setChatModel(id, choice)
     return this.chatModels.state(harness, updated.chatModel)
   }
@@ -485,6 +527,22 @@ export class AgentController {
     const harness = session.harness ?? 'codex'
     this.chatModels.setDefault(harness, await this.choiceFrom(harness, body))
     return this.chatModels.state(harness, session.chatModel)
+  }
+
+  /** A Motion Reel chat's setup card. Answers once it is checked; the project is readied in the
+   *  background and the chat opens with a `motion_setup` event (or the card comes back with a
+   *  notice saying what went wrong). */
+  @Post('sessions/:id/motion-reel')
+  setupMotionReel(@Param('id') id: string, @Body() body: unknown): { ok: true } {
+    checkSessionId(id)
+    try {
+      this.motion.setup(id, body)
+    } catch (error) {
+      if (error instanceof MotionSetupError) throw new BadRequestException(error.message)
+      if (error instanceof MotionSetupTakenError) throw new ConflictException(error.message)
+      throw error
+    }
+    return { ok: true }
   }
 
   /** Opens a finished video's chat for editing (the Edit card). 409 while it cannot. */

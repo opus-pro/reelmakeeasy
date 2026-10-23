@@ -37,6 +37,8 @@ import {
 } from './attachments/ComposerAttachments'
 import { useAttachments } from './attachments/useAttachments'
 import { ChatModelBar } from './models/ChatModelBar'
+import { MotionReelSetupCard } from './motion/MotionReelSetupCard'
+import { MotionReelVideoCard } from './motion/MotionReelVideoCard'
 import { type ActivityEntry, ActivityGroup } from './ActivityGroup'
 import { agentNameOf, chosenHarnessOf, presetHarnessOf } from './agent-harness'
 import { AgentMarkdown } from './AgentMarkdown'
@@ -183,6 +185,7 @@ function composerPlaceholder({
   flowActive,
   flowFinished,
   modeChosen,
+  motionSetupPending,
   pickUp,
   singleQuestion,
   who,
@@ -200,6 +203,8 @@ function composerPlaceholder({
   /** An autonomous session whose flow is over: nothing more to type. */
   flowFinished: boolean
   modeChosen: boolean
+  /** A Motion Reel chat whose setup card hasn't been sent yet. */
+  motionSetupPending: boolean
   /** An Easy chat a restart cut off: its button above (named this) carries it on. */
   pickUp: false | string
   /** A one-question card is open that the composer can answer. */
@@ -209,6 +214,7 @@ function composerPlaceholder({
   working: boolean
 }): string {
   if (!modeChosen) return 'Choose how to start above'
+  if (motionSetupPending) return 'Set up your Motion Reel above'
   if (editing) return 'Describe what to change…'
   if (pickUp) return `Press "${pickUp}" above to carry on`
   if (flowFinished) return AUTONOMOUS_FINISHED
@@ -219,6 +225,13 @@ function composerPlaceholder({
   if (cardQuestions > 1) return 'Answer the questions above'
   if (working) return `${who} is still working. Wait for it, or press Stop.`
   return `Message ${who}…`
+}
+
+/** A Motion Reel chat whose setup card hasn't been sent yet: nothing to type until it is. */
+function isMotionSetupPending(mode: AgentMode | null, entries: TranscriptEntry[]): boolean {
+  return (
+    mode === 'motion' && !entries.some((e) => e.kind === 'motion_setup' && e.state === 'chosen')
+  )
 }
 
 /** Codex tool names are snake_case; the pill shows them as words. */
@@ -234,6 +247,7 @@ function TranscriptRow({
   expiredHints,
   onEdit,
   sessionId,
+  setupMotionReel,
   startedProjectId,
   submittedIds,
 }: {
@@ -247,6 +261,8 @@ function TranscriptRow({
   /** Opens the chat for editing (Easy only: Free chats are already open). */
   onEdit?: StartEditingFn
   sessionId: string
+  /** Sends a Motion Reel's setup card. */
+  setupMotionReel: AgentSessionState['setupMotionReel']
   /** Set on ReelMakeEasy's "Your video is being made" message: the video it follows. */
   startedProjectId?: string
   /** Question ids whose answer the server accepted, before `question_answered` arrives. */
@@ -260,6 +276,12 @@ function TranscriptRow({
     }
     case 'image': {
       return <ImageEntry entry={entry} sessionId={sessionId} />
+    }
+    case 'motion_setup': {
+      return <MotionReelSetupCard entry={entry} onSubmit={setupMotionReel} sessionId={sessionId} />
+    }
+    case 'motion_video': {
+      return <MotionReelVideoCard entry={entry} />
     }
     case 'notice': {
       return <div className="text-sm text-amber-400">{entry.text}</div>
@@ -390,6 +412,7 @@ export function AgentChat({
     sending,
     serverFlowActive,
     session,
+    setupMotionReel,
     startEditing,
     stop,
     transcript,
@@ -435,6 +458,7 @@ export function AgentChat({
     transcript,
   })
   const modeChosen = mode !== null
+  const motionSetupPending = isMotionSetupPending(mode, transcript.entries)
   // An Easy chat a restart cut off before its video: "Pick up where you left off" below it.
   const pickUp = canPickUp(session, transcript.entries, flowActive)
   const expiredHints = expiredHintsFor({ editing, flowActive, mode, pickUp })
@@ -451,7 +475,8 @@ export function AgentChat({
 
   // Nothing to type before a mode is chosen, nor during autonomous mode with no card the
   // composer can answer, nor once autonomous mode is over; text left in the box then counts for nothing.
-  const inputDisabled = !modeChosen || flowFinished || (flowActive && !singleQuestion)
+  const inputDisabled =
+    !modeChosen || motionSetupPending || flowFinished || (flowActive && !singleQuestion)
   // An Easy ranking's topic card takes words only (what it's about): files come later.
   const canAttach = takesFiles(
     inputDisabled,
@@ -602,6 +627,7 @@ export function AgentChat({
     flowActive,
     flowFinished,
     modeChosen,
+    motionSetupPending,
     pickUp: pickUp && resumeWords(session?.resume).button,
     singleQuestion: !!singleQuestion,
     who,
@@ -644,6 +670,7 @@ export function AgentChat({
                 key={item.key}
                 onEdit={mode === 'autonomous' ? startEditing : undefined}
                 sessionId={sessionId}
+                setupMotionReel={setupMotionReel}
                 startedProjectId={startedLines.get(item.entry.id)}
                 submittedIds={submittedIds}
               />

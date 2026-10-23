@@ -59,7 +59,7 @@ export function startsEasy(params: Params): boolean {
 /** The tool the page URL asks the welcome card to show first, or null. */
 export function toolOf(params: Params): AgentTool | null {
   const tool = params?.get(TOOL_PARAM)
-  return tool === 'ranking' || tool === 'short' ? tool : null
+  return tool === 'motion' || tool === 'ranking' || tool === 'short' ? tool : null
 }
 
 /**

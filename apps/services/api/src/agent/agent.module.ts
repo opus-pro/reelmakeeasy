@@ -35,6 +35,7 @@ import { RankingService } from '../ranking/ranking.service'
 import { SoundLibraryModule } from '../sound-library/sound-library.module'
 import { SoundLibraryService } from '../sound-library/sound-library.service'
 
+import { MotionReelService } from './motion-reel/motion-reel.service'
 import { AgentController } from './agent.controller'
 import { AgentSessionService } from './agent-session.service'
 import { ChatModelService } from './chat-model.service'
@@ -59,6 +60,7 @@ import { ChatModelService } from './chat-model.service'
       ) => {
         const flow = () => refs.get(AutonomousService, { strict: true })
         const edit = () => refs.get(AgentEditService, { strict: true })
+        const motion = () => refs.get(MotionReelService, { strict: true })
         // The Ranking Builder's tools; the session service gives the chat's working folder.
         let session: AgentSessionService | undefined
         const rankingTools = new RankingAgentTools({
@@ -76,11 +78,19 @@ import { ChatModelService } from './chat-model.service'
             resumeAction: (id) => flow().resumeAction(id),
             start: (id) => flow().start(id),
           },
-          chatModels,
-          // Codex's ReelMakeEasy tools, answered by the edit service (resolved lazily, like the
-          // flow); the Ranking Builder's by its own tools.
+          chatModels: {
+            choiceFor: (harness, chat) => chatModels.choiceFor(harness, chat),
+            motionChoiceFor: (harness, chat) => chatModels.motionChoiceFor(harness, chat),
+          },
+          // Codex's ReelMakeEasy tools, answered by the edit service, a Motion Reel's by the
+          // Motion Reel service (both resolved lazily, like the flow); the Ranking Builder's by
+          // its own tools.
           onToolCall: (id, tool, args) =>
-            tool.startsWith('ranking_') ? rankingTools.call(id, tool, args) : edit().callTool(id, tool, args),
+            tool.startsWith('ranking_')
+              ? rankingTools.call(id, tool, args)
+              : tool.startsWith('motion_')
+                ? motion().callTool(id, tool, args)
+                : edit().callTool(id, tool, args),
         })
         return session
       },
@@ -112,6 +122,11 @@ import { ChatModelService } from './chat-model.service'
         autonomous: AutonomousService,
         music: MusicService,
       ) => new AgentEditService({ autonomous, longTake, music, projects, sessions }),
+    },
+    {
+      inject: [AgentSessionService],
+      provide: MotionReelService,
+      useFactory: (sessions: AgentSessionService) => new MotionReelService(sessions),
     },
     CodexLlmService,
     ClaudeLlmService,

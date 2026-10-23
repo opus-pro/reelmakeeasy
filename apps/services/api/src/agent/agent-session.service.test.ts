@@ -16,7 +16,7 @@ import { isRankingTopicQuestion } from '@shared/types/api/agent'
 import type { AgentAppServer } from './claude/agent-app-server'
 import { buildAppServerArgs } from './codex/codex-config'
 import { CodexRpcClient } from './codex/codex-rpc'
-import { briefFor, kickoffFor, rankingKickoff } from './agent-brief'
+import { briefFor, kickoffFor, motionReelFreeKickoff, rankingKickoff } from './agent-brief'
 
 const AUTONOMOUS_BRIEF = briefFor({ mode: 'autonomous' }, 'codex')
 const FREE_CHAT_BRIEF = briefFor({ mode: 'free' }, 'codex')
@@ -30,6 +30,7 @@ import {
   HarnessNotReadyError,
   InvalidAnswerError,
   ModeAlreadyChosenError,
+  MotionSetupPendingError,
   ModeNotChattableError,
   NotResumableError,
   PickTopicFirstError,
@@ -707,6 +708,114 @@ describe('AgentSessionService', () => {
       )
       for (const mode of ['free', undefined] as const)
         expect(appServerArgsForMode(mode)).toEqual(buildAppServerArgs({ webSearch: false }))
+    })
+
+    it('motion: emits mode and the setup card, refuses messages until the setup is in, then starts the agent', async () => {
+      const svc = makeService(root)
+      const session = await svc.createSession()
+      const events: AgentUiEvent[] = []
+      svc.subscribe(session.id, 0, (e) => events.push(e))
+
+      await svc.chooseMode(session.id, 'motion')
+      expect(events.map((e) => e.type)).toEqual(['mode', 'motion_setup_request'])
+      expect(svc.isRunning(session.id)).toBe(false)
+      await expect(svc.sendMessage(session.id, 'hi')).rejects.toBeInstanceOf(
+        MotionSetupPendingError,
+      )
+
+      const setup = {
+        bars: 8,
+        bpm: 128,
+        lengthSec: 15,
+        music: { source: 'none' as const },
+        musicTitle: null,
+        ratio: '16:9' as const,
+        reelSec: 15,
+        styleId: 'hud-showreel',
+        styleLabel: 'HUD Showreel',
+        subject: 'A launch reel',
+      }
+      svc.startMotionReel(session.id, setup, '[ReelMakeEasy] go')
+      expect(svc.getSession(session.id).motionReel).toEqual(setup)
+      expect(svc.getSession(session.id).title).toBe('A launch reel')
+      await waitFor(() => events.some((e) => e.type === 'message'))
+      await waitFor(() => svc.getSession(session.id).status === 'idle')
+      expect(events.find((e) => e.type === 'motion_setup')).toMatchObject({ setup })
+      expect(() => svc.startMotionReel(session.id, setup, 'again')).toThrow(ModeAlreadyChosenError)
+      expect(spawnOpts.at(-1)?.mode).toBe('motion')
+    })
+
+    it('motion_free: starts the agent at once with its own kickoff, takes messages, and names itself after the setup', async () => {
+      const log = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'agent-svc-mfree-')), 'log.jsonl')
+      const svc = makeService(root, [], { FAKE_LOG: log })
+      const session = await svc.createSession()
+      const events: AgentUiEvent[] = []
+      svc.subscribe(session.id, 0, (e) => events.push(e))
+
+      await svc.chooseMode(session.id, 'motion_free')
+      await waitFor(() => svc.getSession(session.id).status === 'idle')
+      // No setup card: the agent's first turn asks what the reel is for.
+      expect(events.some((e) => e.type === 'motion_setup_request')).toBe(false)
+      const start = readLog(log).find((e) => e.method === 'turn/start')
+      expect(start?.params?.['input']).toEqual([
+        { text: motionReelFreeKickoff('codex'), type: 'text' },
+      ])
+      expect(spawnOpts.at(-1)?.mode).toBe('motion_free')
+
+      // The setup comes from the agent's motion_setup: shown, and the unnamed chat named.
+      const setup = {
+        bars: 8,
+        bpm: 128,
+        lengthSec: 15,
+        music: { source: 'none' as const },
+        musicTitle: null,
+        ratio: '16:9' as const,
+        reelSec: 15,
+        styleId: 'hud-showreel',
+        styleLabel: 'HUD Showreel',
+        subject: 'A launch reel',
+      }
+      svc.updateMotionReel(session.id, setup)
+      expect(svc.getSession(session.id)).toMatchObject({
+        motionReel: setup,
+        title: 'A launch reel',
+      })
+      expect(events.find((e) => e.type === 'motion_setup')).toMatchObject({ setup })
+
+      await svc.sendMessage(session.id, 'Copy the look of https://reelmakeeasy.example')
+      await waitFor(() => svc.getSession(session.id).status === 'idle')
+      expect(svc.userTexts(session.id)).toEqual(['Copy the look of https://reelmakeeasy.example'])
+
+      // A card: what they type into it is theirs; an option they pick is the agent's words.
+      const store = svc['store']
+      store.append(session.id, {
+        questionId: 'q1',
+        questions: [
+          {
+            header: 'Reference',
+            id: 'ref',
+            isOther: true,
+            isSecret: false,
+            options: [{ description: '', label: 'Use https://agent-made.example (Recommended)' }],
+            question: 'A look to borrow?',
+          },
+        ],
+        type: 'question',
+      })
+      store.append(session.id, {
+        answers: { ref: ['Use https://agent-made.example (Recommended)'] },
+        questionId: 'q1',
+        type: 'question_answered',
+      })
+      store.append(session.id, {
+        answers: { ref: ['https://typed-in-the-card.example'] },
+        questionId: 'q1',
+        type: 'question_answered',
+      })
+      expect(svc.userTexts(session.id)).toEqual([
+        'Copy the look of https://reelmakeeasy.example',
+        'https://typed-in-the-card.example',
+      ])
     })
 
     it('throws ModeAlreadyChosenError for a second chooseMode call', async () => {

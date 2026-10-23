@@ -129,3 +129,58 @@ export function parseChoice(body: unknown): ChatModelChoice | null {
     model: model.trim(),
   }
 }
+
+/** The model family a Motion Reel chat must run on, per harness: Claude Code's Opus, Codex's
+ *  Astra. Smaller models write Remotion code that breaks or drifts off the beat. */
+export const MOTION_MODEL_FAMILY: Record<AgentHarnessName, string> = {
+  claude: 'opus',
+  codex: 'astra',
+}
+
+/** Thinking levels from least to most; a Motion Reel needs medium or more. */
+const EFFORT_ORDER = ['none', 'minimal', 'low', 'medium', 'high', 'xhigh', 'max']
+const atLeastMedium = (effort: string | undefined) =>
+  effort !== undefined && EFFORT_ORDER.indexOf(effort) >= EFFORT_ORDER.indexOf('medium')
+
+/** Whether a model may run a Motion Reel chat on `harness` (its family's newest). */
+export function isMotionModel(
+  harness: AgentHarnessName,
+  models: ChatModelOption[],
+  id: string,
+): boolean {
+  return newestOf(models, MOTION_MODEL_FAMILY[harness])?.id === id
+}
+
+/**
+ * The model a Motion Reel chat runs on: its family's newest model, at the picked thinking level
+ * when that is medium or more, else at medium (or the model's own level when it has no medium).
+ * Null when the harness doesn't offer the family to this account.
+ */
+export function motionModelChoice(
+  harness: AgentHarnessName,
+  models: ChatModelOption[],
+  picked?: ChatModelChoice | null,
+): ChatModelChoice | null {
+  const model = newestOf(models, MOTION_MODEL_FAMILY[harness])
+  if (!model) return null
+  if (
+    picked?.model === model.id &&
+    atLeastMedium(picked.effort) &&
+    model.efforts.includes(picked.effort as string)
+  )
+    return { effort: picked.effort, model: model.id }
+  if (model.efforts.includes('medium')) return { effort: 'medium', model: model.id }
+  const effort = model.efforts.find(atLeastMedium)
+  return effort ? { effort, model: model.id } : atMedium(model)
+}
+
+/** Why a harness can't run a Motion Reel for this account, or null when it can. */
+export function motionModelGate(
+  harness: AgentHarnessName,
+  models: ChatModelOption[],
+): null | string {
+  if (motionModelChoice(harness, models)) return null
+  return harness === 'claude'
+    ? "Motion Reel needs Claude Opus, and this Claude Code account doesn't offer it."
+    : "Motion Reel needs GPT Astra, and this Codex account doesn't offer it (it comes with bigger ChatGPT plans)."
+}

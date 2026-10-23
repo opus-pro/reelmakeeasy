@@ -17,6 +17,8 @@ import {
   FREE_CHAT_BRIEF,
   FREE_CHAT_KICKOFF,
   kickoffFor,
+  motionReelFreeKickoff,
+  motionReelKickoff,
   RANKING_TOPIC_ID,
   RANKING_TOPIC_IDEAS,
   RANKING_TOPIC_RECOMMENDED,
@@ -311,5 +313,32 @@ describe('Loop shorts in the chat briefs', () => {
     expect(brief).toContain('## Loop shorts')
     expect(brief).toContain("make_beat_loop's reply has the cost")
     expect(brief).not.toMatch(/\$\d+\.\d\d for 24 s/)
+  })
+})
+
+describe('an Advanced Motion Reel', () => {
+  it('sets the reel up itself: the options first, cards for choices, references only from the user', () => {
+    const brief = briefFor({ mode: 'motion_free' }, 'codex')
+    expect(brief).toContain('reelmakeeasy-motion-reel')
+    expect(brief).toMatch(/Call it with no arguments first/)
+    expect(brief).toMatch(/as a card with request_user_input/)
+    expect(brief).toMatch(/Only a link the user pasted in this chat can be a reference/)
+    expect(brief).toMatch(/Call motion_setup again only when the user changes/)
+    expect(briefFor({ mode: 'motion_free' }, 'claude')).toMatch(/as a card with AskUserQuestion/)
+    // Easy's brief stays as it was: its card sets the reel up.
+    expect(briefFor({ mode: 'motion' }, 'codex')).not.toContain('motion_setup')
+  })
+
+  it('opens by looking at the options and asking what the reel is for, nothing else', () => {
+    const kickoff = motionReelFreeKickoff('codex')
+    expect(kickoff).toMatch(/^\[ReelMakeEasy\] The user chose Motion Reel, Advanced/)
+    expect(kickoff).toMatch(/call motion_setup with no arguments/)
+    expect(kickoff).toMatch(/Nothing else yet\.$/)
+  })
+
+  it("leaves the Easy kickoff's words as they were", () => {
+    expect(motionReelKickoff('codex', false)).toBe(
+      '[ReelMakeEasy] The user filled in the Motion Reel card and `reel/` is ready. Read the skill, then `reel/brief.md`, `reel/style.md` and `reel/public/reel.json`. Then write `reel/plan.md`, and write the plan in your reply too: one short line per scene (its bars, what is on screen, the sound on its cut), so the user reads it in the chat. Then ask with request_user_input whether to build it (options: build it, or change something).',
+    )
   })
 })

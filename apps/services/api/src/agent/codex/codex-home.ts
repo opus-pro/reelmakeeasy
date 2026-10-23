@@ -5,7 +5,9 @@ import { dataDir } from '@reelmakeeasy/common/storage/file-store'
 
 import { BEAT_LOOP_SKILL_NAME, renderBeatLoopSkill } from '../craft/beat-loop-skill'
 import { CAMERA_SKILL_NAME, renderCameraSkill } from '../craft/camera-skill'
+import { MOTION_REEL_SKILL_NAME, renderMotionReelSkill } from '../craft/motion-reel-skill'
 import { RANKING_SKILL_NAME, renderRankingSkill } from '../craft/ranking-skill'
+import { remotionSkillFolders } from '../motion-reel/motion-runtime'
 
 import { codexHome } from './codex-config'
 
@@ -23,10 +25,25 @@ const AGENT_SKILLS: Record<string, () => string> = {
   [CAMERA_SKILL_NAME]: renderCameraSkill,
   [BEAT_LOOP_SKILL_NAME]: renderBeatLoopSkill,
   [RANKING_SKILL_NAME]: renderRankingSkill,
+  [MOTION_REEL_SKILL_NAME]: renderMotionReelSkill,
 }
 
 /** The skills' names, in the order they are written. */
 export const AGENT_SKILL_NAMES: readonly string[] = Object.keys(AGENT_SKILLS)
+
+/** Remotion's own agent skills a Motion Reel uses (downloaded with its runtime, copied in once
+ *  there). Not its project-creating or rendering skills: ReelMakeEasy sets up and renders. */
+export const REMOTION_SKILLS = [
+  'remotion-best-practices',
+  'remotion-markup',
+  'remotion-multimedia',
+] as const
+
+/** Every skill agent chats load now: ReelMakeEasy's, and Remotion's once downloaded. */
+export function agentSkillNames(): string[] {
+  const remotion = new Set(remotionSkillFolders().map((folder) => folder.name))
+  return [...AGENT_SKILL_NAMES, ...REMOTION_SKILLS.filter((name) => remotion.has(name))]
+}
 
 /**
  * Writes ReelMakeEasy's skills into `<home>/skills/<name>/SKILL.md` and removes `reelmakeeasy-*`
@@ -43,6 +60,13 @@ export function syncAgentSkills(home: string): void {
   for (const [name, render] of Object.entries(AGENT_SKILLS)) {
     fs.mkdirSync(path.join(root, name), { recursive: true })
     fs.writeFileSync(path.join(root, name, 'SKILL.md'), render())
+  }
+  const remotion = remotionSkillFolders().filter((folder) =>
+    (REMOTION_SKILLS as readonly string[]).includes(folder.name),
+  )
+  for (const folder of remotion) {
+    fs.rmSync(path.join(root, folder.name), { force: true, recursive: true })
+    fs.cpSync(folder.dir, path.join(root, folder.name), { recursive: true })
   }
 }
 
