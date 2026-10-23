@@ -103,9 +103,12 @@ overrides:
   # (non-breaking).
   'undici@^7': 7.29.1 # CVE-2026-13697 (2026-09-14 sweep); GHSA-vxpw-j846-p89q +6 (HIGH); + CVE-2026-19534 / -84961 (2026-10-02 sweep)
   'qs@^6': 6.16.0 # GHSA-q8mj-m7cp-5q26 (MEDIUM): prototype pollution / DoS; + 2026-10-15 sweep
-  'follow-redirects@^1': 1.16.0 # GHSA-r4q5-vmmm-2653 (MEDIUM): info leak
+  'follow-redirects@^1': 1.16.1 # GHSA-r4q5-vmmm-2653 (MEDIUM): info leak; + CVE-2026-111755 / -111756 (HIGH, 2026-10-23 sweep)
+  # CVE-2026-111767 / -111768 (HIGH, 2026-10-23 sweep): fixed in 1.32.0. Same major; transitive
+  # (auto-installed peer of @anthropic-ai/claude-agent-sdk).
+  '@modelcontextprotocol/sdk@^1': 1.32.0
   'ip-address@^10': 10.7.1 # CVE-2026-69192 (2026-09-14 sweep); GHSA-v2v4-37r5-5v8g (MEDIUM): SSRF bypass; + 4 SSRF/DoS fixes (2026-10-15 sweep)
-  'launch-editor@^2': 2.14.1 # GHSA-v6wh-96g9-6wx3 (MEDIUM): command injection
+  'launch-editor@^2': 2.14.2 # GHSA-v6wh-96g9-6wx3 (MEDIUM): command injection; 2026-10-23 sweep HIGH fixed in 2.14.2
   'webpack-dev-server@^5': 5.2.6 # GHSA-mx8g-39q3-5c79 +2 (MEDIUM): source leak
   'http-proxy-middleware@^2': 2.0.10 # GHSA-64mm-vxmg-q3vj (MEDIUM): DoS
   'http-proxy-middleware@^3': 3.0.7 # GHSA-gcq2-9pq2-cxqm (HIGH): SSRF
