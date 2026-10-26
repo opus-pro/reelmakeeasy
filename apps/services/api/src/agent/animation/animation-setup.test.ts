@@ -67,13 +67,13 @@ describe('animationSetupFromTool', () => {
         lookId: '8bit',
         music: 'agent',
         musicEngine: 'ace-step',
-        subject: 'How Taipei 101 stays still',
+        subject: 'How Tokyo Skytree stays up in an earthquake',
       }),
     ).toEqual({
       lengthSec: 45,
       lookId: '8bit',
       music: { engine: 'ace-step', source: 'agent' },
-      subject: 'How Taipei 101 stays still',
+      subject: 'How Tokyo Skytree stays up in an earthquake',
     })
   })
 

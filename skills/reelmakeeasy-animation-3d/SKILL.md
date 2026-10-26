@@ -44,7 +44,17 @@ One detailed 3D hero (an object, a machine, an organ, a planet) explains how som
 - **One idea per scene,** each with a visual change on its key word: a part lights up, the hero opens, a cutaway shows the inside, an arrow shows the flow.
 - **Labels** on the parts being explained, with leader lines, at least 3% of the frame height.
 - **The camera never parks:** orbit, crane, push in, spiral, slowly and eased.
-- The library is in `src/stage/` (the 3D stage, camera moves, labels): read its `index.ts` before you build.
+
+### The 3D library (`src/stage/`)
+
+`Animation.tsx` holds `<Voice />`, `<Music />`, `<Stage3D build={build} />` (optionally `background="#0E1116"`) and `<Captions accent="…" />` after it. `build(E, font)` in `src/scenes/episode.ts` makes the whole scene once and returns `{ update(t) }`, which sets everything from t (seconds) alone: no state carried between frames.
+
+- **Engine `E`:** `scene` (studio light, a dark ground at y 0 fading into fog are already there), `camera` (35° PerspectiveCamera), `renderer` (shadows on: set `castShadow` on the hero's meshes), `labels` (the label layer, cleared every frame), `toScreen(vec3)` → `[x, y, inFront]`, `sync()`.
+- **Order inside `update(t)`:** move and scale parts, set the camera, `camera.updateProjectionMatrix()`, `sync()`, then the labels.
+- **Camera:** `cam.orbit(E.camera, t, { target, radius, height, from, speed })` circles the hero; `cam.move(E.camera, t, a, b, from, to, target)` pushes in, cranes or pulls back between times a and b. Chain them per scene with `t` ranges from `lineStart(i) / 30`.
+- **Labels:** `label(E.labels, 'LEFT VENTRICLE', E.toScreen(point), [ox, oy], { k, color, fontFamily: font })` draws a dot, a leader line and the text (58 px, kept inside the margin); grow it in with `k = ss(start, start + 0.5, t)` on its word.
+- **Helpers:** `THREE`, `mat(color, { roughness, metalness })`, `emissive(color, k)` (a part that lights up), `ss`, `back`, `lerp`, `clamp`, `rng(seed)` (never `Math.random()`).
+- Build the hero from three.js shapes (spheres, cylinders, tori, `LatheGeometry`, `ExtrudeGeometry`, `TubeGeometry` along a curve) with enough parts to look real, and animate what it does (a beat, a turn, a flow along a tube with small instanced spheres). A cutaway: hide the outer shell with `ss` and show the inside.
 
 ## Craft rules
 

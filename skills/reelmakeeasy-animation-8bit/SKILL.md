@@ -38,7 +38,7 @@ Remotion is installed. Its own skills (`remotion-best-practices`, `remotion-mark
 
 A low-resolution 3D scene drawn blocky and dithered like an old video game, with crisp pixel-font captions and labels on top, and a narrator.
 
-- **Script:** about 2.3 words per second of length, one narrator. The hook comes first: a big number plus the question ("632 METRES. 128 FLOORS. WHY IS IT TWISTED?"), in everyday words. Then one idea per caption, a new caption every 1.5-2.5 s, and an ending that closes the loop and ties it to daily life. The last shot returns to the first, so the video loops.
+- **Script:** about 2.3 words per second of length, one narrator. The hook comes first: a big number plus the question ("184 METRES TALL. WHY DOESN'T THE SPACE NEEDLE TIP OVER?"), in everyday words. Then one idea per caption, a new caption every 1.5-2.5 s, and an ending that closes the loop and ties it to daily life. The last shot returns to the first, so the video loops.
 - **Voice:** one narrator in `animation_voice` ("Narrator: an upbeat, clear voice with a smile, like a game show host").
 - **A busy screen:** at least 3 layers move at any moment (the hero, life around it, weather or flows, the HUD).
 - **The hero has real detail** and stands out; everything else is smaller, muted and sparser.
