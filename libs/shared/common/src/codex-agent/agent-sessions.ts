@@ -54,7 +54,9 @@ export type SessionRowStatus =
  *  with it keeps its history and carries on as Free chat. Anything else unknown is no mode. */
 export function agentModeFromStored(mode: unknown): AgentMode | undefined {
   if (mode === 'guided') return 'free'
-  return mode === 'autonomous' ||
+  return mode === 'animation' ||
+    mode === 'animation_free' ||
+    mode === 'autonomous' ||
     mode === 'free' ||
     mode === 'motion' ||
     mode === 'motion_free' ||

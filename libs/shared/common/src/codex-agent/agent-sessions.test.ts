@@ -87,6 +87,11 @@ describe('agentModeFromStored', () => {
     expect(agentModeFromStored('motion_free')).toBe('motion_free')
   })
 
+  it('keeps Claude Animation', () => {
+    expect(agentModeFromStored('animation')).toBe('animation')
+    expect(agentModeFromStored('animation_free')).toBe('animation_free')
+  })
+
   it('reads a chat saved in the removed Guided mode as Free chat', () => {
     expect(agentModeFromStored('guided')).toBe('free')
   })

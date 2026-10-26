@@ -38,6 +38,27 @@ describe('ChatModelService', () => {
     expect(probe).toHaveBeenCalledTimes(1)
   })
 
+  it('refuses Claude Animation on Codex, whatever its models', async () => {
+    const probe = jest.fn().mockResolvedValue({ models, plan: 'pro' })
+    const svc = new ChatModelService({ probe, root })
+    await expect(svc.animationGate('codex')).resolves.toBe(
+      'Claude Animation runs only on Claude Code.',
+    )
+  })
+
+  it('gates Claude Animation on Claude Code like a Motion Reel: Opus or nothing', async () => {
+    const sonnet = [{ efforts: ['low', 'medium'], id: 'claude-sonnet-5-5', label: 'Sonnet 5.5' }]
+    const opus = [{ efforts: ['low', 'medium', 'high'], id: 'claude-opus-5-5', label: 'Opus 5.5' }]
+    const probe = jest.fn().mockResolvedValueOnce({ models: sonnet })
+    const svc = new ChatModelService({ probe, root })
+    await expect(svc.animationGate('claude')).resolves.toBe(
+      "Claude Animation needs Claude Opus, and this Claude Code account doesn't offer it.",
+    )
+    probe.mockResolvedValueOnce({ models: [...sonnet, ...opus] })
+    await svc.catalog('claude', { refresh: true })
+    await expect(svc.animationGate('claude')).resolves.toBeNull()
+  })
+
   it('saves and clears a default per harness, kept on disk', async () => {
     const probe = jest.fn().mockResolvedValue({ models, plan: 'plus' })
     const svc = new ChatModelService({ probe, root })

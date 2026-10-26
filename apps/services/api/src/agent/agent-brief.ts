@@ -351,6 +351,10 @@ function makeMusicStep(engine: MotionMusicEngine): string {
   return `The user asked for music from ${MOTION_MUSIC_ENGINE_INFO[engine].label}: before planning, compose it with motion_music (engine "${engine}": one description written for this reel, its type and subject, with a tempo), then read \`reel/music-map.md\` again: the grid and events are the new track's.`
 }
 
+/** The hidden first turn of an Advanced Claude Animation chat (it has no setup card). */
+export const ANIMATION_FREE_KICKOFF =
+  "[ReelMakeEasy] The user chose Claude Animation, Advanced (free chat). Call animation_setup with no arguments to see the looks and music. Then, in one or two short sentences, ask what the animation should be about (or offer to pick a fun fact yourself) and which look they'd like: 2D, 3D or 8-bit. Nothing else yet."
+
 /** The hidden first turn of an Advanced Motion Reel chat (it has no setup card). */
 export function motionReelFreeKickoff(harness: AgentHarnessName): string {
   return fillToolNames(

@@ -474,6 +474,58 @@ describe('AgentController', () => {
       expect(stub.chooseMode).toHaveBeenCalledWith(SESSION.id, 'motion', undefined, undefined)
     })
 
+    it('refuses Claude Animation on Codex (409) and takes it on Claude Code', async () => {
+      const stub = makeStubService()
+      const models = {
+        animationGate: jest.fn(async (h: string) =>
+          h === 'claude' ? null : 'Claude Animation runs only on Claude Code.',
+        ),
+      }
+      const controller = new AgentController(
+        stub as never,
+        NO_AUTONOMOUS,
+        NO_PROJECTS,
+        NO_EDIT,
+        models as never,
+        NO_RANKINGS,
+        NO_MOTION,
+      )
+      await expect(
+        controller.chooseMode(S1, { harness: 'codex', mode: 'animation' }),
+      ).rejects.toThrow(new ConflictException('Claude Animation runs only on Claude Code.'))
+      expect(stub.chooseMode).not.toHaveBeenCalled()
+      await expect(
+        controller.chooseMode(S1, { harness: 'claude', mode: 'animation_free' }),
+      ).resolves.toEqual({ ok: true })
+      expect(stub.chooseMode).toHaveBeenCalledWith(S1, 'animation_free', 'claude')
+    })
+
+    it('makes a chat for Claude Animation on Claude Code, and refuses one asked on Codex', async () => {
+      const stub = makeStubService()
+      const models = {
+        animationGate: jest.fn(async (h: string) =>
+          h === 'claude' ? null : 'Claude Animation runs only on Claude Code.',
+        ),
+        catalog: jest.fn().mockResolvedValue(null),
+      }
+      const controller = new AgentController(
+        stub as never,
+        NO_AUTONOMOUS,
+        NO_PROJECTS,
+        NO_EDIT,
+        models as never,
+        NO_RANKINGS,
+        NO_MOTION,
+      )
+      await expect(
+        controller.createSession({ harness: 'codex', mode: 'animation' }),
+      ).rejects.toThrow(new ConflictException('Claude Animation runs only on Claude Code.'))
+      expect(stub.createSession).not.toHaveBeenCalled()
+      await controller.createSession({ mode: 'animation' })
+      expect(stub.createSession).toHaveBeenCalledWith({ harness: 'claude', title: undefined })
+      expect(stub.chooseMode).toHaveBeenCalledWith(SESSION.id, 'animation', undefined, undefined)
+    })
+
     it('answers a Motion Reel setup card: 400 for a bad card, 409 once it is taken', () => {
       const motion = { setup: jest.fn() }
       const controller = new AgentController(
