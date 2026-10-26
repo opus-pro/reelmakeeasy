@@ -124,6 +124,8 @@ describe('AnimationService, the setup card', () => {
       ['8bit', '8-bit', [30, 45, 60], null],
     ])
     expect(options.looks[0]?.defaultTrackId).toBe('data-pulse')
+    // Every look has a preview clip in the presets.
+    for (const look of options.looks) expect(look.previewUrl).toMatch(/animation\/looks\/.+\.mp4$/)
     expect(options.tracks.length).toBeGreaterThan(0)
     expect(options.composers.map((c) => c.id)).toEqual(['eleven-music', 'ace-step'])
   })
