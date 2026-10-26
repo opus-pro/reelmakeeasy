@@ -462,6 +462,8 @@ describe('Claude Animation chats', () => {
     expect(kickoff).toContain('`reelmakeeasy-animation-2d`')
     expect(kickoff).toMatch(/animation_music \(engine "ace-step"\)/)
     expect(kickoff).toMatch(/script.*plan of one short line per scene.*\{ASK\}/)
+    // The user approves what they can read: the script goes in the reply, before the card.
+    expect(kickoff).toMatch(/Write your reply first.*"Who: words".*only then ask/i)
   })
 
   it('makes no music when the user picked some', () => {

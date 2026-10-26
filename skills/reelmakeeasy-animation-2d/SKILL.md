@@ -20,7 +20,7 @@ Remotion is installed. Its own skills (`remotion-best-practices`, `remotion-mark
 ## How to work
 
 1. **Read** `brief.md`, `look.md` and the look's library (`index.ts`).
-2. **Write the script** the look asks for (below), and a plan of one short line per scene (what is said, what is on screen). Put both in your reply (not only in a file or your thinking: the user can't see those), then ask if it's good, unless they already said to go ahead.
+2. **Write the script** the look asks for (below), and a plan of one short line per scene (what is said, what is on screen). Write both as your reply's text, the script as "Who: words" rows (not only in a file or your thinking: the user can't see those), then ask if it's good, unless they already said to go ahead. Never ask to build a script the user hasn't read.
 3. **Record the voices** with `animation_voice`: `lines` one "Who: words" per row, in order, and `voices` one "Who: description" per speaker. It keeps takes that say your words and match each speaker; listen to the lines it warns about (ask the user). When the total is much longer than the length asked for, shorten the script and record again.
 4. **Make the music** with `animation_music` only when the brief says you make it.
 5. **Build.** One component per scene in `src/scenes/`, placed in `Animation.tsx` with `<Sequence from={lineStart(i)}>` so every scene starts on its line. Keep `<Voice />`, `<Music />` and `<Captions />` in `Animation.tsx` (captions in the look's palette and font).
