@@ -112,38 +112,6 @@
         "source": "https://fal.ai/models/fal-ai/elevenlabs/music",
         "prompt": "Exciting modern synthwave product launch anthem. Driving gated drums, pumping octave bass, bright neon lead hook, lush pads, a riser into a big euphoric chorus at bar 9 with impact hits. 112 BPM, steady tempo, glowing, energetic and futuristic. Instrumental, no vocals."
       }
-    },
-    {
-      "id": "keynote-air",
-      "title": "Keynote Air",
-      "bpm": 60,
-      "styles": [
-        "minimal-keynote"
-      ],
-      "file": "motion-reel/music/keynote-air-60s.mp3",
-      "durationSec": 60,
-      "credit": {
-        "artist": "ElevenLabs Music v2.5 (via fal)",
-        "license": "AI-generated for ReelMakeEasy; commercial use under the fal and ElevenLabs terms",
-        "source": "https://fal.ai/models/fal-ai/elevenlabs/music",
-        "prompt": "Inspiring keynote product reveal music that builds. Confident piano motif, warm strings, punchy modern drums entering at bar 5, rising swells, a big emotional lift at bar 9 with orchestral hits. 88 BPM, steady tempo, elegant, hopeful and exciting. Instrumental, no vocals."
-      }
-    },
-    {
-      "id": "pixel-dash",
-      "title": "Pixel Dash",
-      "bpm": 136,
-      "styles": [
-        "retro-pixel"
-      ],
-      "file": "motion-reel/music/pixel-dash-60s.mp3",
-      "durationSec": 60,
-      "credit": {
-        "artist": "ElevenLabs Music v2.5 (via fal)",
-        "license": "AI-generated for ReelMakeEasy; commercial use under the fal and ElevenLabs terms",
-        "source": "https://fal.ai/models/fal-ai/elevenlabs/music",
-        "prompt": "Hyper, exciting chiptune-EDM launch track for retro pixel graphics. 8-bit lead hook over punchy EDM drums and a pumping bass, fast arpeggios, risers and big drops every 8 bars, power-up sound energy. 136 BPM, steady tempo, fun, loud and thrilling. Instrumental, no vocals."
-      }
     }
   ]
 }
