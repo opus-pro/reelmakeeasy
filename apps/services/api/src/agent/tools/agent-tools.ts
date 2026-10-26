@@ -3,6 +3,7 @@ import { type AgentHarnessName, type AgentMode, isRankingMode } from '@shared/ty
 import { MAKE_LOOP_LABEL } from '../craft/beat-loop-skill'
 
 export type AgentToolName =
+  | 'animation_voice'
   | 'generate_image'
   | 'make_beat_loop'
   | 'make_video'
@@ -120,6 +121,38 @@ export const AGENT_TOOLS: Record<AgentToolName, DynamicToolSpec> = {
       type: 'object',
     },
     name: 'make_video',
+  },
+  animation_voice: {
+    description:
+      "Record the animation's voices (free on this computer; when the voices aren't installed it says so first, as they would run on fal, paid). Each line gets up to 3 takes; the kept one says the script's words and matches its speaker's pitch. The reply gives the total length and any line to listen to; public/voice.wav and public/voice/lines.json (each line's start, end, words and loudness) are rewritten, so scenes timed with lineStart() and wordAt() follow. Record again only when the script changes.",
+    inputSchema: {
+      additionalProperties: false,
+      properties: {
+        confirmPaid: {
+          description: 'true only after you told the user the voices run on fal, paid.',
+          type: 'boolean',
+        },
+        lines: {
+          description:
+            'Every line, in order, one per row: "Who: the words, as said" (numbers as digits: "3000 years"; no stage directions). A narrator is "Narrator: …".',
+          type: 'string',
+        },
+        pauseMs: {
+          description: 'Silence between lines, in ms (default 250).',
+          maximum: 2000,
+          minimum: 0,
+          type: 'integer',
+        },
+        voices: {
+          description:
+            'Each speaker\'s voice, one per row: "Who: a vivid description" (age, energy, pace, attitude: "Bee: a cheerful young bee, quick and bright"), or a preset id starting kokoro-.',
+          type: 'string',
+        },
+      },
+      required: ['lines', 'voices'],
+      type: 'object',
+    },
+    name: 'animation_voice',
   },
   motion_music: {
     description:
@@ -641,6 +674,7 @@ export function toolsForSession(
 
 /** The chat pill's text for calls whose text doesn't depend on their arguments. */
 const FIXED_SUMMARIES: Record<string, string> = {
+  animation_voice: 'Recording the voices',
   generate_image: 'Making a preview image',
   motion_music: 'Composing the music',
   motion_render: 'Rendering the reel',

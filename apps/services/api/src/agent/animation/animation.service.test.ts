@@ -5,6 +5,8 @@ import path from 'node:path'
 import type { AgentAnimationSetupView, AgentSession } from '@shared/types/api/agent'
 
 import { voiceReadiness } from './animation-setup'
+import type { VoiceDeps } from './animation-voice'
+import { sineWav } from './test-wav'
 import { AnimationService, type AnimationSessions, AnimationSetupTakenError } from './animation.service'
 
 // Setting up installs Remotion: a stand-in here. The project itself is laid out for real.
@@ -26,7 +28,7 @@ const CARD = {
   subject: 'Why honey never spoils',
 }
 
-export function makeAnimation(mode: AgentSession['mode']) {
+export function makeAnimation(mode: AgentSession['mode'], voice?: VoiceDeps) {
   const workspace = fs.mkdtempSync(path.join(os.tmpdir(), 'animation-svc-'))
   let session: AgentSession = {
     createdAt: '',
@@ -60,7 +62,7 @@ export function makeAnimation(mode: AgentSession['mode']) {
   }
   return {
     messages,
-    service: new AnimationService(sessions),
+    service: new AnimationService(sessions, voice ? { voice } : {}),
     sessions,
     started,
     updated,
@@ -131,5 +133,98 @@ describe('AnimationService, the setup card', () => {
     service.setup('s1', { ...CARD, music: { id: 'data-pulse', source: 'library' } })
     await waitFor(() => started.length === 1)
     expect(started[0]?.setup.musicTitle).toBeTruthy()
+  })
+})
+
+describe('AnimationService, animation_voice', () => {
+  const fakeVoice = (): VoiceDeps & { voices: string[] } => {
+    const voices: string[] = []
+    return {
+      align: jest.fn(async (_f: string, text: string) =>
+        text.split(/\s+/).map((w, i) => ({ end: (i + 1) * 0.3, start: i * 0.3, text: w })),
+      ),
+      speak: jest.fn(async ({ voice }: { voice: string }) => {
+        voices.push(voice)
+        return { audio: sineWav(200, 1.2), ranOn: 'local' as const }
+      }),
+      voices,
+    }
+  }
+  const LINES = {
+    lines: 'Bee: Did you know honey never spoils?\nJar: Not even after 3000 years!',
+    voices: 'Bee: a cheerful bee\nJar: a slow old jar',
+  }
+
+  afterEach(() =>
+    jest.mocked(voiceReadiness).mockResolvedValue({ designed: 'local', preset: 'local' }),
+  )
+
+  async function ready(lookId = '2d', voice = fakeVoice()) {
+    const made = makeAnimation('animation', voice)
+    made.service.setup('s1', { ...CARD, lookId })
+    await waitFor(() => made.started.length === 1)
+    return { ...made, voice }
+  }
+
+  it('records the lines and points the project at the voice', async () => {
+    const { service, workspace } = await ready()
+    const result = await service.callTool('s1', 'animation_voice', LINES)
+    expect(result.success).toBe(true)
+    expect(result.text).toMatch(/Recorded 2 lines \(Bee, Jar\): .* s in all/)
+    const spec = JSON.parse(
+      fs.readFileSync(path.join(workspace, 'animation/public/animation.json'), 'utf8'),
+    ) as { voiceFile: string }
+    expect(spec.voiceFile).toBe('voice.wav')
+  })
+
+  it('asks before paying for fal voices', async () => {
+    jest.mocked(voiceReadiness).mockResolvedValue({ designed: 'fal', preset: 'fal' })
+    const { service, voice } = await ready()
+    const ask = await service.callTool('s1', 'animation_voice', LINES)
+    expect(ask.success).toBe(false)
+    expect(ask.text).toMatch(/run on fal, paid.*confirmPaid: true/)
+    expect(voice.speak).not.toHaveBeenCalled()
+    const done = await service.callTool('s1', 'animation_voice', { ...LINES, confirmPaid: true })
+    expect(done.success).toBe(true)
+  })
+
+  it('fails plainly with no way to make designed voices for two characters', async () => {
+    const { service } = await ready()
+    jest.mocked(voiceReadiness).mockResolvedValueOnce({ designed: null, preset: 'local' })
+    const result = await service.callTool('s1', 'animation_voice', LINES)
+    expect(result).toEqual({
+      success: false,
+      text: 'No designed voices here: install Qwen3 voices (run setup again) or add a fal key.',
+    })
+  })
+
+  it('gives a narrator a preset voice when designed voices are missing', async () => {
+    const { service, voice } = await ready('3d')
+    jest.mocked(voiceReadiness).mockResolvedValueOnce({ designed: null, preset: 'local' })
+    const result = await service.callTool('s1', 'animation_voice', {
+      lines: 'Narrator: The heart has 4 rooms.',
+      voices: 'Narrator: a calm doctor',
+    })
+    expect(result.success).toBe(true)
+    expect(voice.voices).toEqual(['kokoro-am_michael'])
+    expect(result.text).toMatch(/preset voice/)
+  })
+
+  it('says which lines to cut when the voice runs long', async () => {
+    const { service } = await ready()
+    const many = Array.from({ length: 30 }, (_, i) => `Bee: Line number ${i + 1} is here.`)
+    const result = await service.callTool('s1', 'animation_voice', {
+      lines: many.join('\n'),
+      voices: 'Bee: a cheerful bee',
+    })
+    expect(result.text).toMatch(/longer than the 30 s asked for: shorten or cut lines/)
+  })
+
+  it('needs the animation set up first', async () => {
+    const { service } = makeAnimation('animation_free', fakeVoice())
+    await expect(service.callTool('s1', 'animation_voice', LINES)).resolves.toEqual({
+      success: false,
+      text: 'Set the animation up first: call animation_setup.',
+    })
   })
 })

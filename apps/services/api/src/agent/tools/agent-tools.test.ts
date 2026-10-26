@@ -292,3 +292,11 @@ describe('loop shorts', () => {
     )
   })
 })
+
+describe('a Claude Animation chat', () => {
+  it('records voices from the lines and each speaker\'s voice', () => {
+    const schema = AGENT_TOOLS.animation_voice.inputSchema as { required: string[] }
+    expect(schema.required).toEqual(['lines', 'voices'])
+    expect(toolSummary('animation_voice', { lines: [] })).toBe('Recording the voices')
+  })
+})
