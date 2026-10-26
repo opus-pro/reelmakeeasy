@@ -2,6 +2,7 @@ import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
 
+import type { BeatGrid } from '@reelmakeeasy/common/motion-reel/beat-grid'
 import type { MotionReelSetup } from '@reelmakeeasy/common/motion-reel/reel-config'
 
 import { prepareReelProject, REEL_DIR } from './motion-project'
@@ -79,5 +80,81 @@ describe('prepareReelProject (the music)', () => {
     expect(reel.events.kicks.every((t) => reel.beats.some((b) => Math.abs(b - t) < 0.03))).toBe(
       true,
     )
+  })
+
+  it("puts a composed score under the reel from its first bar, its grid and events exactly the score's", async () => {
+    const file = path.join(workspace, 'composer-1.wav')
+    kickWav(file, 12)
+    const beats = Array.from({ length: 24 }, (_, i) => i * 0.5)
+    const grid: BeatGrid = {
+      beats,
+      beatsPerBar: 4,
+      bpm: 120,
+      downbeats: beats.filter((_, i) => i % 4 === 0),
+      durationSec: 12,
+      events: {
+        chords: [0, 2, 4, 6, 8, 10],
+        // Off the kick bursts on purpose: written events are taken as they are, not found by ear.
+        kicks: [0.25, 2.25, 4.25],
+        melody: [{ strength: 1, t: 1 }],
+        sections: [
+          { endSec: 4, energy: 1, name: 'intro', startSec: 0 },
+          { endSec: 12, energy: 3, name: 'drop', startSec: 4 },
+        ],
+        snares: [1.5, 3.5],
+      },
+      strongHits: [4],
+    }
+    const { reel } = await prepareReelProject({
+      music: { file, grid, title: 'Composed: E dorian, 120 BPM' },
+      musicOnly: true,
+      setup: { ...setup, lengthSec: 10 },
+      workspace,
+    })
+    expect(reel).toMatchObject({ bars: 5, bpm: 120, lengthSec: 10 })
+    expect(reel.beats.slice(0, 3)).toEqual([0, 0.5, 1])
+    expect(reel.events.kicks).toEqual([0.25, 2.25, 4.25])
+    expect(reel.events.snares).toEqual([1.5, 3.5])
+    expect(reel.events.sections.map((s) => [s.name, s.startSec, s.endSec])).toEqual([
+      ['intro', 0, 4],
+      ['drop', 4, 10],
+    ])
+    expect(fs.existsSync(path.join(workspace, REEL_DIR, 'public', 'music.wav'))).toBe(true)
+  })
+})
+
+describe('prepareReelProject (music the agent composes)', () => {
+  let workspace: string
+
+  beforeEach(() => {
+    workspace = fs.mkdtempSync(path.join(os.tmpdir(), 'motion-composer-setup-'))
+  })
+
+  afterEach(() => fs.rmSync(workspace, { force: true, recursive: true }))
+
+  it('copies the composer into reel/music/ and writes its config from the setup', async () => {
+    const composing: MotionReelSetup = { ...setup, music: { engine: 'composer', source: 'agent' } }
+    const { reel } = await prepareReelProject({
+      music: null,
+      musicOnly: true,
+      setup: composing,
+      workspace,
+    })
+    const dir = path.join(workspace, REEL_DIR, 'music')
+    expect(fs.existsSync(path.join(dir, 'tools', 'score.mjs'))).toBe(true)
+    expect(fs.existsSync(path.join(dir, 'tools', 'audio', 'instruments.mjs'))).toBe(true)
+    const config = fs.readFileSync(path.join(dir, 'reel.config.mjs'), 'utf8')
+    expect(config).toContain(`  bpm: ${reel.bpm},`)
+    expect(config).toContain('  title: "ReelMakeEasy",')
+    expect(config).toContain("  audio: { ending: 'ring', lufs: -14, tp: -1 },")
+    expect(fs.readFileSync(path.join(workspace, REEL_DIR, 'brief.md'), 'utf8')).toMatch(
+      /composed by you with the reelmakeeasy-music-composer skill/,
+    )
+
+    // Music made another way gets no composer.
+    const other = fs.mkdtempSync(path.join(os.tmpdir(), 'motion-composer-setup-'))
+    await prepareReelProject({ music: null, musicOnly: true, setup, workspace: other })
+    expect(fs.existsSync(path.join(other, REEL_DIR, 'music'))).toBe(false)
+    fs.rmSync(other, { force: true, recursive: true })
   })
 })

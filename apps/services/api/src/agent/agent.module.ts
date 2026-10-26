@@ -36,6 +36,7 @@ import { SoundLibraryModule } from '../sound-library/sound-library.module'
 import { SoundLibraryService } from '../sound-library/sound-library.service'
 
 import { MotionReelService } from './motion-reel/motion-reel.service'
+import { MotionTaskTracker } from './motion-reel/motion-tasks'
 import { AgentController } from './agent.controller'
 import { AgentSessionService } from './agent-session.service'
 import { ChatModelService } from './chat-model.service'
@@ -63,6 +64,12 @@ import { ChatModelService } from './chat-model.service'
         const motion = () => refs.get(MotionReelService, { strict: true })
         // The Ranking Builder's tools; the session service gives the chat's working folder.
         let session: AgentSessionService | undefined
+        // A Motion Reel's phases (its Tasks panel), sent as its tools run and its turns end.
+        const motionTasks = new MotionTaskTracker({
+          emitAutonomousEvent: (id, event) => session?.emitAutonomousEvent(id, event),
+          getSession: (id) => (session as AgentSessionService).getSession(id),
+          workingDir: (id) => (session as AgentSessionService).workingDir(id),
+        })
         const rankingTools = new RankingAgentTools({
           onRanking: (id, rankingId) => session?.followRanking(id, rankingId),
           prints: new LibraryPrints(sounds),
@@ -89,8 +96,11 @@ import { ChatModelService } from './chat-model.service'
             tool.startsWith('ranking_')
               ? rankingTools.call(id, tool, args)
               : tool.startsWith('motion_')
-                ? motion().callTool(id, tool, args)
+                ? motionTasks.track(id, tool, () => motion().callTool(id, tool, args))
                 : edit().callTool(id, tool, args),
+          // Both can come while the session service is still being made (its restart pass).
+          onTurnEnd: (id) => session && motionTasks.turnEnded(id),
+          onTurnStart: (id) => session && motionTasks.turnStarted(id),
         })
         return session
       },

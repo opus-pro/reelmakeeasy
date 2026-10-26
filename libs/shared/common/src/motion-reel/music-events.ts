@@ -274,7 +274,9 @@ function capPerBeat(hits: Hit[], beats: number[]): number[] {
   const byBeat = new Map<number, Hit[]>()
   for (const h of hits) {
     const index = beatIndex(beats, h.t)
-    byBeat.set(index, [...(byBeat.get(index) ?? []), h])
+    const group = byBeat.get(index)
+    if (group) group.push(h)
+    else byBeat.set(index, [h])
   }
   const kept = [...byBeat.values()].flatMap((group) =>
     group.sort((a, b) => b.s - a.s).slice(0, DRUMS_PER_BEAT),

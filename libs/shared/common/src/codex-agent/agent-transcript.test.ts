@@ -893,3 +893,72 @@ describe('Motion Reel events', () => {
     ])
   })
 })
+
+describe('reduceTranscript, a Motion Reel', () => {
+  it('keeps the last motion_tasks list, and a user message leaves it in place', () => {
+    const t = run([
+      {
+        id: 1,
+        tasks: [{ id: 'setup', label: 'Set up', result: null, state: 'running' }],
+        type: 'motion_tasks',
+      },
+      {
+        id: 2,
+        tasks: [
+          { id: 'setup', label: 'Set up', result: 'HUD Showreel', state: 'done' },
+          {
+            details: ['Sync: passes.'],
+            id: 'sync',
+            label: 'Sync check',
+            result: 'Sync: passes',
+            state: 'done',
+          },
+        ],
+        type: 'motion_tasks',
+      },
+      { id: 3, text: 'more pop', type: 'user_message' },
+    ])
+    expect(t.motionTasks?.map((task) => [task.id, task.state, task.result])).toEqual([
+      ['setup', 'done', 'HUD Showreel'],
+      ['sync', 'done', 'Sync: passes'],
+    ])
+    expect(t.lastEventId).toBe(3)
+    expect(initialTranscript.motionTasks).toBeNull()
+  })
+
+  it('ignores a replayed older list', () => {
+    const first = run([
+      {
+        id: 5,
+        tasks: [{ id: 'render', label: 'Render', result: 'Render 2 of 3', state: 'done' }],
+        type: 'motion_tasks',
+      },
+    ])
+    const t = reduceTranscript(first, {
+      id: 4,
+      tasks: [{ id: 'render', label: 'Render', result: null, state: 'waiting' }],
+      type: 'motion_tasks',
+    })
+    expect(t.motionTasks?.[0]?.result).toBe('Render 2 of 3')
+  })
+
+  it('a stop (a restart, an exit) settles what was running: nothing spins after it', () => {
+    const t = run([
+      {
+        id: 1,
+        tasks: [
+          { id: 'build', label: 'Build', result: '3 scene files', state: 'running' },
+          { id: 'render', label: 'Render', result: 'Rendering 2 of 3…', state: 'running' },
+          { id: 'setup', label: 'Set up', result: 'HUD Showreel', state: 'done' },
+        ],
+        type: 'motion_tasks',
+      },
+      { id: 2, reason: 'The server restarted', status: 'stopped', type: 'session' },
+    ])
+    expect(t.motionTasks?.map((task) => [task.id, task.state, task.result])).toEqual([
+      ['build', 'done', '3 scene files'],
+      ['render', 'failed', 'Stopped before it finished'],
+      ['setup', 'done', 'HUD Showreel'],
+    ])
+  })
+})

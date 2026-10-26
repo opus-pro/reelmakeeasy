@@ -1,4 +1,11 @@
-import { alignmentReport, analyseBeatGrid, ANALYSIS_SAMPLE_RATE, fitReel } from './beat-grid'
+import {
+  alignmentReport,
+  analyseBeatGrid,
+  ANALYSIS_SAMPLE_RATE,
+  type BeatGrid,
+  fitReel,
+  wholeBars,
+} from './beat-grid'
 
 const SR = ANALYSIS_SAMPLE_RATE
 
@@ -65,6 +72,28 @@ describe('analyseBeatGrid', () => {
 
 describe('fitReel', () => {
   const grid = analyseBeatGrid(clickTrack(120, 40))
+
+  it('rounds a half bar up, whatever the float error (30 s at 116 BPM is 15 bars)', () => {
+    for (const [lengthSec, bpm, bars] of [
+      [30, 116, 15],
+      [15, 232, 15],
+      [60, 58, 15],
+      [60, 226, 57],
+    ] as const) {
+      expect(wholeBars(lengthSec, bpm)).toBe(bars)
+      const beatSec = 60 / bpm
+      const beats = Array.from({ length: bars * 4 }, (_, i) => i * beatSec)
+      const exact: BeatGrid = {
+        beats,
+        beatsPerBar: 4,
+        bpm,
+        downbeats: beats.filter((_, i) => i % 4 === 0),
+        durationSec: bars * 4 * beatSec,
+        strongHits: [],
+      }
+      expect(fitReel(exact, lengthSec).bars).toBe(bars)
+    }
+  })
 
   it('picks whole bars close to the target length, starting on a bar start', () => {
     const fit = fitReel(grid, 15)

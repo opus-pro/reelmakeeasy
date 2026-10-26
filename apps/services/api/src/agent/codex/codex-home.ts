@@ -6,6 +6,7 @@ import { dataDir } from '@reelmakeeasy/common/storage/file-store'
 import { BEAT_LOOP_SKILL_NAME, renderBeatLoopSkill } from '../craft/beat-loop-skill'
 import { CAMERA_SKILL_NAME, renderCameraSkill } from '../craft/camera-skill'
 import { MOTION_REEL_SKILL_NAME, renderMotionReelSkill } from '../craft/motion-reel-skill'
+import { MUSIC_COMPOSER_SKILL_NAME, musicComposerSkillDir } from '../craft/music-composer-skill'
 import { RANKING_SKILL_NAME, renderRankingSkill } from '../craft/ranking-skill'
 import { remotionSkillFolders } from '../motion-reel/motion-runtime'
 
@@ -28,8 +29,17 @@ const AGENT_SKILLS: Record<string, () => string> = {
   [MOTION_REEL_SKILL_NAME]: renderMotionReelSkill,
 }
 
+/** Skills ReelMakeEasy ships as checked-in folders (a SKILL.md with its references), copied whole:
+ *  their folder in the repo, by name. */
+const AGENT_SKILL_FOLDERS: Record<string, () => string> = {
+  [MUSIC_COMPOSER_SKILL_NAME]: () => musicComposerSkillDir(),
+}
+
 /** The skills' names, in the order they are written. */
-export const AGENT_SKILL_NAMES: readonly string[] = Object.keys(AGENT_SKILLS)
+export const AGENT_SKILL_NAMES: readonly string[] = [
+  ...Object.keys(AGENT_SKILLS),
+  ...Object.keys(AGENT_SKILL_FOLDERS),
+]
 
 /** Remotion's own agent skills a Motion Reel uses (downloaded with its runtime, copied in once
  *  there). Not its project-creating or rendering skills: ReelMakeEasy sets up and renders. */
@@ -42,7 +52,23 @@ export const REMOTION_SKILLS = [
 /** Every skill agent chats load now: ReelMakeEasy's, and Remotion's once downloaded. */
 export function agentSkillNames(): string[] {
   const remotion = new Set(remotionSkillFolders().map((folder) => folder.name))
-  return [...AGENT_SKILL_NAMES, ...REMOTION_SKILLS.filter((name) => remotion.has(name))]
+  return [
+    ...Object.keys(AGENT_SKILLS),
+    ...Object.entries(AGENT_SKILL_FOLDERS)
+      .filter(([, source]) => skillFolder(source))
+      .map(([name]) => name),
+    ...REMOTION_SKILLS.filter((name) => remotion.has(name)),
+  ]
+}
+
+/** A checked-in skill's folder, or null when this install doesn't have it (it is then skipped). */
+function skillFolder(source: () => string): null | string {
+  try {
+    const dir = source()
+    return fs.existsSync(path.join(dir, 'SKILL.md')) ? dir : null
+  } catch {
+    return null
+  }
 }
 
 /**
@@ -53,13 +79,18 @@ export function syncAgentSkills(home: string): void {
   const root = path.join(home, 'skills')
   fs.mkdirSync(root, { recursive: true })
   for (const entry of fs.readdirSync(root)) {
-    if (entry.startsWith('reelmakeeasy-') && !(entry in AGENT_SKILLS)) {
+    if (entry.startsWith('reelmakeeasy-') && !AGENT_SKILL_NAMES.includes(entry)) {
       fs.rmSync(path.join(root, entry), { force: true, recursive: true })
     }
   }
   for (const [name, render] of Object.entries(AGENT_SKILLS)) {
     fs.mkdirSync(path.join(root, name), { recursive: true })
     fs.writeFileSync(path.join(root, name, 'SKILL.md'), render())
+  }
+  for (const [name, source] of Object.entries(AGENT_SKILL_FOLDERS)) {
+    fs.rmSync(path.join(root, name), { force: true, recursive: true })
+    const dir = skillFolder(source)
+    if (dir) fs.cpSync(dir, path.join(root, name), { recursive: true })
   }
   const remotion = remotionSkillFolders().filter((folder) =>
     (REMOTION_SKILLS as readonly string[]).includes(folder.name),

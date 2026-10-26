@@ -4,6 +4,7 @@ import type {
   AgentLoopLine,
   AgentMode,
   AgentMotionSetupView,
+  AgentMotionTask,
   AgentPlanStep,
   AgentQuestion,
   AgentUiEvent,
@@ -24,6 +25,8 @@ export type Transcript = {
   lastEventId: number
   /** Chosen once, right after the session is created; null until the `mode` event arrives. */
   mode: AgentMode | null
+  /** A Motion Reel's phases (the last `motion_tasks` event); null until ReelMakeEasy sends them. */
+  motionTasks: AgentMotionTask[] | null
   /** The latest `turn/plan/updated` steps; cleared when the user sends a message. */
   plan: AgentPlanStep[] | null
   /** A Ranking chat's ranking (the last `ranking` event) and how many changes it has seen, so
@@ -86,6 +89,7 @@ export const initialTranscript: Transcript = {
   entries: [],
   lastEventId: 0,
   mode: null,
+  motionTasks: null,
   plan: null,
   ranking: null,
   working: false,
@@ -314,6 +318,20 @@ const handleQuestionExpired = (
   entries: expireQuestion(state.entries, event.questionId),
 })
 
+/**
+ * A Motion Reel's phases when the agent stops (an exit, a restart): nothing it was doing is
+ * running any more. Scenes being written are as far as they got; a call cut off says so. A call
+ * the server still finishes sends the phases again.
+ */
+const settleMotionTasks = (tasks: AgentMotionTask[] | null): AgentMotionTask[] | null =>
+  tasks?.some((t) => t.state === 'running')
+    ? tasks.map((t): AgentMotionTask => {
+        if (t.state !== 'running') return t
+        if (t.id === 'build') return { ...t, state: 'done' }
+        return { ...t, result: 'Stopped before it finished', state: 'failed' }
+      })
+    : tasks
+
 const handleSession = (
   state: Transcript,
   next: Transcript,
@@ -335,6 +353,7 @@ const handleSession = (
     // The agent's cards go with it; ReelMakeEasy's own stay until it expires them (an agent that
     // exited mid-turn leaves the loop card it waits on answerable).
     entries: stopped ? expireOpenStyle(settleInFlight(entries, true)) : entries,
+    motionTasks: stopped ? settleMotionTasks(state.motionTasks) : state.motionTasks,
     working: stopped || idle ? false : event.status === 'running' ? true : state.working,
   }
 }
@@ -601,6 +620,9 @@ export function reduceTranscript(state: Transcript, event: TranscriptAction): Tr
     }
     case 'motion_setup_request': {
       return handleMotionSetupRequest(state, next, event)
+    }
+    case 'motion_tasks': {
+      return { ...next, motionTasks: event.tasks }
     }
     case 'motion_video': {
       return handleMotionVideo(state, next, event)

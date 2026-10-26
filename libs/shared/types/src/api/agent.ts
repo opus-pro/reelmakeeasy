@@ -20,9 +20,9 @@ export type AgentMotionSetup = {
   /** About this long, in seconds; the reel is whole bars of its music. */
   lengthSec: number
   /** A library track's id, an attachment's name (`upload`), no music, or made by the agent
-   *  (`agent`) with a music model (`engine`). */
+   *  (`agent`): composed by the agent itself, or with a music model (`engine`). */
   music:
-    | { engine: 'ace-step' | 'eleven-music'; source: 'agent' }
+    | { engine: 'ace-step' | 'composer' | 'eleven-music'; source: 'agent' }
     | { id: string; source: 'library' | 'upload' }
     | { source: 'none' }
   ratio: '1:1' | '9:16' | '16:9'
@@ -39,7 +39,7 @@ export type AgentMotionOptions = {
   composers: {
     cost: string
     description: string
-    id: 'ace-step' | 'eleven-music'
+    id: 'ace-step' | 'composer' | 'eleven-music'
     label: string
   }[]
   defaultLengthSec: number
@@ -72,6 +72,22 @@ export type AgentMotionSetupView = AgentMotionSetup & {
 }
 
 export type AgentPlanStep = { status: 'completed' | 'inProgress' | 'pending'; step: string }
+
+/** One phase of a Motion Reel, as its Tasks panel shows it: worked out by ReelMakeEasy from the
+ *  reel's folder and the chat's Motion Reel tool calls, never from what the agent says. */
+export interface AgentMotionTask {
+  /** More to show when the row is opened (the stills taken, the sync report's lines). */
+  details?: string[]
+  id: AgentMotionTaskId
+  label: string
+  /** One line on how it went (e.g. "Render 2 of 3", "Sync: passes."); null: nothing yet. */
+  result: null | string
+  state: AgentMotionTaskState
+}
+
+export type AgentMotionTaskId = 'build' | 'look' | 'music' | 'plan' | 'render' | 'setup' | 'sync'
+
+export type AgentMotionTaskState = 'done' | 'failed' | 'running' | 'waiting'
 
 /** What a chat makes: a tool, each with an Easy and an Advanced mode. */
 export type AgentTool = 'motion' | 'ranking' | 'short'
@@ -396,6 +412,9 @@ export type AgentUiEvent = { id?: number } & (
   | { setup: AgentMotionSetupView; type: 'motion_setup' }
   /** A rendered Motion Reel. `report`: how its cuts sit on the beat grid, in one line. */
   | { itemId: string; posterUrl?: string; report?: string; type: 'motion_video'; videoUrl: string }
+  /** A Motion Reel's phases now (the Tasks panel): sent after each Motion Reel tool call starts
+   *  and ends, and when the agent's turn ends. */
+  | { tasks: AgentMotionTask[]; type: 'motion_tasks' }
 )
 
 /** One line of a loop short, as the storyboard panel lists it: what is said, and the fact stamp

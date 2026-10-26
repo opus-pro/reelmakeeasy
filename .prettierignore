@@ -65,3 +65,5 @@ cache/
 # Ignore local environment variables
 .env.local
 
+# The Motion Reel composer, vendored as it was written (tools/motion-composer/README.md)
+tools/motion-composer/

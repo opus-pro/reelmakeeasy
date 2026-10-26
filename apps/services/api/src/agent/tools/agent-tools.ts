@@ -39,6 +39,9 @@ export interface DynamicToolSpec {
 
 /** What a tool call answers: `text` goes back to Codex as the tool's output. */
 export interface ToolCallResult {
+  /** The call was refused before it ran (another call or setup running, a reel that doesn't
+   *  type-check): it says nothing about the tool's own work. */
+  refused?: 'busy' | 'type-check'
   success: boolean
   text: string
 }
@@ -119,29 +122,28 @@ export const AGENT_TOOLS: Record<AgentToolName, DynamicToolSpec> = {
   },
   motion_music: {
     description:
-      'Compose the Motion Reel\'s own music with the music model the user picked (engine: "eleven-music", ElevenLabs Music, $0.60 a minute; or "ace-step", about $0.01), about a minute. ReelMakeEasy measures its beat, keeps the most energetic whole bars, and rewrites reel/public/music.wav and reel/public/reel.json, so scenes timed with beat() and bar() follow the new music. Use it when the user asks for different or original music, or chose to have you make it. The reply gives the new length, tempo and strongest hits.',
+      'Put the Motion Reel\'s own music under it, made the way the user picked (engine). "composer" (free, recommended): music you composed note by note with the reelmakeeasy-music-composer skill; first write reel/music/music.mjs and set bpm in reel/music/reel.config.mjs, run `cd reel/music && node tools/score.mjs --no-cues` in your shell and fix its QC, then call this with engine "composer" and no prompt: ReelMakeEasy takes audio/score.wav with its exact grid and events from build/music.json. "eleven-music" (ElevenLabs Music, $0.60 a minute) or "ace-step" (about $0.01): a music model composes it from your prompt, about a minute; ReelMakeEasy measures its beat and keeps the most energetic whole bars. Either way reel/public/music.wav and reel/public/reel.json are rewritten, so scenes timed with beat() and bar() follow the new music. Use it when the user asks for different or original music, or chose to have you make it. The reply gives the new length, tempo and strongest hits.',
     inputSchema: {
       additionalProperties: false,
       properties: {
         bpm: {
           description:
-            'Optional: the tempo to ask for (the grid follows what the model actually plays).',
+            'For a music model, optional: the tempo to ask for (the grid follows what the model actually plays). The composer takes its tempo from your music.mjs.',
           maximum: 180,
           minimum: 60,
           type: 'integer',
         },
         engine: {
-          description: 'The music model (default: the one the user picked).',
-          enum: ['eleven-music', 'ace-step'],
+          description: 'How the music was made (default: the way the user picked).',
+          enum: ['composer', 'eleven-music', 'ace-step'],
           type: 'string',
         },
         prompt: {
           description:
-            'The music, as the music model reads it: genre, mood, instruments, energy, and its shape in bars (e.g. "4-bar intro with a riser, big drop at bar 5, hits on the downbeats"). Instrumental.',
+            'For a music model (not the composer): the music as it reads it: genre, mood, instruments, energy, and its shape in bars (e.g. "4-bar intro with a riser, big drop at bar 5, hits on the downbeats"). Instrumental.',
           type: 'string',
         },
       },
-      required: ['prompt'],
       type: 'object',
     },
     name: 'motion_music',
@@ -171,8 +173,8 @@ export const AGENT_TOOLS: Record<AgentToolName, DynamicToolSpec> = {
         },
         musicEngine: {
           description:
-            'With music "agent": the music model you make it with, as the user picked: eleven-music (ElevenLabs Music, $0.60 a minute, recommended) or ace-step (about $0.01).',
-          enum: ['eleven-music', 'ace-step'],
+            'With music "agent": how you make it, as the user picked: composer (you compose it note by note with the reelmakeeasy-music-composer skill; free, recommended), eleven-music (ElevenLabs Music, $0.60 a minute) or ace-step (about $0.01).',
+          enum: ['composer', 'eleven-music', 'ace-step'],
           type: 'string',
         },
         musicId: {

@@ -1,6 +1,8 @@
 import { SFX_DESCRIPTIONS, SFX_NAMES } from '@reelmakeeasy/common/motion-reel/sfx'
 import { MOTION_REEL_STYLES } from '@reelmakeeasy/common/motion-reel/styles'
 
+import { MUSIC_COMPOSER_SKILL_NAME } from './music-composer-skill'
+
 export const MOTION_REEL_SKILL_NAME = 'reelmakeeasy-motion-reel'
 
 /** The tools a Motion Reel chat has (agent-tools.ts implements them). */
@@ -60,7 +62,10 @@ export function renderMotionReelSkill(): string {
     '',
     '## Music',
     '',
-    `The music is the reel's clock. It comes from the library, the user's own file, or you: \`${MOTION_MUSIC_TOOL}\` composes a track with the music model the user picked (its \`engine\`: "eleven-music" or "ace-step"; a paid generation, one per request, never to try things). Write its prompt for this reel: genre, mood and instruments for the style and subject, a tempo in the style card's range, and its shape in bars (an intro that builds, a riser into a drop on the biggest moment, an ending that resolves). For a launch or a showreel: punchy drums, a clear hook, a real drop. Its events are found by ear: read \`music-map.md\` and \`public/reel.json\` again (bars, tempo and events change) and re-check timing that assumed the old grid.`,
+    `The music is the reel's clock. It comes from the library, the user's own file, or you: \`${MOTION_MUSIC_TOOL}\` puts the music you make under the reel, the way the user picked (its \`engine\`). Then read \`music-map.md\` and \`public/reel.json\` again (bars, tempo and events change) and re-check timing that assumed the old grid.`,
+    '',
+    `- **Composed by you (\`engine: "composer"\`, free, recommended).** Read the \`${MUSIC_COMPOSER_SKILL_NAME}\` skill and follow it: you write \`music/music.mjs\` note by note (its own sound world, harmony, bass and motif for this reel), set \`bpm\` in \`music/reel.config.mjs\`, run \`cd reel/music && node tools/score.mjs --no-cues\` in your shell, fix what its QC flags, then call \`${MOTION_MUSIC_TOOL}\` with \`engine: "composer"\` and no prompt. The sections add up to the reel's bars at your tempo: round(length x bpm / 240); the reply says the count if it is off. Plan the music and the picture together: a section per world, the drop on your biggest reveal. Its events are exact: the kicks, snares and claps you wrote, the motif's notes as \`melody(0.8)\` (pop elements on them), your chord changes and sections.`,
+    '- **A music model (`engine: "eleven-music"` or `"ace-step"`, paid).** Write its prompt for this reel: genre, mood and instruments for the style and subject, a tempo in the style card\'s range, and its shape in bars (an intro that builds, a riser into a drop on the biggest moment, an ending that resolves). For a launch or a showreel: punchy drums, a clear hook, a real drop. One generation per request, never to try things. Its events are found by ear: check them in `music-map.md`.',
     '',
     '## Sound effects',
     '',

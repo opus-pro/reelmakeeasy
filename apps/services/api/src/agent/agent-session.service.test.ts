@@ -242,6 +242,28 @@ describe('AgentSessionService', () => {
     ])
   })
 
+  it('tells its hooks when a turn starts and when the agent stops, a restart included', async () => {
+    const hookRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'agent-svc-hooks-'))
+    const store = new AgentSessionStore(hookRoot)
+    const stale = store.create({ id: randomUUID(), title: 'Stale' })
+    store.update(stale.id, { status: 'running' })
+    const calls: string[] = []
+    const svc = new AgentSessionService({
+      onTurnEnd: (id) => calls.push(`end ${id}`),
+      onTurnStart: (id) => calls.push(`start ${id}`),
+      root: hookRoot,
+      spawnCodex: async (cwd) => CodexRpcClient.spawn(process.execPath, [FAKE], { cwd }),
+    })
+    services.push(svc)
+    // The restart's stop.
+    expect(calls).toEqual([`end ${stale.id}`])
+    const session = await svc.createSession()
+    await svc.sendMessage(session.id, 'hi')
+    await waitFor(() => svc.getSession(session.id).status === 'idle')
+    expect(calls).toContain(`start ${session.id}`)
+    expect(calls.at(-1)).toBe(`end ${session.id}`)
+  })
+
   it("keeps a stale session's updatedAt across the restart that reconciles it: a restart is not activity", () => {
     const staleRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'agent-svc-stale-touch-'))
     const store = new AgentSessionStore(staleRoot)

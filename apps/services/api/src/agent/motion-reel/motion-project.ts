@@ -20,6 +20,7 @@ import {
 import { motionReelStyle, renderStyleCard } from '@reelmakeeasy/common/motion-reel/styles'
 import { presetPath } from '@reelmakeeasy/common/storage/presets'
 
+import { composerTitle, installComposer } from './motion-composer'
 import { run, runtimeDir, sfxDir } from './motion-runtime'
 
 /** The reel's Remotion project, inside the chat's working folder. */
@@ -37,8 +38,10 @@ export type PreparedReel = {
   reel: ReelJson
 }
 
-/** A music track to put under the reel: a file on this computer, with its known tempo when we have one. */
-export type ReelMusicSource = { bpm?: number; file: string; title: string }
+/** A music track to put under the reel: a file on this computer, with its known tempo when we
+ *  have one, or its exact grid with its events (a score the agent composed: nothing is found by
+ *  ear, and the reel starts at its first bar). */
+export type ReelMusicSource = { bpm?: number; file: string; grid?: BeatGrid; title: string }
 
 /**
  * Sets up the reel's project in `workspace/reel`: the template, a link to the shared runtime,
@@ -68,7 +71,11 @@ export async function prepareReelProject(o: {
 
   let grid: BeatGrid | null = null
   let fit: null | ReelFit = null
-  if (o.music) {
+  if (o.music?.grid) {
+    // A composed score: its grid is what was written, from its first bar.
+    grid = o.music.grid
+    fit = fitReel(grid, o.setup.lengthSec)
+  } else if (o.music) {
     const samples = await decodeAudioMono(o.music.file)
     grid = analyseBeatGrid(samples)
     // A library track's tempo is known exactly; trust it over the estimate when they disagree,
@@ -78,6 +85,8 @@ export async function prepareReelProject(o: {
       grid = { ...moved, events: analyseMusicEvents(samples, ANALYSIS_SAMPLE_RATE, moved) }
     }
     fit = fitReel(grid, o.setup.lengthSec, (from, to) => rmsBetween(samples, from, to))
+  }
+  if (o.music && fit) {
     await run(
       'ffmpeg',
       [
@@ -120,11 +129,20 @@ export async function prepareReelProject(o: {
     fs.writeFileSync(path.join(projectDir, 'style.md'), `${renderStyleCard(style)}\n`)
   fs.writeFileSync(path.join(projectDir, 'brief.md'), renderBrief(o.setup, reel, o.music))
   fs.writeFileSync(path.join(projectDir, 'music-map.md'), renderMusicMap(reel))
+  // The agent composes the music itself: the composer and its config, in reel/music/.
+  if (o.setup.music.source === 'agent' && o.setup.music.engine === 'composer')
+    installComposer(projectDir, {
+      bpm: reel.bpm,
+      lengthSec: o.setup.lengthSec,
+      title: composerTitle(o.setup.subject),
+    })
   return { grid, projectDir, reel }
 }
 
 /** How the brief says the agent makes the music. */
 function makeWith(engine: MotionMusicEngine): string {
+  if (engine === 'composer')
+    return 'composed by you with the reelmakeeasy-music-composer skill in `music/` (engine "composer")'
   return `with ${MOTION_MUSIC_ENGINE_INFO[engine].label} (engine "${engine}")`
 }
 

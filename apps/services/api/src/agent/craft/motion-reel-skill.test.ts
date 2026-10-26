@@ -11,6 +11,7 @@ import {
   MOTION_STILL_TOOL,
   renderMotionReelSkill,
 } from './motion-reel-skill'
+import { MUSIC_COMPOSER_SKILL_NAME } from './music-composer-skill'
 
 const CHECKED_IN = path.resolve(
   __dirname,
@@ -32,6 +33,12 @@ describe('renderMotionReelSkill', () => {
     expect(skill).toContain(MOTION_MUSIC_TOOL)
     for (const name of SFX_NAMES) expect(skill).toContain(`\`${name}\``)
     for (const style of MOTION_REEL_STYLES) expect(skill).toContain(`\`${style.id}\``)
+  })
+
+  it('sends composed music to the composer skill, and keeps the music models', () => {
+    expect(skill).toContain(`\`${MUSIC_COMPOSER_SKILL_NAME}\` skill`)
+    expect(skill).toContain('`engine: "composer"`')
+    expect(skill).toContain('`engine: "eleven-music"` or `"ace-step"`')
   })
 
   it('keeps the agent off the network and the renderer', () => {

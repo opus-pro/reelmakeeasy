@@ -1,0 +1,496 @@
+import fs from 'node:fs'
+import os from 'node:os'
+import path from 'node:path'
+
+import type { AgentMotionSetupView, AgentMotionTask, AgentSession } from '@shared/types/api/agent'
+
+import {
+  type MotionTaskInput,
+  motionTasks,
+  MotionTaskTracker,
+  type MotionToolCall,
+  readReelFacts,
+} from './motion-tasks'
+
+const SETUP: AgentMotionSetupView = {
+  bars: 8,
+  bpm: 128,
+  lengthSec: 15,
+  music: { engine: 'eleven-music', source: 'agent' },
+  musicTitle: null,
+  ratio: '16:9',
+  reelSec: 15,
+  styleId: 'hud-showreel',
+  styleLabel: 'HUD Showreel',
+  subject: 'A reel',
+} as AgentMotionSetupView
+
+const RENDER_FAIL = [
+  'Rendered the reel (15 s, 8 bars at 128 BPM) and showed it to the user. The file is reel/out/reel.mp4.',
+  '',
+  'Sync check (the picture against the music):',
+  'Cuts: 6 of 7 on the grid.',
+  'Kick pulse: none.',
+  'Sync: 2 to fix: kick pulse, section starts.',
+  '',
+  'Fix every miss listed above at the beats it names, then render again.',
+].join('\n')
+
+const RENDER_PASS = [
+  'Rendered the reel (15 s, 8 bars at 128 BPM) and showed it to the user. The file is reel/out/reel.mp4.',
+  '',
+  'Sync check (the picture against the music):',
+  'Cuts: 7 of 7 on the grid.',
+  'Sync: passes.',
+].join('\n')
+
+const STILLS = [
+  'Rendered 2 stills (the user sees them too). Open each file and look at it:',
+  '- beat 4 (frame 113): reel/out/stills/1/frame-113.png',
+  '- beat 12 (frame 338): reel/out/stills/1/frame-338.png',
+].join('\n')
+
+const call = (tool: string, ok?: boolean, text?: string, startedAt = 1000): MotionToolCall => ({
+  ...(ok === undefined ? {} : { endedAt: startedAt + 1, ok, text: text ?? '' }),
+  startedAt,
+  tool,
+})
+
+const noFacts = {
+  musicChangedAt: 0,
+  musicScore: false,
+  plan: null,
+  scenes: { lastChange: 0, names: [] },
+}
+
+function reelDir(): string {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'motion-tasks-'))
+  return path.join(dir, 'reel')
+}
+
+function tasks(
+  input: Partial<MotionTaskInput>,
+): Record<string, Omit<AgentMotionTask, 'id' | 'label'>> {
+  const list = motionTasks({
+    calls: [],
+    facts: noFacts,
+    mode: 'motion',
+    setup: undefined,
+    working: false,
+    ...input,
+  })
+  return Object.fromEntries(list.map(({ id, label: _label, ...rest }) => [id, rest]))
+}
+
+describe('motionTasks', () => {
+  it('lists the seven phases in order, all waiting before the setup', () => {
+    const list = motionTasks({
+      calls: [],
+      facts: noFacts,
+      mode: 'motion',
+      setup: undefined,
+      working: false,
+    })
+    expect(list.map((t) => [t.id, t.label, t.state])).toEqual([
+      ['setup', 'Set up', 'waiting'],
+      ['music', 'Music', 'waiting'],
+      ['plan', 'Plan', 'waiting'],
+      ['build', 'Build', 'waiting'],
+      ['look', 'Look (stills)', 'waiting'],
+      ['render', 'Render', 'waiting'],
+      ['sync', 'Sync check', 'waiting'],
+    ])
+    expect(list[0]?.result).toBe('Waiting for the setup card')
+  })
+
+  it("an Advanced chat's motion_setup: running while it runs, failed with its reason", () => {
+    expect(tasks({ calls: [call('motion_setup')], mode: 'motion_free' }).setup).toEqual({
+      result: 'Setting up the reel…',
+      state: 'running',
+    })
+    expect(
+      tasks({ calls: [call('motion_setup', false, 'That style is unknown.\nmore')] }).setup,
+    ).toEqual({ details: ['more'], result: 'That style is unknown.', state: 'failed' })
+    expect(tasks({ setup: SETUP }).setup).toEqual({
+      result: 'HUD Showreel, 16:9, 15 s (8 bars at 128 BPM)',
+      state: 'done',
+    })
+  })
+
+  it('music: a library track is done; music the agent makes follows motion_music', () => {
+    const library = {
+      ...SETUP,
+      music: { id: 'pulse-drive', source: 'library' as const },
+      musicTitle: 'Pulse Drive',
+    }
+    expect(tasks({ setup: library }).music).toEqual({
+      result: 'Pulse Drive, 128 BPM',
+      state: 'done',
+    })
+    expect(tasks({ setup: { ...SETUP, music: { source: 'none' } } }).music.result).toBe('No music')
+    expect(tasks({ setup: SETUP }).music).toEqual({ result: null, state: 'waiting' })
+    expect(tasks({ facts: { ...noFacts, musicScore: true }, setup: SETUP }).music.result).toMatch(
+      /Score written/,
+    )
+    expect(tasks({ calls: [call('motion_music')], setup: SETUP }).music.state).toBe('running')
+    expect(
+      tasks({ calls: [call('motion_music', false, 'No score.wav yet.')], setup: SETUP }).music,
+    ).toEqual({ result: 'No score.wav yet.', state: 'failed' })
+    expect(
+      tasks({
+        calls: [call('motion_music', true)],
+        setup: { ...SETUP, bpm: 136, musicTitle: 'Composed: F# dorian, 136 BPM' },
+      }).music,
+    ).toEqual({ result: 'Composed: F# dorian, 136 BPM', state: 'done' })
+  })
+
+  it('plan and build come from the reel folder', () => {
+    const dir = reelDir()
+    fs.mkdirSync(path.join(dir, 'src', 'scenes'), { recursive: true })
+    fs.writeFileSync(
+      path.join(dir, 'plan.md'),
+      '# Plan\n\n## Intro\n- Scene 1: logo\n- Scene 2: title\n## Drop\n### Scene 3: grid\n',
+    )
+    fs.writeFileSync(path.join(dir, 'src', 'scenes', 'Intro.tsx'), 'x')
+    fs.writeFileSync(path.join(dir, 'src', 'scenes', 'Drop.tsx'), 'x')
+    fs.writeFileSync(path.join(dir, 'src', 'scenes', 'notes.md'), 'x')
+    const facts = readReelFacts(dir)
+    expect(facts.plan).toEqual({ scenes: 3, sections: 2 })
+    expect(facts.scenes.names).toEqual(['Drop.tsx', 'Intro.tsx'])
+    expect(facts.musicScore).toBe(false)
+
+    const t = tasks({ facts, setup: SETUP, working: true })
+    expect(t.plan).toEqual({ result: 'plan.md: 2 sections, 3 scenes', state: 'done' })
+    // Scenes changing while the agent works, with no render after them: being built.
+    expect(t.build).toEqual({
+      details: ['Drop.tsx', 'Intro.tsx'],
+      result: '2 scene files',
+      state: 'running',
+    })
+    expect(tasks({ facts, setup: SETUP, working: false }).build.state).toBe('done')
+    const rendered = [call('motion_render', true, RENDER_PASS, facts.scenes.lastChange + 10)]
+    expect(tasks({ calls: rendered, facts, setup: SETUP, working: true }).build.state).toBe('done')
+  })
+
+  it('a missing reel folder reads as nothing there', () => {
+    expect(readReelFacts(reelDir())).toEqual(noFacts)
+  })
+
+  it('look counts the stills over every look and lists the last one', () => {
+    const t = tasks({
+      calls: [call('motion_still', true, STILLS), call('motion_still', true, STILLS)],
+      setup: SETUP,
+    })
+    expect(t.look).toEqual({
+      details: ['beat 4 (frame 113)', 'beat 12 (frame 338)'],
+      result: '4 stills over 2 looks',
+      state: 'done',
+    })
+    expect(
+      tasks({ calls: [call('motion_still', true, STILLS), call('motion_still')] }).look.state,
+    ).toBe('running')
+  })
+
+  it('render counts the fix loop and sync reads its verdict', () => {
+    const first = tasks({ calls: [call('motion_render', true, RENDER_FAIL)], setup: SETUP })
+    expect(first.render).toEqual({ result: 'Render 1 of 3', state: 'done' })
+    expect(first.sync).toEqual({
+      details: [
+        'Cuts: 6 of 7 on the grid.',
+        'Kick pulse: none.',
+        'Sync: 2 to fix: kick pulse, section starts.',
+      ],
+      result: '2 to fix: kick pulse, section starts',
+      state: 'failed',
+    })
+
+    const second = tasks({
+      calls: [call('motion_render', true, RENDER_FAIL), call('motion_render')],
+      setup: SETUP,
+    })
+    expect(second.render).toEqual({ result: 'Rendering 2 of 3…', state: 'running' })
+    expect(second.sync.state).toBe('running')
+
+    const passed = tasks({
+      calls: [call('motion_render', true, RENDER_FAIL), call('motion_render', true, RENDER_PASS)],
+      setup: SETUP,
+    })
+    expect(passed.render.result).toBe('Render 2 of 3')
+    expect(passed.sync).toEqual({
+      details: ['Cuts: 7 of 7 on the grid.', 'Sync: passes.'],
+      result: 'Sync: passes',
+      state: 'done',
+    })
+
+    const broken = tasks({
+      calls: [
+        call('motion_render', true, RENDER_PASS),
+        call('motion_render', false, 'The render failed:\nerr'),
+      ],
+      setup: SETUP,
+    })
+    expect(broken.render).toEqual({
+      details: ['err'],
+      result: 'The render failed: err',
+      state: 'failed',
+    })
+    // The last render that went through still has the word on the sync.
+    expect(broken.sync.result).toBe('Sync: passes')
+  })
+})
+
+describe('MotionTaskTracker', () => {
+  function tracker(mode: AgentSession['mode'] = 'motion') {
+    const workspace = path.dirname(reelDir())
+    const events: AgentMotionTask[][] = []
+    let session = { id: 's1', mode, motionReel: SETUP, status: 'running' } as AgentSession
+    const make = () =>
+      new MotionTaskTracker({
+        emitAutonomousEvent: (_id, event) => events.push(event.tasks),
+        getSession: () => session,
+        workingDir: () => workspace,
+      })
+    return {
+      events,
+      make,
+      setStatus: (status: AgentSession['status']) => (session = { ...session, status }),
+      workspace,
+    }
+  }
+  const stateOf = (list: AgentMotionTask[] | undefined, id: string) =>
+    list?.find((t) => t.id === id)?.state
+
+  it('sends the phases as a call starts and ends, and keeps the calls in the reel folder', async () => {
+    const { events, make, workspace } = tracker()
+    const tasksNow = make()
+    const result = await tasksNow.track('s1', 'motion_render', async () => {
+      expect(stateOf(events.at(-1), 'render')).toBe('running')
+      return { success: true, text: RENDER_PASS }
+    })
+    expect(result.success).toBe(true)
+    expect(events).toHaveLength(2)
+    expect(stateOf(events[1], 'render')).toBe('done')
+    expect(events[1]?.find((t) => t.id === 'sync')?.result).toBe('Sync: passes')
+    expect(fs.existsSync(path.join(workspace, 'reel', 'out', 'motion-tasks.json'))).toBe(true)
+
+    // After a restart, the calls are read back.
+    const later = tracker()
+    const again = new MotionTaskTracker({
+      emitAutonomousEvent: (_id, event) => later.events.push(event.tasks),
+      getSession: () =>
+        ({ id: 's1', mode: 'motion', motionReel: SETUP, status: 'idle' }) as AgentSession,
+      workingDir: () => workspace,
+    })
+    again.turnEnded('s1')
+    expect(stateOf(later.events[0], 'render')).toBe('done')
+  })
+
+  it('a composer motion_music call shows in Music: composing, then its title', async () => {
+    const workspace = path.dirname(reelDir())
+    const events: AgentMotionTask[][] = []
+    const composer: AgentMotionSetupView = {
+      ...SETUP,
+      music: { engine: 'composer', source: 'agent' },
+    }
+    let session = {
+      id: 's1',
+      mode: 'motion',
+      motionReel: composer,
+      status: 'running',
+    } as AgentSession
+    const tasksNow = new MotionTaskTracker({
+      emitAutonomousEvent: (_id, event) => events.push(event.tasks),
+      getSession: () => session,
+      workingDir: () => workspace,
+    })
+    const music = (list: AgentMotionTask[] | undefined) => list?.find((t) => t.id === 'music')
+    await tasksNow.track('s1', 'motion_music', async () => {
+      expect(music(events.at(-1))).toMatchObject({ result: 'Composing…', state: 'running' })
+      // What the service's refit does once the score is put under the reel.
+      session = {
+        ...session,
+        motionReel: { ...composer, bpm: 136, musicTitle: 'Composed: F# dorian, 136 BPM' },
+      }
+      return { success: true, text: 'Composed: F# dorian, 136 BPM. Put under the reel.' }
+    })
+    expect(music(events.at(-1))).toMatchObject({
+      result: 'Composed: F# dorian, 136 BPM',
+      state: 'done',
+    })
+  })
+
+  it('a failed or throwing call ends failed; the error still reaches the caller', async () => {
+    const { events, make } = tracker()
+    const tasksNow = make()
+    await expect(
+      tasksNow.track('s1', 'motion_still', async () => {
+        throw new Error('boom')
+      }),
+    ).rejects.toThrow('boom')
+    expect(stateOf(events.at(-1), 'look')).toBe('failed')
+  })
+
+  it("doesn't keep a call made while another runs (the service refuses it)", async () => {
+    const { events, make } = tracker()
+    const tasksNow = make()
+    let finish: (() => void) | undefined
+    const first = tasksNow.track(
+      's1',
+      'motion_render',
+      () =>
+        new Promise((resolve) => {
+          finish = () => resolve({ success: true, text: RENDER_PASS })
+        }),
+    )
+    const refused = await tasksNow.track('s1', 'motion_still', async () => ({
+      success: false,
+      text: 'A render or setup is already running; wait for it.',
+    }))
+    expect(refused.success).toBe(false)
+    finish?.()
+    await first
+    expect(stateOf(events.at(-1), 'look')).toBe('waiting')
+  })
+
+  it('sends the same list once, and nothing for a chat that is not a Motion Reel', () => {
+    const { events, make, setStatus } = tracker()
+    const tasksNow = make()
+    tasksNow.turnEnded('s1')
+    tasksNow.turnEnded('s1')
+    expect(events).toHaveLength(1)
+    setStatus('idle')
+    tasksNow.turnEnded('s1')
+    expect(events).toHaveLength(1)
+
+    const other = tracker('free')
+    other.make().turnEnded('s1')
+    expect(other.events).toEqual([])
+  })
+})
+
+describe('motionTasks: refusals, failures and shell work', () => {
+  const composer: AgentMotionSetupView = {
+    ...SETUP,
+    music: { engine: 'composer', source: 'agent' },
+  }
+
+  it("a call refused because the reel doesn't type-check is Build's, not the tool's", () => {
+    const refused: MotionToolCall = {
+      ...call(
+        'motion_music',
+        false,
+        "The reel doesn't type-check; fix these first:\nsrc/scenes/A.tsx(3,1): error",
+      ),
+      refused: 'type-check',
+    }
+    const scenes = { lastChange: 500, names: ['A.tsx'] }
+    const now = tasks({ calls: [refused], facts: { ...noFacts, scenes }, setup: composer })
+    expect(now.music.state).toBe('waiting')
+    expect(now.build).toEqual({
+      details: ['src/scenes/A.tsx(3,1): error'],
+      result: "Doesn't type-check",
+      state: 'failed',
+    })
+    // Scenes changed since: the agent is fixing them.
+    const fixed = { lastChange: 2000, names: ['A.tsx'] }
+    expect(tasks({ calls: [refused], facts: { ...noFacts, scenes: fixed } }).build.state).toBe(
+      'done',
+    )
+  })
+
+  it('a failure says why on its row and keeps the rest as details', () => {
+    const failed = call('motion_render', false, 'The render failed:\nChrome exited\nat frame 120')
+    expect(tasks({ calls: [failed] }).render).toEqual({
+      details: ['Chrome exited', 'at frame 120'],
+      result: 'The render failed: Chrome exited',
+      state: 'failed',
+    })
+  })
+
+  it('music is running while the agent composes in its shell, between motion_music calls', () => {
+    const facts = { ...noFacts, musicChangedAt: 5000, musicScore: true }
+    expect(tasks({ facts, setup: composer, working: true }).music).toEqual({
+      result: 'Composing in reel/music/ (the composer)…',
+      state: 'running',
+    })
+    // Not while the turn is over, and not when the last motion_music came after the change.
+    expect(tasks({ facts, setup: composer }).music.state).toBe('waiting')
+    const after = call('motion_music', true, 'ok', 6000)
+    expect(
+      tasks({
+        calls: [after],
+        facts,
+        setup: { ...composer, musicTitle: 'Composed: x' },
+        working: true,
+      }).music.state,
+    ).toBe('done')
+  })
+
+  it('reads when the score last changed from the reel folder', () => {
+    const dir = reelDir()
+    fs.mkdirSync(path.join(dir, 'music', 'audio'), { recursive: true })
+    expect(readReelFacts(dir).musicChangedAt).toBe(0)
+    fs.writeFileSync(path.join(dir, 'music', 'audio', 'score.wav'), 'x')
+    expect(readReelFacts(dir).musicChangedAt).toBeGreaterThan(0)
+  })
+})
+
+describe('MotionTaskTracker: live turns', () => {
+  afterEach(() => jest.useRealTimers())
+
+  it('reads the phases again while a turn runs, and stops when it ends', () => {
+    jest.useFakeTimers()
+    const workspace = path.dirname(reelDir())
+    const events: AgentMotionTask[][] = []
+    let session = { id: 's1', mode: 'motion', motionReel: SETUP, status: 'running' } as AgentSession
+    const tracker = new MotionTaskTracker({
+      emitAutonomousEvent: (_id, event) => events.push(event.tasks),
+      getSession: () => session,
+      workingDir: () => workspace,
+    })
+    tracker.turnStarted('s1')
+    expect(events).toHaveLength(1)
+    // The agent writes a scene in its shell: the next read shows Build running.
+    fs.mkdirSync(path.join(workspace, 'reel', 'src', 'scenes'), { recursive: true })
+    fs.writeFileSync(path.join(workspace, 'reel', 'src', 'scenes', 'A.tsx'), 'x')
+    jest.advanceTimersByTime(3000)
+    expect(events.at(-1)?.find((t) => t.id === 'build')).toMatchObject({
+      result: '1 scene file',
+      state: 'running',
+    })
+    session = { ...session, status: 'stopped' }
+    jest.advanceTimersByTime(3000)
+    expect(events.at(-1)?.find((t) => t.id === 'build')?.state).toBe('done')
+    const sent = events.length
+    jest.advanceTimersByTime(10_000)
+    expect(events).toHaveLength(sent)
+  })
+
+  it('a call refused as busy is not kept; one refused for type errors goes to Build', async () => {
+    const workspace = path.dirname(reelDir())
+    const events: AgentMotionTask[][] = []
+    const tracker = new MotionTaskTracker({
+      emitAutonomousEvent: (_id, event) => events.push(event.tasks),
+      getSession: () =>
+        ({ id: 's1', mode: 'motion', motionReel: SETUP, status: 'running' }) as AgentSession,
+      workingDir: () => workspace,
+    })
+    await tracker.track('s1', 'motion_render', async () => ({
+      refused: 'busy',
+      success: false,
+      text: 'A render or setup is already running; wait for it.',
+    }))
+    expect(events.at(-1)?.find((t) => t.id === 'render')?.state).toBe('waiting')
+    await tracker.track('s1', 'motion_render', async () => ({
+      refused: 'type-check',
+      success: false,
+      text: "The reel doesn't type-check; fix these first:\nerror",
+    }))
+    const last = events.at(-1)
+    expect(last?.find((t) => t.id === 'render')?.state).toBe('waiting')
+    expect(last?.find((t) => t.id === 'build')).toMatchObject({
+      result: "Doesn't type-check",
+      state: 'failed',
+    })
+  })
+})

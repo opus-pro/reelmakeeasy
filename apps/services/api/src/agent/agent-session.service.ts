@@ -99,6 +99,11 @@ export interface SessionDeps {
   idleMs?: number
   /** Runs a ReelMakeEasy tool the agent called (`item/tool/call`); the text goes back to it. */
   onToolCall?: (sessionId: string, tool: string, args: unknown) => Promise<ToolCallResult>
+  /** The agent's turn in a session ended, or the agent stopped (a Motion Reel then sends its
+   *  phases again). */
+  onTurnEnd?: (sessionId: string) => void
+  /** A turn is starting (a Motion Reel then follows its phases while it runs). */
+  onTurnStart?: (sessionId: string) => void
   root?: string
   /** Starts a session's agent (its Codex app-server, or Claude Code behind the same protocol);
    *  `opts.harness` picks which, `opts.mode` decides its tools. */
@@ -392,6 +397,8 @@ export class AgentSessionService implements OnModuleDestroy {
       idleMs: deps?.idleMs ?? IDLE_MS,
       onToolCall:
         deps?.onToolCall ?? (async () => ({ success: false, text: 'No tools in this chat.' })),
+      onTurnEnd: deps?.onTurnEnd ?? (() => undefined),
+      onTurnStart: deps?.onTurnStart ?? (() => undefined),
       root: deps?.root ?? path.join(dataDir(), 'agent'),
       spawnCodex: deps?.spawnCodex ?? spawnAgent,
     }
@@ -627,6 +634,7 @@ export class AgentSessionService implements OnModuleDestroy {
           | 'brief'
           | 'flow_cancelled'
           | 'motion_setup_request'
+          | 'motion_tasks'
           | 'motion_video'
           | 'style_chosen'
           | 'style_request'
@@ -1200,6 +1208,7 @@ export class AgentSessionService implements OnModuleDestroy {
       this.store.update(id, { status: 'idle' })
       live.idleTimer = setTimeout(() => this.stopLive(id), this.deps.idleMs)
       this.settleQuiet(live, quietOutcome(event, live.quiet?.text ?? null))
+      this.deps.onTurnEnd(id)
       this.sendNotesSoon(id)
     })
     live.client.onExit((code, reason) => {
@@ -1264,6 +1273,8 @@ export class AgentSessionService implements OnModuleDestroy {
         this.logger.error(`Subscriber for session ${id} threw: ${ensureError(error).message}`)
       }
     }
+    // Every stop of the agent goes through here (a restart, an exit, a failed turn).
+    if (event.type === 'session' && event.status === 'stopped') this.deps.onTurnEnd(id)
   }
 
   private endSubscriber(sub: Subscriber): void {
@@ -1362,6 +1373,7 @@ export class AgentSessionService implements OnModuleDestroy {
     params: QuietTurnOptions = {},
     quiet?: QuietTurn,
   ): Promise<void> {
+    this.deps.onTurnStart(id)
     let live: Live
     try {
       live = await this.ensureLive(id)

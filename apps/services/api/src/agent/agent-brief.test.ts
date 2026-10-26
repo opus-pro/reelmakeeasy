@@ -336,6 +336,23 @@ describe('an Advanced Motion Reel', () => {
     expect(kickoff).toMatch(/Nothing else yet\.$/)
   })
 
+  it('offers the composer first, and has the agent compose before it plans when it was picked', () => {
+    expect(briefFor({ mode: 'motion_free' }, 'codex')).toMatch(
+      /"Composed by you \(Recommended\)".*"ElevenLabs Music".*"ACE-Step"/,
+    )
+    const kickoff = motionReelKickoff('codex', false, 'composer')
+    expect(kickoff).toMatch(/read the `reelmakeeasy-music-composer` skill/)
+    expect(kickoff).toMatch(
+      /write `reel\/music\/music.mjs` and set its bpm in `reel\/music\/reel.config.mjs`/,
+    )
+    expect(kickoff).toMatch(/`cd reel\/music && node tools\/score.mjs --no-cues`/)
+    expect(kickoff).toMatch(/call motion_music with engine "composer" \(no prompt\)/)
+    expect(kickoff.indexOf('motion_music')).toBeLessThan(kickoff.indexOf('reel/plan.md'))
+    expect(motionReelKickoff('codex', false, 'eleven-music')).toMatch(
+      /compose it with motion_music \(engine "eleven-music"/,
+    )
+  })
+
   it("leaves the Easy kickoff's words as they were", () => {
     expect(motionReelKickoff('codex', false)).toBe(
       '[ReelMakeEasy] The user filled in the Motion Reel card and `reel/` is ready. Read the skill, then `reel/brief.md`, `reel/style.md` and `reel/music-map.md`. Then write `reel/plan.md` from the music (one world per section), and write the plan in your reply too: one short line per scene (its beats, what is on screen, what the kick and melody drive), so the user reads it in the chat. Then ask with request_user_input whether to build it (options: build it, or change something).',

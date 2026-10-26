@@ -265,7 +265,7 @@ export function fitReel(
 ): ReelFit {
   const beatSec = 60 / grid.bpm
   const barSec = beatSec * grid.beatsPerBar
-  const bars = Math.max(1, Math.round(targetSec / barSec))
+  const bars = wholeBars(targetSec, grid.bpm, grid.beatsPerBar)
   const lengthSec = bars * barSec
   const starts = grid.downbeats.filter((d) => d + lengthSec <= grid.durationSec + 0.05)
   const candidates = starts.length ? starts : grid.downbeats.slice(0, 1)
@@ -286,6 +286,15 @@ export function fitReel(
     reelEvents: eventsInWindow(grid.events, startSec, lengthSec),
     startSec: round3(startSec),
   }
+}
+
+/**
+ * How many whole bars a reel of about `targetSec` is at `bpm`: the nearest count, a half rounding
+ * up. Computed one way everywhere (the composer's config, the score check, `fitReel`), so float
+ * error never makes 30 s at 116 BPM (14.5 bars) 15 bars in one place and 14 in another.
+ */
+export function wholeBars(targetSec: number, bpm: number, beatsPerBar = BEATS_PER_BAR): number {
+  return Math.max(1, Math.round((targetSec * bpm) / (60 * beatsPerBar) + 1e-9))
 }
 
 /** How well cuts follow the grid: each cut's distance to the nearest beat, and how many land on one. */

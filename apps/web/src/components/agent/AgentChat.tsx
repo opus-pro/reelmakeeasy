@@ -9,6 +9,7 @@ import {
   type AgentAnswers,
   type AgentMode,
   type AgentTool,
+  isMotionMode,
   isRankingTopicQuestion,
 } from '@shared/types/api/agent'
 import { Button, cn, Textarea } from '@shared/ui'
@@ -497,7 +498,8 @@ export function AgentChat({
     lastEntry?.kind === 'assistant' && !lastEntry.id.startsWith(REELMAKEEASY_MESSAGE_PREFIX)
   const showWorkingIndicator =
     transcript.working && (activity !== null || !codexTalking) && !waitingOnCard
-  const showPlan = transcript.working && !!transcript.plan?.length
+  // A Motion Reel's to-do list is in its Tasks panel, beside the chat.
+  const showPlan = transcript.working && !!transcript.plan?.length && !isMotionMode(mode)
 
   // Nothing to type before a mode is chosen, nor during autonomous mode with no card the
   // composer can answer, nor once autonomous mode is over; text left in the box then counts for nothing.

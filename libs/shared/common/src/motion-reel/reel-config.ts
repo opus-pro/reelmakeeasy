@@ -23,12 +23,14 @@ export const MOTION_REEL_FPS = 30
 export const MOTION_REEL_SUBJECT_MAX = 600
 
 /**
- * How the agent makes a reel's own music (`motion_music`): composed by a music model on fal
- * (ElevenLabs Music, or the cheaper ACE-Step), the recommended first.
+ * How the agent makes a reel's own music (`motion_music`): composed note by note by the agent
+ * itself (the `reelmakeeasy-music-composer` skill and the composer in `tools/motion-composer`,
+ * run in its own shell; free, every hit exactly where it wrote it), or by a music model on fal
+ * (ElevenLabs Music, or the cheaper ACE-Step). The recommended first.
  */
-export const MOTION_MUSIC_ENGINES = ['eleven-music', 'ace-step'] as const
+export const MOTION_MUSIC_ENGINES = ['composer', 'eleven-music', 'ace-step'] as const
 export type MotionMusicEngine = (typeof MOTION_MUSIC_ENGINES)[number]
-export const DEFAULT_MOTION_MUSIC_ENGINE: MotionMusicEngine = 'eleven-music'
+export const DEFAULT_MOTION_MUSIC_ENGINE: MotionMusicEngine = 'composer'
 
 /** What each way of making the music is, as the setup card and the agent offer it. */
 export const MOTION_MUSIC_ENGINE_INFO: Record<
@@ -39,6 +41,12 @@ export const MOTION_MUSIC_ENGINE_INFO: Record<
     cost: 'about $0.01',
     description: 'A quick, cheap generated track from style tags; rougher than ElevenLabs.',
     label: 'ACE-Step',
+  },
+  composer: {
+    cost: 'free',
+    description:
+      'Written note by note by the agent with its composer skill: its own sound, harmony and motif for this reel, every hit exactly where the plan puts a cut.',
+    label: 'Composed by the agent',
   },
   'eleven-music': {
     cost: '$0.60 a minute',
@@ -51,7 +59,7 @@ export const isMotionMusicEngine = (v: unknown): v is MotionMusicEngine =>
   (MOTION_MUSIC_ENGINES as readonly unknown[]).includes(v)
 
 /** An engine read back from a card or a saved setup: anything else (none, or one no longer
- *  offered, such as the old "code") reads as the default. */
+ *  offered, such as the old "code", music written in code) reads as the default, the composer. */
 export const motionMusicEngineOf = (v: unknown): MotionMusicEngine =>
   isMotionMusicEngine(v) ? v : DEFAULT_MOTION_MUSIC_ENGINE
 

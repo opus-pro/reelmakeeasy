@@ -35,6 +35,12 @@ import { resolveAttachment } from '../agent-attachments'
 import { motionReelKickoff, motionReelNextSteps } from '../agent-brief'
 import type { ToolCallResult } from '../tools/agent-tools'
 
+import {
+  composerTitle,
+  ensureComposer,
+  keptComposerScore,
+  readComposedMusic,
+} from './motion-composer'
 import { composeMusic, parseComposeRequest } from './motion-music'
 import { prepareReelProject, REEL_DIR, type ReelMusicSource } from './motion-project'
 import { readReference, REFERENCE_DIR } from './motion-reference'
@@ -111,7 +117,11 @@ export class MotionReelService {
   /** The agent called one of the Motion Reel tools. */
   async callTool(id: string, tool: string, args: unknown): Promise<ToolCallResult> {
     if (this.busy.has(id) || this.preparing.has(id))
-      return { success: false, text: 'A render or setup is already running; wait for it.' }
+      return {
+        refused: 'busy',
+        success: false,
+        text: 'A render or setup is already running; wait for it.',
+      }
     const session = this.sessions.getSession(id)
     if (tool === 'motion_setup') return await this.setupFromChat(id, session, args)
     if (!isMotionMode(session.mode) || !session.motionReel)
@@ -127,16 +137,21 @@ export class MotionReelService {
     try {
       const errors = await typeCheck(projectDir)
       if (errors)
-        return { success: false, text: `The reel doesn't type-check; fix these first:\n${errors}` }
+        return {
+          refused: 'type-check',
+          success: false,
+          text: `The reel doesn't type-check; fix these first:\n${errors}`,
+        }
       if (tool === 'motion_music') return await this.compose(id, session, projectDir, args)
       if (tool === 'motion_still') return await this.stills(id, projectDir, args)
       if (tool === 'motion_render') return await this.render(id, projectDir)
       return { success: false, text: `Unknown tool ${tool}.` }
     } catch (error) {
       if (error instanceof MotionSetupError) return { success: false, text: error.message }
+      const what = tool === 'motion_music' ? 'music' : tool === 'motion_still' ? 'stills' : 'render'
       return {
         success: false,
-        text: `The render failed:\n${ensureError(error).message.slice(-3000)}`,
+        text: `The ${what} failed:\n${ensureError(error).message.slice(-3000)}`,
       }
     } finally {
       this.busy.delete(id)
@@ -185,9 +200,9 @@ export class MotionReelService {
     void this.prepare(id, session, setup, music).finally(() => this.preparing.delete(id))
   }
 
-  /** The agent made the reel's own music (`motion_music`) with the music model it names (else the
-   *  one the user picked), then fitted to whole bars; the grid (reel.json) follows the new track,
-   *  so beat-timed scenes follow it too. */
+  /** The agent made the reel's own music (`motion_music`) the way it names (else the way the user
+   *  picked): composed by itself, or by a music model and fitted to whole bars; the grid
+   *  (reel.json) follows the new music, so beat-timed scenes follow it too. */
   private async compose(
     id: string,
     session: AgentSession,
@@ -200,6 +215,7 @@ export class MotionReelService {
       return { success: false, text: `engine is ${MOTION_MUSIC_ENGINES.join(' or ')}.` }
     const engine: MotionMusicEngine =
       asked ?? motionMusicEngineOf(view.music.source === 'agent' ? view.music.engine : undefined)
+    if (engine === 'composer') return this.composed(id, view, projectDir)
     const request = parseComposeRequest(args)
     if (typeof request === 'string') return { success: false, text: request }
     const composed = await composeMusic(
@@ -225,6 +241,49 @@ export class MotionReelService {
           : 'It has no stand-out hits: put impacts on bar starts.',
         'Compose again only if the user wants different music: each one is a paid generation.',
       ].join(' '),
+    }
+  }
+
+  /** The music the agent composed in its own shell (`reel/music/`): read as data, never run, and
+   *  put under the reel with its exact grid. */
+  private async composed(
+    id: string,
+    view: AgentMotionSetupView,
+    projectDir: string,
+  ): Promise<ToolCallResult> {
+    // A reel set up before the composer, or with other music: install it now.
+    const installed = ensureComposer(projectDir, {
+      bpm: view.bpm,
+      lengthSec: view.lengthSec,
+      title: composerTitle(view.subject),
+    })
+    const score = readComposedMusic(projectDir, view.lengthSec)
+    if (typeof score === 'string')
+      return {
+        success: false,
+        text: installed
+          ? `The composer was not in this reel yet: it is now in reel/music/tools/ with reel/music/reel.config.mjs (set its bpm). ${score}`
+          : score,
+      }
+    const { reel } = await this.refit(id, view, {
+      file: score.file,
+      grid: score.grid,
+      title: score.title,
+    })
+    const hits = reel.strongHits.map((t) => beatAt(reel, t)).slice(0, 8)
+    return {
+      success: true,
+      text: [
+        `${score.title}. Put under the reel: ${reel.lengthSec} s, ${reel.bars} bars of ${reel.beatsPerBar} at ${reel.bpm} BPM.`,
+        'public/music.wav and public/reel.json are rewritten from your score itself, so its beats, kicks, snares, motif notes, chords and sections are exact. Re-check anything that assumed the old grid.',
+        hits.length
+          ? `Its section entries that raise the energy are at beats ${hits.join(', ')}.`
+          : '',
+        ...score.qc,
+        'Checked by measurement only: tell the user what the QC measured, never how it sounds; they hear it in the next render. Compose again freely (it is free) when the plan changes.',
+      ]
+        .filter(Boolean)
+        .join(' '),
     }
   }
 
@@ -411,9 +470,7 @@ export class MotionReelService {
       before?.music.source === 'agent' &&
       motionMusicEngineOf(before.music.engine) === setup.music.engine
     const made = sameWay ? newestMade(path.join(this.sessions.workingDir(id), REEL_DIR)) : null
-    const keep =
-      made && (!path.basename(made).startsWith('score-') || before?.lengthSec === setup.lengthSec)
-    const composed = keep && before?.musicTitle ? { file: made, title: before.musicTitle } : null
+    const composed = made && before?.musicTitle ? keptMusic(made, before, setup) : null
     if (composed) music = composed
     this.preparing.add(id)
     try {
@@ -491,8 +548,29 @@ function setupFrom(view: AgentMotionSetupView): MotionReelSetup {
   }
 }
 
+/**
+ * Music the agent made that a new setup keeps (`newestMade`): a model's track, fitted to the new
+ * length; a score it composed (with its exact grid again) or one an earlier version wrote (a
+ * plain track) only while the length holds, as its bars are the reel's. Null: make it anew.
+ */
+function keptMusic(
+  file: string,
+  before: AgentMotionSetupView,
+  setup: MotionReelSetup,
+): null | ReelMusicSource {
+  const name = path.basename(file)
+  const title = before.musicTitle ?? ''
+  if (name.startsWith('composer-')) {
+    if (before.lengthSec !== setup.lengthSec) return null
+    const score = keptComposerScore(file)
+    return score ? { file, grid: score.grid, title } : null
+  }
+  if (name.startsWith('score-') && before.lengthSec !== setup.lengthSec) return null
+  return { file, title }
+}
+
 /** The newest music the agent made for the reel in `projectDir` (`motion_music`), if any: a
- *  model's track, or a score an earlier version wrote there, used as a plain track. */
+ *  model's track, a score it composed, or a score an earlier version wrote there. */
 function newestMade(projectDir: string): null | string {
   const dir = path.join(projectDir, 'music')
   let names: string[]
@@ -501,11 +579,12 @@ function newestMade(projectDir: string): null | string {
   } catch {
     return null
   }
-  // Named composed-<time>.mp3 (or score-<time>.wav): the newest has the largest time.
+  // Named composed-<time>.mp3, composer-<time>.wav (or score-<time>.wav): the newest has the
+  // largest time.
   const newest = names
     .map((name) => ({
       name,
-      time: Number(/^(?:composed|score)-(\d+)\.(?:mp3|wav)$/.exec(name)?.[1]),
+      time: Number(/^(?:composed|composer|score)-(\d+)\.(?:mp3|wav)$/.exec(name)?.[1]),
     }))
     .filter((m) => Number.isFinite(m.time))
     .sort((a, b) => a.time - b.time)

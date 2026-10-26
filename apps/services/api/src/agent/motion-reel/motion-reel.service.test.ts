@@ -174,6 +174,48 @@ describe('MotionReelService, an Advanced chat', () => {
   })
 })
 
+/** A real, tiny WAV `seconds` long (100 Hz mono 8-bit silence): the length is what is checked. */
+function silentWav(seconds: number): Buffer {
+  const data = Buffer.alloc(Math.round(seconds * 100), 128)
+  const header = Buffer.alloc(44)
+  header.write('RIFF', 0)
+  header.writeUInt32LE(36 + data.length, 4)
+  header.write('WAVEfmt ', 8)
+  header.writeUInt32LE(16, 16)
+  header.writeUInt16LE(1, 20)
+  header.writeUInt16LE(1, 22)
+  header.writeUInt32LE(100, 24)
+  header.writeUInt32LE(100, 28)
+  header.writeUInt16LE(1, 32)
+  header.writeUInt16LE(8, 34)
+  header.write('data', 36)
+  header.writeUInt32LE(data.length, 40)
+  return Buffer.concat([header, data])
+}
+
+/** A real composer render's build/music.json (34 bars at 136 BPM, 60 s), trimmed. */
+const COMPOSER_JSON = path.join(__dirname, 'fixtures', 'composer-music.json')
+
+/** What the agent's composer run leaves in reel/music/: music.mjs, then its score, music.json and QC. */
+function writeComposerRun(workspace: string, o: { fail?: boolean; stale?: boolean } = {}): void {
+  const dir = path.join(workspace, 'reel', 'music')
+  for (const sub of ['audio', 'build', 'qc']) fs.mkdirSync(path.join(dir, sub), { recursive: true })
+  fs.writeFileSync(path.join(dir, 'music.mjs'), 'export default {}\n')
+  fs.writeFileSync(path.join(dir, 'audio', 'score.wav'), silentWav(60))
+  fs.copyFileSync(COMPOSER_JSON, path.join(dir, 'build', 'music.json'))
+  const checks = [
+    { id: 'loudness', msg: 'integrated -13.9 LUFS (target -14)', status: 'PASS' },
+    { id: 'ending', msg: 'ring: rings out', status: o.fail ? 'FAIL' : 'PASS' },
+    { id: 'phone', msg: '200 Hz high-passed (phone speaker) loses 6.4 LU', status: 'WARN' },
+  ]
+  fs.writeFileSync(path.join(dir, 'qc', 'score-report.json'), JSON.stringify({ checks }))
+  const now = Date.now() / 1000
+  const [source, made] = o.stale ? [now, now - 60] : [now - 60, now]
+  fs.utimesSync(path.join(dir, 'music.mjs'), source, source)
+  for (const file of ['audio/score.wav', 'build/music.json', 'qc/score-report.json'])
+    fs.utimesSync(path.join(dir, file), made, made)
+}
+
 describe('the music the agent makes', () => {
   async function setUp(music?: Record<string, unknown>) {
     const ctx = setup('motion_free')
@@ -183,27 +225,94 @@ describe('the music the agent makes', () => {
     return ctx
   }
 
-  it('composes with ElevenLabs Music unless the user picked ACE-Step', async () => {
-    const { service, updated } = await setUp()
+  it("puts the score the agent composed under the reel, its grid and events exactly the score's", async () => {
+    const { service, updated, workspace } = await setUp({ lengthSec: 60, music: 'agent' })
+    expect(updated.at(-1)?.music).toEqual({ engine: 'composer', source: 'agent' })
+    writeComposerRun(workspace)
+    const result = await service.callTool('s1', 'motion_music', {})
+    expect(result.success).toBe(true)
+    expect(result.text).toMatch(/^Composed: F# dorian, 136 BPM\. Put under the reel/)
+    expect(result.text).toMatch(/QC passed: loudness, ending\. QC WARN phone: 200 Hz/)
+    expect(result.text).toMatch(/never how it sounds/)
+    const music = jest.mocked(prepareReelProject).mock.calls[0]?.[0].music
+    expect(music?.file).toMatch(/reel[\\/]music[\\/]composer-\d+\.wav$/)
+    expect(fs.existsSync(music?.file ?? '')).toBe(true)
+    expect(music?.grid).toMatchObject({ beatsPerBar: 4, bpm: 136, durationSec: 60 })
+    expect(music?.grid?.downbeats.slice(0, 3)).toEqual([0, 1.765, 3.529])
+    expect(music?.grid?.events?.kicks.slice(0, 2)).toEqual([0, 1.765])
+    expect(music?.grid?.events?.melody[0]).toEqual({ strength: 1, t: 0 })
+    expect(music?.grid?.events?.sections.map((s) => s.name)).toContain('dropB')
+    expect(updated.at(-1)?.musicTitle).toBe('Composed: F# dorian, 136 BPM')
+    expect(composeMusic).not.toHaveBeenCalled()
+  })
+
+  it('says what to do when the score is missing, stale, failed its QC or is the wrong length', async () => {
+    const { service, workspace } = await setUp()
+    const call = () => service.callTool('s1', 'motion_music', { engine: 'composer' })
+    // A reel set up without the composer in reel/music/tools/ (an earlier version) gets it now.
+    expect(await call()).toEqual({
+      success: false,
+      text: expect.stringMatching(
+        /^The composer was not in this reel yet: it is now in reel\/music\/tools\/.* There is no reel\/music\/music.mjs: write it/,
+      ),
+    })
+    expect(fs.existsSync(path.join(workspace, 'reel', 'music', 'tools', 'score.mjs'))).toBe(true)
+    expect(fs.existsSync(path.join(workspace, 'reel', 'music', 'reel.config.mjs'))).toBe(true)
+    expect((await call()).text).toMatch(/^There is no reel\/music\/music.mjs: write it/)
+    writeComposerRun(workspace, { stale: true })
+    expect((await call()).text).toMatch(/older than reel\/music\/music.mjs: run the composer again/)
+    writeComposerRun(workspace, { fail: true })
+    expect((await call()).text).toMatch(/QC failed: ending/)
+    // The reel is 15 s: 9 bars at 136 BPM, not the score's 34.
+    writeComposerRun(workspace)
+    expect((await call()).text).toMatch(/a 15 s reel at 136 BPM is 9 bars/)
+    expect(prepareReelProject).not.toHaveBeenCalled()
+  })
+
+  it('keeps a composed score through a new frame, with its grid, but not through a new length', async () => {
+    const { service, workspace } = await setUp({ lengthSec: 60, music: 'agent' })
+    writeComposerRun(workspace)
+    await service.callTool('s1', 'motion_music', {})
+    jest.mocked(prepareReelProject).mockClear()
+
+    const reframed = await service.callTool('s1', 'motion_setup', {
+      ...ARGS,
+      lengthSec: 60,
+      music: 'agent',
+      ratio: '9:16',
+    })
+    expect(reframed.text).toMatch(/The music you made is kept/)
+    const kept = jest.mocked(prepareReelProject).mock.calls[0]?.[0].music
+    expect(kept?.file).toMatch(/composer-\d+\.wav$/)
+    expect(kept?.grid?.bpm).toBe(136)
+    expect(kept?.title).toBe('Composed: F# dorian, 136 BPM')
+
+    jest.mocked(prepareReelProject).mockClear()
+    const shorter = await service.callTool('s1', 'motion_setup', { ...ARGS, music: 'agent' })
+    expect(jest.mocked(prepareReelProject).mock.calls[0]?.[0].music).toBeNull()
+    expect(shorter.text).toMatch(/read the `reelmakeeasy-music-composer` skill/)
+    expect(shorter.text).toMatch(/call motion_music with engine "composer"/)
+  })
+
+  it('composes with the music model the user picked', async () => {
+    const { service, updated } = await setUp({ music: 'agent', musicEngine: 'eleven-music' })
     const result = await service.callTool('s1', 'motion_music', { prompt: 'a bright launch track' })
     expect(result.success).toBe(true)
     expect(jest.mocked(composeMusic).mock.calls[0]?.[3]).toBe('eleven-music')
     expect(updated.at(-1)?.musicTitle).toMatch(/^ElevenLabs Music: a bright launch track/)
-  })
-
-  it('composes with the music model the user picked', async () => {
-    const { service, updated } = await setUp({ music: 'agent', musicEngine: 'ace-step' })
-    const result = await service.callTool('s1', 'motion_music', { prompt: 'a bright launch track' })
-    expect(result.success).toBe(true)
-    expect(jest.mocked(composeMusic).mock.calls[0]?.[3]).toBe('ace-step')
-    expect(updated.at(-1)?.musicTitle).toMatch(/^ACE-Step: a bright launch track/)
+    const cheap = await service.callTool('s1', 'motion_music', {
+      engine: 'ace-step',
+      prompt: 'a bright launch track',
+    })
+    expect(cheap.success).toBe(true)
+    expect(jest.mocked(composeMusic).mock.calls[1]?.[3]).toBe('ace-step')
     expect(await service.callTool('s1', 'motion_music', { engine: 'code', prompt: 'x' })).toEqual({
       success: false,
-      text: 'engine is eleven-music or ace-step.',
+      text: 'engine is composer or eleven-music or ace-step.',
     })
   })
 
-  it('carries on a chat saved when music could be written in code, its score as a plain track', async () => {
+  it('carries on a chat saved when music could be written in code: the composer now, its score a plain track', async () => {
     const { service, sessions, updated, workspace } = await setUp()
     const musicDir = path.join(workspace, 'reel', 'music')
     fs.mkdirSync(musicDir, { recursive: true })
@@ -222,9 +331,9 @@ describe('the music the agent makes', () => {
       file: path.join(musicDir, 'score-1.wav'),
       title: 'Score: D minor, 128 BPM',
     })
-    expect(updated.at(-1)?.music).toEqual({ engine: 'eleven-music', source: 'agent' })
+    expect(updated.at(-1)?.music).toEqual({ engine: 'composer', source: 'agent' })
 
-    // A new length drops the score (its bars were the old reel's): the agent makes new music.
+    // A new length drops the score (its bars were the old reel's): the agent composes anew.
     sessions.updateMotionReel('s1', {
       ...(updated.at(-1) as AgentMotionSetupView),
       music: { engine: 'code', source: 'agent' } as unknown as AgentMotionSetupView['music'],
@@ -237,20 +346,9 @@ describe('the music the agent makes', () => {
     })
     expect(longer.success).toBe(true)
     expect(longer.text).not.toMatch(/The music you made is kept/)
-    expect(jest.mocked(prepareReelProject).mock.calls[0]?.[0].music?.file).not.toBe(
-      path.join(musicDir, 'score-1.wav'),
-    )
-
-    // Music made anew comes from ElevenLabs Music.
-    sessions.updateMotionReel('s1', {
-      ...(updated.at(-1) as AgentMotionSetupView),
-      music: { engine: 'code', source: 'agent' } as unknown as AgentMotionSetupView['music'],
-    })
-    const made = await service.callTool('s1', 'motion_music', { prompt: 'a bright launch track' })
-    expect(made.success).toBe(true)
-    expect(jest.mocked(composeMusic).mock.calls[0]?.[3]).toBe('eleven-music')
-    expect(jest.mocked(prepareReelProject).mock.calls.at(-1)?.[0].setup.music).toEqual({
-      engine: 'eleven-music',
+    expect(jest.mocked(prepareReelProject).mock.calls[0]?.[0].music).toBeNull()
+    expect(jest.mocked(prepareReelProject).mock.calls[0]?.[0].setup.music).toEqual({
+      engine: 'composer',
       source: 'agent',
     })
   })
