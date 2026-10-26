@@ -8,7 +8,7 @@ import {
 import {
   type AgentMode,
   type AgentTool,
-  isMotionMode,
+  isCodeVideoMode,
   isRankingMode,
 } from '@shared/types/api/agent'
 import { Button, cn } from '@shared/ui'
@@ -268,7 +268,7 @@ function AgentWorkspace({
           />
         </div>
         <div className="min-h-0 min-w-0 flex-1">
-          {isMotionMode(mode) ? (
+          {isCodeVideoMode(mode) ? (
             <MotionReelPanel transcript={agent.transcript} />
           ) : isRankingMode(mode) ? (
             <RankingChatPanel

@@ -11,6 +11,7 @@ import {
 import { cn } from '@shared/ui'
 import {
   ArrowRight,
+  Brush,
   Check,
   Clapperboard,
   Film,
@@ -20,7 +21,13 @@ import {
 } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 
-import { HARNESS_LABEL, HARNESS_SHORT, harnessChoices, initialHarness } from './agent-harness'
+import {
+  HARNESS_LABEL,
+  HARNESS_SHORT,
+  harnessChoices,
+  harnessNotReady,
+  initialHarness,
+} from './agent-harness'
 import { Spinner } from './Spinner'
 
 export type WelcomeCardProps = {
@@ -48,6 +55,8 @@ type ModeOption = {
 }
 
 type ToolOption = {
+  /** Runs on Claude Code whatever agent is picked (Claude Animation). */
+  claudeOnly?: boolean
   icon: React.ComponentType<{ className?: string }>
   key: AgentTool
   label: string
@@ -61,7 +70,7 @@ const SHORT_VIDEO: ToolOption = {
   modes: [
     {
       description: () =>
-        'We find a fun fact, a news story or a famous figure. You pick one and a style, and we make the whole video.',
+        'We find a fun fact, a news story or a famous figure. You pick one and a style, and we make the whole video. Made with AI video models.',
       label: 'Easy (Guided)',
       mode: AGENT_TOOL_MODES.short.easy,
       recommended: true,
@@ -120,6 +129,28 @@ const TOOLS: ToolOption[] = [
       },
     ],
   },
+  {
+    claudeOnly: true,
+    icon: Brush,
+    key: 'animation',
+    label: 'Claude Animation',
+    modes: [
+      {
+        description: () =>
+          "Claude animates your video itself, every frame in code: 2D, 3D or 8-bit. Pick a look and say what it's about. No AI video model.",
+        label: 'Easy (Guided)',
+        mode: AGENT_TOOL_MODES.animation.easy,
+        recommended: true,
+      },
+      {
+        description: () =>
+          'Talk it through with Claude: the story, the look, the music. Claude sets it up and builds it.',
+        label: 'Advanced (Free chat)',
+        mode: AGENT_TOOL_MODES.animation.advanced,
+        recommended: false,
+      },
+    ],
+  },
 ]
 
 /**
@@ -156,13 +187,20 @@ export function WelcomeCard({
   const tool = TOOLS.find((t) => t.key === toolKey) ?? SHORT_VIDEO
 
   const locked = mode !== null || pending !== null
+  // Claude Animation runs on Claude Code whatever agent is picked; unusable until it is ready.
+  const claudeOnly = !!tool.claudeOnly
+  const claudeMissing = claudeOnly && mode === null ? harnessNotReady(status ?? null, 'claude') : undefined
 
   const choose = async (next: AgentMode) => {
-    if (locked || inFlightRef.current) return
+    if (locked || claudeMissing || inFlightRef.current) return
     inFlightRef.current = true
     setClicked(next)
     // A preset agent is already on the chat; with none known the server's default is used.
-    const ok = await (presetHarness || !choices.length ? onChoose(next) : onChoose(next, harness))
+    const ok = await (claudeOnly
+      ? onChoose(next, 'claude')
+      : presetHarness || !choices.length
+        ? onChoose(next)
+        : onChoose(next, harness))
     // On success stay locked until the `mode` event arrives.
     if (!ok) {
       inFlightRef.current = false
@@ -175,7 +213,8 @@ export function WelcomeCard({
       <div className="flex flex-col gap-1">
         <p className="text-[15px] font-semibold text-primary">What would you like to make?</p>
         <p className="text-xs text-secondary">
-          {agent} is your creative partner here. New to this? Start with Easy.
+          {claudeOnly ? HARNESS_SHORT.claude : agent} is your creative partner here. New to this?
+          Start with Easy.
         </p>
       </div>
       <div
@@ -215,9 +254,9 @@ export function WelcomeCard({
       <div className="flex flex-col gap-1.5" role="tabpanel">
         {tool.modes.map((option) => (
           <ModeButton
-            agent={agent}
+            agent={claudeOnly ? HARNESS_SHORT.claude : agent}
             key={option.mode}
-            locked={locked}
+            locked={locked || !!claudeMissing}
             mode={mode}
             onChoose={(next) => void choose(next)}
             option={option}
@@ -225,12 +264,19 @@ export function WelcomeCard({
           />
         ))}
       </div>
-      {(presetHarness || mode !== null) && (
-        <p className="border-t border-white/[0.08] pt-3 text-xs text-white/40">
-          Running on {HARNESS_LABEL[chosenHarness ?? presetHarness ?? harness]}
-        </p>
+      {claudeOnly && mode === null ? (
+        <div className="flex flex-col gap-1 border-t border-white/[0.08] pt-3">
+          <p className="text-xs text-white/40">Runs on {HARNESS_LABEL.claude}</p>
+          {claudeMissing && <p className="text-xs text-secondary">{claudeMissing}</p>}
+        </div>
+      ) : (
+        (presetHarness || mode !== null) && (
+          <p className="border-t border-white/[0.08] pt-3 text-xs text-white/40">
+            Running on {HARNESS_LABEL[chosenHarness ?? presetHarness ?? harness]}
+          </p>
+        )
       )}
-      {mode === null && !presetHarness && choices.length > 1 && (
+      {mode === null && !claudeOnly && !presetHarness && choices.length > 1 && (
         <div className="flex flex-col gap-1 border-t border-white/[0.08] pt-3">
           <div className="flex items-center gap-2 text-xs text-white/40">
             Runs on

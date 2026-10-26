@@ -1,0 +1,145 @@
+import { fireEvent, render, screen } from '@testing-library/react'
+import type { AgentAnimationOptions } from '@shared/types/api/agent'
+
+import { AnimationSetupCard } from './AnimationSetupCard'
+import { useAnimationOptions } from './useAnimationOptions'
+
+jest.mock('./useAnimationOptions', () => ({ useAnimationOptions: jest.fn() }))
+jest.mock('jotai', () => ({ ...jest.requireActual('jotai'), useAtomValue: () => '' }))
+
+const OPTIONS: AgentAnimationOptions = {
+  composers: [
+    { cost: '$0.60 a minute', description: 'Rich', id: 'eleven-music', label: 'ElevenLabs Music' },
+    { cost: 'about $0.01', description: 'Quick', id: 'ace-step', label: 'ACE-Step' },
+  ],
+  looks: [
+    {
+      defaultLengthSec: 30,
+      defaultTrackId: 'data-pulse',
+      description: 'Cartoon characters talk you through it, with voices and lip sync.',
+      id: '2d',
+      label: '2D',
+      lengths: [30],
+      previewUrl: null,
+    },
+    {
+      defaultLengthSec: 30,
+      defaultTrackId: 'dark-precision',
+      description: 'A 3D scene shows how something works, with a narrator.',
+      id: '3d',
+      label: '3D',
+      lengths: [30, 45, 60],
+      previewUrl: '/api/presets/animation/looks/3d.mp4',
+    },
+    {
+      defaultLengthSec: 30,
+      defaultTrackId: 'neon-drive',
+      description: 'Pixel art, like an old video game, with a narrator.',
+      id: '8bit',
+      label: '8-bit',
+      lengths: [30, 45, 60],
+      previewUrl: null,
+    },
+  ],
+  tracks: [
+    { bpm: 90, id: 'data-pulse', previewUrl: '/a.mp3', styles: [], title: 'Data Pulse' },
+    { bpm: 96, id: 'dark-precision', previewUrl: '/b.mp3', styles: [], title: 'Dark Precision' },
+    { bpm: 120, id: 'neon-drive', previewUrl: '/c.mp3', styles: [], title: 'Neon Drive' },
+  ],
+}
+
+const open = { id: 'animation-setup-1', kind: 'animation_setup' as const, state: 'open' as const }
+
+function renderCard(options: AgentAnimationOptions = OPTIONS) {
+  jest.mocked(useAnimationOptions).mockReturnValue({ error: false, options, retry: jest.fn() })
+  const onSubmit = jest.fn(async () => true)
+  render(<AnimationSetupCard entry={open} onSubmit={onSubmit} sessionId="s1" />)
+  return onSubmit
+}
+
+const look = (name: RegExp) => screen.getByRole('radio', { name }) as HTMLButtonElement
+
+describe('AnimationSetupCard', () => {
+  it('sends the look, length, music and subject', () => {
+    const onSubmit = renderCard()
+    fireEvent.click(look(/3D/))
+    fireEvent.click(screen.getByRole('radio', { name: '45 s' }))
+    fireEvent.change(screen.getByRole('textbox'), { target: { value: '  black holes  ' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Animate it' }))
+    expect(onSubmit).toHaveBeenCalledWith({
+      lengthSec: 45,
+      lookId: '3d',
+      music: { id: 'dark-precision', source: 'library' },
+      subject: 'black holes',
+    })
+  })
+
+  it('sends no subject for Surprise me', () => {
+    const onSubmit = renderCard()
+    fireEvent.click(screen.getByRole('checkbox', { name: /Surprise me/ }))
+    expect((screen.getByRole('textbox') as HTMLTextAreaElement).disabled).toBe(true)
+    fireEvent.click(screen.getByRole('button', { name: 'Animate it' }))
+    expect(onSubmit).toHaveBeenCalledWith(expect.objectContaining({ lookId: '2d', subject: null }))
+  })
+
+  it('waits for what it is about', () => {
+    renderCard()
+    expect((screen.getByRole('button', { name: 'Animate it' }) as HTMLButtonElement).disabled).toBe(
+      true,
+    )
+    expect(screen.getByText(/Say what it's about, or pick Surprise me/)).toBeTruthy()
+  })
+
+  it('offers only 30 s for 2D', () => {
+    renderCard()
+    expect(screen.getAllByRole('radio', { name: /^\d+ s$/ }).map((r) => r.textContent)).toEqual([
+      '30 s',
+    ])
+  })
+
+  it('plays a look preview when there is one', () => {
+    renderCard()
+    expect(document.querySelector('video[src="/api/presets/animation/looks/3d.mp4"]')).toBeTruthy()
+  })
+
+  it('shows why a look is unavailable and starts on one that is', () => {
+    const onSubmit = renderCard({
+      ...OPTIONS,
+      looks: OPTIONS.looks.map((l) =>
+        l.id === '2d' ? { ...l, disabledReason: 'Needs Qwen3 voices on this computer or a fal key.' } : l,
+      ),
+    })
+    expect(look(/2D/).disabled).toBe(true)
+    expect(screen.getByText('Needs Qwen3 voices on this computer or a fal key.')).toBeTruthy()
+    fireEvent.change(screen.getByRole('textbox'), { target: { value: 'volcanoes' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Animate it' }))
+    expect(onSubmit).toHaveBeenCalledWith(expect.objectContaining({ lookId: '3d' }))
+  })
+
+  it('shows what was chosen once it is sent', () => {
+    jest.mocked(useAnimationOptions).mockReturnValue({ error: false, options: OPTIONS, retry: jest.fn() })
+    render(
+      <AnimationSetupCard
+        entry={{
+          ...open,
+          setup: {
+            lengthSec: 30,
+            lookId: '2d',
+            lookLabel: '2D',
+            music: { source: 'none' },
+            musicTitle: null,
+            subject: null,
+          },
+          state: 'chosen',
+        }}
+        onSubmit={jest.fn()}
+        sessionId="s1"
+      />,
+    )
+    expect(screen.getByText('Claude Animation')).toBeTruthy()
+    expect(screen.getByText('A fun fact Claude picks')).toBeTruthy()
+    expect(screen.getByText('2D')).toBeTruthy()
+    expect(screen.getByText('30 s')).toBeTruthy()
+    expect(screen.getByText('No music')).toBeTruthy()
+  })
+})

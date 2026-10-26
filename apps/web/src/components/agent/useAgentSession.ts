@@ -6,6 +6,7 @@ import {
   type Transcript,
 } from '@reelmakeeasy/common/codex-agent/agent-transcript'
 import type {
+  AgentAnimationSetup,
   AgentAnswers,
   AgentHarnessName,
   AgentMode,
@@ -459,6 +460,34 @@ export function useAgentSession(sessionId: string | undefined) {
     }
   })
 
+  /** Sends the Claude Animation setup card; resolves false (after a notice saying why) on failure. */
+  const setupAnimation = useRefCallback(async (setup: AgentAnimationSetup): Promise<boolean> => {
+    if (!sessionId) return false
+    try {
+      await fetchApiDomain('/api/agent/sessions/{id}/animation', {
+        data: setup,
+        method: 'POST',
+        pathParams: { id: sessionId },
+      })
+      return true
+    } catch (error) {
+      const status = error instanceof ApiError ? error.status : undefined
+      if (status === 404) {
+        markNotFound()
+        return false
+      }
+      const message = error instanceof Error ? error.message : ''
+      addLocalNotice(
+        status === 400 && message
+          ? message
+          : status === 409
+            ? 'This animation is already set up.'
+            : 'Could not start the animation. Try again.',
+      )
+      return false
+    }
+  })
+
   /** "Pick up where you left off": carries on an Easy chat a restart cut off, from its open
    *  card. False (with a notice saying why, in the API's words) when the API refuses. */
   const resume = useRefCallback(async (): Promise<boolean> => {
@@ -524,6 +553,7 @@ export function useAgentSession(sessionId: string | undefined) {
     resume,
     send,
     sending,
+    setupAnimation,
     setupMotionReel,
     startEditing,
     /** The server's `session.flowActive`; undefined while it may be stale or is unknown. */

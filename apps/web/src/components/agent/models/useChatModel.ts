@@ -10,7 +10,13 @@ import { getChatModel, setChatModel, setDefaultChatModel } from './chat-model'
 /** A chat's model: what it runs on, what its harness offers, and the picks that change it. */
 export type ChatModel = ReturnType<typeof useChatModel>
 
-export function useChatModel(sessionId: null | string | undefined, enabled: boolean) {
+/** `key` changes when the chat's agent or mode does (a Claude Animation moves a Codex chat to
+ *  Claude Code; a Motion Reel pins its model): the model is asked again then. */
+export function useChatModel(
+  sessionId: null | string | undefined,
+  enabled: boolean,
+  key = '',
+) {
   const { fetchApiDomain } = useApi()
   const [state, setState] = useState<ChatModelState | null>(null)
   const [error, setError] = useState<null | string>(null)
@@ -32,7 +38,7 @@ export function useChatModel(sessionId: null | string | undefined, enabled: bool
     setState(null)
     if (!sessionId || !enabled) return
     void run(() => getChatModel(fetchApiDomain, sessionId))
-  }, [enabled, fetchApiDomain, run, sessionId])
+  }, [enabled, fetchApiDomain, key, run, sessionId])
 
   const id = sessionId ?? ''
   return {

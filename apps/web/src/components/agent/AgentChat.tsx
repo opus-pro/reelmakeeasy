@@ -38,6 +38,8 @@ import {
 } from './attachments/ComposerAttachments'
 import { useAttachments } from './attachments/useAttachments'
 import { ChatModelBar } from './models/ChatModelBar'
+import { AnimationSetupCard } from './animation/AnimationSetupCard'
+import { composerPlaceholder } from './composer-placeholder'
 import { MotionReelSetupCard } from './motion/MotionReelSetupCard'
 import { MotionReelVideoCard } from './motion/MotionReelVideoCard'
 import { type ActivityEntry, ActivityGroup } from './ActivityGroup'
@@ -192,64 +194,12 @@ function ToolEntry({ entry }: { entry: Extract<TranscriptEntry, { kind: 'tool' }
   )
 }
 
-/** The API's 409 for a message to a finished autonomous session, used as the composer hint. */
-const AUTONOMOUS_FINISHED = 'This autonomous session is finished. Start a new session to chat.'
-
-/** The composer's hint: what typing there does right now. */
-function composerPlaceholder({
-  cardOrMessage,
-  cardQuestions,
-  editing,
-  flowActive,
-  flowFinished,
-  modeChosen,
-  motionSetupPending,
-  pickUp,
-  singleQuestion,
-  who,
-  working,
-}: {
-  /** One of ReelMakeEasy's fixed cards is open in a chat: typing an option answers it, anything
-   *  else is a message to the agent. */
-  cardOrMessage: boolean
-  /** Questions on an open card only its own Submit can answer (0 when none). */
-  cardQuestions: number
-  /** The finished video is being edited in this chat: a free chat again. */
-  editing: boolean
-  /** An autonomous flow runs: the composer only answers its cards. */
-  flowActive: boolean
-  /** An autonomous session whose flow is over: nothing more to type. */
-  flowFinished: boolean
-  modeChosen: boolean
-  /** A Motion Reel chat whose setup card hasn't been sent yet. */
-  motionSetupPending: boolean
-  /** An Easy chat a restart cut off: its button above (named this) carries it on. */
-  pickUp: false | string
-  /** A one-question card is open that the composer can answer. */
-  singleQuestion: boolean
-  /** How the chat names its agent: Codex or Claude. */
-  who: string
-  working: boolean
-}): string {
-  if (!modeChosen) return 'Choose how to start above'
-  if (motionSetupPending) return 'Set up your Motion Reel above'
-  if (editing) return 'Describe what to change…'
-  if (pickUp) return `Press "${pickUp}" above to carry on`
-  if (flowFinished) return AUTONOMOUS_FINISHED
-  if (cardOrMessage && !working) return `Pick an option above, or message ${who}…`
-  if (singleQuestion && !cardOrMessage) return 'Pick an option above, or type your answer'
-  if (flowActive) return 'Answer the cards above'
-  if (cardQuestions === 1) return 'Answer the question above'
-  if (cardQuestions > 1) return 'Answer the questions above'
-  if (working) return `${who} is still working. Wait for it, or press Stop.`
-  return `Message ${who}…`
-}
-
-/** A Motion Reel chat whose setup card hasn't been sent yet: nothing to type until it is. */
-function isMotionSetupPending(mode: AgentMode | null, entries: TranscriptEntry[]): boolean {
-  return (
-    mode === 'motion' && !entries.some((e) => e.kind === 'motion_setup' && e.state === 'chosen')
-  )
+/** What a Motion Reel or Claude Animation chat still needs set up (its card not yet sent), as
+ *  the composer names it; null when nothing is waiting. */
+function setupPendingFor(mode: AgentMode | null, entries: TranscriptEntry[]): null | string {
+  const card = mode === 'motion' ? 'motion_setup' : mode === 'animation' ? 'animation_setup' : null
+  if (!card || entries.some((e) => e.kind === card && e.state === 'chosen')) return null
+  return card === 'motion_setup' ? 'Motion Reel' : 'animation'
 }
 
 /** Codex tool names are snake_case; the pill shows them as words. */
@@ -266,6 +216,7 @@ function TranscriptRow({
   expiredHints,
   onEdit,
   sessionId,
+  setupAnimation,
   setupMotionReel,
   startedProjectId,
   submittedIds,
@@ -282,6 +233,8 @@ function TranscriptRow({
   /** Opens the chat for editing (Easy only: Free chats are already open). */
   onEdit?: StartEditingFn
   sessionId: string
+  /** Sends a Claude Animation's setup card. */
+  setupAnimation: AgentSessionState['setupAnimation']
   /** Sends a Motion Reel's setup card. */
   setupMotionReel: AgentSessionState['setupMotionReel']
   /** Set on ReelMakeEasy's "Your video is being made" message: the video it follows. */
@@ -297,6 +250,9 @@ function TranscriptRow({
     }
     case 'image': {
       return <ImageEntry entry={entry} sessionId={sessionId} />
+    }
+    case 'animation_setup': {
+      return <AnimationSetupCard entry={entry} onSubmit={setupAnimation} sessionId={sessionId} />
     }
     case 'motion_setup': {
       return <MotionReelSetupCard entry={entry} onSubmit={setupMotionReel} sessionId={sessionId} />
@@ -434,6 +390,7 @@ export function AgentChat({
     sending,
     serverFlowActive,
     session,
+    setupAnimation,
     setupMotionReel,
     startEditing,
     stop,
@@ -480,7 +437,8 @@ export function AgentChat({
     transcript,
   })
   const modeChosen = mode !== null
-  const motionSetupPending = isMotionSetupPending(mode, transcript.entries)
+  const setupPending = setupPendingFor(mode, transcript.entries)
+  const motionSetupPending = setupPending !== null
   // An Easy chat a restart cut off before its video: "Pick up where you left off" below it.
   const pickUp = canPickUp(session, transcript.entries, flowActive)
   const expiredHints = expiredHintsFor({ editing, flowActive, mode, pickUp })
@@ -655,8 +613,8 @@ export function AgentChat({
     flowActive,
     flowFinished,
     modeChosen,
-    motionSetupPending,
     pickUp: pickUp && resumeWords(session?.resume).button,
+    setupPending,
     singleQuestion: !!singleQuestion,
     who,
     working: transcript.working,
@@ -699,6 +657,7 @@ export function AgentChat({
                 key={item.key}
                 onEdit={mode === 'autonomous' ? startEditing : undefined}
                 sessionId={sessionId}
+                setupAnimation={setupAnimation}
                 setupMotionReel={setupMotionReel}
                 startedProjectId={startedLines.get(item.entry.id)}
                 submittedIds={submittedIds}

@@ -66,6 +66,16 @@ export function harnessChoices(
   })
 }
 
+/** What to do to use `harness` (installed or not), or undefined when it is ready or the status
+ *  isn't known yet (the server checks again). */
+export function harnessNotReady(
+  status: AgentStatusResponse | null,
+  harness: AgentHarnessName,
+): string | undefined {
+  if (!status) return undefined
+  return notReadyReason(harness, statusOf(status, harness))
+}
+
 /** Whether a chat can open: at least one harness is installed and signed in. */
 export function anyHarnessReady(status: AgentStatusResponse): boolean {
   return ORDER.some((h) => statusOf(status, h).available)
