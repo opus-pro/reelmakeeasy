@@ -1,0 +1,1144 @@
+{
+ "title": "ReelMakeEasy — Launch Reel",
+ "bpm": 176,
+ "meter": "4/4",
+ "beatsPerBar": 4,
+ "stepsPerBar": 16,
+ "fps": 30,
+ "width": 1920,
+ "height": 1080,
+ "duration": 30,
+ "audio": {
+  "music": "music.mjs",
+  "ending": "ring",
+  "lufs": -14,
+  "tp": -1
+ },
+ "look": [],
+ "sections": [
+  {
+   "index": 0,
+   "scene": "composer-type",
+   "at": 0,
+   "dur": 2.727272727272727,
+   "bars": 2,
+   "energy": 0,
+   "label": "Cold open: one typed sentence"
+  },
+  {
+   "index": 1,
+   "scene": "particle-mark",
+   "at": 2.727272727272727,
+   "dur": 2.727272727272727,
+   "bars": 2,
+   "energy": 3,
+   "label": "Drop: particles lock into the mark",
+   "signature": true
+  },
+  {
+   "index": 2,
+   "scene": "agent-ui",
+   "at": 5.454545454545454,
+   "dur": 5.454545454545454,
+   "bars": 4,
+   "energy": 2,
+   "label": "The app, working: guided cards to storyboard"
+  },
+  {
+   "index": 3,
+   "scene": "layer-stack",
+   "at": 10.909090909090908,
+   "dur": 2.727272727272727,
+   "bars": 2,
+   "energy": 3,
+   "label": "One short, five layers (3D)"
+  },
+  {
+   "index": 4,
+   "scene": "ranking-countdown",
+   "at": 13.636363636363635,
+   "dur": 5.454545454545454,
+   "bars": 4,
+   "energy": 3,
+   "label": "Ranking: kinetic numerals over clips"
+  },
+  {
+   "index": 5,
+   "scene": "local-proof",
+   "at": 19.09090909090909,
+   "dur": 2.727272727272727,
+   "bars": 2,
+   "energy": 1,
+   "label": "Proof: it runs on your computer"
+  },
+  {
+   "index": 6,
+   "scene": "feed-wall",
+   "at": 21.818181818181817,
+   "dur": 5.454545454545454,
+   "bars": 4,
+   "energy": 3,
+   "label": "Momentum: a wall of finished shorts"
+  },
+  {
+   "index": 7,
+   "scene": "frame-resolve",
+   "at": 27.27272727272727,
+   "dur": 2.727272727272727,
+   "bars": 2,
+   "energy": 0,
+   "label": "Brand: the frame mark"
+  }
+ ],
+ "cues": [
+  {
+   "t": 0,
+   "kind": "key",
+   "g": 0.9,
+   "i": 0,
+   "section": 0
+  },
+  {
+   "t": 0.08522727272727272,
+   "kind": "key",
+   "g": 0.55,
+   "i": 1,
+   "section": 0
+  },
+  {
+   "t": 0.17045454545454544,
+   "kind": "key",
+   "g": 0.9,
+   "i": 2,
+   "section": 0
+  },
+  {
+   "t": 0.2556818181818182,
+   "kind": "key",
+   "g": 0.9,
+   "i": 3,
+   "section": 0
+  },
+  {
+   "t": 0.3409090909090909,
+   "kind": "key",
+   "g": 0.9,
+   "i": 4,
+   "section": 0
+  },
+  {
+   "t": 0.4261363636363636,
+   "kind": "key",
+   "g": 0.9,
+   "i": 5,
+   "section": 0
+  },
+  {
+   "t": 0.5113636363636364,
+   "kind": "key",
+   "g": 0.9,
+   "i": 6,
+   "section": 0
+  },
+  {
+   "t": 0.5965909090909091,
+   "kind": "key",
+   "g": 0.55,
+   "i": 7,
+   "section": 0
+  },
+  {
+   "t": 0.6818181818181818,
+   "kind": "key",
+   "g": 0.9,
+   "i": 8,
+   "section": 0
+  },
+  {
+   "t": 0.7670454545454545,
+   "kind": "key",
+   "g": 0.9,
+   "i": 9,
+   "section": 0
+  },
+  {
+   "t": 0.8522727272727272,
+   "kind": "key",
+   "g": 0.9,
+   "i": 10,
+   "section": 0
+  },
+  {
+   "t": 0.9374999999999999,
+   "kind": "key",
+   "g": 0.9,
+   "i": 11,
+   "section": 0
+  },
+  {
+   "t": 1.0227272727272727,
+   "kind": "key",
+   "g": 0.9,
+   "i": 12,
+   "section": 0
+  },
+  {
+   "t": 1.1079545454545454,
+   "kind": "key",
+   "g": 0.55,
+   "i": 13,
+   "section": 0
+  },
+  {
+   "t": 1.1931818181818181,
+   "kind": "key",
+   "g": 0.9,
+   "i": 14,
+   "section": 0
+  },
+  {
+   "t": 1.2784090909090908,
+   "kind": "key",
+   "g": 0.9,
+   "i": 15,
+   "section": 0
+  },
+  {
+   "t": 1.3636363636363635,
+   "kind": "key",
+   "g": 0.9,
+   "i": 16,
+   "section": 0
+  },
+  {
+   "t": 1.4488636363636362,
+   "kind": "key",
+   "g": 0.55,
+   "i": 17,
+   "section": 0
+  },
+  {
+   "t": 1.534090909090909,
+   "kind": "key",
+   "g": 0.9,
+   "i": 18,
+   "section": 0
+  },
+  {
+   "t": 1.6193181818181817,
+   "kind": "key",
+   "g": 0.9,
+   "i": 19,
+   "section": 0
+  },
+  {
+   "t": 1.7045454545454544,
+   "kind": "key",
+   "g": 0.9,
+   "i": 20,
+   "section": 0
+  },
+  {
+   "t": 1.789772727272727,
+   "kind": "key",
+   "g": 0.9,
+   "i": 21,
+   "section": 0
+  },
+  {
+   "t": 1.8749999999999998,
+   "kind": "key",
+   "g": 0.55,
+   "i": 22,
+   "section": 0
+  },
+  {
+   "t": 1.9602272727272725,
+   "kind": "key",
+   "g": 0.9,
+   "i": 23,
+   "section": 0
+  },
+  {
+   "t": 2.0454545454545454,
+   "kind": "key",
+   "g": 0.9,
+   "i": 24,
+   "section": 0
+  },
+  {
+   "t": 2.130681818181818,
+   "kind": "key",
+   "g": 0.9,
+   "i": 25,
+   "section": 0
+  },
+  {
+   "t": 2.215909090909091,
+   "kind": "key",
+   "g": 0.9,
+   "i": 26,
+   "section": 0
+  },
+  {
+   "t": 2.3011363636363633,
+   "kind": "key",
+   "g": 0.9,
+   "i": 27,
+   "section": 0
+  },
+  {
+   "t": 2.3863636363636362,
+   "kind": "tick",
+   "f": 2600,
+   "g": 1.1,
+   "id": "send",
+   "section": 0
+  },
+  {
+   "t": 2.5568181818181817,
+   "kind": "sweep",
+   "d": 0.13636363636363635,
+   "f0": 300,
+   "f1": 2400,
+   "g": 0.5,
+   "id": "collapse",
+   "section": 0
+  },
+  {
+   "t": 2.5568181818181817,
+   "kind": "transition",
+   "d": 0.17045454545454541,
+   "name": "bubble -> hot dot",
+   "section": 0
+  },
+  {
+   "t": 2.642045454545454,
+   "kind": "gap",
+   "d": 0.08522727272727272,
+   "id": "pre-drop",
+   "section": 0
+  },
+  {
+   "t": 2.727272727272727,
+   "kind": "boom",
+   "s": 0.7,
+   "section": 1
+  },
+  {
+   "t": 2.727272727272727,
+   "kind": "flash",
+   "peak": 0.7,
+   "decay": 16,
+   "color": "#FFE7B8",
+   "section": 1
+  },
+  {
+   "t": 3.4090909090909087,
+   "kind": "blip",
+   "note": 2,
+   "id": "copy",
+   "section": 1
+  },
+  {
+   "t": 4.090909090909091,
+   "kind": "lock",
+   "s": 0.55,
+   "section": 1
+  },
+  {
+   "t": 4.090909090909091,
+   "kind": "bell",
+   "section": 1
+  },
+  {
+   "t": 4.090909090909091,
+   "kind": "blip",
+   "note": 4,
+   "id": "copy",
+   "section": 1
+  },
+  {
+   "t": 4.857954545454545,
+   "kind": "whoosh",
+   "d": 0.5965909090909091,
+   "section": 1
+  },
+  {
+   "t": 4.857954545454545,
+   "kind": "transition",
+   "d": 0.5965909090909091,
+   "name": "dive through the mark window",
+   "section": 1
+  },
+  {
+   "t": 5.795454545454545,
+   "kind": "blip",
+   "note": 0,
+   "id": "card-welcome",
+   "g": 0.8,
+   "section": 2
+  },
+  {
+   "t": 6.477272727272727,
+   "kind": "tick",
+   "f": 3200,
+   "g": 0.7,
+   "id": "click-tab",
+   "section": 2
+  },
+  {
+   "t": 6.8181818181818175,
+   "kind": "tick",
+   "f": 3200,
+   "g": 0.7,
+   "id": "click-tab",
+   "section": 2
+  },
+  {
+   "t": 7.159090909090908,
+   "kind": "tick",
+   "f": 3200,
+   "g": 0.7,
+   "id": "click-easy",
+   "section": 2
+  },
+  {
+   "t": 7.5,
+   "kind": "blip",
+   "note": 2,
+   "id": "answer-check",
+   "g": 0.8,
+   "section": 2
+  },
+  {
+   "t": 7.585227272727272,
+   "kind": "blip",
+   "note": 2,
+   "id": "card-option",
+   "g": 0.8,
+   "section": 2
+  },
+  {
+   "t": 7.670454545454545,
+   "kind": "blip",
+   "note": 4,
+   "id": "card-option",
+   "g": 0.8,
+   "section": 2
+  },
+  {
+   "t": 7.7556818181818175,
+   "kind": "blip",
+   "note": 5,
+   "id": "card-option",
+   "g": 0.8,
+   "section": 2
+  },
+  {
+   "t": 7.84090909090909,
+   "kind": "tick",
+   "f": 3200,
+   "g": 0.7,
+   "id": "click-idea",
+   "section": 2
+  },
+  {
+   "t": 7.84090909090909,
+   "kind": "pop",
+   "s": 0.18,
+   "id": "overlay-pick",
+   "section": 2
+  },
+  {
+   "t": 8.011363636363637,
+   "kind": "blip",
+   "note": 1,
+   "id": "answer-check",
+   "g": 0.8,
+   "section": 2
+  },
+  {
+   "t": 8.267045454545453,
+   "kind": "blip",
+   "note": 4,
+   "id": "card-option",
+   "g": 0.8,
+   "section": 2
+  },
+  {
+   "t": 8.352272727272727,
+   "kind": "blip",
+   "note": 5,
+   "id": "card-option",
+   "g": 0.8,
+   "section": 2
+  },
+  {
+   "t": 8.4375,
+   "kind": "blip",
+   "note": 7,
+   "id": "card-option",
+   "g": 0.8,
+   "section": 2
+  },
+  {
+   "t": 8.522727272727272,
+   "kind": "blip",
+   "note": 8,
+   "id": "card-option",
+   "g": 0.8,
+   "section": 2
+  },
+  {
+   "t": 8.522727272727272,
+   "kind": "tick",
+   "f": 3200,
+   "g": 0.7,
+   "id": "click-style",
+   "section": 2
+  },
+  {
+   "t": 8.693181818181817,
+   "kind": "blip",
+   "note": 3,
+   "id": "answer-check",
+   "g": 0.8,
+   "section": 2
+  },
+  {
+   "t": 8.863636363636363,
+   "kind": "blip",
+   "note": 0,
+   "id": "card-progress",
+   "g": 0.8,
+   "section": 2
+  },
+  {
+   "t": 9.034090909090908,
+   "kind": "blip",
+   "note": 0,
+   "id": "storyboard-shot",
+   "g": 0.8,
+   "section": 2
+  },
+  {
+   "t": 9.204545454545453,
+   "kind": "blip",
+   "note": 2,
+   "id": "storyboard-shot",
+   "g": 0.8,
+   "section": 2
+  },
+  {
+   "t": 9.375,
+   "kind": "blip",
+   "note": 5,
+   "id": "storyboard-shot",
+   "g": 0.8,
+   "section": 2
+  },
+  {
+   "t": 9.545454545454545,
+   "kind": "blip",
+   "note": 3,
+   "id": "storyboard-shot",
+   "g": 0.8,
+   "section": 2
+  },
+  {
+   "t": 9.545454545454545,
+   "kind": "pop",
+   "s": 0.22,
+   "id": "overlay-makes",
+   "section": 2
+  },
+  {
+   "t": 9.71590909090909,
+   "kind": "blip",
+   "note": 4,
+   "id": "storyboard-shot",
+   "g": 0.8,
+   "section": 2
+  },
+  {
+   "t": 9.886363636363637,
+   "kind": "blip",
+   "note": 7,
+   "id": "storyboard-shot",
+   "g": 0.8,
+   "section": 2
+  },
+  {
+   "t": 10.227272727272727,
+   "kind": "whoosh",
+   "d": 0.6818181818181817,
+   "dir": 1,
+   "section": 2
+  },
+  {
+   "t": 10.227272727272727,
+   "kind": "transition",
+   "d": 0.6818181818181817,
+   "name": "shot 1 lifts off the page",
+   "section": 2
+  },
+  {
+   "t": 10.909090909090908,
+   "kind": "burst",
+   "s": 0.35,
+   "id": "explode",
+   "section": 3
+  },
+  {
+   "t": 11.25,
+   "kind": "blip",
+   "note": 0,
+   "id": "layer-pictures",
+   "g": 0.9,
+   "section": 3
+  },
+  {
+   "t": 11.59090909090909,
+   "kind": "blip",
+   "note": 2,
+   "id": "layer-clips",
+   "g": 0.9,
+   "section": 3
+  },
+  {
+   "t": 11.931818181818182,
+   "kind": "blip",
+   "note": 4,
+   "id": "layer-voice",
+   "g": 0.9,
+   "section": 3
+  },
+  {
+   "t": 12.272727272727272,
+   "kind": "blip",
+   "note": 5,
+   "id": "layer-captions",
+   "g": 0.9,
+   "section": 3
+  },
+  {
+   "t": 12.613636363636363,
+   "kind": "blip",
+   "note": 7,
+   "id": "layer-music",
+   "g": 0.9,
+   "section": 3
+  },
+  {
+   "t": 12.954545454545453,
+   "kind": "snap",
+   "s": 0.25,
+   "id": "close",
+   "section": 3
+  },
+  {
+   "t": 13.295454545454545,
+   "kind": "whoosh",
+   "d": 0.34090909090909083,
+   "dir": -1,
+   "id": "phone-flip",
+   "section": 3
+  },
+  {
+   "t": 13.295454545454545,
+   "kind": "transition",
+   "d": 0.34090909090909083,
+   "name": "phone flips 180 to the ranking short",
+   "section": 3
+  },
+  {
+   "t": 13.636363636363635,
+   "kind": "pop",
+   "s": 0.18,
+   "id": "title-word",
+   "section": 4
+  },
+  {
+   "t": 13.80681818181818,
+   "kind": "pop",
+   "s": 0.18,
+   "id": "title-word",
+   "section": 4
+  },
+  {
+   "t": 13.977272727272727,
+   "kind": "pop",
+   "s": 0.18,
+   "id": "title-word",
+   "section": 4
+  },
+  {
+   "t": 14.318181818181817,
+   "kind": "cut",
+   "s": 0.3,
+   "id": "title-word",
+   "section": 4
+  },
+  {
+   "t": 14.488636363636362,
+   "kind": "tick",
+   "f": 3000,
+   "g": 0.6,
+   "id": "order-flick",
+   "section": 4
+  },
+  {
+   "t": 14.829545454545453,
+   "kind": "snap",
+   "s": 0.12,
+   "shake": false,
+   "id": "snare-roll",
+   "g": 0.4,
+   "section": 4
+  },
+  {
+   "t": 14.999999999999998,
+   "kind": "cut",
+   "s": 0.42,
+   "id": "rank-5",
+   "rank": 5,
+   "section": 4
+  },
+  {
+   "t": 15.511363636363635,
+   "kind": "snap",
+   "s": 0.12,
+   "shake": false,
+   "id": "snare-roll",
+   "g": 0.4,
+   "section": 4
+  },
+  {
+   "t": 15.68181818181818,
+   "kind": "cut",
+   "s": 0.42,
+   "id": "rank-4",
+   "rank": 4,
+   "section": 4
+  },
+  {
+   "t": 16.193181818181817,
+   "kind": "snap",
+   "s": 0.12,
+   "shake": false,
+   "id": "snare-roll",
+   "g": 0.4,
+   "section": 4
+  },
+  {
+   "t": 16.363636363636363,
+   "kind": "cut",
+   "s": 0.42,
+   "id": "rank-3",
+   "rank": 3,
+   "section": 4
+  },
+  {
+   "t": 16.874999999999996,
+   "kind": "snap",
+   "s": 0.12,
+   "shake": false,
+   "id": "snare-roll",
+   "g": 0.4,
+   "section": 4
+  },
+  {
+   "t": 17.045454545454543,
+   "kind": "cut",
+   "s": 0.42,
+   "id": "rank-2",
+   "rank": 2,
+   "section": 4
+  },
+  {
+   "t": 17.55681818181818,
+   "kind": "snap",
+   "s": 0.12,
+   "shake": false,
+   "id": "snare-roll",
+   "g": 0.4,
+   "section": 4
+  },
+  {
+   "t": 17.727272727272727,
+   "kind": "cut",
+   "s": 0.55,
+   "id": "rank-1",
+   "rank": 1,
+   "section": 4
+  },
+  {
+   "t": 18.75,
+   "kind": "whoosh",
+   "d": 0.34090909090909083,
+   "dir": 1,
+   "id": "zoom-into-1",
+   "section": 4
+  },
+  {
+   "t": 18.75,
+   "kind": "transition",
+   "d": 0.34090909090909083,
+   "name": "zoom into the numeral 1",
+   "section": 4
+  },
+  {
+   "t": 19.261363636363637,
+   "kind": "blip",
+   "note": 4,
+   "id": "local-node",
+   "g": 0.7,
+   "section": 5
+  },
+  {
+   "t": 19.43181818181818,
+   "kind": "blip",
+   "note": 7,
+   "id": "local-node",
+   "g": 0.7,
+   "section": 5
+  },
+  {
+   "t": 19.602272727272727,
+   "kind": "blip",
+   "note": 5,
+   "id": "local-node",
+   "g": 0.7,
+   "section": 5
+  },
+  {
+   "t": 19.602272727272727,
+   "kind": "tick",
+   "f": 5200,
+   "g": 0.18,
+   "id": "odometer-roll",
+   "section": 5
+  },
+  {
+   "t": 19.6875,
+   "kind": "tick",
+   "f": 5500,
+   "g": 0.18,
+   "id": "odometer-roll",
+   "section": 5
+  },
+  {
+   "t": 19.772727272727273,
+   "kind": "blip",
+   "note": 9,
+   "id": "local-node",
+   "g": 0.7,
+   "section": 5
+  },
+  {
+   "t": 19.772727272727273,
+   "kind": "tick",
+   "f": 5800,
+   "g": 0.18,
+   "id": "odometer-roll",
+   "section": 5
+  },
+  {
+   "t": 19.857954545454547,
+   "kind": "tick",
+   "f": 6100,
+   "g": 0.18,
+   "id": "odometer-roll",
+   "section": 5
+  },
+  {
+   "t": 19.943181818181817,
+   "kind": "tick",
+   "f": 6400,
+   "g": 0.18,
+   "id": "odometer-roll",
+   "section": 5
+  },
+  {
+   "t": 19.943181818181817,
+   "kind": "tick",
+   "f": 5200,
+   "g": 0.18,
+   "id": "odometer-roll",
+   "section": 5
+  },
+  {
+   "t": 20.02840909090909,
+   "kind": "tick",
+   "f": 6700,
+   "g": 0.18,
+   "id": "odometer-roll",
+   "section": 5
+  },
+  {
+   "t": 20.02840909090909,
+   "kind": "tick",
+   "f": 5500,
+   "g": 0.18,
+   "id": "odometer-roll",
+   "section": 5
+  },
+  {
+   "t": 20.113636363636363,
+   "kind": "lock",
+   "s": 0.12,
+   "shake": false,
+   "id": "odometer-land",
+   "g": 0.5,
+   "section": 5
+  },
+  {
+   "t": 20.113636363636363,
+   "kind": "tick",
+   "f": 5800,
+   "g": 0.18,
+   "id": "odometer-roll",
+   "section": 5
+  },
+  {
+   "t": 20.198863636363637,
+   "kind": "tick",
+   "f": 6100,
+   "g": 0.18,
+   "id": "odometer-roll",
+   "section": 5
+  },
+  {
+   "t": 20.284090909090907,
+   "kind": "tick",
+   "f": 6400,
+   "g": 0.18,
+   "id": "odometer-roll",
+   "section": 5
+  },
+  {
+   "t": 20.284090909090907,
+   "kind": "tick",
+   "f": 5200,
+   "g": 0.18,
+   "id": "odometer-roll",
+   "section": 5
+  },
+  {
+   "t": 20.36931818181818,
+   "kind": "tick",
+   "f": 6700,
+   "g": 0.18,
+   "id": "odometer-roll",
+   "section": 5
+  },
+  {
+   "t": 20.36931818181818,
+   "kind": "tick",
+   "f": 5500,
+   "g": 0.18,
+   "id": "odometer-roll",
+   "section": 5
+  },
+  {
+   "t": 20.454545454545453,
+   "kind": "lock",
+   "s": 0.12,
+   "shake": false,
+   "id": "odometer-land",
+   "g": 0.5,
+   "section": 5
+  },
+  {
+   "t": 20.454545454545453,
+   "kind": "tick",
+   "f": 5800,
+   "g": 0.18,
+   "id": "odometer-roll",
+   "section": 5
+  },
+  {
+   "t": 20.539772727272727,
+   "kind": "tick",
+   "f": 6100,
+   "g": 0.18,
+   "id": "odometer-roll",
+   "section": 5
+  },
+  {
+   "t": 20.624999999999996,
+   "kind": "tick",
+   "f": 6400,
+   "g": 0.18,
+   "id": "odometer-roll",
+   "section": 5
+  },
+  {
+   "t": 20.71022727272727,
+   "kind": "tick",
+   "f": 6700,
+   "g": 0.18,
+   "id": "odometer-roll",
+   "section": 5
+  },
+  {
+   "t": 20.795454545454543,
+   "kind": "lock",
+   "s": 0.12,
+   "shake": false,
+   "id": "odometer-land",
+   "g": 0.5,
+   "section": 5
+  },
+  {
+   "t": 21.136363636363637,
+   "kind": "transition",
+   "d": 0.6818181818181817,
+   "name": "box unfolds into tiles",
+   "section": 5
+  },
+  {
+   "t": 21.136363636363637,
+   "kind": "reverse",
+   "d": 0.6818181818181817,
+   "id": "swell-into-rebuild",
+   "section": 5
+  },
+  {
+   "t": 21.818181818181817,
+   "kind": "burst",
+   "s": 0.5,
+   "id": "wall-in",
+   "section": 6
+  },
+  {
+   "t": 23.18181818181818,
+   "kind": "cut",
+   "s": 0.4,
+   "id": "feed-line-0",
+   "section": 6
+  },
+  {
+   "t": 24.545454545454543,
+   "kind": "cut",
+   "s": 0.4,
+   "id": "feed-line-1",
+   "section": 6
+  },
+  {
+   "t": 25.909090909090907,
+   "kind": "cut",
+   "s": 0.4,
+   "id": "feed-line-2",
+   "section": 6
+  },
+  {
+   "t": 26.25,
+   "kind": "pop",
+   "s": 0.3,
+   "id": "wave",
+   "section": 6
+  },
+  {
+   "t": 26.59090909090909,
+   "kind": "whoosh",
+   "d": 0.6818181818181817,
+   "id": "merge",
+   "section": 6
+  },
+  {
+   "t": 26.59090909090909,
+   "kind": "transition",
+   "d": 0.6818181818181817,
+   "name": "wall merges into the hero tile",
+   "section": 6
+  },
+  {
+   "t": 27.27272727272727,
+   "kind": "final",
+   "s": 0.6,
+   "id": "final",
+   "section": 7
+  },
+  {
+   "t": 27.443181818181817,
+   "kind": "snap",
+   "s": 0.15,
+   "shake": false,
+   "id": "tail-swing",
+   "g": 0.4,
+   "section": 7
+  },
+  {
+   "t": 27.61363636363636,
+   "kind": "blip",
+   "note": 4,
+   "id": "wordmark",
+   "g": 0.6,
+   "section": 7
+  },
+  {
+   "t": 27.954545454545453,
+   "kind": "pop",
+   "s": 0.12,
+   "shake": false,
+   "id": "tagline-0",
+   "g": 0.5,
+   "section": 7
+  },
+  {
+   "t": 28.636363636363633,
+   "kind": "pop",
+   "s": 0.12,
+   "shake": false,
+   "id": "tagline-1",
+   "g": 0.5,
+   "section": 7
+  }
+ ],
+ "transitions": [
+  {
+   "t": 2.5568181818181817,
+   "d": 0.17045454545454541,
+   "name": "bubble -> hot dot",
+   "section": 0
+  },
+  {
+   "t": 4.857954545454545,
+   "d": 0.5965909090909091,
+   "name": "dive through the mark window",
+   "section": 1
+  },
+  {
+   "t": 10.227272727272727,
+   "d": 0.6818181818181817,
+   "name": "shot 1 lifts off the page",
+   "section": 2
+  },
+  {
+   "t": 13.295454545454545,
+   "d": 0.34090909090909083,
+   "name": "phone flips 180 to the ranking short",
+   "section": 3
+  },
+  {
+   "t": 18.75,
+   "d": 0.34090909090909083,
+   "name": "zoom into the numeral 1",
+   "section": 4
+  },
+  {
+   "t": 21.136363636363637,
+   "d": 0.6818181818181817,
+   "name": "box unfolds into tiles",
+   "section": 5
+  },
+  {
+   "t": 26.59090909090909,
+   "d": 0.6818181818181817,
+   "name": "wall merges into the hero tile",
+   "section": 6
+  }
+ ]
+}

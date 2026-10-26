@@ -250,6 +250,8 @@ export function readComposedMusic(projectDir: string, lengthSec: number): Compos
   const sliced = 'error' in report ? null : slicedRun(report.value)
   if (sliced) return sliced
   const checks = 'error' in report ? [] : reportChecks(report.value)
+  const harmony = harmonyRefusal(checks)
+  if (harmony) return harmony
   const failed = checks.filter((c) => c.status === 'FAIL')
   if (failed.length) {
     const why = failed.map((c) => `${c.id}: ${c.msg}`).join('; ')
@@ -286,6 +288,21 @@ export function keptComposerScore(file: string): ComposerScore | null {
   if ('error' in json) return null
   const score = composerScore(json.value)
   return typeof score === 'string' ? null : score
+}
+
+/**
+ * The composer's harmony check (`tools/audio/harmony.mjs`) must PASS: a score that measures clean
+ * can still be dissonant (a mode switch, #11 chords over a pedal, an inharmonic lead holding
+ * pitches against the chords), and nothing else here can hear that. A report without it is from
+ * a composer older than the check. A message telling the agent what to fix, or null.
+ */
+function harmonyRefusal(checks: { id: string; msg: string; status: string }[]): null | string {
+  const check = checks.find((c) => c.id === 'harmony')
+  const rerun = '`cd reel/music && node tools/score.mjs --no-cues`'
+  if (!check)
+    return `qc/score-report.json has no harmony check (it is from an older composer): run ${rerun} again, fix what its harmony line lists, then call motion_music.`
+  if (check.status === 'PASS') return null
+  return `The composer's harmony check did not pass: ${check.msg.slice(0, 600)}. The score must be stable: fix every clash and note it lists (the full lists are under "harmony" in reel/music/qc/score-report.json; the rules are the composer skill's Harmony rules: one key in major, minor, dorian or mixolydian, every chord in the key (no borrowed chord but a Picardy last chord), 7th and 9th chords whose tones are in the key, every note a chord tone or its plain 9th/11th/6th with no passing tones, bass on roots and fifths, harmonic lead sounds), run ${rerun} again until harmony is ok, then call motion_music.`
 }
 
 function hitsOf(json: MusicJson, voices: string[]): { s: number; t: number }[] {

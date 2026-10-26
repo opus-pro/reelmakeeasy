@@ -1,8 +1,8 @@
 # Music synthesis: write, voice, mix and measure `music.mjs`
 
-Read this after the plan's `## Music` lines are filled from `music-direction.md` (concept, tempo, arc, motif, material
-palette). This file is the *how*: the format, grids and feel, instruments, mix, endings, measurement, and a worked
-example. **`node tools/score.mjs --help` and `--list` (run in `reel/music/`) are authoritative** (they describe
+Read this after the plan's `## Music` lines are filled from `music-direction.md` (concept, recipe, tempo, harmony,
+motif, arc). This file is the *how*: the format, grids and feel, instruments, mix, endings, measurement, and the four
+stable recipes as complete files. **`node tools/score.mjs --help` and `--list` (run in `reel/music/`) are authoritative** (they describe
 `tools/audio/*.mjs`); where this file disagrees, follow the tool and say so.
 
 Evidence: (physics) acoustics or arithmetic · (practice) production convention · [checked] measured with this composer
@@ -10,14 +10,15 @@ by its authors · signal = vendor or single source · `[n]` = sources at the end
 
 Contents: 1 Loop · 2 Top-level fields · 3 Voices · 4 Grid strings · 5 Feel: swing, humanize, feel changes · 6 Harmony,
 motif, sections, step · 7 Instruments and materials · 8 An optional cue sheet · 9 Transition and tension recipes ·
-10 Mix · 11 Endings · 12 Measurement QC · 13 Slices and auditions · 14 Score → picture · 15 Anti-generic moves ·
-16 Worked example · Sources
+10 Mix · 11 Endings · 12 Measurement QC · 13 Slices and auditions · 14 Score → picture · 15 Arrangement moves that
+keep it stable · 16 Four stable recipes · Sources
 
 ## 1. Loop and commands
 
 Everything runs in `reel/music/`, in your shell. `tools/` is ReelMakeEasy's copy of the composer: never edit it.
 
 ```bash
+node tools/score.mjs --no-cues --harmony   # the harmony check alone, in seconds: run it first, until it prints ok
 node tools/score.mjs --no-cues    # music.mjs -> audio/score.wav + .mp3, build/music.json, qc/audio.png, qc/score-report.json
 node tools/score.mjs --list       # 80 instruments + parameters, voice inserts, voice keys, cue kinds, scales
 node tools/score.mjs --no-cues --around <section|bar> --out audio/sketch.wav   # about 10 s (whole bars) around a section's start
@@ -25,13 +26,14 @@ node tools/score.mjs --no-cues --from-bar <n> [--seconds s | --bars n] | --secti
 node tools/score.mjs --no-cues --seed <n>    # same structure, new humanize / arpeggio / texture rolls
 node tools/score.mjs --no-cues --solo v1,v2 | --mute v1,v2   # audition at the full mix's gain, never over the score
 ```
-- Exit 0 = written (WARN = advice) · 1 = refused/error · 3 = a QC FAIL (true peak or ending). It refuses without
+- Exit 0 = written (WARN = advice) · 1 = refused/error · 3 = a QC FAIL (harmony, true peak or ending). It refuses without
   `music.mjs` or with `sections: []`: there is no fallback music.
 - `reel.config.mjs` holds `bpm` (yours), meter `'4/4'`, the reel's `duration`, and `audio: { ending: 'ring', lufs: -14,
   tp: -1 }`. Read `config.bpm` and `config.meter` in `music.mjs` (`export default ({ config }) => ({ bpm: config.bpm,
   ... })`). Without a cue sheet the score's length is the sum of its sections: make them the reel's bars
   (`music-direction.md` §3).
-- Loop: edit → score → read the console `map` line, `qc/score-report.json`, `qc/audio.png` → fix. A full render
+- Loop: edit → `--harmony` until ok → score → read the console `harmony` and `map` lines, `qc/score-report.json`,
+  `qc/audio.png` → fix. A full render
   rewrites `build/music.json` and `qc/score-report.json`; a slice (§13) reports to `qc/score-report-window.json` and
   leaves `build/music.json` alone [checked]. `motion_music` takes only a full render newer than `music.mjs`.
 - Deterministic: same `music.mjs` + seed → identical mix. No `Math.random`/`Date`; use `seed`, `ctx.rng`, `api.rand`.
@@ -66,8 +68,7 @@ config }`; optional `export function step(ctx)` (§6). Accepted spellings: `voic
 
 `<voice>: { inst, ...composer keys, ...instrument parameters }`. Name voices for what they are (`kick`, `bass`,
 `lead`): ReelMakeEasy reads each voice's instrument and name: a voice is a kick when its instrument is `kick` or its name
-  says kick, a snare when its instrument is `snare`/`clap` or its name says snare or clap (name a found-sound kit's
-  thud `kick_<object>`). Composer keys:
+  says kick, a snare when its instrument is `snare`/`clap` or its name says snare or clap. Composer keys:
 - **Level, routing:** `gain` · `pan` −1..1 · `send` (reverb) · `dsend` (delay) · `bus` `beat|music|sfx` (default by
   instrument kind: drums → beat, tonal/texture → music, fx/foley → sfx).
 - **Register:** `octave` (default 2 for bass instruments, 3 drums, 4 others) · `low` (lowest MIDI of the chord-tone
@@ -95,7 +96,7 @@ config }`; optional `export function step(ctx)` (§6). Accepted spellings: `voic
 
 One character per cell; `|` and spaces are ignored (show beats with them).
 - `X` accent 1.0 · `x` 0.75 · `o` ghost 0.35 · `.` or `-` rest · `_` tie (extends the previous hit).
-  Pitched: `R` root · `3 5 7 9` · `O` octave · `A` approach (a semitone under the next chord's bass) · `C` whole chord;
+  Pitched: `R` root · `3 5 7 9` · `O` octave · `A` approach (a semitone under the next chord's bass: a non-chord tone, so the harmony check fails it) · `C` whole chord;
   they hit at 0.8, so accent them with the voice's `velMap` (`{ R: 1, ... }`). An `X` (velocity ≥ 0.9) on a voice the
   motif plays on is a strong melody accent in the reel.
 - Macros: `E(k,n[,rot][,X|x|o])` Euclid · `'a+b'` concatenate · `'a*3'` repeat.
@@ -115,8 +116,8 @@ One character per cell; `|` and spaces are ignored (show beats with them).
   keeps drifting across sections [checked]. `rotate: n` shifts the start (left, like `rot`).
 - **Triplets:** a 6/12/24-cell grid on a 16-cell bar is a polymeter, not triplets (the composer warns). Give the voice
   or pattern `steps: 12` (8th triplets in 4/4) or `24`.
-- **Never ship a grid verbatim** from the worked example, a reference or another doc: change ≥ 3 cells per row, add or
-  remove a voice, write the 4th-bar variation (practice).
+- **Start from a recipe's grids** (§16) and fit them to the reel: the section lengths, a 4th-bar fill, which voices
+  play in which section. A grid from a known record is copying (`music-direction.md` §11).
 
 ## 5. Feel: swing, humanize, feel changes
 
@@ -145,13 +146,15 @@ sections: [{ name: '<name>', bars: 4, grid: 'body', fill: { grid: 'trip', last: 
 ## 6. Harmony, motif, sections, step
 
 - **Chord tokens**, relative to the current mode: Roman `'I' 'vi7' 'bVII' 'IVmaj7' 'Vsus4' 'IVadd9'`, secondary
-  `'V/V'`, pedal `'V>I'` (V over the I bass) · diatonic stacks `1 '4^7' '2^9'` · names `'Ebmaj9' 'D/C'` · MIDI arrays
-  literal · `'-'` no chord. Per section: `prog`, `chordBars`, `key`, `mode`, `transpose` (a key lift = `transpose: 1|2`
-  on one section). Chord-token bass lines follow the bass of slash and pedal chords. Every chord change is a chord
-  event in the reel.
+  `'V/V'`, pedal `'IV>I'` (IV over the I bass: IV holds the tonic) · diatonic stacks `1 '4^7' '2^9'` · names `'Fmaj9'
+  'C/E'` · MIDI arrays literal · `'-'` no chord. A slash or pedal bass must be a tone of its chord (`'V>I'`, `'F/Eb'`
+  FAIL the harmony check). Per section: `prog`, `chordBars`; a section `key`, `mode` or `transpose` that changes the
+  notes FAILs it too (the relative major/minor is the one move allowed). Chord-token bass lines follow the bass of
+  slash and pedal chords. Every chord change is a chord event in the reel. The rules: `music-direction.md` §8.
 - **Motif** `{ degrees, rhythm (grid), voice }`, stated by `section.motif` (`true` | `'<transform>'` | `{ voice,
   transform, bar, beat, every, times }`) or by `play: { <voice>: 'motif:<transform>' }`. Transforms `retro invert aug
-  dim shift:<n>`, chained with `+`. Derive the degrees (`music-direction.md` §9); cryptogram helper:
+  dim shift:<n>`, chained with `+` (re-check the beats after a transform: the harmony check reads every note). Derive
+  the degrees (`music-direction.md` §9); cryptogram helper:
   `import { cryptogram } from './tools/audio/theory.mjs'` → `cryptogram('<word>', 7)` = degrees [checked]. Every note
   of every statement is a melody accent in the reel (`melody(0.8)`): state it where elements should pop.
 - **Section keys:** `name` · length by `bars` | `beats` | `dur` | `at` (+length) | `until: 'end'` · `energy` 0–4 ·
@@ -164,15 +167,15 @@ sections: [{ name: '<name>', bars: 4, grid: 'body', fill: { grid: 'trip', last: 
   energy, chord {root, ints, symbol, notes}, key, scale, T, stepSec, barSec, stepsPerBar, rng, lib, play(voice, {...}),
   inst(name, {...}), cuesNear(dt) }`; `rng` is seeded, `lib` = euclid parseNote nameOf mtof degree parseChord
   expandGrid. Use it for probabilistic events and phrase-aware lines.
-- **Sparse worlds** (ambient M04, sound-design-only M25): `'hold'` drones and pads per chord change, sparse events from
-  `step()` with `rng`, whole bars left near-silent on purpose. The reel still needs a grid: keep a quiet pulse (a rim,
+- **Sparse worlds** (ambient pads): `'hold'` pads per chord change, sparse chord-tone events from `step()` with `rng`,
+  whole bars left near-silent on purpose. The reel still needs a grid: keep a quiet pulse (a rim,
   a tick) so the picture has kicks or snares to follow, or plan the picture on the motif.
 
-## 7. Instruments (80, sample-free) and material palettes
+## 7. Instruments (80, sample-free): which are harmonic
 
 All oscillators, noise, envelopes and filters; `--list` has every parameter. You can't judge timbre: acoustic idioms
 come out as toy/FM/lo-fi versions (`music-direction.md` §1). A voice in front that imitates a voice or a real source
-means asking the user's ear after the render (`music-direction.md` §1 has the list and the naming test).
+means asking the user's ear after the render (`music-direction.md` §1).
 
 | Family | Instruments | Recipe notes |
 |---|---|---|
@@ -180,51 +183,21 @@ means asking the user's ear after the render (`music-direction.md` §1 has the l
 | Snare, hats | `snare clap hat ride shaker rim cowbell chipnoise` | metallic hat = six inharmonic squares [5]; `snare gated` [13]; `chipnoise` LFSR long/short [12]. `snare` and `clap` voices are the reel's snare track |
 | Tuned, hand perc | `tom conga taiko logdrum membrane wood body brush` | tune to scale degrees; `logdrum` = pitched bass, pitch drop + 1:1 FM knock [11]; `body` chest/thigh/snap/stomp; `brush` swirl/tap |
 | Bass | `sawBass reese acid wobble upright triangle` | `wobble div` locks the LFO to beats; `acid` `accent` and `from` (slide over `glide`, 60 ms); all need harmonics (§10) |
-| Keys, plucks | `pluck ks epiano piano organ fm bell pulse blip sine arpSaw` | `ks` Karplus-Strong, feedback .990–.998, `strum` [6]; `epiano` 1:1 body + tine FM [7]; `piano` (`felt`) is the weakest emulation; `pulse` duty 12.5/25/50 % + `arp` fake chords [12] |
-| Modal | `bar glass modal` (`material`, `shape`) | free-free bar 1:2.756:5.404:8.933 · tuned bar 1:4:10 · circular membrane 1:1.594:2.136:2.296:2.653:2.918:3.156 (physics) · glass 1:2.32:4.25:6.63 = starting values. `ratios` takes a preset name (`'free'`, `'tuned'`, `'glass'` …) or an array. `modal shape` derives the modes from an object: found-sound recipes below |
-| Object gestures | `rattle scrape` | physical models over the modal body: a drop settling in bounces (restitution `e`), a click train at speed / ridge spacing |
+| Keys, plucks | `pluck ks epiano piano organ fm bell pulse blip sine arpSaw` | `ks` Karplus-Strong, feedback .990–.998, `strum` [6]; `epiano` 1:1 body + tine FM [7]; `piano` (`felt`) is the weakest emulation; `pulse` duty 12.5/25/50 % + `arp` fake chords [12]. `fm` only with an integer `ratio` (1, 2, 3, 4) for anything pitched; the `bell` on any ratio (its partials read as a bell: the owner approved the 1.4 bell) |
+| Modal (inharmonic) | `bar glass modal membrane ceramic wood` | free-free bar 1:2.756:5.404:8.933 · circular membrane 1:1.594:2.136… (physics) · glass 1:2.32:4.25:6.63: partials off the harmonic series, so they fight the chord. Unpitched percussion and ticks under 0.15 s only (`decay` ≤ ~0.06 s); the tuned bar `bar tuned: true` (1:4:10) is the one harmonic modal voice |
+| Object gestures | `rattle scrape` | unpitched foley only: a drop settling in bounces, a click train |
 | Pads, voices | `pad supersaw stab brass vox choir drone braam` | supersaw 7 saws 0/±6/±12/±20 cents; `vox`/`choir` formants, male /a/ 730·1090·2440 Hz, ×1.15–1.2 female/child [4]; `braam`: once at most, with a reason [10] |
-| Textures | `vinyl hiss wind` (+ `mix.tape`) | crackle hides synthesis; leaning on it is the lo-fi cliché |
+| Textures | `vinyl hiss wind` (+ `mix.tape`) | crackle and air under a lo-fi bed; keep it low |
 | Transition fx | `boom riser whoosh sweep downlifter shepard doppler aperture snip shutter crackle bloop` | §9; Shepard weights by sin² so wraps are silent [8] |
 | Foley | `ceramic paper tapepull squish boing degauss channel shing bubble gel fabric stamp shatter click` | `degauss hum` 50 Hz (60 in the Americas) |
 
-**Material palette → instruments** (one family per reel, `music-direction.md` §2): wood `wood`, `modal
-material:'wood'`, short `bar` · glass `glass`, `modal 'glass'`, soft transient · membrane/drum-like `membrane tom
-taiko` · metal `bell` (ratio 1.4 or 3.5), `shing`, `modal` with ratios you choose · ceramic `ceramic` · paper `paper`,
-`crackle`, `tapepull` · water `bubble bloop` · rubber/gel `gel squish boing` · fabric/air `fabric wind whoosh` ·
-digital/pure `blip bell fm sine` (the least distinctive).
-
-**Found-sound recipes (M26, M25).** What makes a found-sound kit is in `music-direction.md` §7. A found sound is built
-from its object: the **shape** sets the mode ratios, the **size and material** set the pitch and the decay, the
-**gesture** sets the excitation. Every number below comes from *your* object (its real size; ask the user when it
-matters); the placeholders are the point:
-```js
-import { plateHz, tubeHz, OBJECT_MATERIALS } from './tools/audio/instruments.mjs';
-const PANEL = plateHz({ a: <long side m>, b: <short side m>, h: <thickness m>, material: '<steel|aluminium|glass|acrylic|abs|plywood|card>' });
-voices: {
-  // 1 struck panel (a lid, a card, a phone back, a sign): aspect = the mode pattern, strike = where it is hit
-  panel:  { inst: 'modal', shape: 'plate', aspect: <a / b>, strike: [<u 0..1>, <v 0..1>], f: PANEL,
-            decay: OBJECT_MATERIALS.<material>.tau, hard: <.2 fingertip .. .9 nail, key or coin> },
-  // 2 shell (a cup, glass, can, bowl): the ring series 1 : 2.83 : 5.42 : 8.77; pitch from tapping the object
-  rim:    { inst: 'modal', shape: 'ring', note: <its tapped pitch>, decay: <s>, tilt: <.4 glassy .. .9 dull> },
-  // 3 drop and settle: impacts at first·(1 - e^k)/(1 - e), each e x the last, ringing the object's own modes
-  settle: { inst: 'rattle', e: <restitution>, first: <s>, n: <impacts>, shape: '<its shape>', note: <...>, decay: <s> },
-  // 4 drag, zip, ratchet, scroll: clicks at speed / ridge spacing; periodic = a pitch, jitter 1 = crinkle
-  zip:    { inst: 'scrape', v0: <m/s>, v1: <m/s>, spacing: <ridge pitch m>, jitter: <0..1>, f: <its body Hz>, shape: '<...>' },
-  // 5 air column (a bottle neck, a tube, a cap's pop): closed = odd harmonics, open = all
-  neck:   { inst: 'modal', shape: 'tube', ends: '<closed|open>', f: tubeHz({ L: <m>, r: <m> }), noise: <.4-.7> },
-}
-```
-- Starting values for the gesture (practice): restitution `e` ≈ 0.2-0.4 for a cased phone on a desk, 0.5-0.6 for
-  wood on wood, 0.8-0.9 for a coin or a steel ball on stone; `first` = the first rebound's flight (a drop of a few cm
-  ≈ 0.05-0.15 s); a gesture's speed 0.05-0.5 m/s over its own ridge pitch.
-- Ratios are ideal (a simply supported plate, a thin ring, an unflanged tube): a starting point. No recordings, no
-  samples.
-- Each object is pitched twice: its physical pitch from the formula, then rounded to the reel's scale, or the reel's
-  key is taken from it. One object can be three voices (struck, dropped, dragged): that is how a kit stays one world.
-- Measured [checked by the composer's authors]: a glass panel 147 × 71 × 0.6 mm (`plateHz` 361 Hz) shows its predicted
-  plate modes within 0.6 %; the ring shows 1 : 2.83 : 5.42 at 0 / −11 / −23 dB; a closed 200 mm tube of radius 12 mm
-  sounds at 413.6 Hz with odd harmonics only. Measurement proves the physics, not that a viewer hears "a lid": ask.
+**Harmonic and inharmonic** (the harmony check's timbre rule, `music-direction.md` §8). Harmonic, for every pitched
+voice (lead, hook, chords, bass): `epiano pluck supersaw pad stab sine pulse organ arpSaw blip triangle sub sawBass
+reese acid wobble e808 logdrum upright`, `fm` with an integer `ratio`, `bell` on any ratio, `bar` with `tuned: true`.
+Inharmonic, for unpitched percussion and ticks shorter than 0.15 s only: `glass modal bar membrane ceramic wood`, object
+shapes (`shape: 'plate' | 'ring' | 'tube'`), `fm` with a non-integer ratio (2.32). The check reads each note's
+sounding length (its gate, or its decay to about −20 dB for a struck voice) and FAILs an inharmonic one held longer.
+UI sounds: a `tick`, `click`, `key` or `blip`, short, or a chord tone on a harmonic voice.
 
 **`pulse` glides (the chip slide).** A note's `from` (MIDI) or `slide` (semitones from the note, negative = from
 below) glides to the note over `glide` (0.06 s), linear in pitch; `stepHz: 60` quantises the slide to one pitch update
@@ -276,13 +249,13 @@ Which device serves the arc: `music-direction.md` §6. How to build each here:
 | Freeze | section `'granular'` | |
 | Accelerating roll | a denser fill grid, or a voice with `steps: 32` in the last bar; velocity rising `o x X` | cut density D2 → D4 within WCAG |
 | Breakdown · half-time switch | `mute`, `only`, `maxEnergy` · a section grid with the backbeat on cell 8 | |
-| Fake drop · key lift | a section with one soft element, the real drop a bar later · `transpose: 1` or `2` on the last section | once at most · a known cliché: knowingly |
-| Suspension → resolve | `'Vsus4'` or a pedal `'V>I'` through the build, tonic on the hit | |
+| Fake drop | a section with one soft element, the real drop a bar later | once at most |
+| Suspension → resolve | `'Vsus4'` then `'V'` through the build, the tonic on the hit | the sus resolves to its triad |
 | Displacement | `rotate` a figure's pattern one cell further each section, or move the motif's `beat` per statement | snaps home on the drop |
 | Ducked hit | `mix.duck.by` takes voices (`['kick']`) | §10 |
 
 Rules: ≤ 1 whoosh per 4 bars, never two identical in a row · ≤ 1 ear-candy device per phrase · silence is the
-strongest transition sound · a riser into every section is a re-roll default.
+strongest transition sound · not a riser into every section.
 
 ## 10. Mix
 
@@ -324,7 +297,7 @@ bus fx → master sum → reverse swells → master chain: high-pass `hp` 25 Hz,
 - `ring`: everything rings out; cosine fade of `ringFade` (0.5 s; set `ringFade` in music.mjs) at the very end. Put
   the final chord ≥ 1.5 s before the end so it actually rings: a 1-2 bar final section with a held chord, a sub and
   one bell. QC: the last sample silent. The reel's end card lands on that chord.
-- Design the ending (a cadence by meaning, `music-direction.md` §8); a plain fade-out is a re-roll default.
+- Design the ending: a plain cadence into the tonic (`music-direction.md` §8), not a fade-out.
 - `button` (a dead stop on the final hit) and `loop` exist in the composer (`--ending`), but the reel fades its music
   on the last half bar, so keep `ring` unless the plan has a reason.
 
@@ -332,6 +305,7 @@ bus fx → master sum → reverse swells → master chain: high-pass `hp` 25 Hz,
 
 | Check | Measures | Pass | If not |
 |---|---|---|---|
+| `harmony` | every pitched note, cue sounds included (`tools/audio/harmony.mjs`): the mode, one key (and a key wherever a pitch is held), unstable chords (#11, b9, #9, altered, augmented, diminished), slash basses, chords outside the key (borrowed ones included; a minor piece's Picardy last chord excepted), notes off the semitone, notes outside the key, non-chord tones (every note is a chord tone or its plain 9th/11th/6th: no passing or neighbour tones at all), the bass (and any note below C3) off root and fifth, sustained m2/M7/tritone clashes between voices, inharmonic voices (any instrument kind but the bell) holding a pitch | none of these (FAIL, exit 3) | each line names the time, voice, note and chord: fix them (`music-direction.md` §8); `--harmony` re-checks in seconds |
 | `loudness` · `truepeak` | integrated LUFS, LRA · dBTP of the delivered file | ±0.5 LU · ≤ ceiling (FAIL, exit 3) | lower hit gains, re-render |
 | `linear` | loudnorm pass-2 mode | linear | `master.pass1.input_lra` > 11 LU makes loudnorm ride the gain (dynamic): lift the quietest section or shorten long quiet stretches; a WARN you may keep when the arc needs its quiet break (say so) |
 | `peaks` | limiter depth | ≤ 6 dB | hits too far above the bed (§10) |
@@ -342,14 +316,24 @@ bus fx → master sum → reverse swells → master chain: high-pass `hp` 25 Hz,
 | `onsets` | hero cues of a cue sheet (s ≥ .45): onset within ±30 ms | max ≤ 10 ms | give the hit a transient; no swell, slow attack or humanize on it |
 | `ending` | the ring-out | last sample silent | a held final chord, ≥ 1.5 s before the end |
 
-- **A FAIL refuses the score**: `motion_music` will not take it. Fix and run again.
+- **A FAIL refuses the score**: `motion_music` will not take it. Fix and run again. For `harmony`, the console prints up
+  to four lines per kind and the ten worst clashes; `harmony` in `qc/score-report.json` has the counts and the lists.
+  Common fixes: a non-chord melody note → change it to a chord tone (moving it off the beat or shortening it does not
+  help: there are no passing tones) · a motif note that does not fit a chord → state the motif over a chord that holds
+  all its notes (a section motif's `bar`), or change the note · a clash with a held pad → change the melody note or the
+  chord · a slash chord → its plain triad · a borrowed chord → the key's own chord (bVI in dorian → IIImaj7: Dmaj7 →
+  Amaj7 in F# dorian) · a 7th chord with a tone outside the key → the key's own 7th chord on that degree · an
+  inharmonic hook → `epiano`, `pluck`, `supersaw`, `bell` or an integer-ratio `fm` · a mode or key change → one mode
+  for every section. Never fix a clash by dropping to plain triads: richness comes from 7ths and 9ths in the key.
+- **The check is arithmetic, not an ear.** It proves the notes keep the rules; it cannot hear a mix that masks the
+  melody, a chord voiced too low or a lead that is too loud. Say so.
 - **Loudness map:** the console `map` line and `sectionLoudness` (momentary LUFS per section) must show the planned
   arc: louder with energy, the breakdown clearly down, the drop up. Sections of different energy within ~1 LU of each
   other make no audible step (practice heuristic).
 - **Reading `qc/audio.png`** (open it: waveform L/R over a log spectrogram; yellow = sections; practice): drums =
   vertical lines · bass = bright band under ~120 Hz · pads = horizontal bands · risers = rising diagonals · gaps = dark
   columns · clipping = broadband smear at hits · a constant wide band below 60 Hz outside hits = mud.
-- **What you say:** "checked by measurement (loudness, true peak, mono, phone band, gaps, ending), not by ear", the
+- **What you say:** "checked by measurement (harmony, loudness, true peak, mono, phone band, gaps, ending), not by ear", the
   WARNs you kept and why, and ask the user to listen to the hook, the drop and the ending in the render.
 
 ## 13. Slices and auditions
@@ -377,46 +361,50 @@ motion-reel skill). So:
 - state the motif where elements should pop, and keep its voice clean of other busy figures;
 - keep the kick on the beats the background should pulse to (a half-time section halves the pulse).
 
-## 15. Anti-generic moves
+## 15. Arrangement moves that keep it stable
 
-1 Change something every 2 bars; never loop 1 bar > 4 times unchanged (2-bar grids, `fill.every`) · 2 a fill on the
-last beat of every 4-bar phrase, a bigger one every 8 (`fill: [{every: 4, …}, {bars: […]}]`) · 3 one instrument
-foreign to the world, supplied by the subject's world · 4 the motif from the subject (`music-direction.md` §9) · 5 no
-re-roll-default keys (D major, C minor, D minor, A minor): choose and justify · 6 one borrowed or secondary chord at
-the reveal (that section's `prog`) · 7 one polymetric or polyrhythmic element (odd-length grid, `phase: 'global'`,
-`steps`) · 8 swing decided per voice · 9 seeded humanize, small on kick, snare and motif · 10 automate filters, sends
-and decays per section (per-note functions, section patterns, `fx` strings) · 11 ≤ 1 ear candy (reverse swell, delay
-throw, tape stop) per phrase · 12 a counter-melody in the last third (`minEnergy` or late sections only) · 13
-subtract: mute a layer for a bar (fill with `null`) · 14 the subject's own sounds as percussion (M26, §7) · 15 a
-designed ending (§11) · 16 no "corporate happy" kit, no inspirational piano + four-on-the-floor + I–V–vi–IV, no
-build-and-drop every 8 bars by habit · 17 never a grid verbatim (§4) · 18 shaped dynamics: crescendos through `o x X`,
-not flat 1.0 · 19 move sounds in stereo with the picture's objects (`pan` functions) · 20 tune the drums: kick `f1`
-near the root, toms and membranes on scale degrees, the log drum plays the bass.
+Variety comes from the arrangement, never from new harmony or an odd sound: 1 change something every 2 bars; never
+loop 1 bar > 4 times unchanged (2-bar grids, `fill.every`) · 2 a fill on the last beat of every 4-bar phrase, a bigger
+one every 8 (`fill: [{every: 4, …}, {bars: […]}]`) · 3 subtract: mute a layer for a bar (fill with `null`) · 4 add
+one layer per section (assembly) · 5 swing decided per voice · 6 seeded humanize, small on kick, snare and motif · 7
+automate filters, sends and decays per section (per-note functions, section patterns, `fx` strings) · 8 ≤ 1 ear candy
+(reverse swell, delay throw, tape stop) per phrase · 9 a counter-line in the last third on chord tones (`minEnergy` or
+late sections only) · 10 shaped dynamics: crescendos through `o x X`, not flat 1.0 · 11 the motif doubled an octave up
+at the peak · 12 move sounds in stereo with the picture's objects (`pan` functions) · 13 tune the kick: `f1` near the
+root · 14 a designed ending (§11).
 
-## 16. Worked example (an example of the format; never reuse it verbatim)
+## 16. Four stable recipes (complete files to start from)
 
-A 60 s showreel at 136 BPM: round(60 × 136 / 240) = 34 bars, 60.0 s. It shows the format at work: a world, voices
-with harmonics for phones, named grid sets per section, fills, a motif with transforms, a surprise chord, gaps before
-the drops and a Picardy ending. Its world, tempo and key are now a re-roll default for unrelated reels: write your own
-from your plan, with your own grids, harmony and motif. Measured (not heard): −13.9 LUFS, −1.0 dBTP, mono −0.1 LU,
-phone 5.8 LU, both gaps ≥ 31 dB, ring ending PASS; the `map` line −15.9 | −13.8 | −13.8 | −24.6 | −12.4 | −13.6 | −17.2
-| −32.6 LUFS shows the two-drop arc.
-
-`reel/music/reel.config.mjs` (ReelMakeEasy writes it; only `bpm` is the agent's):
+Each passes the harmony check and was measured with this composer (not heard). Richness comes from 7ths and 9ths,
+swing, off-beat stabs and layering, never from a note outside the chord: A and D show it; B and C are triad-based, so
+voice them with 7ths and 9ths in the key. Start from the one nearest the reel
+(`music-direction.md` §10) and adapt it: `bpm` (then the bars), the key (move every chord with it; the Roman numerals
+of B and C follow the key by themselves), the sections and their lengths, the sounds, the motif (re-check its beats
+with `--harmony`). `reel/music/reel.config.mjs` is ReelMakeEasy's; only `bpm` is yours:
 ```js
-export default { title: 'A 60 s product showreel', bpm: 136, meter: '4/4', duration: 60, fps: 30,
-  audio: { ending: 'ring', lufs: -14, tp: -1 } };
+export default { title: '...', bpm: 136, meter: '4/4', duration: 60, fps: 30, audio: { ending: 'ring', lufs: -14, tp: -1 } };
 ```
 
-`reel/music/music.mjs`:
+### A. Garage loop: F# dorian, 136 BPM, 60 s (34 bars)
+
+The owner's liked garage track with B9, the 1.4 bell and the F# 6/9 Picardy ending, and one change: its borrowed Dmaj7
+(bVI) is Amaj7 (IIImaj7). Two motif statements moved onto chords that hold all their notes (the keys' motif off the
+G#m7 bar, the break's bell motif from the Amaj7 bar). Measured: harmony ok (554 pitched notes, every chord in F#
+dorian), −13.9 LUFS, −1.0 dBTP, mono 0 LU, phone 5.7 LU, both gaps ≥ 32 dB, ring ending PASS; the `map` line −15.9 |
+−13.8 | −13.7 | −24.0 | −12.4 | −13.5 | −17.2 | −32.5 LUFS shows the two-drop arc. It kept two WARNs: a shaker onset
+inside each pre-drop gap (move the shaker or `keep` the bus) and `linear` (the quiet break pushed loudnorm to dynamic
+mode). The true peak sits on the ceiling: after any change, a true-peak FAIL of −0.9 dBTP is fixed by another `seed`
+(it moves the humanize, not the notes) or a lower hit gain.
 ```js
-// EXAMPLE ONLY: never reuse it verbatim.
-// Sound: a UK garage / 2-step bed for a 60 s product showreel (M01, synth-native).
-// The world sounds slick and nocturnal: swung hats, a skipping kick, minor-9 stabs, a bent bass.
-// Key F# dorian (cool, hopeful minor; the raised 6th, D#, is the colour). Not a stock loop: i9 - IV9 - IIImaj7 - ii7,
-// one surprise chord (bVImaj7, Dmaj7) at the second drop, a Picardy ending (F# major 6/9) = problem solved.
+// RECIPE A: a UK garage / 2-step loop for a 60 s showreel. F# dorian (cool, hopeful minor), 136 BPM, 34 bars.
+// The owner's liked garage track, with one change: its borrowed Dmaj7 (bVI, from the parallel minor) is Amaj7 (IIImaj7).
+// Harmony, every tone in F# dorian: i9 - IV9 - IIImaj7 - ii7 (F#m9 B9 Amaj7 G#m7), IIImaj7 - V (Amaj7 E) into the drops
+// and the outro, and the F# major 6/9 Picardy chord to end (the one chord allowed outside the key: a minor piece's last).
+// The 7ths and 9ths are the richness: a plain-triad version sounds like an exercise.
 // Arc two-drop: drop at bar 9 (~24 %), breakdown, bigger drop at bar 23 (~65 %), short resolve, ring ending.
-// Motif (speech rhythm of the product's name): 5 notes, down a 4th by steps with one leap, answered on the tonic.
+// Motif (speech rhythm of the product's name): C# A B G# F#, stated only over chords that hold every one of its notes
+// as a chord tone or a plain 9th/11th/6th (the keys on the F#m9 and Amaj7 bars, the break's bell from the Amaj7 bar).
+// The hook is a soft FM bell (ratio 1.4: the bell is exempt from the inharmonic rule) doubled by a supersaw.
 export default ({ config }) => ({
   bpm: config.bpm,
   meter: config.meter,
@@ -491,16 +479,15 @@ export default ({ config }) => ({
     final: { pad: 'hold', keys: { grid: 'C...............', gate: 1 }, sub: { grid: 'R...............', gate: 1 }, bell: { grid: 'x...............', notes: [7] } },
   },
 
-  // 4 + 4 + 8 + 4 + 2 + 8 + 2 + 2 = 34 bars = the reel.
   sections: [
     { name: 'intro', bars: 4, energy: 1, grid: 'air', motif: { voice: 'bell', every: 2 } },
-    { name: 'build', bars: 4, energy: 2, grid: 'build', motif: { voice: 'keys', every: 2, bar: 1 }, fx: ['riser', 'gap16'] },
+    { name: 'build', bars: 4, energy: 2, grid: 'build', motif: { voice: 'keys', every: 2 }, fx: ['riser', 'gap16'] },
     { name: 'dropA', bars: 8, energy: 3, grid: 'dropA', fill: { grid: 'dropAfill', every: 4 }, motif: { voice: 'lead', every: 2 } },
-    { name: 'break', bars: 4, energy: 1, grid: 'brk', prog: ['F#m9', 'B9', 'Dmaj7', 'C#m7'], motif: { voice: 'bell', transform: 'aug', every: 4 }, fx: ['downlifter'] },
-    { name: 'lift', bars: 2, energy: 2, grid: 'lift', prog: ['Dmaj7', 'E'], fx: ['riser', 'gap8'] },
-    { name: 'dropB', bars: 8, energy: 4, grid: 'dropB', fill: { grid: 'dropBfill', every: 4 }, prog: ['F#m9', 'B9', 'Dmaj7', 'G#m7'], motif: { voice: 'lead', every: 2 }, play: { lead8: 'motif' } },
-    { name: 'outro', bars: 2, energy: 2, grid: 'outro', prog: ['Dmaj7', 'E'], motif: { voice: 'bell', transform: 'retro' } },
-    { name: 'final', bars: 2, energy: 1, grid: 'final', prog: [[42, 49, 54, 58, 61, 63, 68]], chordBars: 2 },
+    { name: 'break', bars: 4, energy: 1, grid: 'brk', prog: ['F#m9', 'B9', 'Amaj7', 'C#m7'], motif: { voice: 'bell', transform: 'aug', every: 4, bar: 2 }, fx: ['downlifter'] },
+    { name: 'lift', bars: 2, energy: 2, grid: 'lift', prog: ['Amaj7', 'E'], fx: ['riser', 'gap8'] },
+    { name: 'dropB', bars: 8, energy: 4, grid: 'dropB', fill: { grid: 'dropBfill', every: 4 }, prog: ['F#m9', 'B9', 'Amaj7', 'G#m7'], motif: { voice: 'lead', every: 2 }, play: { lead8: 'motif' } },
+    { name: 'outro', bars: 2, energy: 2, grid: 'outro', prog: ['Amaj7', 'E'], motif: { voice: 'bell', transform: 'retro' } },
+    { name: 'final', bars: 2, energy: 1, grid: 'final', prog: [[42, 49, 54, 58, 61, 63, 68]], chordBars: 2 },   // F# 6/9 as MIDI: F# C# F# A# C# D# G#
   ],
 
   ringFade: 0.6,
@@ -514,10 +501,361 @@ export default ({ config }) => ({
   },
 });
 ```
-What the reel got from it: kicks from `kick`, snares from `snare` and `clap`, the melody from the motif's statements
-on `bell`, `keys`, `lead` and `lead8`, a chord event on every bar, and the eight sections (dropB's energy 4 as 3). Its
-console left two WARNs it explained: a shaker onset inside each pre-drop gap (move the shaker or `keep` the bus) and
-`linear` (the quiet break pushed loudnorm to dynamic mode).
+
+### B. Minor launch: A minor, 128 BPM, 30 s (16 bars)
+
+Measured: harmony ok (272 pitched notes), −13.7 LUFS, −1.0 dBTP, phone 5.5 LU, ring ending PASS; `map` −15.5 | −12.6 |
+−13.1 | −24.5 | −24.4 LUFS; WARN `linear` kept (the quiet break and end).
+```js
+// RECIPE: a minor-key launch track. A natural minor, i-VI-III-VII (Am F C G), 128 BPM, four-on-the-floor.
+// 30 s = round(30 x 128 / 240) = 16 bars. Arc: intro 2 · build 2 · drop 8 · break 2 · end 2 (rings on Am).
+// Stable by construction: triads, the bass on roots and octaves, the motif on chord tones and plain 9ths/6ths on every
+// step. For more richness, voice the chords with their 7ths and 9ths in the key (Am9 Fmaj7 Cmaj7 G6).
+export default ({ config }) => ({
+  bpm: config.bpm, meter: config.meter, key: 'A', mode: 'aeolian', seed: 128,
+  swing: { hat: 0.54, default: 0.5 },
+  voices: {
+    kick: { inst: 'kick', f0: 150, f1: 45, decay: 0.3, click: 0.3, gain: 0.72, harmonics: -6 },
+    clap: { inst: 'clap', tone: 1500, gain: 0.42, send: 0.25 },
+    hat: { inst: 'hat', mode: 'metal', tone: 8400, gain: 0.26, pan: 0.2, choke: 'hh' },
+    ohat: { inst: 'hat', mode: 'metal', open: true, decay: 0.08, gain: 0.2, pan: 0.25, choke: 'hh' },
+    bass: { inst: 'sawBass', cut: 700, decay: 0.2, octave: 1, gain: 0.5, harmonics: -8 },
+    sub: { inst: 'sub', cut: 200, octave: 1, gain: 0.45 },
+    pad: { inst: 'pad', cut: 1200, attack: 0.3, release: 0.8, detune: 8, chorus: 0.5, gain: 0.42, send: 0.45, voicing: 'close', center: 62, size: 3 },
+    pluck: { inst: 'pluck', decay: 0.14, index: 1.1, gain: 0.42, send: 0.3, dsend: 0.2, octave: 5, pan: -0.2 },
+    lead: { inst: 'supersaw', cut: 5000, hp: 250, attack: 0.008, release: 0.15, spread: 0.8, gain: 0.32, send: 0.3, dsend: 0.2, octave: 5 },
+  },
+  progression: ['i', 'VI', 'III', 'VII'],
+  chordBars: 1,
+  // E D C A C: each a chord tone or a plain 9th/11th/6th of the chord under it (A is the 6th over C)
+  motif: { degrees: [4, 3, 2, 0, 2], rhythm: 'X..x..x.X...x...', voice: 'pluck' },
+  grids: {
+    intro: { pad: { hold: true, gain: 1.3 }, hat: '..x...x...x...x.', pluck: { grid: 'x.x.x.x.x.x.x.x.', notes: 'up', gain: 1.2 }, sub: { grid: 'R_______________', gate: 0.9, gain: 0.6 } },
+    build: { pad: 'hold', kick: { grid: 'x...x...x...x...', gain: 0.7 }, hat: '..x...x...x...x.', bass: { grid: '..R...R...R...R.', gate: 0.7, gain: 0.8 } },
+    drop: {
+      pad: 'hold', kick: 'X...X...X...X...', clap: '....X.......X...', hat: 'x.x.x.x.x.x.x.xo', ohat: '..x...x...x...x.',
+      bass: { grid: '..R.O.R...R.O.R.', gate: 0.7 }, sub: { grid: 'R...R...R...R...', gate: 0.9 },
+      pluck: { grid: 'x.x.x.x.x.x.x.x.', notes: 'up', arpOctaves: 2, gain: 0.6 },
+    },
+    dropfill: { kick: 'X...X...X.......', clap: '....X.......X.XX' },
+    brk: { pad: { hold: true, gain: 1.8 }, pluck: { grid: 'x.x.x.x.x.x.x.x.', notes: 'up', gain: 1 }, sub: { grid: 'R...............', gate: 0.95 }, hat: '..x...x...x...x.' },
+    end: { pad: { hold: true, gain: 1.8 }, sub: { grid: 'R...............', gate: 1 }, pluck: { grid: 'x...............', notes: [7] } },
+  },
+  sections: [
+    { name: 'intro', bars: 2, energy: 1, grid: 'intro', motif: { voice: 'pluck', every: 2 } },
+    { name: 'build', bars: 2, energy: 2, grid: 'build', motif: { voice: 'pluck', every: 2 }, fx: ['gap16'] },
+    { name: 'drop', bars: 8, energy: 3, grid: 'drop', fill: { grid: 'dropfill', every: 4 }, motif: { voice: 'lead', every: 2 } },
+    { name: 'break', bars: 2, energy: 1, grid: 'brk', motif: { voice: 'pluck', transform: 'aug' } },
+    { name: 'end', bars: 2, energy: 1, grid: 'end', prog: ['i'], chordBars: 2 },
+  ],
+  ringFade: 0.6,
+  mix: {
+    duck: { by: ['kick'], depth: 0.45, beats: 0.5, targets: ['music'] },
+    reverb: { size: 0.8, damp: 0.35, wet: 0.75 }, delay: { beats: 0.75, fb: 0.3, lp: 3200, wet: 0.7, spread: 1 },
+    monoBelow: 120, width: 1.1,
+  },
+});
+```
+
+### C. Bright pop-house: C major, 124 BPM, 30 s (16 bars, 30.97 s)
+
+Measured: harmony ok (307 pitched notes), −14.0 LUFS, −1.0 dBTP, phone 4.4 LU, ring ending PASS; `map` −15.7 | −12.7 |
+−14.5 | −29.4 LUFS; WARN `linear` kept (the quiet end).
+```js
+// RECIPE: a bright major pop-house track. C major, I-V-vi-IV (C G Am F), 124 BPM, four-on-the-floor.
+// 30 s = round(30 x 124 / 240) = 16 bars (30.97 s). Arc: intro 2 · verse 4 · drop 8 · end 2 (V-I, rings on C).
+export default ({ config }) => ({
+  bpm: config.bpm, meter: config.meter, key: 'C', mode: 'ionian', seed: 124,
+  swing: { hat: 0.55, shaker: 0.55, default: 0.5 },
+  voices: {
+    kick: { inst: 'kick', f0: 145, f1: 48, decay: 0.28, click: 0.3, gain: 0.72, harmonics: -6 },
+    clap: { inst: 'clap', tone: 1600, gain: 0.4, send: 0.25 },
+    hat: { inst: 'hat', mode: 'metal', tone: 8600, gain: 0.25, pan: 0.2, choke: 'hh' },
+    ohat: { inst: 'hat', mode: 'metal', open: true, decay: 0.08, gain: 0.2, pan: 0.25, choke: 'hh' },
+    shaker: { inst: 'shaker', gain: 0.15, pan: -0.3 },
+    bass: { inst: 'sawBass', cut: 800, decay: 0.18, octave: 1, gain: 0.5, harmonics: -8 },
+    keys: { inst: 'epiano', index: 1.2, tine: 0.6, decay: 0.6, trem: 0.15, gain: 0.55, send: 0.35, voicing: 'close', center: 64, size: 3 },
+    pad: { inst: 'pad', cut: 1400, attack: 0.25, release: 0.7, detune: 8, chorus: 0.5, gain: 0.34, send: 0.45, voicing: 'close', center: 60, size: 3 },
+    lead: { inst: 'supersaw', cut: 5500, hp: 250, attack: 0.008, release: 0.15, spread: 0.8, gain: 0.24, send: 0.3, dsend: 0.2, octave: 5 },
+  },
+  progression: ['I', 'V', 'vi', 'IV'],
+  chordBars: 1,
+  // E D C G E: each a chord tone or a plain 9th/11th/6th of the chord under it (G is the 7th over Am)
+  motif: { degrees: [2, 1, 0, 4, 2], rhythm: 'X..x..x.X...x...', voice: 'keys' },
+  grids: {
+    intro: { pad: { hold: true, gain: 1.3 }, shaker: 'xoxoxoxoxoxoxoxo', keys: { grid: 'C.......C.......', gate: 0.8 }, hat: '..x...x...x...x.' },
+    verse: { pad: 'hold', kick: 'X...X...X...X...', hat: '..x...x...x...x.', keys: { grid: '..C...C...C...C.', gate: 0.5 },
+      bass: { grid: '..R...R...R...R.', gate: 0.7 } },
+    drop: {
+      pad: 'hold', kick: 'X...X...X...X...', clap: '....X.......X...', hat: '..x...x...x...x.', ohat: '..x...x...x...x.',
+      shaker: 'xoxoxoxoxoxoxoxo', keys: { grid: '..C..C....C..C..', gate: 0.5 }, bass: { grid: '..R.O.R...R.O.R.', gate: 0.7 },
+    },
+    dropfill: { kick: 'X...X...X.......', clap: '....X.......XXXX' },
+    end: { pad: { hold: true, gain: 1.3 }, keys: { grid: 'C...............', gate: 1 }, bass: { grid: 'R...............', gate: 1 } },
+  },
+  sections: [
+    { name: 'intro', bars: 2, energy: 1, grid: 'intro', motif: { voice: 'keys', every: 2 } },
+    { name: 'verse', bars: 4, energy: 2, grid: 'verse', motif: { voice: 'keys', every: 2 }, fx: ['riser', 'gap16'] },
+    { name: 'drop', bars: 8, energy: 3, grid: 'drop', fill: { grid: 'dropfill', every: 4 }, motif: { voice: 'lead', every: 2 } },
+    { name: 'end', bars: 2, energy: 1, grid: 'end', prog: ['V', 'I'] },
+  ],
+  ringFade: 0.6,
+  mix: {
+    duck: { by: ['kick'], depth: 0.45, beats: 0.5, targets: ['music'] },
+    reverb: { size: 0.8, damp: 0.35, wet: 0.75 }, delay: { beats: 0.75, fb: 0.3, lp: 3500, wet: 0.7, spread: 1 },
+    monoBelow: 120, width: 1.1,
+  },
+});
+```
+### D. Liquid drum & bass: F# dorian, 176 BPM, 30 s (22 bars), owner-approved
+
+The harmony and sound of the launch score the owner **approved**: F#m9 · B9 · Amaj7 · G#m7 (i9 IV9 IIImaj7 ii7, every
+tone in F# dorian), changing every half bar at the peak, the F# 6/9 Picardy chord to end; off-beat m9 stabs, an
+electric piano comp, a saw bass over a sine sub, swung hats, rim ghosts and a shaker; the hook a soft FM bell (ratio
+1.4) doubled by a supersaw in the drops and an octave up at the peak. The hook is written as notes, each one a tone of
+the chord under it (`top(t)`), so it can never land a passing tone. The approved score also pitched its UI cue sounds
+(a cue sheet) on `top(t)`; this file is that score without the cues. Measured: harmony ok (486 pitched notes; 601 with
+the approved cue sheet), −13.6 LUFS, −1.1 dBTP, `linear` ok, mono 0.2 LU, phone 5.8 LU, both gaps ≥ 30 dB, ring ending
+PASS; `map` −26.2 | −27.9 | −12.7 | −14.2 | −15.2 | −12.5 | −19.6 | −12.5 | −12.5 | −20.2 LUFS. One WARN kept: a shaker
+onset inside the pre-peak gap. Its `reel.config.mjs`: `bpm: 176, duration: 30`.
+```js
+// RECIPE D (owner-approved): liquid drum & bass for a 30 s launch reel. F# dorian, 176 BPM (felt 88), 22 bars = 30.0 s.
+// The harmony of the owner's approved launch score: F#m9 - B9 - Amaj7 - G#m7 (i9 IV9 IIImaj7 ii7, every tone in F#
+// dorian), off-beat minor-9 stabs, an electric piano, a soft FM bell hook (ratio 1.4) doubled by a supersaw in the drops,
+// the F# 6/9 Picardy chord to end. Every pitched note is a tone of the chord sounding then (its 7th and 9th included):
+// the hook is built from the chord's own tones, never a passing tone. The approved score also pitches its UI cue
+// sounds (sheet cues) on chord tones of `chordAt(t)`; add those with `cues: { ... }` when the reel has a cue sheet.
+// BARS must list the chord of every bar of sections[] (22 here): the hook reads its notes from it.
+
+// pitch classes of each chord, root first
+const CHORD = {
+  'F#m9': [6, 9, 1, 4, 8],
+  B9: [11, 3, 6, 9, 1],
+  Amaj7: [9, 1, 4, 8],
+  'G#m7': [8, 11, 3, 6],
+  'F#69': [6, 10, 1, 3, 8],      // the end: F# major 6/9, as in the garage track's ending
+};
+
+// the chord of every bar (0-based), mirroring sections[]; the peak changes chord every half bar
+const BARS = [
+  'F#m9', 'F#m9',                          // hook, typing
+  'F#m9', 'B9',                            // drop
+  'F#m9', 'B9', 'Amaj7', 'G#m7',           // app
+  'F#m9', 'B9',                            // stack
+  'F#m9', 'B9', 'Amaj7', 'G#m7',           // rank
+  'Amaj7', 'G#m7',                         // breakdown
+  'F#m9', 'B9',                            // rebuild
+  ['F#m9', 'B9'], ['Amaj7', 'G#m7'],       // peak (half bars)
+  'F#69', 'F#69',                          // ring
+];
+
+/** The chord's tones (MIDI) inside [lo, hi], ascending. */
+const tones = (name, lo, hi) => {
+  const out = [];
+  for (let m = lo; m <= hi; m++) if (CHORD[name].includes(m % 12)) out.push(m);
+  return out;
+};
+
+export default ({ config, T }) => {
+  const BAR = T.bar(1), STEP = T.s16(1);
+  // the chord at a time (a note within 20 ms of a chord change belongs to the new chord)
+  const chordAt = t0 => {
+    const t = t0 + 0.02;
+    const b = Math.max(0, Math.min(BARS.length - 1, Math.floor(t / BAR + 1e-3)));
+    const c = BARS[b];
+    return Array.isArray(c) ? c[(t - b * BAR) >= BAR / 2 - 1e-3 ? 1 : 0] : c;
+  };
+  const top = (t, lo = 67, hi = 84) => tones(chordAt(t), lo, hi);
+  // seconds until the chord changes (a held note never rings into the next chord)
+  const untilChange = t0 => {
+    const t = t0 + 0.02;
+    const step = Array.isArray(BARS[Math.floor(t / BAR + 1e-3)]) ? BAR / 2 : BAR;
+    let end = (Math.floor(t / step + 1e-3) + 1) * step;
+    while (end < BARS.length * BAR - 1e-6 && chordAt(end) === chordAt(t)) end += BAR / 2;
+    return Math.max(0.05, end - t0 - 0.01);
+  };
+  // the hook: five notes in the garage track's rhythm (cells 0 3 6 8 12), falling through the chord's upper tones and
+  // landing on its root, each one a tone of the chord under it
+  const CELL = [0, 3, 6, 8, 12], LEN = [3, 3, 2, 4, 4];
+  const notes = [];
+  const hook = (voice, t0, { vel = 0.85, oct = 0, only } = {}) =>
+    CELL.forEach((c, i) => {
+      if (only && !only.includes(i)) return;
+      const at = t0 + c * STEP, ts = top(at, 68, 81);
+      const pick = [ts.length - 1, ts.length - 3, ts.length - 2, ts.length - 4, 0][i];
+      notes.push({ voice, at, note: ts[Math.max(0, pick)] + 12 * oct, dur: Math.min(LEN[i] * STEP * 0.92, untilChange(at)), vel: i === 0 ? vel : vel * 0.85 });
+    });
+  hook('bell', 0, { vel: 0.8 });                                  // cold open: the bell alone over the pad
+  hook('bell', BAR, { vel: 0.7, only: [0, 1, 2] });
+  for (const b of [2, 3]) { hook('lead', b * BAR, { vel: 0.9 }); hook('bell', b * BAR, { vel: 0.5 }); }   // the drop
+  for (const b of [10, 11, 12, 13]) hook('lead', b * BAR, { vel: 0.8 });                                  // ranking
+  for (const b of [14, 15]) hook('bell', b * BAR, { vel: 0.7 });                                          // breakdown
+  for (const b of [16, 17]) hook('lead', b * BAR, { vel: 0.85 });                                         // rebuild
+  for (const b of [18, 19]) { hook('lead', b * BAR, { vel: 0.95 }); hook('lead8', b * BAR, { vel: 0.55, oct: 1 }); }   // peak
+  // end card: the hook lands on F#, the bell rings the tonic
+  hook('lead', 20 * BAR, { vel: 0.9, only: [0, 1, 2, 3] });
+  notes.push({ voice: 'bell', at: 20 * BAR + 12 * STEP, note: 78, dur: 1.6, vel: 0.9 });
+
+  return {
+    bpm: config.bpm, meter: config.meter, stepsPerBar: 16,
+    key: 'F#', mode: 'dorian', seed: 176,
+    swing: { hat: 0.56, shaker: 0.56, ghost: 0.56, default: 0.5 },
+    humanize: { hat: { ms: 3, vel: 0.12 }, ghost: { ms: 4, vel: 0.15 }, shaker: { ms: 5, vel: 0.2 }, default: { ms: 0, vel: 0 } },
+
+    voices: {
+      // drums: a normal kick (fast pitch drop, short tail, beater click), snare, clap, rim ghosts, swung hats, shaker
+      kick: { inst: 'kick', f0: 200, f1: 55, pitchTau: 0.008, decay: 0.1, click: 0.65, drive: 1.3, gain: 0.72 },
+      snare: { inst: 'snare', body: 210, drop: 0.1, wires: 2400, decay: 0.08, mix: 0.6, gain: 0.5, send: 0.16 },
+      clap: { inst: 'clap', tone: 1600, gain: 0.32, send: 0.25, minEnergy: 3 },
+      ghost: { inst: 'rim', f1: 520, f2: 1800, decay: 0.014, gain: 0.18, pan: -0.2 },
+      hat: { inst: 'hat', mode: 'metal', tone: 8400, gain: 0.24, pan: 0.25, choke: 'hh' },
+      ohat: { inst: 'hat', mode: 'metal', open: true, decay: 0.08, gain: 0.15, pan: 0.3, choke: 'hh' },
+      shaker: { inst: 'shaker', gain: 0.14, pan: -0.35, minEnergy: 3 },
+      ride: { inst: 'ride', decay: 0.9, ping: 0.4, gain: 0.07, pan: -0.3, minEnergy: 4 },
+      // low end: a saw bass on roots, octaves and fifths, a pure sine sub under it (no glides)
+      bass: { inst: 'sawBass', cut: 720, decay: 0.22, octave: 1, gain: 0.42, harmonics: -8 },
+      sub: { inst: 'sub', cut: 200, octave: 1, gain: 0.42, gate: 0.94 },
+      // harmony: a soft pad, minor-9 stabs on the off-beats, electric piano
+      pad: { inst: 'pad', cut: 1200, attack: 0.3, release: 0.8, detune: 9, chorus: 0.6, gain: 0.26, send: 0.45, voicing: 'close', center: 62, size: 4 },
+      stab: { inst: 'stab', bright: 3200, dur: 0.18, gain: 0.3, send: 0.35, dsend: 0.2, voicing: 'close', center: 66, size: 4, minEnergy: 2 },
+      keys: { inst: 'epiano', index: 1.3, tine: 0.6, decay: 0.7, trem: 0.2, gain: 0.34, send: 0.4, dsend: 0.25, voicing: 'close', center: 64, size: 4 },
+      arp: { inst: 'pluck', decay: 0.12, index: 1.0, gain: 0.11, send: 0.3, dsend: 0.2, octave: 5, pan: 0.3 },
+      // the hook: the soft FM bell, a supersaw doubling it in the drops, its octave in the peak
+      bell: { inst: 'bell', ratio: 1.4, index: 1.6, decay: 0.5, gain: 0.4, send: 0.45, dsend: 0.3 },
+      lead: { inst: 'supersaw', cut: 5200, hp: 250, attack: 0.008, release: 0.18, spread: 0.8, gain: 0.24, send: 0.3, dsend: 0.2 },
+      lead8: { inst: 'supersaw', cut: 6500, hp: 400, release: 0.15, spread: 1, gain: 0.12, send: 0.3, pan: 0.3 },
+      hiss: { inst: 'hiss', level: 0.005, tone: 7000, gain: 0.6 },
+    },
+
+    progressionMode: 'section', chordBars: 1,
+    progression: ['F#m9', 'B9', 'Amaj7', 'G#m7'],
+
+    grids: {
+      // cold open: pad, keys and the bell; a rim keeps time
+      air: { pad: { hold: true, gain: 0.7 }, keys: { grid: 'C.......C.....x.', gate: 0.8 }, ghost: '..o...o...o...o.', hiss: 'hold' },
+      // the drop: a liquid two-step break, off-beat stabs, the bass between root and octave
+      drop: {
+        pad: 'hold',
+        kick: 'X.........x.....' + 'X.x.......x..x..',
+        snare: '....X..o....X...' + '.o..X.......X.oo',
+        clap: '....x.......x...',
+        ghost: '..o....o.o...o..' + '..o..o...o...o..',
+        hat: 'o.x.o.x.oox.o.xo' + 'o.x.oox.o.x.o.xx',
+        ohat: '......x.......x.',
+        shaker: 'xoxoxoxoxoxoxoxo',
+        bass: { grid: 'R.....O...R..R..', gate: 0.85 },
+        sub: { grid: 'R_________R_____', gate: 0.9 },
+        stab: { grid: '...x..x....x..x.', gate: 0.6 },
+      },
+      // the app (lighter): keys comp, a lighter break
+      app: {
+        pad: { hold: true, gain: 0.8 },
+        kick: { grid: 'X.........x.....' + 'X.........x..x..', gain: 0.85 },
+        snare: { grid: '....x.......x...' + '....x.......x..o', gain: 0.85 },
+        ghost: '.o.....o.o.....o',
+        hat: { grid: '..x...x...x...x.' + 'o.x...x.o.x...xo', gain: 0.85 },
+        bass: { grid: 'R.........R..5..', gate: 0.8 },
+        sub: { grid: 'R_________R_____', gain: 0.75 },
+        keys: { grid: '..C.....C.....C.', gate: 0.6 },
+      },
+      // the layer stack: instruments arrive with the layers (keys, arp, bass, then the kit)
+      stack: {
+        pad: 'hold',
+        keys: '..C.....C.....C.' + '..C..C..C..C..C.',
+        arp: { grid: '....x.x.x.x.x.x.' + 'x.x.x.x.x.x.x.x.', notes: 'up', arpOctaves: 2 },
+        bass: '............R...' + '..R...O...R..R..',
+        sub: '............R___' + '....R_____R_____',
+        hat: '................' + 'o.x.o.x.o.x.ooxx',
+        kick: '................' + '....X.....x.....',
+        snare: '................' + '........X...X.XX',
+      },
+      // ranking: the full groove with stabs and shaker
+      rank: {
+        pad: { hold: true, gain: 0.75 },
+        kick: 'X.........x.....' + 'X.....x...x..x..',
+        snare: '....X.......X...' + '....X..o....X.o.',
+        clap: '....x.......x...',
+        ghost: '.o....o..o....o.' + '.o..o.....o..o..',
+        hat: 'o.x.oox.o.x.o.xx' + 'o.x.o.x.oox.o.xo',
+        ohat: '......x.........' + '..............x.',
+        shaker: 'xoxoxoxoxoxoxoxo',
+        bass: { grid: 'R.....O...R..R..', gate: 0.85 },
+        sub: { grid: 'R_________R_____', gate: 0.9 },
+        stab: { grid: '...x..x....x..x.', gate: 0.6 },
+      },
+      // breakdown: drums out, keys and the bell, the sub on the downbeat
+      brk: {
+        pad: 'hold',
+        keys: { grid: 'C.......C...C...', gate: 0.7 },
+        ghost: '..o.......o.....',
+        sub: { grid: 'R_______________', gain: 0.7 },
+        hiss: 'hold',
+      },
+      // rebuild: the groove returns with a snare roll into the peak
+      rebuild: {
+        pad: 'hold',
+        kick: 'X.........x.....' + 'X.x.......x.....',
+        snare: '....X..o....X...' + '....X...x.x.xxxx',
+        ghost: '..o....o.o...o..',
+        hat: { grid: 'o.x.o.x.o.x.oox.' + 'oxx.o.x.oox.oxxx', gain: 0.85 },
+        bass: { grid: 'R.....O...R..R..', gate: 0.85 },
+        sub: { grid: 'R_________R_____', gain: 0.8 },
+        stab: { grid: '...x..x....x..x.', gate: 0.6 },
+      },
+      // peak: everything, ride, busier bass, stabs
+      peak: {
+        pad: { hold: true, gain: 1.1 },
+        kick: 'X.........x..x..' + 'X.x.......x.....',
+        snare: { grid: '....X..o....X...' + '....X..o....Xo..', gain: 1.1 },
+        clap: '....x.......x...',
+        ghost: '..o....o.o...o..' + '..o..o...o...o..',
+        hat: 'o.x.oox.oox.o.xx' + 'o.x.oox.o.x.ox..',
+        ohat: '......x.......x.',
+        ride: 'x.x.x.x.x.x.x.x.' + 'x.x.x.x.x.x.x...',
+        shaker: 'xoxoxoxoxoxoxoxo',
+        bass: { grid: 'R...O...R...O.5.' + 'R...O...R...O...', gate: 0.8 },
+        sub: { grid: 'R_______R_______' + 'R_______R_____..', gain: 1.05 },
+        stab: { grid: '...x..x....x..x.', gate: 0.6 },
+        arp: { grid: 'x.x.x.x.x.x.x.x.', notes: 'updown', arpOctaves: 2, gain: 0.8 },
+      },
+      // the end card: the F# 6/9 chord rings on pad and keys, the sub holds the root
+      ring: { pad: { hold: true, gain: 1.0 }, keys: { grid: 'C...............', gate: 1 }, sub: { grid: 'R_______________' + '________________', gain: 0.8 } },
+    },
+
+    sections: [
+      { name: 'hook', bars: 1, energy: 0, prog: ['F#m9'], grid: 'air' },
+      { name: 'typing', bars: 1, energy: 1, prog: ['F#m9'], grid: 'air',
+        fx: [{ kind: 'filter', type: 'lp', bar: 0, bars: 1, f0: 700, f1: 3000, bus: 'music' }] },
+      { name: 'drop', bars: 2, energy: 3, grid: 'drop', prog: ['F#m9', 'B9'] },
+      { name: 'app', bars: 4, energy: 2, grid: 'app', prog: ['F#m9', 'B9', 'Amaj7', 'G#m7'] },
+      { name: 'stack', bars: 2, energy: 3, grid: 'stack', prog: ['F#m9', 'B9'] },
+      { name: 'rank', bars: 4, energy: 3, grid: 'rank', prog: ['F#m9', 'B9', 'Amaj7', 'G#m7'] },
+      { name: 'breakdown', bars: 2, energy: 1, grid: 'brk', prog: ['Amaj7', 'G#m7'],
+        fx: [{ kind: 'filter', type: 'lp', bar: 0, bars: 2, f0: 2600, f1: 900, bus: 'music' }] },
+      { name: 'rebuild', bars: 2, energy: 3, grid: 'rebuild', prog: ['F#m9', 'B9'], fx: ['riser'] },
+      { name: 'peak', bars: 2, energy: 4, grid: 'peak', prog: ['F#m9', 'B9', 'Amaj7', 'G#m7'], chordBars: 0.5 },
+      { name: 'ring', bars: 2, energy: 1, grid: 'ring', prog: [[42, 49, 54, 58, 61, 63, 68]], chordBars: 2 },
+    ],
+
+    notes,
+
+    fx: [
+      { kind: 'gap', at: 13 * BAR - STEP, dur: STEP, bus: 'all' },
+      { kind: 'gap', at: 20 * BAR - STEP, dur: STEP, bus: 'all' },
+    ],
+
+    mix: {
+      duck: { by: ['kick', 'boom', 'final'], depth: 0.42, beats: 0.5, targets: ['music'] },
+      reverb: { size: 0.8, damp: 0.38, wet: 0.75 },
+      reverbBus: { beat: 0.5, music: 1, sfx: 0.9 },
+      delay: { beats: 0.75, fb: 0.3, lp: 3400, wet: 0.7, spread: 1 },
+      hp: 28, monoBelow: 130, width: 1.1,
+    },
+  };
+};
+```
+What the reel gets from each: kicks from `kick`, snares from `snare` and `clap`, the melody from the motif's
+statements and the other notes of its voices, a chord event on every bar, and the sections (energy 4 reads as 3).
 
 ## Sources
 

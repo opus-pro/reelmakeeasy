@@ -68,8 +68,10 @@ USAGE (run from the reel folder)
   --stem sfx            only the cue sound-design layer -> audio/sfx.wav (under an external track; works with sections: [])
   --mux [out.mp4]       the newest of exports/silent.mp4 and exports/draft-*.mp4 + audio/score.wav -> exports/reel.mp4
                         (a draft: exports/reel-draft-<a>-<b>.mp4, the score cut from the draft's start a) (aac 320k)
+  --harmony             the harmony check only (key, mode, chords, clashes, inharmonic voices): no master, no other QC;
+                        exit 3 when it FAILS, as the full run does (with --json: the whole check as JSON)
   --no-master           write the raw mix only (no loudnorm, no QC) · --no-png · --no-mp3 · --json (report to stdout) · --quiet
-  Exit 0 = written (WARN lines are advice) · 1 = refused / error · 3 = a QC check FAILED (true peak or ending).
+  Exit 0 = written (WARN lines are advice) · 1 = refused / error · 3 = a QC check FAILED (harmony, true peak or ending).
 
 MUSIC.MJS (data; every value is a decision for THIS reel, nothing is filled in for you)
   export default {                       // or export default (ctx) => ({...}); ctx = { sheet, T, lib, config }
@@ -109,7 +111,7 @@ MUSIC.MJS (data; every value is a decision for THIS reel, nothing is filled in f
     the next chord's bass) · C whole chord.  Macros: E(k,n[,rot][,X|x|o]) Euclid · 'a+b' concatenate · 'a*3' repeat.
     Its length is its cycle: stepsPerBar cells loop each bar, 2x = a 2-bar phrase, any other length drifts (polymeter).
   NOTES (pitched voices without chord tokens): [degrees] cycled (0 = tonic, 7 = the octave in a 7-note mode, -1 = below,
-    '3.5' microtonal), ['Eb4', ...], or 'up' | 'down' | 'updown' | 'random' arpeggios over chord tones.  None = 'up'.
+    '3.5' microtonal: refused by the harmony check), ['Eb4', ...], or 'up' | 'down' | 'updown' | 'random' arpeggios over chord tones.  None = 'up'.
   SWING: Linn swing s (0.5 straight · ~0.54 loosens · ~0.58 light · 0.66 triplet feel · 0.75 dotted): the 2nd cell of
     each pair is late by (2s-1) x cell. Per voice, per pattern, section.swing{voice}, or top-level swing{<voice>, default}.
     Applies only when a beat holds an even number of cells (not on a 12-cell triplet grid).
@@ -119,8 +121,17 @@ MUSIC.MJS (data; every value is a decision for THIS reel, nothing is filled in f
     bar 0 = the first bar (of the reel, or of the section for section keys), and beat 0 = its downbeat. The command line
     (--around B, --from-bar B) and build/timing.txt (bar.beat) count from 1. So 9.3 in timing.txt is
     notes: [{ bar: 8, beat: 2, ... }]; a note past the end is dropped with a WARN.
-  FOUND SOUNDS (M26): modal shape 'plate' | 'ring' | 'tube', rattle, scrape (--list), and in music.mjs
-    import { plateHz, tubeHz, OBJECT_MATERIALS } from './tools/audio/instruments.mjs' for an object's pitch from its size.
+  OBJECT SOUNDS: modal shape 'plate' | 'ring' | 'tube', rattle, scrape (--list); plateHz, tubeHz, OBJECT_MATERIALS in
+    ./tools/audio/instruments.mjs. Inharmonic: unpitched percussion and ticks only (the harmony check below).
+  HARMONY CHECK (audio/harmony.mjs; every full run, or --harmony alone; FAIL = exit 3, and motion_music refuses it):
+    mode major/ionian, minor/aeolian, dorian or mixolydian · one key and mode (the relative major/minor allowed) · a key
+    set wherever a pitch is held · no #11, b9, #9, altered, augmented or diminished chord · a slash bass is a chord tone ·
+    every chord in the key (7th and 9th chords on any degree when all their tones are; no borrowed chord but a minor
+    key's major V / V7 and a minor piece's last chord on its tonic's major, a Picardy ending) · whole semitones · every
+    note in the key and a chord tone (or the plain 9th/11th/6th) on every step: no passing or neighbour tones · bass
+    (bass instruments and any note below C3) on root/fifth · no m2/M7/tritone held >= 0.15 s between voices unless both
+    are tones of the chord symbol · glass/modal/bar/membrane/wood/ceramic/rattle/shing and fm with a non-integer ratio
+    never hold a pitch > 0.15 s (the bell is exempt). Cue sounds count.
   SECTION keys: name · bars | beats | dur | at | until: 'end' | picture: <index|label> · energy (0..4; the picture's when
     mirrored) · grid (set name or inline {voice: pattern}) · add (a set merged on top) · play ({voice: pattern | 'motif' |
     'motif:<transform>'}, or [voices] = only) · only · mute · prog | progression · chordBars · key · mode · transpose · swing
@@ -336,6 +347,16 @@ for (const l of info.log) log('  ' + l);
 for (const w of info.warnings) console.warn('  WARN ' + w);
 if (win) log(`  slice     ${win[0].toFixed(3)}-${win[1].toFixed(3)} s (bar ${(win[0] / info.barSec + 1).toFixed(2)} to ${(win[1] / info.barSec + 1).toFixed(2)})${winWhy ? ': ' + winWhy : ''}`);
 
+if (has('--harmony')) {   // ReelMakeEasy: the harmony check alone (no master, no other QC, nothing but the raw mix written)
+  const h = info.harmony;
+  if (has('--json')) console.log(JSON.stringify(h, null, 1));
+  else {
+    (h.status === 'FAIL' ? console.warn : log)(`  ${(h.status === 'PASS' ? 'ok' : h.status).padEnd(4)} ${'harmony'.padEnd(9)} ${h.summary}`);
+    if (h.status === 'FAIL') { for (const [k, list] of Object.entries(h.issues)) for (const r of list.slice(0, 4)) console.warn(`       ${k}: ${r.msg}`); for (const c of h.clashes.worst) console.warn(`       clash: ${c.msg}`); }
+  }
+  fs.rmSync(RAW, { force: true });
+  process.exit(h.status === 'FAIL' ? 3 : 0);
+}
 if (has('--no-master')) { log(`raw mix -> ${rel(RAW)} (no mastering, no QC)`); process.exit(0); }
 
 // ------------------------------------------------------------------ audition (--solo / --mute): the full mix's gain, no QC
@@ -359,7 +380,7 @@ if (AUDITION) {
   process.exit(0);
 }
 
-const report = { tool: 'score.mjs', music: rel(musicPath), cues: sheet ? rel(cuesPath) : null, out: rel(OUT), window: win, target: { lufs: LUFS, tp: TP, preset: tgt }, info: { ...info, hits: undefined, chords: undefined, motif: undefined }, checks: [] };
+const report = { tool: 'score.mjs', music: rel(musicPath), cues: sheet ? rel(cuesPath) : null, out: rel(OUT), window: win, target: { lufs: LUFS, tp: TP, preset: tgt }, info: { ...info, hits: undefined, chords: undefined, motif: undefined, harmony: undefined }, harmony: info.harmony, checks: [] };
 const check = (id, status, msg, data = {}) => { report.checks.push({ id, status, msg, ...data }); const tag = status === 'PASS' ? 'ok' : status === 'INFO' ? '' : status; (status === 'WARN' || status === 'FAIL' ? console.warn : log)(`  ${tag.padEnd(4)} ${id.padEnd(9)} ${msg}`); };
 
 // ------------------------------------------------------------------ stem-only path (cue sounds under an external track)
@@ -413,6 +434,16 @@ if (mastered.limiterDb > 6) {
   });
   const quiet = mastered.gainDb > 12 ? `; the target lifts this mix by ${mastered.gainDb} dB, so most of it is quiet (a silence-led arc puts its hits into the limiter by design: a lower --lufs / audio.lufs is the honest fix there)` : '';
   check('peaks', 'WARN', `the limiter took up to ${mastered.limiterDb} dB off the loudest peaks: ${pk.join(', ') || 'peaks spread across the mix'}. Lower that voice's gain, one hit's g in the scene's cues(), or every hit of a kind with cues.<kind>: { type, gain } in music.mjs${sheet ? '' : ' (no cue sheet: these are music voices)'}${quiet}`, { peaks: pk });
+}
+{ // ReelMakeEasy: the harmony check (audio/harmony.mjs). A dissonant score measured clean on every other check.
+  const h = info.harmony;
+  check('harmony', h.status, h.summary, { counts: h.counts });
+  if (h.status === 'FAIL') {
+    const say = s => console.warn(`  ${''.padEnd(4)} ${''.padEnd(9)} ${s}`);
+    for (const [k, list] of Object.entries(h.issues)) for (const r of list.slice(0, 4)) say(`${k}: ${r.msg}`);
+    for (const c of h.clashes.worst) say(`clash: ${c.msg}`);
+    say('fix every line (the skill\'s Harmony rules, music-direction.md §8), run again (--harmony is quick); qc/score-report.json harmony has the full lists');
+  }
 }
 check('loudness', Math.abs(fin.I - LUFS) <= 0.5 ? 'PASS' : 'WARN', `integrated ${fin.I} LUFS (target ${LUFS}), LRA ${fin.LRA} LU`, { I: fin.I, LRA: fin.LRA });
 check('truepeak', fin.TP <= TP + 0.05 ? 'PASS' : 'FAIL', `true peak ${fin.TP} dBTP (ceiling ${TP})`, { TP: fin.TP });

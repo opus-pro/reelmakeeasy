@@ -12,6 +12,7 @@ import { parseNote, pcOf, resolveScale, degree, parseChord, voiceChord, chordTon
 import { VEL, RESTS, PITCH_TOKENS, expandGrid, meterInfo, swingOffset, euclid } from './rhythm.mjs';
 import { defaultCue, BUS_KINDS } from './cues.mjs';
 import { BUS_FX, swell, applyInserts } from './fx.mjs';
+import { checkHarmony, isPitchedEvent, eventPitches, soundingSec, inharmonicWhy, BASS_INST as HARMONY_BASS, CHORD_INST } from './harmony.mjs';
 
 const BASS_INST = new Set(['sub', 'sawBass', 'e808', 'reese', 'acid', 'wobble', 'logdrum', 'triangle', 'upright']);
 const UNPITCHED_TEXTURE = new Set(['vinyl', 'hiss', 'wind']);
@@ -145,6 +146,7 @@ export function compose(spec, sheet, opts = {}) {
     s.keyPc = s.keyless ? null : (pcOf(k) + (s.transpose ?? 0) + 120) % 12;
     const sc = s.scale ?? s.mode ?? spec.scale;
     if (!s.keyless && (sc == null || sc === '')) fail(`music.mjs sets key ${JSON.stringify(k)} but no mode/scale (section "${s.name}"). Choose one: node tools/score.mjs --help lists them.`);
+    s.modeName = typeof sc === 'string' && sc !== '' ? sc : null;   // ReelMakeEasy: the harmony check refuses some modes by name
     s.scale = sc == null || sc === '' ? null : resolveScale(sc);
     s.chordBars = s.chordBars ?? spec.chordBars ?? 1;
     const prog = s.prog ?? s.progression ?? spec.progression ?? null;
@@ -526,6 +528,21 @@ export function compose(spec, sheet, opts = {}) {
     }
   }
 
+  // ------------------------------------------------------------ ReelMakeEasy: the harmony check (harmony.mjs) on every pitched note
+  const harmony = checkHarmony({
+    beatsPerBar: meter.beatsPerBar, stepsPerBar: meter.stepsPerBar, beatSec, start, duration: DUR,
+    sections: secs.map(s => ({ name: s.name, at: s.at, end: s.end, keyPc: s.keyPc, mode: s.modeName ?? s.scale, scale: s.scale })),
+    chords: secs.flatMap(s => (s.chords ? chordSpans(s).map(sp => ({ ...sp, section: s.name })) : [])),
+    notes: events.filter(e => isPitchedEvent(e, INST[e.inst]?.kind)).flatMap(e => {
+      const many = eventPitches(e), hz = e.inst === 'shing' || e.params?.f != null;
+      const role = HARMONY_BASS.has(e.inst) ? 'bass' : many.length > 1 || CHORD_INST.has(e.inst) ? 'chord' : 'melody';
+      let hold = soundingSec(e.inst, e.params, e.dur);
+      if (e.cut != null) hold = Math.min(hold, e.cut - e.t);
+      const inharmonic = inharmonicWhy(e.inst, e.params);
+      return many.map(m => ({ voice: e.cue ? `${e.voice} (cue ${e.cueKind ?? ''})`.replace(' )', ')') : e.voice, inst: e.inst, t: e.t, dur: e.dur ?? hold, hold, midi: m, vel: e.vel, role, inharmonic, cue: !!e.cue, ...(hz ? { hz: true } : {}) }));
+    }),
+  });
+
   // ------------------------------------------------------------ render (voices with inserts or harmonics render privately first)
   events.sort((a, b) => a.t - b.t || (a.voice < b.voice ? -1 : a.voice > b.voice ? 1 : 0));
   const buses = { beat: new Bus(N, 'beat'), music: new Bus(N, 'music'), sfx: new Bus(N, 'sfx') };
@@ -647,7 +664,7 @@ export function compose(spec, sheet, opts = {}) {
     key: s0.keyless ? null : typeof (s0.key ?? spec.key) === 'string' && !s0.transpose ? String(s0.key ?? spec.key).trim() : nameOf(s0.keyPc + 60).replace(/-?\d+$/, ''), scale: spec.scale ?? null,
     sections: secs.map(s => ({ name: s.name, at: +s.at.toFixed(3), dur: +s.dur.toFixed(3), bars: +s.bars.toFixed(2), energy: s.energy, grid: typeof s.grid === 'string' ? s.grid : (spec.byEnergy?.[s.energy] ?? (typeof spec.grid === 'string' ? spec.grid : s.grid || s.play ? 'inline' : '-')),
       voices: [...new Set(events.filter(e => (e.sec !== undefined ? e.sec === s.index : e.t >= s.at && e.t < s.end) && !e.voice.startsWith('inst:') && !e.cue).map(e => e.voice))] })),
-    chords: chordsLog, hits: hitsLog, motif: motifLog, events: events.length, cueKinds: cueKindsSeen, fx: fxLog, warnings: warn, log,
+    chords: chordsLog, hits: hitsLog, motif: motifLog, harmony, events: events.length, cueKinds: cueKindsSeen, fx: fxLog, warnings: warn, log,
     voices: Object.fromEntries(Object.entries(voices).map(([k, v]) => [k, { inst: v.inst, bus: busOf(v), fx: v.fx ? [].concat(v.fx).map(f => f.type ?? f.kind) : undefined,
       harmonics: v.harmonics != null && v.harmonics !== false ? harmonicsSpec(v.harmonics, k).db : undefined, gain: typeof v.gain === 'number' ? v.gain : undefined }])),
   };

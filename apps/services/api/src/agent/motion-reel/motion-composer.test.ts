@@ -20,6 +20,7 @@ const musicJson = () => JSON.parse(fs.readFileSync(FIXTURE, 'utf8')) as Record<s
 /** The checks a composer run wrote to qc/score-report.json. */
 const REPORT = {
   checks: [
+    { id: 'harmony', msg: 'F# dorian: 555 pitched notes, every chord stable', status: 'PASS' },
     { id: 'loudness', msg: 'integrated -13.9 LUFS (target -14), LRA 9.7 LU', status: 'PASS' },
     { id: 'truepeak', msg: 'true peak -1 dBTP (ceiling -1)', status: 'PASS' },
     { id: 'linear', msg: 'loudnorm pass 2 ran dynamic', status: 'WARN' },
@@ -190,7 +191,7 @@ describe('the composer in a reel', () => {
     expect(fs.statSync(music.file).size).toBe(44 + 6000)
     expect(fs.existsSync(music.file.replace(/\.wav$/, '.json'))).toBe(true)
     expect(music.qc).toEqual([
-      'QC passed: loudness, truepeak.',
+      'QC passed: harmony, loudness, truepeak.',
       'QC WARN linear: loudnorm pass 2 ran dynamic',
     ])
   })
@@ -205,7 +206,9 @@ describe('the composer in a reel', () => {
     writeComposerRun(projectDir, { stale: true })
     expect(readComposedMusic(projectDir, 60)).toMatch(/is older than reel\/music\/music.mjs/)
     writeComposerRun(projectDir, {
-      report: { checks: [{ id: 'truepeak', msg: 'true peak 0.4 dBTP', status: 'FAIL' }] },
+      report: {
+        checks: [...REPORT.checks, { id: 'truepeak', msg: 'true peak 0.4 dBTP', status: 'FAIL' }],
+      },
     })
     expect(readComposedMusic(projectDir, 60)).toMatch(/QC failed: truepeak: true peak 0.4 dBTP/)
     writeComposerRun(projectDir)
@@ -214,6 +217,34 @@ describe('the composer in a reel', () => {
     )
     writeComposerRun(projectDir, { json: { ...musicJson(), bpm: 999 } })
     expect(readComposedMusic(projectDir, 60)).toMatch(/build\/music.json: bpm must be/)
+  })
+
+  it('refuses a score whose harmony check did not pass, or that has none', () => {
+    const harmony = {
+      id: 'harmony',
+      msg: 'Eb lydian: 1 mode refused; 9 slash bass not in the chord; 257 sustained clashes',
+      status: 'FAIL',
+    }
+    writeComposerRun(projectDir, { report: { checks: [harmony, ...REPORT.checks.slice(1)] } })
+    const refused = readComposedMusic(projectDir, 60)
+    expect(refused).toMatch(
+      /harmony check did not pass: Eb lydian: 1 mode refused; 9 slash bass not in the chord; 257 sustained clashes\. The score must be stable: fix every clash and note it lists/,
+    )
+    expect(refused).toMatch(
+      /run `cd reel\/music && node tools\/score.mjs --no-cues` again until harmony is ok/,
+    )
+    // A WARN is not a pass either, and a report from a composer older than the check has none.
+    writeComposerRun(projectDir, {
+      report: { checks: [{ ...harmony, status: 'WARN' }, ...REPORT.checks.slice(1)] },
+    })
+    expect(readComposedMusic(projectDir, 60)).toMatch(/harmony check did not pass/)
+    writeComposerRun(projectDir, { report: { checks: REPORT.checks.slice(1) } })
+    expect(readComposedMusic(projectDir, 60)).toMatch(
+      /has no harmony check \(it is from an older composer\)/,
+    )
+    expect(
+      fs.readdirSync(path.join(projectDir, 'music')).some((f) => f.startsWith('composer-')),
+    ).toBe(false)
   })
 
   it('refuses a slice: its report, or a score.wav that is not the length music.json says', () => {
