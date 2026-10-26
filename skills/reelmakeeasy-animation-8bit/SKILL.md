@@ -44,7 +44,17 @@ A low-resolution 3D scene drawn blocky and dithered like an old video game, with
 - **The hero has real detail** and stands out; everything else is smaller, muted and sparser.
 - **Teach with pictures:** an animated diagram for each idea, an x-ray cutaway for the insides with labels on the inside parts, and a stamp ("RESONANCE!") with a flash on the big moments.
 - **The camera never parks:** orbit, crane and spiral in 3D, with a shake on the big hits.
-- The library is in `src/pixel/` (the pixel stage, the HUD, x-ray): read its `index.ts` before you build.
+
+### The 8-bit library (`src/pixel/`)
+
+`Animation.tsx` holds `<Voice />`, `<Music />` and `<PixelStage build={build} />` (add `res={360}` for a detailed hero); leave `<Captions />` out (call `narration(H, t)` instead). `build(E)` in `src/scenes/episode.ts` makes the whole scene once and returns `{ update(t) }`, which sets everything from t (seconds) alone: no state carried between frames, frames are drawn in any order.
+
+- **Engine `E`:** `scene`, `camera` (a PerspectiveCamera), `post` (`bloom` ≈1, `threshold` 0.75, `levels` 18-28 posterize steps, `flash` 0-1 with `flashColor`, `vignette`, `scanline`), `lens` (the x-ray: `on`, `x`, `y` 0-1 of the screen, `r` a fraction of the width, `insideBg`; objects passed to `inside(obj)` only show inside it), `toScreen(vec3)` → `[x, y, inFront]` in HUD pixels, `sync()`, `hud` (H).
+- **Order inside `update(t)`:** move objects, set the camera, `camera.updateProjectionMatrix()`, `sync()`, then the lens and the HUD (they need fresh matrices). End with `narration(H, t)`.
+- **Helpers (px.ts):** `THREE`, `ss(a, b, t)`, `pulse(t, at, len)` (1→0), `back(x)`, `lerp`, `clamp`, `smooth`, `easeOut`, `rng(seed)` (never `Math.random()`), `flat(color, opts)` (flat-shaded material), `glow(color, strength)` (unlit and over-bright: it blooms), `flow(curve, n, { size, color, speed })` (particles along a curve; call `.update(t)`), `windowTexture(cols, rows, { lit })` (lit windows, pixel-crisp).
+- **HUD (H, 1080×1920, pixel font, uppercase):** `H.C` palette (`ink yellow cyan red green orange dim`); `text(s, x, y, { u, color, align })`, `panel`, `hook([{ text, color }], t, t0, { y, out })` (types in), `stamp(s, t, t0, t1, { y, color, u })` (slams in), `caption`, `counter(label, value, x, y, w)`, `bar`, `gauge`, `scope`, `trace`, `tag(s, [px, py], [ox, oy], { color, k })` (a label on a dotted leader from a screen point), `ring(cx, cy, r)` (around the lens), `poly`, and `fmt(n)`. The font has A-Z, 0-9 and `.,!?:-+/%°$×▲▼@&#`; anything else draws `?`.
+- **Layout:** counters at y 80-236, the hook at 330, the lens mid-screen, a diagram panel at y 1150-1480, narration at 1712. Colour over 1.0 (`new THREE.Color(c).multiplyScalar(2)`) is what blooms.
+- Build the hero from boxes, cylinders and extrusions with real detail (floors, windows as `windowTexture`, a crown, the inside parts on the x-ray layer). Keep low-poly elsewhere.
 
 ## Craft rules
 
