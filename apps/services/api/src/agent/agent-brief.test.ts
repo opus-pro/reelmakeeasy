@@ -384,7 +384,9 @@ describe('an Advanced Motion Reel', () => {
   it('states the pace and space rules and the review loop in the briefs and the next steps', () => {
     expect(MOTION_PACE_SPACE_REVIEW_RULE).toMatch(/one idea gets at most 4 s/)
     expect(MOTION_PACE_SPACE_REVIEW_RULE).toMatch(/over 8 s only with a reason in the plan/)
-    expect(MOTION_PACE_SPACE_REVIEW_RULE).toMatch(/staged in depth \(X, Y, Z\)/)
+    expect(MOTION_PACE_SPACE_REVIEW_RULE).toMatch(
+      /mostly flat layouts; depth for one or two moments, never everything/,
+    )
     expect(MOTION_PACE_SPACE_REVIEW_RULE).toMatch(/something visible moves on every frame/)
     // The loop, in order: render, review, review.md, fix, render again.
     const loop = [

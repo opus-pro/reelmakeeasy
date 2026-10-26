@@ -81,13 +81,16 @@ describe('renderMotionReelSkill', () => {
     )
   })
 
-  it('has the space rules: scenes staged in depth, transitions that join them', () => {
-    expect(skill).toMatch(/## Space \(X, Y, Z\)/)
-    expect(skill).toMatch(/`perspective` with `translateZ`, `rotateX` and `rotateY`, or three\.js/)
-    expect(skill).toMatch(/Stage the next scene behind or beside the current one before the cut/)
-    expect(skill).toMatch(/A flat 2D slide or a plain cut is the exception, not the default/)
-    // Shot's moves are flat: how to build a join in depth instead.
-    expect(skill).toMatch(/These moves are flat 2D, the exception/)
+  it('treats depth as one tool: mostly flat scenes, transitions that join them', () => {
+    expect(skill).toMatch(/## Transitions and depth/)
+    expect(skill).toMatch(/Most scenes are flat and clean/)
+    expect(skill).toMatch(/one tool among many, not the look: use it for one or two moments/)
+    expect(skill).toMatch(/never add depth for its own sake/)
+    expect(skill).toMatch(/the next scene is ready before the move reveals it/)
+    expect(skill).not.toMatch(/Stage every scene in depth/)
+    expect(skill).not.toMatch(/the exception, not the default/)
+    // Shot's flat moves are fine; how to build the rare join in depth.
+    expect(skill).toMatch(/These are flat moves, fine for most cuts/)
     expect(skill).toMatch(/one `<Sequence>` inside one `perspective` container/)
   })
 
@@ -104,10 +107,12 @@ describe('renderMotionReelSkill', () => {
     )
   })
 
-  it('has a plan.md block per scene with its idea, depth staging, transitions and motion', () => {
+  it('has a plan.md block per scene with its idea, staging, transitions and motion', () => {
     expect(skill).toMatch(/one short block per scene: its seconds and its beats or bars/)
-    expect(skill).toMatch(/the one idea it shows; its staging in X, Y and Z/)
-    expect(skill).toMatch(/how each joins the neighbouring scene in depth; and what keeps moving/)
+    expect(skill).toMatch(/the one idea it shows; what is on screen and where/)
+    expect(skill).toMatch(
+      /how each joins the neighbouring scene \(and, for the one or two moments that use depth, what waits behind\); and what keeps moving/,
+    )
   })
 
   it('makes the review loop mandatory, with review.md and a fresh reviewer subagent', () => {
