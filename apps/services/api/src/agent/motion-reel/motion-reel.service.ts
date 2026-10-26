@@ -2,6 +2,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 
 import { Logger } from '@reelmakeeasy/common/logger'
+import type { BeatGrid } from '@reelmakeeasy/common/motion-reel/beat-grid'
 import {
   defaultTrackFor,
   motionReelTrack,
@@ -10,15 +11,15 @@ import {
 import {
   DEFAULT_MOTION_REEL_LENGTH,
   DEFAULT_MOTION_REEL_RATIO,
-  MOTION_REEL_LENGTHS,
-  MOTION_REEL_RATIOS,
   isMotionMusicEngine,
   MOTION_MUSIC_ENGINE_INFO,
   MOTION_MUSIC_ENGINES,
+  MOTION_REEL_LENGTHS,
+  MOTION_REEL_RATIOS,
   type MotionMusicEngine,
   type MotionReelSetup,
 } from '@reelmakeeasy/common/motion-reel/reel-config'
-import type { BeatGrid } from '@reelmakeeasy/common/motion-reel/beat-grid'
+import { parseScore, renderScore, wavBytes } from '@reelmakeeasy/common/motion-reel/score'
 import { MOTION_REEL_STYLES, motionReelStyle } from '@reelmakeeasy/common/motion-reel/styles'
 import { storeUri } from '@reelmakeeasy/common/storage/address'
 import { presetPath, presetUrl } from '@reelmakeeasy/common/storage/presets'
@@ -35,6 +36,7 @@ import { resolveAttachment } from '../agent-attachments'
 import { motionReelKickoff, motionReelNextSteps } from '../agent-brief'
 import type { ToolCallResult } from '../tools/agent-tools'
 
+import { composeMusic, parseComposeRequest } from './motion-music'
 import { prepareReelProject, REEL_DIR, type ReelMusicSource } from './motion-project'
 import { readReference, REFERENCE_DIR } from './motion-reference'
 import {
@@ -47,8 +49,6 @@ import {
   typeCheck,
 } from './motion-render'
 import { ensureMotionReelRuntime } from './motion-runtime'
-import { composeMusic, parseComposeRequest } from './motion-music'
-import { parseScore, renderScore, wavBytes } from '@reelmakeeasy/common/motion-reel/score'
 import {
   MotionSetupError,
   motionSetupFromTool,
@@ -372,7 +372,7 @@ export class MotionReelService {
     })
     return {
       success: true,
-      text: `Rendered the reel (${reel.lengthSec} s, ${reel.bars} bars at ${reel.bpm} BPM) and showed it to the user. Beat check: ${result.report} The file is ${REEL_DIR}/out/reel.mp4.`,
+      text: `Rendered the reel (${reel.lengthSec} s, ${reel.bars} bars at ${reel.bpm} BPM) and showed it to the user. The file is ${REEL_DIR}/out/reel.mp4.\n\nSync check (the picture against the music):\n${result.sync.lines.join('\n')}${result.sync.passes ? '' : '\n\nFix every miss listed above at the beats it names, then render again.'}`,
     }
   }
 
@@ -516,11 +516,14 @@ export class MotionReelService {
       bpm: score.bpm,
       downbeats: rendered.plan.downbeats,
       durationSec: rendered.plan.durationSec,
+      events: rendered.plan.events,
       strongHits: rendered.plan.strongHits,
     }
-    fs.writeFileSync(`${file}.grid.json`, `${JSON.stringify(grid)}\n`)
-    const title = `Score: ${score.key} ${score.mode}, ${score.bpm} BPM`
-    const { reel } = await this.refit(id, view, { file, grid, title })
+    const key = `${score.key} ${score.mode}`
+    // The key rides along in the grid file so a later prepare's music map still names it.
+    fs.writeFileSync(`${file}.grid.json`, `${JSON.stringify({ ...grid, key })}\n`)
+    const title = `Score: ${key}, ${score.bpm} BPM`
+    const { reel } = await this.refit(id, view, { file, grid, key, title })
     return {
       success: true,
       text: [
@@ -547,7 +550,7 @@ function setupFrom(view: AgentMotionSetupView): MotionReelSetup {
 
 /** The newest music the agent made for the reel in `projectDir` (`motion_music`): a model's
  *  track, or a score with its exact grid. */
-function newestMade(projectDir: string): null | { file: string; grid?: BeatGrid } {
+function newestMade(projectDir: string): null | { file: string; grid?: BeatGrid; key?: string } {
   const dir = path.join(projectDir, 'music')
   let names: string[]
   try {
@@ -568,7 +571,12 @@ function newestMade(projectDir: string): null | { file: string; grid?: BeatGrid 
   const file = path.join(dir, newest.name)
   if (!newest.name.startsWith('score-')) return { file }
   try {
-    return { file, grid: JSON.parse(fs.readFileSync(`${file}.grid.json`, 'utf8')) as BeatGrid }
+    const { key, ...grid } = JSON.parse(
+      fs.readFileSync(`${file}.grid.json`, 'utf8'),
+    ) as BeatGrid & {
+      key?: string
+    }
+    return { file, grid, ...(key ? { key } : {}) }
   } catch {
     return null
   }

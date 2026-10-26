@@ -302,9 +302,9 @@ export function motionReelNextSteps(
 ): string {
   return fillToolNames(
     [
-      `${readSkill ? 'Read the skill, then' : 'Read'} \`reel/brief.md\`, \`reel/style.md\` and \`reel/public/reel.json\`${hasReference ? ', and the files in `reel/public/reference/` (look at the images)' : ''}.`,
+      `${readSkill ? 'Read the skill, then' : 'Read'} \`reel/brief.md\`, \`reel/style.md\` and \`reel/music-map.md\`${hasReference ? ', and the files in `reel/public/reference/` (look at the images)' : ''}.`,
       ...(makeMusic ? [makeMusicStep(makeMusic)] : []),
-      'Then write `reel/plan.md`, and write the plan in your reply too: one short line per scene (its bars, what is on screen, the sound on its cut), so the user reads it in the chat. Then ask with {ASK} whether to build it (options: build it, or change something).',
+      'Then write `reel/plan.md` from the music (one world per section), and write the plan in your reply too: one short line per scene (its beats, what is on screen, what the kick and melody drive), so the user reads it in the chat. Then ask with {ASK} whether to build it (options: build it, or change something).',
     ].join(' '),
     harness,
   )
@@ -313,8 +313,8 @@ export function motionReelNextSteps(
 /** The step that makes the reel's music, in the engine the user picked. */
 function makeMusicStep(engine: MotionMusicEngine): string {
   if (engine === 'code')
-    return 'The user asked you to write the music: sketch the reel in bars first, then write it as a score with motion_music (engine "code"), whose sections follow your sketch (an intro, a build, a stop before the drop, the drop on the biggest moment, energy rising to the end) and whose hits sit on the beats where your biggest cuts land, at a tempo in the style card\'s range. Then read `reel/public/reel.json` again: its grid is your score\'s.'
-  return `The user asked for music from ${MOTION_MUSIC_ENGINE_INFO[engine].label}: before planning, compose it with motion_music (engine "${engine}": one description written for this reel, its style and subject, a tempo in the style card's range, and its shape in bars: an intro that builds, a riser into a drop, an ending that resolves), then read \`reel/public/reel.json\` again: the grid is the new track's.`
+    return 'The user asked you to write the music: sketch the reel in bars first, then write it as a score with motion_music (engine "code"), whose sections are your worlds (an intro, a build, a stop before the drop, the drop on the biggest moment, energy rising to the end) and whose hits sit on the beats where your biggest cuts land, at a tempo in the style card\'s range. Then read `reel/music-map.md` again: its grid and events are your score\'s.'
+  return `The user asked for music from ${MOTION_MUSIC_ENGINE_INFO[engine].label}: before planning, compose it with motion_music (engine "${engine}": one description written for this reel, its style and subject, a tempo in the style card's range, and its shape in bars: an intro that builds, a riser into a drop, an ending that resolves), then read \`reel/music-map.md\` again: the grid and events are the new track's.`
 }
 
 /** The hidden first turn of an Advanced Motion Reel chat (it has no setup card). */

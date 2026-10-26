@@ -3,11 +3,13 @@ import path from 'node:path'
 
 import {
   analyseBeatGrid,
+  ANALYSIS_SAMPLE_RATE,
   type BeatGrid,
   fitReel,
   type ReelFit,
 } from '@reelmakeeasy/common/motion-reel/beat-grid'
 import { decodeAudioMono, rmsBetween } from '@reelmakeeasy/common/motion-reel/decode-audio'
+import { analyseMusicEvents, renderMusicMap } from '@reelmakeeasy/common/motion-reel/music-events'
 import {
   buildReelJson,
   MOTION_MUSIC_ENGINE_INFO,
@@ -36,8 +38,15 @@ export type PreparedReel = {
 }
 
 /** A music track to put under the reel: a file on this computer, with its known tempo when we
- *  have one, or its exact grid (a score the agent wrote: nothing to detect). */
-export type ReelMusicSource = { bpm?: number; file: string; grid?: BeatGrid; title: string }
+ *  have one, or its exact grid (a score the agent wrote: nothing to detect), and its key when
+ *  known (for the music map). */
+export type ReelMusicSource = {
+  bpm?: number
+  file: string
+  grid?: BeatGrid
+  key?: string
+  title: string
+}
 
 /**
  * Sets up the reel's project in `workspace/reel`: the template, a link to the shared runtime,
@@ -47,8 +56,8 @@ export type ReelMusicSource = { bpm?: number; file: string; grid?: BeatGrid; tit
  */
 export async function prepareReelProject(o: {
   music: null | ReelMusicSource
-  /** Only the music changes (the agent composed a track): the template, links and style card
-   *  stay as they are, so nothing the agent wrote is touched. */
+  /** Only the music changes (the agent composed a track): the links, style card and the agent's
+   *  files stay as they are; only ReelMakeEasy's own source files are refreshed. */
   musicOnly?: boolean
   setup: MotionReelSetup
   workspace: string
@@ -57,8 +66,10 @@ export async function prepareReelProject(o: {
   const style = motionReelStyle(o.setup.styleId)
   if (!style) throw new Error(`Unknown Motion Reel style: ${o.setup.styleId}`)
 
+  // ReelMakeEasy's own source files are refreshed every time, so a reel set up earlier gets the
+  // current helpers when its music is re-made.
+  copyTemplate(projectDir, o.musicOnly)
   if (!o.musicOnly) {
-    copyTemplate(projectDir)
     linkRuntime(projectDir)
     linkSfx(projectDir)
   }
@@ -67,14 +78,28 @@ export async function prepareReelProject(o: {
   let fit: null | ReelFit = null
   if (o.music) {
     if (o.music.grid) {
-      // A score: its grid is what was written, from its first bar.
-      grid = o.music.grid
+      // A score: its grid is what was written, from its first bar. A score made before its events
+      // were written down has them found by ear, on its exact grid.
+      grid = o.music.grid.events
+        ? o.music.grid
+        : {
+            ...o.music.grid,
+            events: analyseMusicEvents(
+              await decodeAudioMono(o.music.file),
+              ANALYSIS_SAMPLE_RATE,
+              o.music.grid,
+            ),
+          }
       fit = fitReel(grid, o.setup.lengthSec)
     } else {
       const samples = await decodeAudioMono(o.music.file)
       grid = analyseBeatGrid(samples)
-      // A library track's tempo is known exactly; trust it over the estimate when they disagree.
-      if (o.music.bpm && Math.abs(grid.bpm - o.music.bpm) > 2) grid = regrid(grid, o.music.bpm)
+      // A library track's tempo is known exactly; trust it over the estimate when they disagree,
+      // and find its events again on that grid (the estimate's spacing rules thinned them wrongly).
+      if (o.music.bpm && Math.abs(grid.bpm - o.music.bpm) > 2) {
+        const moved = regrid(grid, o.music.bpm)
+        grid = { ...moved, events: analyseMusicEvents(samples, ANALYSIS_SAMPLE_RATE, moved) }
+      }
       fit = fitReel(grid, o.setup.lengthSec, (from, to) => rmsBetween(samples, from, to))
     }
     await run(
@@ -118,6 +143,7 @@ export async function prepareReelProject(o: {
   if (!o.musicOnly)
     fs.writeFileSync(path.join(projectDir, 'style.md'), `${renderStyleCard(style)}\n`)
   fs.writeFileSync(path.join(projectDir, 'brief.md'), renderBrief(o.setup, reel, o.music))
+  fs.writeFileSync(path.join(projectDir, 'music-map.md'), renderMusicMap(reel, o.music?.key))
   return { grid, projectDir, reel }
 }
 
@@ -158,12 +184,25 @@ export function renderBrief(
   ].join('\n')
 }
 
-/** Copies the template in (its `*.template.json` under their real names); keeps the agent's Reel.tsx. */
-function copyTemplate(projectDir: string): void {
+/** The template's files ReelMakeEasy owns (the agent uses them, never edits them): refreshed on
+ *  every prepare, also when only the music changes. */
+const OWNED_TEMPLATE_FILES = new Set(
+  ['grid.ts', 'index.ts', 'kit.tsx', 'Root.tsx', 'transitions.tsx'].map((file) =>
+    path.join('src', file),
+  ),
+)
+
+/**
+ * Copies the template in (its `*.template.json` under their real names); keeps the agent's
+ * Reel.tsx and scenes. `ownedOnly`: copy only ReelMakeEasy's own source files (the clock, the kit,
+ * the transitions, the root), so a reel set up earlier gets the current helpers.
+ */
+function copyTemplate(projectDir: string, ownedOnly = false): void {
   const template = presetPath('motion-reel/template')
   fs.mkdirSync(path.join(projectDir, 'public'), { recursive: true })
   for (const entry of walk(template)) {
     const relative = path.relative(template, entry)
+    if (ownedOnly && !OWNED_TEMPLATE_FILES.has(relative)) continue
     const target = path.join(projectDir, TEMPLATE_RENAMES[relative] ?? relative)
     // The agent's starter Reel.tsx is only written once: later runs keep its work.
     if (relative === path.join('src', 'Reel.tsx') && fs.existsSync(target)) continue
@@ -187,7 +226,8 @@ function linkSfx(projectDir: string): void {
     fs.copyFileSync(path.join(sfxDir(), file), path.join(target, file))
 }
 
-/** Moves a grid to a known tempo: same first beat and bar phase, beats every 60/bpm seconds. */
+/** Moves a grid to a known tempo: same first beat and bar phase, beats every 60/bpm seconds (its
+ *  music events are left out: they are found again on the new grid). */
 function regrid(grid: BeatGrid, bpm: number): BeatGrid {
   const first = grid.beats[0] ?? 0
   const beatSec = 60 / bpm
@@ -199,10 +239,12 @@ function regrid(grid: BeatGrid, bpm: number): BeatGrid {
   const firstDownbeat = grid.downbeats[0] ?? first
   const phase = Math.round((firstDownbeat - first) / beatSec) % grid.beatsPerBar
   return {
-    ...grid,
     beats,
+    beatsPerBar: grid.beatsPerBar,
     bpm,
     downbeats: beats.filter((_, i) => i >= phase && (i - phase) % grid.beatsPerBar === 0),
+    durationSec: grid.durationSec,
+    strongHits: grid.strongHits,
   }
 }
 

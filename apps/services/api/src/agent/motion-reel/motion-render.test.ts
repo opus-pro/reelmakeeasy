@@ -9,6 +9,7 @@ const reel = (over: Partial<ReelJson> = {}): ReelJson => ({
   bpm: 120,
   downbeats: [0, 2],
   durationInFrames: 120,
+  events: { chords: [], kicks: [], melody: [], sections: [], snares: [] },
   fadeOutSec: 0.5,
   fps: 30,
   height: 1080,

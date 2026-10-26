@@ -206,6 +206,13 @@ describe('the music the agent makes', () => {
     expect(music?.grid).toMatchObject({ beatsPerBar: 4, bpm: 128 })
     expect(music?.grid?.downbeats.slice(0, 3)).toEqual([0, 1.875, 3.75])
     expect(music?.grid?.strongHits[0]).toBe(13.125)
+    // The score's own events go with its grid (and its key, for the music map).
+    expect(music?.grid?.events?.sections.map((s) => s.name)).toEqual(['intro', 'drop', 'final hit'])
+    expect(music?.grid?.events?.kicks[0]).toBe(0)
+    expect(music?.key).toBe('D minor')
+    // The grid file keeps the key, so a later prepare from it still names the key.
+    const saved = JSON.parse(fs.readFileSync(`${music?.file}.grid.json`, 'utf8'))
+    expect(saved).toMatchObject({ bpm: 128, key: 'D minor' })
     expect(updated.at(-1)?.musicTitle).toBe('Score: D minor, 128 BPM')
     expect(composeMusic).not.toHaveBeenCalled()
   }, 60000)

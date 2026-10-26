@@ -81,6 +81,40 @@ describe('fitReel', () => {
     expect(fit.startSec).toBeGreaterThanOrEqual(20)
   })
 
+  it('shifts the music events to the reel and clips the sections to it', () => {
+    const withEvents = {
+      ...grid,
+      events: {
+        chords: [0, 18, 20, 30],
+        kicks: [1, 18, 18.5, 26, 34.5],
+        melody: [{ strength: 1, t: 19.25 }],
+        sections: [
+          { endSec: 10, energy: 1 as const, name: 'intro', startSec: 0 },
+          { endSec: 24, energy: 3 as const, name: 'drop', startSec: 10 },
+          { endSec: 40, energy: 2 as const, name: 'groove', startSec: 24 },
+        ],
+        snares: [19],
+      },
+    }
+    const fit = fitReel(withEvents, 8, (from) => (from >= 18 && from < 19 ? 10 : 1))
+    expect(fit.startSec).toBeCloseTo(18, 1)
+    const shift = fit.startSec
+    const at = (t: number) => Math.round((t - shift) * 1000) / 1000
+    expect(fit.reelEvents.kicks).toEqual([at(18), at(18.5)])
+    expect(fit.reelEvents.snares).toEqual([at(19)])
+    expect(fit.reelEvents.melody).toEqual([{ strength: 1, t: at(19.25) }])
+    expect(fit.reelEvents.sections.map((s) => s.name)).toEqual(['drop', 'groove'])
+    expect(fit.reelEvents.sections[0]?.startSec).toBe(0)
+    expect(fit.reelEvents.sections[1]?.startSec).toBe(at(24))
+    expect(fit.reelEvents.sections.at(-1)?.endSec).toBe(fit.lengthSec)
+    // No events on the grid: one groove section over the reel.
+    const bare = fitReel({ ...grid, events: undefined }, 8)
+    expect(bare.reelEvents.kicks).toEqual([])
+    expect(bare.reelEvents.sections).toEqual([
+      { endSec: bare.lengthSec, energy: 2, name: 'groove', startSec: 0 },
+    ])
+  })
+
   it('starts at the first bar when the track is shorter than the reel', () => {
     const short = analyseBeatGrid(clickTrack(120, 6))
     const fit = fitReel(short, 30)

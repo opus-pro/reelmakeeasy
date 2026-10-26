@@ -1,4 +1,5 @@
-import type { BeatGrid, ReelFit } from './beat-grid'
+import type { BeatGrid, MusicEvents, ReelFit } from './beat-grid'
+import { steadyEvents } from './music-events'
 import type { MotionReelRatio, MotionReelStyleId } from './styles'
 
 /** The reel lengths the setup card offers, in seconds (the grid rounds to whole bars). */
@@ -83,6 +84,8 @@ export type ReelJson = {
   bpm: number
   downbeats: number[]
   durationInFrames: number
+  /** What the music plays when, in reel time (seconds from the first frame). */
+  events: MusicEvents
   fadeOutSec: number
   fps: number
   height: number
@@ -112,13 +115,15 @@ export function buildReelJson(o: {
     const bars = Math.max(1, Math.round(o.lengthSec / (beatSec * 4)))
     const lengthSec = round3(bars * 4 * beatSec)
     const beats = Array.from({ length: bars * 4 }, (_, i) => round3(i * beatSec))
+    const downbeats = beats.filter((_, i) => i % 4 === 0)
     return {
       bars,
       beats,
       beatsPerBar: 4,
       bpm,
-      downbeats: beats.filter((_, i) => i % 4 === 0),
+      downbeats,
       durationInFrames: Math.round(lengthSec * MOTION_REEL_FPS),
+      events: steadyEvents(beats, downbeats, lengthSec),
       fadeOutSec: 0,
       fps: MOTION_REEL_FPS,
       height,
@@ -138,6 +143,7 @@ export function buildReelJson(o: {
     bpm: grid.bpm,
     downbeats: fit.reelDownbeats,
     durationInFrames: Math.round(fit.lengthSec * MOTION_REEL_FPS),
+    events: fit.reelEvents,
     fadeOutSec: fit.fadeOutSec,
     fps: MOTION_REEL_FPS,
     height,

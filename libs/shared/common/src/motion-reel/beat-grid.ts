@@ -6,6 +6,9 @@
  * Pure functions over mono samples; `decode-audio.ts` turns a file into samples.
  */
 
+import { analyseMusicEvents, eventsInWindow } from './music-events'
+import { fft, hann, ONSET_LAG_SEC } from './spectrum'
+
 export type BeatGrid = {
   /** Every beat, in seconds from the start of the track. */
   beats: number[]
@@ -17,8 +20,24 @@ export type BeatGrid = {
   downbeats: number[]
   /** The track's length in seconds. */
   durationSec: number
+  /** What the music plays when (kicks, snares, melody, chords, sections), in track time. */
+  events?: MusicEvents
   /** The loudest onsets (hits, drops), in seconds, strongest first. At most 16. */
   strongHits: number[]
+}
+
+/** What plays when: the music's events, in seconds (track time in a BeatGrid, reel time in reel.json). */
+export type MusicEvents = {
+  /** Where the harmony changes (chord starts). */
+  chords: number[]
+  /** Kick drum (and bass-drum-like low hits). */
+  kicks: number[]
+  /** Melody (lead) note starts, with strength 0-1 (1 = the phrase's accented notes). */
+  melody: { strength: number; t: number }[]
+  /** The music's sections, in order, covering the whole span: name, start, end and energy (0 ambient .. 3 peak). */
+  sections: { endSec: number; energy: 0 | 1 | 2 | 3; name: string; startSec: number }[]
+  /** Snare and clap hits. */
+  snares: number[]
 }
 
 /** The stretch of the track a reel uses: whole bars from a bar start. */
@@ -30,6 +49,8 @@ export type ReelFit = {
   /** The reel's beats and bar starts, in seconds from `startSec` (so 0 is the reel's first frame). */
   reelBeats: number[]
   reelDownbeats: number[]
+  /** The music's events inside the reel, in reel time (sections clipped to the reel). */
+  reelEvents: MusicEvents
   startSec: number
 }
 
@@ -211,7 +232,7 @@ export function findStrongHits(envelope: Float32Array, frameRate: number, max = 
     .map((p) => round3(p.time))
 }
 
-/** The whole grid for a track. */
+/** The whole grid for a track, with what its music plays when (`music-events.ts`). */
 export function analyseBeatGrid(
   samples: Float32Array,
   sampleRate = ANALYSIS_SAMPLE_RATE,
@@ -219,14 +240,17 @@ export function analyseBeatGrid(
   const { envelope, frameRate, lowBand } = onsetEnvelope(samples, sampleRate)
   const bpm = estimateTempo(envelope, frameRate)
   const beats = trackBeats(envelope, frameRate, bpm)
-  return {
-    beats: beats.map(round3),
+  const durationSec = round3(samples.length / sampleRate)
+  const late = (t: number) => round3(Math.min(durationSec, t + ONSET_LAG_SEC))
+  const grid: BeatGrid = {
+    beats: beats.map(late),
     beatsPerBar: BEATS_PER_BAR,
     bpm: Math.round(bpm * 10) / 10,
-    downbeats: findDownbeats(beats, lowBand, frameRate).map(round3),
-    durationSec: round3(samples.length / sampleRate),
-    strongHits: findStrongHits(envelope, frameRate),
+    downbeats: findDownbeats(beats, lowBand, frameRate).map(late),
+    durationSec,
+    strongHits: findStrongHits(envelope, frameRate).map(late),
   }
+  return { ...grid, events: analyseMusicEvents(samples, sampleRate, grid) }
 }
 
 /**
@@ -259,6 +283,7 @@ export function fitReel(
     lengthSec: round3(lengthSec),
     reelBeats: grid.beats.filter(inReel).map((t) => round3(t - startSec)),
     reelDownbeats: grid.downbeats.filter(inReel).map((t) => round3(t - startSec)),
+    reelEvents: eventsInWindow(grid.events, startSec, lengthSec),
     startSec: round3(startSec),
   }
 }
@@ -279,52 +304,10 @@ export function alignmentReport(
   return { cuts: cuts.length, onBeat, worstOffSec: cuts.length ? round3(worst) : 0 }
 }
 
-function hann(size: number): Float64Array {
-  const window = new Float64Array(size)
-  for (let i = 0; i < size; i++) window[i] = 0.5 - 0.5 * Math.cos((2 * Math.PI * i) / (size - 1))
-  return window
-}
-
 function average(values: ArrayLike<number>): number {
   let sum = 0
   for (let i = 0; i < values.length; i++) sum += values[i] ?? 0
   return values.length ? sum / values.length : 0
-}
-
-/** In-place iterative radix-2 FFT (size must be a power of two). */
-function fft(re: Float64Array, im: Float64Array): void {
-  const n = re.length
-  for (let i = 1, j = 0; i < n; i++) {
-    let bit = n >> 1
-    for (; j & bit; bit >>= 1) j ^= bit
-    j ^= bit
-    if (i < j) {
-      ;[re[i], re[j]] = [re[j] ?? 0, re[i] ?? 0]
-      ;[im[i], im[j]] = [im[j] ?? 0, im[i] ?? 0]
-    }
-  }
-  for (let size = 2; size <= n; size <<= 1) {
-    const angle = (-2 * Math.PI) / size
-    const wr = Math.cos(angle)
-    const wi = Math.sin(angle)
-    for (let start = 0; start < n; start += size) {
-      let cr = 1
-      let ci = 0
-      for (let k = 0; k < size / 2; k++) {
-        const a = start + k
-        const b = a + size / 2
-        const tr = (re[b] ?? 0) * cr - (im[b] ?? 0) * ci
-        const ti = (re[b] ?? 0) * ci + (im[b] ?? 0) * cr
-        re[b] = (re[a] ?? 0) - tr
-        im[b] = (im[a] ?? 0) - ti
-        re[a] = (re[a] ?? 0) + tr
-        im[a] = (im[a] ?? 0) + ti
-        const next = cr * wr - ci * wi
-        ci = cr * wi + ci * wr
-        cr = next
-      }
-    }
-  }
 }
 
 function normalise(values: Float32Array): Float32Array {

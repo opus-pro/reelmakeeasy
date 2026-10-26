@@ -338,7 +338,7 @@ describe('an Advanced Motion Reel', () => {
 
   it("leaves the Easy kickoff's words as they were", () => {
     expect(motionReelKickoff('codex', false)).toBe(
-      '[ReelMakeEasy] The user filled in the Motion Reel card and `reel/` is ready. Read the skill, then `reel/brief.md`, `reel/style.md` and `reel/public/reel.json`. Then write `reel/plan.md`, and write the plan in your reply too: one short line per scene (its bars, what is on screen, the sound on its cut), so the user reads it in the chat. Then ask with request_user_input whether to build it (options: build it, or change something).',
+      '[ReelMakeEasy] The user filled in the Motion Reel card and `reel/` is ready. Read the skill, then `reel/brief.md`, `reel/style.md` and `reel/music-map.md`. Then write `reel/plan.md` from the music (one world per section), and write the plan in your reply too: one short line per scene (its beats, what is on screen, what the kick and melody drive), so the user reads it in the chat. Then ask with request_user_input whether to build it (options: build it, or change something).',
     )
   })
 })

@@ -6,6 +6,9 @@ import { ensureError } from '@reelmakeeasy/common/utils/error-handler'
 
 import { detectCuts, remotionBrowserPath } from './motion-reference'
 import { run, runtimeDir } from './motion-runtime'
+import { beatTime, gridReport, measureChanges, type SyncReport, syncReport } from './motion-sync'
+
+export { beatAt, beatTime, gridReport } from './motion-sync'
 
 /** Loudness every reel is delivered at: streaming level, with headroom for the peaks. */
 export const REEL_LOUDNESS = 'loudnorm=I=-14:TP=-1.5:LRA=11'
@@ -51,31 +54,6 @@ for (const frame of frames) {
 `
 }
 
-/** The time of beat `n` (fractions allowed), as grid.ts's `beat()` reckons it. */
-export function beatTime(reel: ReelJson, n: number): number {
-  const beatSec = 60 / reel.bpm
-  const whole = Math.floor(n)
-  const at = (i: number) => {
-    const beats = reel.beats
-    if (i < beats.length) return beats[i] as number
-    const last = beats.length - 1
-    return (last >= 0 ? (beats[last] as number) : 0) + (i - Math.max(last, 0)) * beatSec
-  }
-  return at(whole) + (n - whole) * (at(whole + 1) - at(whole))
-}
-
-/** Beat number of a time (the inverse of `beatTime`, to two decimals). */
-export function beatAt(reel: ReelJson, seconds: number): number {
-  const { beats } = reel
-  const beatSec = 60 / reel.bpm
-  if (!beats.length) return Math.round((seconds / beatSec) * 100) / 100
-  let i = 0
-  while (i + 1 < beats.length && (beats[i + 1] as number) <= seconds) i++
-  const next = i + 1 < beats.length ? (beats[i + 1] as number) : (beats[i] as number) + beatSec
-  const from = beats[i] as number
-  return Math.round((i + (seconds - from) / (next - from)) * 100) / 100
-}
-
 /** The frame of a beat, clamped into the reel. */
 export function frameOfBeat(reel: ReelJson, n: number): number {
   return Math.min(reel.durationInFrames - 1, Math.max(0, Math.round(beatTime(reel, n) * reel.fps)))
@@ -98,12 +76,15 @@ export async function typeCheck(projectDir: string): Promise<null | string> {
   }
 }
 
+/** What `renderReel` delivers: the video, its poster, and how it sits on the music. */
 export type ReelRender = {
   /** The delivered video (loudness evened out). */
   file: string
   poster: string
   /** One line: how the cuts sit on the grid. */
   report: string
+  /** How the picture moves with the music: section starts, melody, kick pulse, stills. */
+  sync: SyncReport
 }
 
 /** Renders the stills of `frames` into `outDir` (made fresh); returns their files in order. */
@@ -128,7 +109,7 @@ export async function renderStills(
   return frames.map((frame) => path.join(outDir, `frame-${frame}.png`))
 }
 
-/** Renders the whole reel, evens out its loudness, takes a poster and checks its cuts. */
+/** Renders the whole reel, evens out its loudness, takes a poster and checks its cuts and sync. */
 export async function renderReel(projectDir: string): Promise<ReelRender> {
   const out = path.join(projectDir, 'out')
   fs.mkdirSync(out, { recursive: true })
@@ -215,32 +196,6 @@ export async function renderReel(projectDir: string): Promise<ReelRender> {
     out,
   )
   const cuts = await detectCuts(file, out)
-  return { file, poster, report: gridReport(reel, cuts) }
-}
-
-/**
- * How a render's cuts sit on the grid, in one line: on a beat, on a half beat, or off it (with the
- * beat numbers of those, so the agent can fix them). A cut is on the grid within a frame and a half.
- */
-export function gridReport(reel: ReelJson, cuts: number[]): string {
-  const tolerance = 1.5 / reel.fps
-  const beatSec = 60 / reel.bpm
-  const total = Math.ceil(reel.lengthSec / beatSec) + 1
-  const beats = Array.from({ length: total }, (_, i) => beatTime(reel, i))
-  const halves = beats.map((b, i) => (b + (beats[i + 1] ?? b + beatSec)) / 2)
-  const near = (t: number, grid: number[]) => grid.some((g) => Math.abs(g - t) <= tolerance)
-  const inside = cuts.filter((t) => t > tolerance && t < reel.lengthSec - tolerance)
-  const onBeat = inside.filter((t) => near(t, beats))
-  const onHalf = inside.filter((t) => !near(t, beats) && near(t, halves))
-  const off = inside.filter((t) => !near(t, beats) && !near(t, halves))
-  if (!inside.length)
-    return 'No hard cuts found (only moves and fades): nothing to check against the beat.'
-  const parts = [`${inside.length} cuts: ${onBeat.length} on a beat`]
-  if (onHalf.length) parts.push(`${onHalf.length} on a half beat`)
-  parts.push(
-    off.length
-      ? `${off.length} off the grid (at beats ${off.map((t) => beatAt(reel, t)).join(', ')})`
-      : 'none off the grid',
-  )
-  return `${parts.join(', ')}.`
+  const changes = await measureChanges(file, out, reel.fps)
+  return { file, poster, report: gridReport(reel, cuts), sync: syncReport(reel, changes, cuts) }
 }

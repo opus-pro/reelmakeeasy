@@ -13,6 +13,9 @@
  * algorithmic reverb in place of its FFT filtering and convolution.
  */
 
+import type { MusicEvents } from './beat-grid'
+import { tidyEvents } from './music-events'
+
 export const SCORE_SAMPLE_RATE = 48000
 const SR = SCORE_SAMPLE_RATE
 
@@ -48,6 +51,8 @@ export type ScorePlan = {
   /** Bar starts, the final hit's bar included (seconds). */
   downbeats: number[]
   durationSec: number
+  /** What the music plays when, exactly as written (seconds from the first bar). */
+  events: MusicEvents
   /** The final hit: the tonic chord on the downbeat after the score's bars. */
   finalHitSec: number
   /** Section starts, crashes, hits and the final hit, strongest first. */
@@ -325,11 +330,15 @@ type Chord = { pcs: number[]; q: 'maj' | 'min'; t0: number; t1: number }
 
 type Note = { m: number; t0: number; t1: number; voice: string }
 
+/** A drum hit as played: kick, snare (or clap) or crash, with how loud it is (for the caps). */
+type DrumHit = { kind: 'crash' | 'kick' | 'snare'; s: number; t: number }
+
 class Composer {
   readonly bar: number
   readonly bars: BarInfo[] = []
   readonly beat: number
   readonly chords: Chord[] = []
+  readonly drums: DrumHit[] = []
   readonly finalT: number
   readonly notes: Note[] = []
   constructor(
@@ -492,12 +501,20 @@ function drums(band: Band, { en, info, t0 }: BarPlay): void {
   const { c, kickHz, mix, s16 } = band
   const groove = GROOVES[c.score.groove]
   const kicks = en >= 3 ? groove.kick3 : en >= 2 ? groove.kick : [0]
-  for (const p of kicks)
+  for (const p of kicks) {
     mix.add(kick(mix, kickHz, p === 0 ? 1 : 0.78), t0 + p * s16, { gain: 0.95 })
+    c.drums.push({ kind: 'kick', s: p === 0 ? 1 : 0.78, t: t0 + p * s16 })
+  }
   if (en >= 2) {
     // A crash opens every 4-bar phrase.
-    if (info.k % 4 === 0) mix.add(crash(mix, 1.6), t0, { gain: 0.6, verb: 0.2 })
-    for (const p of groove.snare) mix.add(snare(mix), t0 + p * s16, { gain: 0.9, verb: 0.12 })
+    if (info.k % 4 === 0) {
+      mix.add(crash(mix, 1.6), t0, { gain: 0.6, verb: 0.2 })
+      c.drums.push({ kind: 'crash', s: 0.6, t: t0 })
+    }
+    for (const p of groove.snare) {
+      mix.add(snare(mix), t0 + p * s16, { gain: 0.9, verb: 0.12 })
+      c.drums.push({ kind: 'snare', s: 0.9, t: t0 + p * s16 })
+    }
   }
   hats(band, en, t0)
 }
@@ -595,11 +612,14 @@ function sectionEntries(band: Band): Mark[] {
       prev !== null && (s.energy - prev >= 2 || (s.name.startsWith('drop') && s.energy > prev))
     if (climb) {
       mix.add(riser(mix, c.bar), t - c.bar, { verb: 0.2 })
-      for (let k = 0; k < 4; k++)
+      for (let k = 0; k < 4; k++) {
         mix.add(snare(mix, k < 2), t - c.beat + k * s16, { gain: 0.6 + 0.12 * k })
+        c.drums.push({ kind: 'snare', s: 0.6 + 0.12 * k, t: t - c.beat + k * s16 })
+      }
     }
     if (prev !== null && (climb || (s.energy >= 2 && prev <= 1))) {
       mix.add(crash(mix), t, { verb: 0.3 })
+      c.drums.push({ kind: 'crash', s: 1, t })
       mix.add(subBoom(subRoot), t, { gain: 0.8 })
       marks.push({ strength: climb ? 0.9 : 0.7, t })
     }
@@ -617,10 +637,12 @@ function accents(band: Band): Mark[] {
     if (h.kind === 'crash') {
       mix.add(crash(mix), t, { verb: 0.3 })
       mix.add(kick(mix, kickHz), t, { gain: 0.9 })
+      c.drums.push({ kind: 'crash', s: 1, t }, { kind: 'kick', s: 1, t })
     } else if (h.kind === 'hit') {
       mix.add(kick(mix, kickHz), t)
       mix.add(subBoom(subRoot, 1), t, { gain: 0.7 })
       mix.add(snare(mix), t, { gain: 0.8, verb: 0.3 })
+      c.drums.push({ kind: 'kick', s: 1, t }, { kind: 'snare', s: 1, t })
     } else {
       const { pcs } = c.chordOf(Math.min(c.bars.length - 1, Math.floor(t / c.bar)))
       for (const m of c.voiced(pcs, 64, 76)) {
@@ -647,6 +669,7 @@ function finalHit(band: Band, tailSec: number): Mark {
   }
   mix.add(crash(mix, Math.min(3, tailSec)), t, { gain: 1.3, verb: 0.5 })
   mix.add(kick(mix, kickHz), t)
+  c.drums.push({ kind: 'crash', s: 1.3, t }, { kind: 'kick', s: 1, t })
   mix.add(subBoom(subRoot, Math.min(2.5, tailSec)), t)
   mix.add(riser(mix, c.bar / 2), t - c.bar / 2, { gain: 0.8 })
   c.chords.push({ pcs: tonic, q: minor ? 'min' : 'maj', t0: t, t1: t + ring })
@@ -787,12 +810,47 @@ export function renderScore(
       beats,
       downbeats: beats.filter((_, i) => i % 4 === 0),
       durationSec: Math.round(durationSec * 1000) / 1000,
+      events: scoreEvents(c, beats, durationSec),
       finalHitSec: Math.round(c.finalT * 1000) / 1000,
       strongHits: strongHits.slice(0, 16),
     },
     right,
     sampleRate: SR,
   }
+}
+
+/**
+ * The score's events as played: its kicks and snares (fills and hits included), the lead's note
+ * starts (strength 1 on a beat, 0.6 off it) and its stabs (0.8), the chord changes, and its
+ * sections in bars, then the final hit to the end.
+ */
+function scoreEvents(c: Composer, beats: number[], durationSec: number): MusicEvents {
+  const onBeat = (t: number) => Math.abs(t / c.beat - Math.round(t / c.beat)) < 1e-6
+  const melody = c.notes.flatMap((n) => {
+    if (n.voice === 'lead') return [{ strength: onBeat(n.t0) ? 1 : 0.6, t: n.t0 }]
+    return n.voice === 'stab' ? [{ strength: 0.8, t: n.t0 }] : []
+  })
+  const chords = c.chords
+    .filter((ch, i) => i === 0 || ch.pcs.join(',') !== c.chords[i - 1]?.pcs.join(','))
+    .map((ch) => ch.t0)
+  const sections: MusicEvents['sections'] = []
+  let bar = 0
+  for (const s of c.score.sections) {
+    sections.push({
+      endSec: (bar + s.bars) * c.bar,
+      energy: s.energy,
+      name: s.name,
+      startSec: bar * c.bar,
+    })
+    bar += s.bars
+  }
+  sections.push({ endSec: durationSec, energy: 3, name: 'final hit', startSec: c.finalT })
+  const drums = (kind: DrumHit['kind']) => c.drums.filter((d) => d.kind === kind)
+  return tidyEvents(
+    { chords, kicks: drums('kick'), melody, sections, snares: drums('snare') },
+    beats,
+    durationSec,
+  )
 }
 
 /** Stereo float samples as a 16-bit PCM WAV file's bytes. */
