@@ -264,6 +264,24 @@ describe('AgentSessionService', () => {
     expect(calls.at(-1)).toBe(`end ${session.id}`)
   })
 
+  it("tells its hook before the agent's question card shows (a Motion Reel sends its plan first)", async () => {
+    const hookRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'agent-svc-ask-hook-'))
+    const order: string[] = []
+    const svc = new AgentSessionService({
+      onQuestion: (id) => order.push(`hook ${id}`),
+      root: hookRoot,
+      spawnCodex: async (cwd) => CodexRpcClient.spawn(process.execPath, [FAKE, '--ask'], { cwd }),
+    })
+    services.push(svc)
+    const session = await svc.createSession()
+    svc.subscribe(session.id, 0, (e) => {
+      if (e.type === 'question') order.push('card')
+    })
+    await svc.sendMessage(session.id, 'make a reel')
+    await waitFor(() => order.includes('card'))
+    expect(order).toEqual([`hook ${session.id}`, 'card'])
+  })
+
   it("keeps a stale session's updatedAt across the restart that reconciles it: a restart is not activity", () => {
     const staleRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'agent-svc-stale-touch-'))
     const store = new AgentSessionStore(staleRoot)

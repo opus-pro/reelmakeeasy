@@ -97,6 +97,9 @@ export interface SessionDeps {
    *  when it starts, as before). */
   harnessStatus?: (harness: AgentHarnessName) => Promise<HarnessStatus | null>
   idleMs?: number
+  /** The agent is about to show the user a question card (a Motion Reel then sends its phases
+   *  and plan first). */
+  onQuestion?: (sessionId: string) => void
   /** Runs a ReelMakeEasy tool the agent called (`item/tool/call`); the text goes back to it. */
   onToolCall?: (sessionId: string, tool: string, args: unknown) => Promise<ToolCallResult>
   /** The agent's turn in a session ended, or the agent stopped (a Motion Reel then sends its
@@ -397,6 +400,7 @@ export class AgentSessionService implements OnModuleDestroy {
       idleMs: deps?.idleMs ?? IDLE_MS,
       onToolCall:
         deps?.onToolCall ?? (async () => ({ success: false, text: 'No tools in this chat.' })),
+      onQuestion: deps?.onQuestion ?? (() => undefined),
       onTurnEnd: deps?.onTurnEnd ?? (() => undefined),
       onTurnStart: deps?.onTurnStart ?? (() => undefined),
       root: deps?.root ?? path.join(dataDir(), 'agent'),
@@ -1159,6 +1163,7 @@ export class AgentSessionService implements OnModuleDestroy {
         secretIds: new Set(questions.filter((q) => q.isSecret).map((q) => q.id)),
       })
       this.armQuestionTimer(id, live)
+      this.deps.onQuestion(id)
       this.emit(id, { questionId, questions, type: 'question' })
     })
   }

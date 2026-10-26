@@ -1,5 +1,5 @@
 import type { AgentMotionOptions, AgentMotionSetupView } from '@shared/types/api/agent'
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 
 import { MotionReelSetupCard } from './MotionReelSetupCard'
 
@@ -52,6 +52,47 @@ describe('MotionReelSetupCard', () => {
     // No style picker, thumbnails or palettes: the agent decides the look.
     expect(screen.queryByText('Style')).toBeNull()
     expect(screen.queryByRole('img')).toBeNull()
+  })
+
+  it('has a neutral placeholder and examples that fill the box, with the type and length they name', async () => {
+    const onSubmit = jest.fn().mockResolvedValue(true)
+    render(
+      <MotionReelSetupCard
+        entry={{ id: 'm1', kind: 'motion_setup', state: 'open' }}
+        onSubmit={onSubmit}
+        sessionId="s1"
+      />,
+    )
+    const box = screen.getByRole('textbox') as HTMLTextAreaElement
+    expect(box.placeholder).toBe('Describe your reel…')
+    const examples = within(screen.getByRole('group', { name: 'Examples' })).getAllByRole('button')
+    expect(examples.length).toBeGreaterThanOrEqual(2)
+    expect(examples.length).toBeLessThanOrEqual(3)
+
+    fireEvent.change(box, { target: { value: 'something typed' } })
+    fireEvent.click(screen.getByRole('button', { name: 'About yourself, Claude' }))
+    // A click replaces the text.
+    expect(box.value).toBe('Make a 15-second motion reel about yourself, Claude')
+    expect(screen.getByRole('radio', { name: /Motion reel/ }).getAttribute('aria-checked')).toBe(
+      'true',
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: 'A ReelMakeEasy launch' }))
+    expect(box.value).toBe(
+      'A 30-second product launch for ReelMakeEasy: make shorts on your own computer',
+    )
+    expect(screen.getByRole('radio', { name: /Product launch/ }).getAttribute('aria-checked')).toBe(
+      'true',
+    )
+    expect(screen.getByRole('radio', { name: '30 s' }).getAttribute('aria-checked')).toBe('true')
+
+    fireEvent.click(screen.getByRole('button', { name: 'Build my reel' }))
+    await waitFor(() => expect(onSubmit).toHaveBeenCalledTimes(1))
+    expect(onSubmit.mock.calls[0][0]).toMatchObject({
+      lengthSec: 30,
+      subject: 'A 30-second product launch for ReelMakeEasy: make shorts on your own computer',
+      type: 'launch',
+    })
   })
 
   it('sends the picked type, and no style', async () => {

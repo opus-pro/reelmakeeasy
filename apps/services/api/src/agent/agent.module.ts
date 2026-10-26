@@ -98,6 +98,7 @@ import { ChatModelService } from './chat-model.service'
               : tool.startsWith('motion_')
                 ? motionTasks.track(id, tool, () => motion().callTool(id, tool, args))
                 : edit().callTool(id, tool, args),
+          onQuestion: (id) => session && motionTasks.questionAsked(id),
           // Both can come while the session service is still being made (its restart pass).
           onTurnEnd: (id) => session && motionTasks.turnEnded(id),
           onTurnStart: (id) => session && motionTasks.turnStarted(id),

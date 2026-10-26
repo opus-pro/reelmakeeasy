@@ -12,6 +12,11 @@ jest.mock('../AgentVideoPlayer', () => ({
   AgentVideoPlayer: ({ src }: { src: string }) => <video data-src={src} />,
 }))
 
+// react-markdown is ESM; the markdown itself is AgentMarkdown's to test.
+jest.mock('../AgentMarkdown', () => ({
+  AgentMarkdown: ({ text }: { text: string }) => <p data-markdown>{text}</p>,
+}))
+
 const transcript = (over: Partial<Transcript>): Transcript => ({ ...initialTranscript, ...over })
 
 const TASKS: Transcript['motionTasks'] = [
@@ -109,6 +114,65 @@ describe('MotionTasksPanel', () => {
       'waiting',
       'waiting',
     ])
+  })
+})
+
+describe('MotionTasksPanel: the plan', () => {
+  const PLAN = {
+    changedAt: 1,
+    text: '## Intro\n- Scene 1 (bars 0-2): logo bang',
+    truncated: false,
+  }
+  const planToggle = () => screen.getByRole('button', { name: /Plan/ })
+
+  it('shows the plan as markdown, open while there is no render, and folds on a click', () => {
+    const { container, rerender } = render(
+      <MotionTasksPanel transcript={transcript({ motionPlan: PLAN, motionTasks: TASKS })} />,
+    )
+    expect(planToggle().getAttribute('aria-expanded')).toBe('true')
+    expect(container.querySelector('[data-markdown]')?.textContent).toBe(PLAN.text)
+    fireEvent.click(planToggle())
+    expect(container.querySelector('[data-markdown]')).toBeNull()
+    // The agent edits plan.md: the new text shows when the section is open.
+    fireEvent.click(planToggle())
+    rerender(
+      <MotionTasksPanel
+        transcript={transcript({
+          motionPlan: { ...PLAN, changedAt: 2, text: '- Scene 1 (bars 0-4): logo' },
+          motionTasks: TASKS,
+        })}
+      />,
+    )
+    expect(container.querySelector('[data-markdown]')?.textContent).toBe(
+      '- Scene 1 (bars 0-4): logo',
+    )
+  })
+
+  it('is folded once there is a render, and says when only the start is shown', () => {
+    const { container } = render(
+      <MotionTasksPanel
+        transcript={transcript({
+          entries: [{ id: 'm1', kind: 'motion_video', videoUrl: '/r.mp4' }],
+          motionPlan: { ...PLAN, truncated: true },
+          motionTasks: TASKS,
+        })}
+      />,
+    )
+    expect(planToggle().getAttribute('aria-expanded')).toBe('false')
+    expect(container.querySelector('[data-markdown]')).toBeNull()
+    fireEvent.click(planToggle())
+    expect(screen.getByText('Only the start of plan.md is shown.')).toBeTruthy()
+  })
+
+  it('has no plan section without a plan (or in a chat from before it was sent)', () => {
+    const { container } = render(
+      <MotionTasksPanel transcript={transcript({ motionTasks: TASKS })} />,
+    )
+    expect(container.querySelector('[data-section="plan"]')).toBeNull()
+    // An old saved transcript without the field at all.
+    const { motionPlan: _gone, ...old } = transcript({ motionTasks: TASKS })
+    const { container: oldContainer } = render(<MotionTasksPanel transcript={old as Transcript} />)
+    expect(oldContainer.querySelector('[data-section="plan"]')).toBeNull()
   })
 })
 

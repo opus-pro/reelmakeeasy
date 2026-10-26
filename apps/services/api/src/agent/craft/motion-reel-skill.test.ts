@@ -64,6 +64,15 @@ describe('renderMotionReelSkill', () => {
     expect(skill).toContain('`engine: "eleven-music"` or `"ace-step"`')
   })
 
+  it('has the agent show the plan in its reply before it asks to build it', () => {
+    expect(skill).toMatch(/## The plan/)
+    expect(skill).toMatch(/write the plan in your reply text too, not only in your thinking/)
+    expect(skill).toMatch(/one short line per scene with its beats or bars/)
+    expect(skill).toMatch(/never ask "Build this plan\?" without the plan above it/)
+    expect(skill).toMatch(/the Tasks panel shows it to the user/)
+    expect(skill.indexOf('in your reply text')).toBeLessThan(skill.indexOf('Only then ask'))
+  })
+
   it('keeps the hard technical rules', () => {
     expect(skill).toMatch(/Never run `remotion render`, `remotion still` or `npm install` yourself/)
     expect(skill).toMatch(/Work only inside `reel\/`/)

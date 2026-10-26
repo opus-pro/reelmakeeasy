@@ -79,6 +79,16 @@ export interface AgentMotionTask {
   state: AgentMotionTaskState
 }
 
+/** A Motion Reel's plan (`reel/plan.md`) as the agent wrote it, for its Tasks panel: the agent's
+ *  own text, so shown as markdown with no raw HTML. */
+export interface AgentMotionPlan {
+  /** When the file last changed (ms). */
+  changedAt: number
+  text: string
+  /** The file is longer than ReelMakeEasy reads: `text` is its start. */
+  truncated: boolean
+}
+
 export type AgentMotionTaskId = 'build' | 'look' | 'music' | 'plan' | 'render' | 'setup' | 'sync'
 
 export type AgentMotionTaskState = 'done' | 'failed' | 'running' | 'waiting'
@@ -407,8 +417,9 @@ export type AgentUiEvent = { id?: number } & (
   /** A rendered Motion Reel. `report`: how its cuts sit on the beat grid, in one line. */
   | { itemId: string; posterUrl?: string; report?: string; type: 'motion_video'; videoUrl: string }
   /** A Motion Reel's phases now (the Tasks panel): sent after each Motion Reel tool call starts
-   *  and ends, and when the agent's turn ends. */
-  | { tasks: AgentMotionTask[]; type: 'motion_tasks' }
+   *  and ends, while a turn runs, before the agent's question card and when its turn ends.
+   *  `plan`: its plan, sent when it changed (null: no plan); absent, the plan is as last sent. */
+  | { plan?: AgentMotionPlan | null; tasks: AgentMotionTask[]; type: 'motion_tasks' }
 )
 
 /** One line of a loop short, as the storyboard panel lists it: what is said, and the fact stamp

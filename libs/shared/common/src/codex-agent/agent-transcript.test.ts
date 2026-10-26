@@ -940,6 +940,25 @@ describe('reduceTranscript, a Motion Reel', () => {
     expect(initialTranscript.motionTasks).toBeNull()
   })
 
+  it('keeps the plan from the list that sent it until another says otherwise', () => {
+    const tasks = [{ id: 'plan' as const, label: 'Plan', result: null, state: 'waiting' as const }]
+    const plan = { changedAt: 10, text: '- Scene 1 (bars 0-2): logo', truncated: false }
+    const sent = run([
+      { id: 1, tasks, type: 'motion_tasks' },
+      { id: 2, plan, tasks, type: 'motion_tasks' },
+      // No `plan`: unchanged.
+      { id: 3, tasks, type: 'motion_tasks' },
+    ])
+    expect(sent.motionPlan).toEqual(plan)
+    // null: the plan is gone.
+    expect(
+      reduceTranscript(sent, { id: 4, plan: null, tasks, type: 'motion_tasks' }).motionPlan,
+    ).toBeNull()
+    // A chat from before the plan was sent has none.
+    expect(run([{ id: 1, tasks, type: 'motion_tasks' }]).motionPlan).toBeNull()
+    expect(initialTranscript.motionPlan).toBeNull()
+  })
+
   it('ignores a replayed older list', () => {
     const first = run([
       {

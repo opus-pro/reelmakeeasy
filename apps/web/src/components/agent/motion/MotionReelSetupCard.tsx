@@ -43,6 +43,27 @@ const COMPOSER_LABEL: Record<string, string> = {
   composer: 'Music the agent composes, to come',
   'eleven-music': 'ElevenLabs Music, to come',
 }
+/** Ideas under "What's it about?": a click puts the text in the box, and the kind of reel and
+ *  length it names when the setup offers them. */
+const EXAMPLES: { label: string; lengthSec?: number; text: string; type?: ReelType['id'] }[] = [
+  {
+    label: 'About yourself, Claude',
+    lengthSec: 15,
+    text: 'Make a 15-second motion reel about yourself, Claude',
+    type: 'showreel',
+  },
+  {
+    label: 'A ReelMakeEasy launch',
+    lengthSec: 30,
+    text: 'A 30-second product launch for ReelMakeEasy: make shorts on your own computer',
+    type: 'launch',
+  },
+  {
+    label: 'Kinetic type and particles',
+    text: 'A motion reel that shows off kinetic type and particles',
+    type: 'showreel',
+  },
+]
 const RATIO_LABEL: Record<Ratio, string> = {
   '16:9': '16:9 wide',
   '1:1': '1:1 square',
@@ -183,10 +204,29 @@ function SetupForm({
             className="min-h-[72px] resize-y rounded-lg border border-white/10 bg-black/30 px-3 py-2 text-sm text-primary placeholder:text-tertiary focus:border-white/30 focus:outline-none"
             maxLength={SUBJECT_MAX}
             onChange={(e) => setSubject(e.target.value)}
-            placeholder="e.g. ReelMakeEasy: make shorts on your own computer. Open source, one API key, ready to go."
+            placeholder="Describe your reel…"
             value={subject}
           />
         </label>
+        <div aria-label="Examples" className="-mt-2 flex flex-wrap gap-1.5" role="group">
+          {EXAMPLES.map((example) => (
+            <button
+              className="rounded-full border border-white/10 px-2.5 py-0.5 text-xs text-secondary transition-colors hover:border-white/30 hover:text-primary"
+              key={example.label}
+              onClick={() => {
+                setSubject(example.text)
+                if (example.type && options.types.some((t) => t.id === example.type))
+                  setType(example.type)
+                if (example.lengthSec && options.lengths.includes(example.lengthSec))
+                  setLengthSec(example.lengthSec)
+              }}
+              title={example.text}
+              type="button"
+            >
+              {example.label}
+            </button>
+          ))}
+        </div>
         <ReferenceField
           kind={referenceKind}
           onKind={setReferenceKind}

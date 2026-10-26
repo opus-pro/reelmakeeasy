@@ -17,8 +17,11 @@ import {
   FREE_CHAT_BRIEF,
   FREE_CHAT_KICKOFF,
   kickoffFor,
+  MOTION_PLAN_IN_REPLY_RULE,
+  MOTION_REEL_FREE_BRIEF,
   motionReelFreeKickoff,
   motionReelKickoff,
+  motionReelNextSteps,
   RANKING_TOPIC_ID,
   RANKING_TOPIC_IDEAS,
   RANKING_TOPIC_RECOMMENDED,
@@ -372,7 +375,35 @@ describe('an Advanced Motion Reel', () => {
 
   it('opens an Easy reel by reading the brief and the music map, then planning', () => {
     expect(motionReelKickoff('codex', false)).toBe(
-      '[ReelMakeEasy] The user filled in the Motion Reel card and `reel/` is ready. Read the skill, then `reel/brief.md` (it says the type) and `reel/music-map.md`. Then write `reel/plan.md`, and write the plan in your reply too: one short line per scene (its beats and what is on screen), so the user reads it in the chat. Then ask with request_user_input whether to build it (options: build it, or change something).',
+      '[ReelMakeEasy] The user filled in the Motion Reel card and `reel/` is ready. Read the skill, then `reel/brief.md` (it says the type) and `reel/music-map.md`. Then write `reel/plan.md`, and write the plan in your reply too, not only in your thinking: one short line per scene (its beats or bars and what is on screen), so the user reads it in the chat. Only then, below the plan in the same reply, ask with request_user_input whether to build it (options: build it, or change something); never ask that without the plan above it.',
     )
+  })
+
+  it('has the agent show the plan in its reply, above the question, never only in its thinking', () => {
+    for (const text of [
+      briefFor({ mode: 'motion' }, 'codex'),
+      briefFor({ mode: 'motion_free' }, 'claude'),
+      MOTION_REEL_FREE_BRIEF,
+    ]) {
+      expect(text).toContain(MOTION_PLAN_IN_REPLY_RULE)
+      expect(text).toMatch(/write the plan in your reply text, not only in your thinking/)
+      expect(text).toMatch(/one short line per scene with its beats or bars/)
+      expect(text).toMatch(
+        /Never ask whether to build the plan without the plan above the question/,
+      )
+    }
+    expect(MOTION_REEL_FREE_BRIEF).toMatch(
+      /write `reel\/plan.md`, write the plan in your reply, then ask whether to build it/,
+    )
+    for (const kickoff of [
+      motionReelKickoff('claude', false),
+      motionReelKickoff('codex', true, 'composer'),
+      motionReelNextSteps('codex', false),
+    ]) {
+      expect(kickoff).toMatch(/write the plan in your reply too, not only in your thinking/)
+      expect(kickoff).toMatch(/never ask that without the plan above it/)
+      // The plan comes before the question.
+      expect(kickoff.indexOf('in your reply too')).toBeLessThan(kickoff.indexOf('whether to build'))
+    }
   })
 })

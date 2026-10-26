@@ -2,13 +2,20 @@ import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
 
-import type { AgentMotionSetupView, AgentMotionTask, AgentSession } from '@shared/types/api/agent'
+import type {
+  AgentMotionPlan,
+  AgentMotionSetupView,
+  AgentMotionTask,
+  AgentSession,
+} from '@shared/types/api/agent'
 
 import {
+  MAX_PLAN_TEXT_BYTES,
   type MotionTaskInput,
   motionTasks,
   MotionTaskTracker,
   type MotionToolCall,
+  readPlanText,
   readReelFacts,
 } from './motion-tasks'
 
@@ -492,5 +499,84 @@ describe('MotionTaskTracker: live turns', () => {
       result: "Doesn't type-check",
       state: 'failed',
     })
+  })
+})
+
+describe('the plan in the Tasks panel', () => {
+  it('reads plan.md as text with when it changed; a missing file or a link reads as none', () => {
+    const dir = reelDir()
+    expect(readPlanText(dir)).toBeNull()
+    fs.mkdirSync(dir, { recursive: true })
+    const file = path.join(dir, 'plan.md')
+    fs.writeFileSync(file, '# Plan\n- Scene 1 (bars 0-2): logo <script>x</script>\n')
+    expect(readPlanText(dir)).toEqual({
+      changedAt: fs.statSync(file).mtimeMs,
+      text: '# Plan\n- Scene 1 (bars 0-2): logo <script>x</script>\n',
+      truncated: false,
+    })
+    // A link to a file elsewhere is not followed.
+    const outside = path.join(path.dirname(dir), 'secret.txt')
+    fs.writeFileSync(outside, 'secret')
+    fs.rmSync(file)
+    fs.symlinkSync(outside, file)
+    expect(readPlanText(dir)).toBeNull()
+  })
+
+  it('keeps only the start of a long plan, never half a character', () => {
+    const dir = reelDir()
+    fs.mkdirSync(dir, { recursive: true })
+    // A two-byte character repeated: the cap falls inside one.
+    fs.writeFileSync(path.join(dir, 'plan.md'), `a${'é'.repeat(MAX_PLAN_TEXT_BYTES)}`)
+    const plan = readPlanText(dir)
+    expect(plan?.truncated).toBe(true)
+    expect(Buffer.byteLength(plan?.text ?? '')).toBeLessThanOrEqual(MAX_PLAN_TEXT_BYTES)
+    expect(plan?.text).toMatch(/^aé+$/)
+  })
+
+  it('sends the plan with the list when it changed, and leaves it out when it did not', () => {
+    const workspace = path.dirname(reelDir())
+    const events: { plan?: AgentMotionPlan | null; tasks: AgentMotionTask[] }[] = []
+    const tracker = new MotionTaskTracker({
+      emitAutonomousEvent: (_id, event) => events.push(event),
+      getSession: () =>
+        ({ id: 's1', mode: 'motion', motionReel: SETUP, status: 'running' }) as AgentSession,
+      workingDir: () => workspace,
+    })
+    // The first list says there is no plan yet.
+    tracker.turnEnded('s1')
+    expect(events).toHaveLength(1)
+    expect(events[0]?.plan).toBeNull()
+
+    // The agent writes plan.md, then asks to build it: the plan goes before the card.
+    const file = path.join(workspace, 'reel', 'plan.md')
+    fs.mkdirSync(path.dirname(file), { recursive: true })
+    fs.writeFileSync(file, '# Plan\n- Scene 1 (bars 0-2): logo\n')
+    tracker.questionAsked('s1')
+    expect(events).toHaveLength(2)
+    expect(events[1]?.plan?.text).toBe('# Plan\n- Scene 1 (bars 0-2): logo\n')
+    expect(events[1]?.tasks.find((t) => t.id === 'plan')?.state).toBe('done')
+
+    // Nothing changed: nothing is sent.
+    tracker.turnEnded('s1')
+    expect(events).toHaveLength(2)
+
+    // Only the plan's words changed (its counts did not): the list goes again, with the plan.
+    fs.writeFileSync(file, '# Plan\n- Scene 1 (bars 0-4): the logo\n')
+    fs.utimesSync(file, new Date(), new Date(Date.now() + 5000))
+    tracker.turnEnded('s1')
+    expect(events).toHaveLength(3)
+    expect(events[2]?.plan?.text).toBe('# Plan\n- Scene 1 (bars 0-4): the logo\n')
+
+    // The list changes but the plan does not: no plan in the event.
+    fs.mkdirSync(path.join(workspace, 'reel', 'src', 'scenes'), { recursive: true })
+    fs.writeFileSync(path.join(workspace, 'reel', 'src', 'scenes', 'A.tsx'), 'x')
+    tracker.turnEnded('s1')
+    expect(events).toHaveLength(4)
+    expect('plan' in (events[3] ?? {})).toBe(false)
+
+    // The plan is deleted: null says so.
+    fs.rmSync(file)
+    tracker.turnEnded('s1')
+    expect(events.at(-1)?.plan).toBeNull()
   })
 })

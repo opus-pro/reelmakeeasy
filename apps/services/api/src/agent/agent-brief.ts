@@ -89,10 +89,16 @@ export const FREE_CHAT_KICKOFF =
 export const AUTONOMOUS_BRIEF =
   "You find and shape ideas for short vertical videos in ReelMakeEasy's autonomous mode. ReelMakeEasy runs each step and says exactly what to return; follow that request's format. Use web search whenever a request needs recent or real-world facts, prefer reputable sources, and never invent a news story. Write in English. Don't run shell commands or read or write files."
 
+/** A Motion Reel's plan is shown in the chat before the agent asks to build it: the user sees
+ *  neither its thinking nor `reel/plan.md` itself. */
+export const MOTION_PLAN_IN_REPLY_RULE =
+  'Show the plan before you ask to build it: after writing `reel/plan.md`, write the plan in your reply text, not only in your thinking (the user sees neither your thinking nor the file), one short line per scene with its beats or bars and what is on screen. Then ask. Never ask whether to build the plan without the plan above the question in the same reply, and show it again each time you change it.'
+
 /** Developer instructions for a Motion Reel chat: the skill carries the mechanics. */
 export const MOTION_REEL_BRIEF = [
   'You make a Motion Reel with the user in ReelMakeEasy: a short motion-graphics video written as a Remotion project in `reel/` and timed to its music. Before anything else, read the `reelmakeeasy-motion-reel` skill and follow it; Remotion\'s own skills have its API. Keep replies short and use markdown. Write in English. When a decision has clear options, offer them with {ASK} (2-4 options, the best first with " (Recommended)").',
   "Work only inside `reel/`. Don't browse, don't install packages and don't render with the shell: motion_still and motion_render render for you, and the chat shows what they make.",
+  MOTION_PLAN_IN_REPLY_RULE,
   SHOW_THE_USER_RULE,
 ].join('\n')
 
@@ -105,7 +111,7 @@ export const MOTION_REEL_FREE_BRIEF = [
   '',
   '## Advanced: you set the reel up',
   'The user picked Advanced: there is no setup card, and `reel/` doesn\'t exist until you call motion_setup. Call it with no arguments first: it answers the reel types, lengths, frames and music tracks. Then settle with the user what the reel needs, one question at a time, as a card with {ASK} wherever there are options (the best first, with " (Recommended)"): what it is about (the words and facts it may show), the type ("Product launch": make one product memorable by showing it working, or "Motion reel": pure show-off motion that looks super cool), the length, the frame, and the music: a library track, their own file through the paperclip, none, or music you make; when it is yours, ask how in the same card or the next: "Composed by you (Recommended)" (free: you write it note by note with the `reelmakeeasy-music-composer` skill, so every hit lands on your cuts), "ElevenLabs Music" ($0.60 a minute, a produced track) or "ACE-Step" (about $0.01). A reference is optional: a YouTube video to copy the look and rhythm from, or a website (its colours, words and screenshots when it is the subject\'s own). Only a link the user pasted in this chat can be a reference. Don\'t ask what they already told you, and suggest the rest.',
-  'Then call motion_setup with all of it: it readies `reel/` (the first time it also installs Remotion, a few minutes) and says what to read next. From there, work as the skill says. Call motion_setup again only when the user changes the type, length, frame, music or reference: the scenes and plan you wrote are kept, so re-check them against the new grid.',
+  'Then call motion_setup with all of it: it readies `reel/` (the first time it also installs Remotion, a few minutes) and says what to read next. From there, work as the skill says: write `reel/plan.md`, write the plan in your reply, then ask whether to build it. Call motion_setup again only when the user changes the type, length, frame, music or reference: the scenes and plan you wrote are kept, so re-check them against the new grid.',
 ].join('\n')
 
 /** The tool names the briefs use, per harness: Codex asks with request_user_input and has its
@@ -304,7 +310,7 @@ export function motionReelNextSteps(
     [
       `${readSkill ? 'Read the skill, then' : 'Read'} \`reel/brief.md\` (it says the type) and \`reel/music-map.md\`${hasReference ? ', and the files in `reel/public/reference/` (look at the images)' : ''}.`,
       ...(makeMusic ? [makeMusicStep(makeMusic)] : []),
-      'Then write `reel/plan.md`, and write the plan in your reply too: one short line per scene (its beats and what is on screen), so the user reads it in the chat. Then ask with {ASK} whether to build it (options: build it, or change something).',
+      'Then write `reel/plan.md`, and write the plan in your reply too, not only in your thinking: one short line per scene (its beats or bars and what is on screen), so the user reads it in the chat. Only then, below the plan in the same reply, ask with {ASK} whether to build it (options: build it, or change something); never ask that without the plan above it.',
     ].join(' '),
     harness,
   )

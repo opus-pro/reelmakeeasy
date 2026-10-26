@@ -3,6 +3,7 @@ import type {
   AgentAttachment,
   AgentLoopLine,
   AgentMode,
+  AgentMotionPlan,
   AgentMotionSetupView,
   AgentMotionTask,
   AgentPlanStep,
@@ -27,6 +28,9 @@ export type Transcript = {
   lastEventId: number
   /** Chosen once, right after the session is created; null until the `mode` event arrives. */
   mode: AgentMode | null
+  /** A Motion Reel's plan (`reel/plan.md`, the last one a `motion_tasks` event sent); null until
+   *  there is one, and in chats from before the plan was sent. */
+  motionPlan: AgentMotionPlan | null
   /** A Motion Reel's phases (the last `motion_tasks` event); null until ReelMakeEasy sends them. */
   motionTasks: AgentMotionTask[] | null
   /** The latest `turn/plan/updated` steps; cleared when the user sends a message. */
@@ -91,6 +95,7 @@ export const initialTranscript: Transcript = {
   entries: [],
   lastEventId: 0,
   mode: null,
+  motionPlan: null,
   motionTasks: null,
   plan: null,
   ranking: null,
@@ -625,7 +630,9 @@ export function reduceTranscript(state: Transcript, event: TranscriptAction): Tr
       return handleMotionSetupRequest(state, next, event)
     }
     case 'motion_tasks': {
-      return { ...next, motionTasks: event.tasks }
+      // No `plan`: unchanged since the last list (or a chat from before the plan was sent).
+      const motionPlan = event.plan === undefined ? state.motionPlan : event.plan
+      return { ...next, motionPlan, motionTasks: event.tasks }
     }
     case 'motion_video': {
       return handleMotionVideo(state, next, event)

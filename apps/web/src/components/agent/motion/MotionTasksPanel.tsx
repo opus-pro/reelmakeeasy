@@ -2,10 +2,11 @@
 
 import type { Transcript } from '@reelmakeeasy/common/codex-agent/agent-transcript'
 import { waitingMotionTasks } from '@reelmakeeasy/common/motion-reel/motion-tasks'
-import type { AgentMotionTask } from '@shared/types/api/agent'
+import type { AgentMotionPlan, AgentMotionTask } from '@shared/types/api/agent'
 import { cn } from '@shared/ui'
 import { useState } from 'react'
 
+import { AgentMarkdown } from '../AgentMarkdown'
 import { AgentPlan } from '../AgentPlan'
 import { Spinner } from '../Spinner'
 
@@ -27,8 +28,8 @@ export function motionActivityLine(transcript: Transcript): null | string {
 
 /**
  * A Motion Reel chat's Tasks: what the agent is doing right now, the reel's phases (from facts
- * ReelMakeEasy reads, not from the agent's words) and the agent's own to-do list. On a narrow
- * window it folds into one line that opens it.
+ * ReelMakeEasy reads, not from the agent's words), its plan (`reel/plan.md`) and the agent's own
+ * to-do list. On a narrow window it folds into one line that opens it.
  */
 export function MotionTasksPanel({ transcript }: { transcript: Transcript }) {
   const [open, setOpen] = useState(false)
@@ -75,6 +76,13 @@ export function MotionTasksPanel({ transcript }: { transcript: Transcript }) {
             <TaskRow key={task.id} task={task} />
           ))}
         </ol>
+        {transcript.motionPlan && (
+          <MotionPlanSection
+            // Open while there is no render yet: the plan is what the user decides on.
+            defaultOpen={!transcript.entries.some((e) => e.kind === 'motion_video')}
+            plan={transcript.motionPlan}
+          />
+        )}
         {plan.length > 0 && (
           <div className="flex flex-col gap-1 border-t border-white/10 pt-2">
             <span className="text-secondary">The agent's to-do list</span>
@@ -83,6 +91,38 @@ export function MotionTasksPanel({ transcript }: { transcript: Transcript }) {
         )}
       </div>
     </section>
+  )
+}
+
+/** The reel's plan as the agent wrote it (`reel/plan.md`), folded once there is a render. */
+function MotionPlanSection({ defaultOpen, plan }: { defaultOpen: boolean; plan: AgentMotionPlan }) {
+  // null: as the reel stands (open before the first render); the user's own choice after that.
+  const [chosen, setChosen] = useState<boolean | null>(null)
+  const open = chosen ?? defaultOpen
+  return (
+    <div className="flex flex-col gap-1 border-t border-white/10 pt-2" data-section="plan">
+      <button
+        aria-expanded={open}
+        className="flex items-center justify-between text-left text-secondary"
+        onClick={() => setChosen(!open)}
+        type="button"
+      >
+        <span className="font-medium text-primary">Plan</span>
+        <span aria-hidden>{open ? '▴' : '▾'}</span>
+      </button>
+      {open && (
+        <div className="max-h-80 overflow-y-auto rounded-md bg-white/5 p-2">
+          {plan.text.trim() ? (
+            <AgentMarkdown className="text-xs" text={plan.text} />
+          ) : (
+            <p className="text-secondary">plan.md is empty.</p>
+          )}
+          {plan.truncated && (
+            <p className="mt-1 text-secondary">Only the start of plan.md is shown.</p>
+          )}
+        </div>
+      )}
+    </div>
   )
 }
 

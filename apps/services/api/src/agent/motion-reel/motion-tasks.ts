@@ -5,6 +5,7 @@ import { Logger } from '@reelmakeeasy/common/logger'
 import { MOTION_MAX_RENDERS, MOTION_TASKS } from '@reelmakeeasy/common/motion-reel/motion-tasks'
 import { ensureError } from '@reelmakeeasy/common/utils/error-handler'
 import {
+  type AgentMotionPlan,
   type AgentMotionSetupView,
   type AgentMotionTask,
   type AgentMotionTaskId,
@@ -26,6 +27,8 @@ const MAX_CALLS = 200
 const MAX_TEXT = 4000
 /** A plan larger than this is only counted as there, not read. */
 const MAX_PLAN_BYTES = 256 * 1024
+/** The most of a plan the Tasks panel shows (its start, when the file is longer). */
+export const MAX_PLAN_TEXT_BYTES = 8 * 1024
 const MAX_DETAILS = 20
 /** How often a running turn's phases are read again: the agent's own shell work (writing scenes,
  *  running the composer) moves them between Motion Reel tool calls. */
@@ -96,9 +99,44 @@ export function readReelFacts(projectDir: string): ReelFacts {
   }
 }
 
+/**
+ * `plan.md` in the reel's folder (`projectDir`) as the Tasks panel shows it: its first
+ * MAX_PLAN_TEXT_BYTES as plain text, and when it last changed. The agent writes it, so it is only
+ * ever shown as text; null when it is missing, not a plain file (a link is not followed) or can't
+ * be read.
+ */
+export function readPlanText(projectDir: string): AgentMotionPlan | null {
+  let fd: number | undefined
+  try {
+    fd = fs.openSync(
+      path.join(projectDir, 'plan.md'),
+      fs.constants.O_RDONLY | (fs.constants.O_NOFOLLOW ?? 0),
+    )
+    const stat = fs.fstatSync(fd)
+    if (!stat.isFile()) return null
+    const buffer = Buffer.alloc(Math.min(stat.size, MAX_PLAN_TEXT_BYTES))
+    const read = fs.readSync(fd, buffer, 0, buffer.length, 0)
+    const truncated = stat.size > read
+    const text = buffer.subarray(0, read).toString('utf8')
+    // Cut at the cap, the last character may be cut in two.
+    return {
+      changedAt: stat.mtimeMs,
+      text: truncated ? text.replace(/\uFFFD+$/, '') : text,
+      truncated,
+    }
+  } catch {
+    return null
+  } finally {
+    if (fd !== undefined) fs.closeSync(fd)
+  }
+}
+
 /** What the tracker needs from the session service. */
 export interface MotionTaskSessions {
-  emitAutonomousEvent(id: string, event: { tasks: AgentMotionTask[]; type: 'motion_tasks' }): void
+  emitAutonomousEvent(
+    id: string,
+    event: { plan?: AgentMotionPlan | null; tasks: AgentMotionTask[]; type: 'motion_tasks' },
+  ): void
   getSession(id: string): AgentSession
   workingDir(id: string): string
 }
@@ -106,15 +144,23 @@ export interface MotionTaskSessions {
 /**
  * Keeps each Motion Reel chat's tool calls and sends its phases (`motion_tasks`) when a Motion
  * Reel tool call starts and ends, every few seconds while the agent's turn runs (its own shell
- * work moves them too), and when the turn ends or the agent stops; the same list twice is sent
- * once. A call refused because another is running is not kept.
+ * work moves them too), when the agent asks the user something and when the turn ends or the
+ * agent stops; the same list twice is sent once. The plan (`plan.md`) goes with the list when it
+ * changed. A call refused because another is running is not kept.
  */
 export class MotionTaskTracker {
   private readonly calls = new Map<string, MotionToolCall[]>()
   private readonly live = new Map<string, ReturnType<typeof setInterval>>()
-  private readonly sent = new Map<string, string>()
+  /** What was last sent per chat: the list, and the plan (null: none). */
+  private readonly sent = new Map<string, { plan: null | string; tasks: string }>()
 
   constructor(private readonly sessions: MotionTaskSessions) {}
+
+  /** The agent is asking the user something (its question card): what it wrote so far, its plan
+   *  above all, shows before the card. */
+  questionAsked(id: string): void {
+    this.send(id)
+  }
 
   /** Runs a Motion Reel tool call (`run`), sending the phases as it starts and ends. */
   async track(
@@ -202,17 +248,29 @@ export class MotionTaskTracker {
     try {
       const session = this.sessions.getSession(id)
       if (!isMotionMode(session.mode)) return
+      const reel = path.join(this.sessions.workingDir(id), REEL_DIR)
       const tasks = motionTasks({
         calls: this.history(id),
-        facts: readReelFacts(path.join(this.sessions.workingDir(id), REEL_DIR)),
+        facts: readReelFacts(reel),
         mode: session.mode,
         setup: session.motionReel,
         working: session.status === 'running',
       })
-      const key = JSON.stringify(tasks)
-      if (this.sent.get(id) === key) return
-      this.sent.set(id, key)
-      this.sessions.emitAutonomousEvent(id, { tasks, type: 'motion_tasks' })
+      const plan = readPlanText(reel)
+      const now = {
+        plan: plan && `${plan.changedAt}\n${plan.text}`,
+        tasks: JSON.stringify(tasks),
+      }
+      const last = this.sent.get(id)
+      if (last?.tasks === now.tasks && last.plan === now.plan) return
+      this.sent.set(id, now)
+      // The plan only when it changed (the first list after a restart always has it).
+      this.sessions.emitAutonomousEvent(
+        id,
+        last && last.plan === now.plan
+          ? { tasks, type: 'motion_tasks' }
+          : { plan, tasks, type: 'motion_tasks' },
+      )
     } catch (error) {
       // The phases are only shown: a chat that is gone, or a folder that can't be read, costs
       // nothing but the update.
