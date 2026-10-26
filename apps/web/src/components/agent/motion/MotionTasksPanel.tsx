@@ -11,9 +11,15 @@ import { AgentPlan } from '../AgentPlan'
 import { Spinner } from '../Spinner'
 
 /** The phases to show: ReelMakeEasy's last list, else every phase to come (the setup done once
- *  the card is chosen). */
+ *  the card is chosen). A list saved before a phase existed (the Review after the Sync check)
+ *  shows that phase as waiting, in its place. */
 export function shownMotionTasks(transcript: Transcript): AgentMotionTask[] {
-  if (transcript.motionTasks?.length) return transcript.motionTasks
+  const sent = transcript.motionTasks
+  if (sent?.length) {
+    const byId = new Map(sent.map((t) => [t.id, t]))
+    const known = waitingMotionTasks().map((t) => byId.get(t.id) ?? t)
+    return [...known, ...sent.filter((t) => !known.includes(t))]
+  }
   const chosen = transcript.entries.some((e) => e.kind === 'motion_setup' && e.state === 'chosen')
   return waitingMotionTasks().map((t) =>
     t.id === 'setup' && chosen ? { ...t, state: 'done' as const } : t,

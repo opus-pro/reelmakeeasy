@@ -89,7 +89,15 @@ export interface AgentMotionPlan {
   truncated: boolean
 }
 
-export type AgentMotionTaskId = 'build' | 'look' | 'music' | 'plan' | 'render' | 'setup' | 'sync'
+export type AgentMotionTaskId =
+  | 'build'
+  | 'look'
+  | 'music'
+  | 'plan'
+  | 'render'
+  | 'review'
+  | 'setup'
+  | 'sync'
 
 export type AgentMotionTaskState = 'done' | 'failed' | 'running' | 'waiting'
 

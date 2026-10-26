@@ -8,6 +8,7 @@ export type AgentToolName =
   | 'make_video'
   | 'motion_music'
   | 'motion_render'
+  | 'motion_review'
   | 'motion_setup'
   | 'motion_still'
   | 'ranking_add_clip'
@@ -153,6 +154,32 @@ export const AGENT_TOOLS: Record<AgentToolName, DynamicToolSpec> = {
       'Render the Motion Reel in reel/ to a video (free, about a minute): type-checks it, renders it with its music, evens out the loudness, shows it to the user in the chat and reports how many cuts land on the beat grid. Call it when the stills look right, and again after each change the user asks for.',
     inputSchema: { additionalProperties: false, properties: {}, type: 'object' },
     name: 'motion_render',
+  },
+  motion_review: {
+    description:
+      'Review the last render of the Motion Reel (free, a few seconds; render with motion_render first): lays it out as contact sheets, a frame every 0.5 s (or 1 s), 8 frames to a row, a few rows to a sheet, and shows them to you and the user, with a pace report: every shot with its length (one idea is at most 4 s, a shot over 8 s fails) and every stall (0.5 s or more in which nothing visibly moves, the end card aside). Call it after every render, open every sheet, write what is wrong by time in reel/review.md with the change of strategy for each, fix, render and review again.',
+    inputSchema: {
+      additionalProperties: false,
+      properties: {
+        every: {
+          description: 'Seconds between frames: 0.5 (default) or 1.',
+          enum: [0.5, 1],
+          type: 'number',
+        },
+        from: {
+          description: 'Optional: start here (seconds; default 0).',
+          minimum: 0,
+          type: 'number',
+        },
+        to: {
+          description: 'Optional: stop here (seconds; default the end of the reel).',
+          minimum: 0,
+          type: 'number',
+        },
+      },
+      type: 'object',
+    },
+    name: 'motion_review',
   },
   motion_setup: {
     description:
@@ -580,7 +607,7 @@ const EDIT_TOOLS: AgentToolName[] = [
 ]
 
 /** Easy sessions get the edit tools only once editing; Free chat declares make_video,
- *  make_beat_loop and the edit tools; a Motion Reel chat, its music and render tools (and an
+ *  make_beat_loop and the edit tools; a Motion Reel chat, its music, render and review tools (and an
  *  Advanced one, motion_setup). Claude (which has no image tool of its own) gets generate_image
  *  wherever it chats with the user, editing included: it fixes a keyframe. */
 export function toolsForSession(
@@ -593,51 +620,65 @@ export function toolsForSession(
     )
   if (session.mode === 'autonomous') return session.editing ? withImage(EDIT_TOOLS) : []
   if (session.mode === 'motion')
-    return [AGENT_TOOLS.motion_music, AGENT_TOOLS.motion_still, AGENT_TOOLS.motion_render]
+    return [
+      AGENT_TOOLS.motion_music,
+      AGENT_TOOLS.motion_still,
+      AGENT_TOOLS.motion_render,
+      AGENT_TOOLS.motion_review,
+    ]
   if (session.mode === 'motion_free')
     return [
       AGENT_TOOLS.motion_setup,
       AGENT_TOOLS.motion_music,
       AGENT_TOOLS.motion_still,
       AGENT_TOOLS.motion_render,
+      AGENT_TOOLS.motion_review,
     ]
   if (isRankingMode(session.mode)) return RANKING_TOOLS.map((n) => AGENT_TOOLS[n])
   if (session.mode !== 'free') return []
   return withImage(['make_video', 'make_beat_loop', ...EDIT_TOOLS, ...RANKING_TOOLS])
 }
 
+/** The chat pill's text for calls whose text doesn't depend on their arguments. */
+const FIXED_SUMMARIES: Record<string, string> = {
+  generate_image: 'Making a preview image',
+  motion_music: 'Composing the music',
+  motion_render: 'Rendering the reel',
+  motion_review: 'Reviewing the render (contact sheets)',
+  motion_still: 'Looking at frames of the reel',
+  ranking_add_sticker_image: 'Adding a picture sticker',
+  ranking_analyze_reference: 'Watching the reference video',
+  ranking_apply_style: 'Applying the ranking style',
+  ranking_export: 'Exporting the ranking short',
+  ranking_find_moments: 'Finding the action in a clip',
+  ranking_generate_clips: 'Making the clips with AI',
+  ranking_get: 'Reading the ranking',
+  ranking_list: 'Looking at your rankings and sounds',
+  ranking_style_get: 'Reading ranking styles',
+  ranking_style_list: 'Reading ranking styles',
+  ranking_style_save: 'Saving the ranking style',
+  ranking_update: 'Changing the ranking',
+  render_video: 'Rebuilding the video',
+  set_music: 'Changing the music',
+}
+
 /** The chat pill's text for a call. */
 export function toolSummary(tool: string, args: unknown): string {
   const a = (args ?? {}) as Record<string, unknown>
+  const fixed = Object.hasOwn(FIXED_SUMMARIES, tool) ? FIXED_SUMMARIES[tool] : undefined
+  if (fixed) return fixed
   if (tool === 'regenerate_clip') {
     const clip = `Redoing clip ${String(a.transitionId ?? '')}`.trim()
     return a.redoFollowing === true ? `${clip} and the clips after it` : clip
   }
-  if (tool === 'render_video') return 'Rebuilding the video'
-  if (tool === 'set_music') return 'Changing the music'
   if (tool === 'use_image_as_keyframe')
     return `Putting the new picture in as keyframe ${String(a.keyframe ?? '')}`.trim()
-  if (tool === 'generate_image') return 'Making a preview image'
   if (tool === 'motion_setup')
     return typeof a.type === 'string' && a.type.trim()
       ? 'Setting up the reel'
       : 'Looking at the reel types and music'
-  if (tool === 'motion_music') return 'Composing the music'
-  if (tool === 'motion_still') return 'Looking at frames of the reel'
-  if (tool === 'motion_render') return 'Rendering the reel'
-  if (tool === 'ranking_list') return 'Looking at your rankings and sounds'
   if (tool === 'ranking_create') return `Starting a ranking: ${String(a.name ?? '')}`.trim()
-  if (tool === 'ranking_get') return 'Reading the ranking'
-  if (tool === 'ranking_update') return 'Changing the ranking'
-  if (tool === 'ranking_add_sticker_image') return 'Adding a picture sticker'
-  if (tool === 'ranking_analyze_reference') return 'Watching the reference video'
-  if (tool === 'ranking_find_moments') return 'Finding the action in a clip'
-  if (tool === 'ranking_generate_clips') return 'Making the clips with AI'
-  if (tool === 'ranking_style_save') return 'Saving the ranking style'
-  if (tool === 'ranking_apply_style') return 'Applying the ranking style'
-  if (tool === 'ranking_style_list' || tool === 'ranking_style_get') return 'Reading ranking styles'
   if (tool === 'ranking_add_clip') return `Adding a clip to rank ${String(a.rank ?? '')}`.trim()
-  if (tool === 'ranking_export') return 'Exporting the ranking short'
   if (tool === 'make_video')
     return `Starting the video: ${String(a.title ?? '')}`.trim().replace(/:$/, '')
   if (tool === 'make_beat_loop')

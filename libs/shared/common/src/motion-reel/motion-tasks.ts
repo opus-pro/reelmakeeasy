@@ -9,6 +9,7 @@ export const MOTION_TASKS: readonly { id: AgentMotionTaskId; label: string }[] =
   { id: 'look', label: 'Look (stills)' },
   { id: 'render', label: 'Render' },
   { id: 'sync', label: 'Sync check' },
+  { id: 'review', label: 'Review' },
 ]
 
 /** How many renders the motion-reel skill allows before the agent says what is still off. */

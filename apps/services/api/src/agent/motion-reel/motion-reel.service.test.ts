@@ -29,7 +29,13 @@ jest.mock('./motion-project', () => ({
 }))
 jest.mock('./motion-render', () => ({
   ...jest.requireActual('./motion-render'),
+  readReelJson: jest.fn(() => ({ bars: 8, bpm: 128, lengthSec: 15 })),
+  renderReel: jest.fn(),
   typeCheck: jest.fn(async () => null),
+}))
+jest.mock('@reelmakeeasy/common/storage/stored-files', () => ({
+  ...jest.requireActual('@reelmakeeasy/common/storage/stored-files'),
+  uploadToStore: jest.fn(async () => undefined),
 }))
 jest.mock('./motion-music', () => ({
   ...jest.requireActual('./motion-music'),
@@ -166,6 +172,41 @@ describe('MotionReelService, an Advanced chat', () => {
       success: false,
       text: 'Set the reel up first: call motion_setup.',
     })
+  })
+
+  it('motion_review asks for a render first, without type-checking the scenes', async () => {
+    const { service } = setup('motion_free')
+    await service.callTool('s1', 'motion_setup', ARGS)
+    const { typeCheck } = jest.requireMock<{ typeCheck: jest.Mock }>('./motion-render')
+    typeCheck.mockClear()
+    const result = await service.callTool('s1', 'motion_review', {})
+    expect(result.success).toBe(false)
+    expect(result.text).toMatch(/^Nothing to review yet: render the reel with motion_render first/)
+    expect(typeCheck).not.toHaveBeenCalled()
+  })
+
+  it('motion_render sends the agent to motion_review whether the sync check passes or not', async () => {
+    const { service } = setup('motion_free')
+    await service.callTool('s1', 'motion_setup', ARGS)
+    const { renderReel } = jest.requireMock<{ renderReel: jest.Mock }>('./motion-render')
+    const rendered = (passes: boolean) => ({
+      file: '/tmp/reel.mp4',
+      poster: '/tmp/reel.jpg',
+      report: '',
+      sync: { lines: [passes ? 'Sync: passes.' : 'Sync: 1 to fix: stalls.'], passes },
+    })
+    renderReel.mockResolvedValueOnce(rendered(true))
+    const pass = await service.callTool('s1', 'motion_render', {})
+    expect(pass.success).toBe(true)
+    expect(pass.text).toMatch(
+      /Sync: passes\.\n\nA passing sync check is not the review\. Now call motion_review/,
+    )
+    renderReel.mockResolvedValueOnce(rendered(false))
+    const fail = await service.callTool('s1', 'motion_render', {})
+    expect(fail.text).toMatch(
+      /Sync: 1 to fix: stalls\.\n\nNow call motion_review, open every sheet and write reel\/review\.md with every miss/,
+    )
+    expect(fail.text).toMatch(/at most 3 renders, one per review round/)
   })
 
   it('leaves an Easy chat to its setup card', async () => {

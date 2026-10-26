@@ -54,6 +54,7 @@ import {
   renderStills,
   typeCheck,
 } from './motion-render'
+import { reviewBlocker, reviewReel } from './motion-review'
 import { ensureMotionReelRuntime } from './motion-runtime'
 import {
   MotionSetupError,
@@ -66,6 +67,21 @@ const logger = new Logger('MotionReelService')
 
 /** Where rendered reels are stored (served at /api/files/agent-motion/...). */
 const STORE_FOLDER = 'agent-motion'
+
+/** What each tool makes, for its failure message. */
+const TOOL_WORK: Record<string, string> = {
+  motion_music: 'music',
+  motion_render: 'render',
+  motion_review: 'review',
+  motion_still: 'stills',
+}
+
+/** What a render's answer asks next: the review, whether the sync check passes or not (each of
+ *  the at most 3 renders is one review round). */
+const REVIEW_AFTER_PASS =
+  'A passing sync check is not the review. Now call motion_review, open every sheet and write reel/review.md; fix what it finds and render again (at most 3 renders, one per review round), or tell the user what is still off.'
+const REVIEW_AFTER_FAIL =
+  'Now call motion_review, open every sheet and write reel/review.md with every miss listed above and what the sheets show, then fix them at the beats named and render again (at most 3 renders, one per review round).'
 
 /** What the Motion Reel service needs from the session service. */
 export interface MotionReelSessions {
@@ -104,7 +120,8 @@ export class MotionSetupTakenError extends Error {
 /**
  * Motion Reel chats: the setup card (`setup`), which readies the reel's Remotion project and then
  * starts the agent; an Advanced chat's `motion_setup`, the same from the agent; and the tools the
- * agent composes and renders with (`motion_music`, `motion_still`, `motion_render`).
+ * agent composes, renders and reviews with (`motion_music`, `motion_still`, `motion_render`,
+ * `motion_review`).
  * Everything that touches the network (installing Remotion, reading a reference) happens here, on
  * the server; the agent only has its sandboxed shell inside the chat's folder.
  */
@@ -136,6 +153,8 @@ export class MotionReelService {
     const projectDir = path.join(this.sessions.workingDir(id), REEL_DIR)
     this.busy.add(id)
     try {
+      // A review only reads the last render: the scenes may be mid-fix.
+      if (tool === 'motion_review') return await this.review(id, projectDir, args)
       const errors = await typeCheck(projectDir)
       if (errors)
         return {
@@ -149,10 +168,9 @@ export class MotionReelService {
       return { success: false, text: `Unknown tool ${tool}.` }
     } catch (error) {
       if (error instanceof MotionSetupError) return { success: false, text: error.message }
-      const what = tool === 'motion_music' ? 'music' : tool === 'motion_still' ? 'stills' : 'render'
       return {
         success: false,
-        text: `The ${what} failed:\n${ensureError(error).message.slice(-3000)}`,
+        text: `The ${TOOL_WORK[tool] ?? 'render'} failed:\n${ensureError(error).message.slice(-3000)}`,
       }
     } finally {
       this.busy.delete(id)
@@ -418,8 +436,17 @@ export class MotionReelService {
     })
     return {
       success: true,
-      text: `Rendered the reel (${reel.lengthSec} s, ${reel.bars} bars at ${reel.bpm} BPM) and showed it to the user. The file is ${REEL_DIR}/out/reel.mp4.\n\nSync check (the picture against the music):\n${result.sync.lines.join('\n')}${result.sync.passes ? '' : '\n\nFix every miss listed above at the beats it names, then render again.'}`,
+      text: `Rendered the reel (${reel.lengthSec} s, ${reel.bars} bars at ${reel.bpm} BPM) and showed it to the user. The file is ${REEL_DIR}/out/reel.mp4.\n\nSync check (the picture against the music):\n${result.sync.lines.join('\n')}\n\n${result.sync.passes ? REVIEW_AFTER_PASS : REVIEW_AFTER_FAIL}`,
     }
+  }
+
+  /** The last render as contact sheets (shown in the chat) with its pace report. */
+  private async review(id: string, projectDir: string, args: unknown): Promise<ToolCallResult> {
+    const blocker = reviewBlocker(projectDir)
+    if (blocker) return { success: false, text: blocker }
+    const result = await reviewReel(projectDir, args)
+    for (const file of result.sheets) this.sessions.emitImage(id, file)
+    return { success: true, text: result.text }
   }
 
   /**

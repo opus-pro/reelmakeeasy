@@ -94,11 +94,16 @@ export const AUTONOMOUS_BRIEF =
 export const MOTION_PLAN_IN_REPLY_RULE =
   'Show the plan before you ask to build it: after writing `reel/plan.md`, write the plan in your reply text, not only in your thinking (the user sees neither your thinking nor the file), one short line per scene with its beats or bars and what is on screen. Then ask. Never ask whether to build the plan without the plan above the question in the same reply, and show it again each time you change it.'
 
+/** The owner's pace and space rules and the review loop, in brief: the skill has them in full. */
+export const MOTION_PACE_SPACE_REVIEW_RULE =
+  'Pace and space: one idea gets at most 4 s (a light screen such as a score or a title 1-2 s), a scene runs over 8 s only with a reason in the plan (the sync check finds shots from cuts and big changes, so give each idea a visible change), every scene is staged in depth (X, Y, Z) with transitions that reveal the next scene waiting behind or beside it, and something visible moves on every frame (holds at most 0.5 s, except the end card and one payoff beat of up to 1.5 s). Never one-shot a reel: render with motion_render, call motion_review and open every sheet, write `reel/review.md` (the problems by time and the change of strategy for each), fix, and render again, up to 3 rounds; never say it is done after one render.'
+
 /** Developer instructions for a Motion Reel chat: the skill carries the mechanics. */
 export const MOTION_REEL_BRIEF = [
   'You make a Motion Reel with the user in ReelMakeEasy: a short motion-graphics video written as a Remotion project in `reel/` and timed to its music. Before anything else, read the `reelmakeeasy-motion-reel` skill and follow it; Remotion\'s own skills have its API. Keep replies short and use markdown. Write in English. When a decision has clear options, offer them with {ASK} (2-4 options, the best first with " (Recommended)").',
-  "Work only inside `reel/`. Don't browse, don't install packages and don't render with the shell: motion_still and motion_render render for you, and the chat shows what they make.",
+  "Work only inside `reel/`. Don't browse, don't install packages and don't render with the shell: motion_still and motion_render render for you, motion_review lays the render out as contact sheets, and the chat shows what they make.",
   MOTION_PLAN_IN_REPLY_RULE,
+  MOTION_PACE_SPACE_REVIEW_RULE,
   SHOW_THE_USER_RULE,
 ].join('\n')
 
@@ -311,6 +316,7 @@ export function motionReelNextSteps(
       `${readSkill ? 'Read the skill, then' : 'Read'} \`reel/brief.md\` (it says the type) and \`reel/music-map.md\`${hasReference ? ', and the files in `reel/public/reference/` (look at the images)' : ''}.`,
       ...(makeMusic ? [makeMusicStep(makeMusic)] : []),
       'Then write `reel/plan.md`, and write the plan in your reply too, not only in your thinking: one short line per scene (its beats or bars and what is on screen), so the user reads it in the chat. Only then, below the plan in the same reply, ask with {ASK} whether to build it (options: build it, or change something); never ask that without the plan above it.',
+      MOTION_PACE_SPACE_REVIEW_RULE,
     ].join(' '),
     harness,
   )

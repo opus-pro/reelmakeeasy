@@ -39,6 +39,13 @@ const TASKS: Transcript['motionTasks'] = [
     result: '1 to fix: kick pulse',
     state: 'failed',
   },
+  {
+    details: ['Stalls: 2 where nothing visibly moves for 0.5 s or more.', 'Pace: 2 stalls to fix.'],
+    id: 'review',
+    label: 'Review',
+    result: '3 sheets, round 1 · review.md: 4 problems',
+    state: 'done',
+  },
 ]
 
 const row = (container: HTMLElement, id: string) =>
@@ -54,7 +61,7 @@ describe('MotionTasksPanel', () => {
     expect(row(container, 'sync').dataset.state).toBe('failed')
     expect(within(row(container, 'sync')).getByText('needs fixing:')).toBeTruthy()
     expect(within(row(container, 'music')).getByText('Pulse Drive, 128 BPM')).toBeTruthy()
-    expect(screen.getAllByText('5 of 7 done').length).toBeGreaterThan(0)
+    expect(screen.getAllByText('6 of 8 done').length).toBeGreaterThan(0)
   })
 
   it('opens a row to show its details', () => {
@@ -113,7 +120,30 @@ describe('MotionTasksPanel', () => {
       'waiting',
       'waiting',
       'waiting',
+      'waiting',
     ])
+  })
+
+  it('shows the Review after the Sync check: its sheets, round and review.md, the pace in its details', () => {
+    const { container } = render(
+      <MotionTasksPanel transcript={transcript({ motionTasks: TASKS })} />,
+    )
+    const rows = [...container.querySelectorAll('[data-task]')].map(
+      (el) => (el as HTMLElement).dataset.task,
+    )
+    expect(rows.slice(-2)).toEqual(['sync', 'review'])
+    const review = row(container, 'review')
+    expect(within(review).getByText('3 sheets, round 1 · review.md: 4 problems')).toBeTruthy()
+    fireEvent.click(within(review).getByRole('button'))
+    expect(screen.getByText('Pace: 2 stalls to fix.')).toBeTruthy()
+  })
+
+  it('a chat saved before the Review still renders, with the Review waiting', () => {
+    const old = TASKS?.filter((t) => t.id !== 'review')
+    const { container } = render(<MotionTasksPanel transcript={transcript({ motionTasks: old })} />)
+    expect(row(container, 'sync').dataset.state).toBe('failed')
+    expect(row(container, 'review').dataset.state).toBe('waiting')
+    expect(screen.getAllByText('5 of 8 done').length).toBeGreaterThan(0)
   })
 })
 
@@ -197,7 +227,7 @@ describe('MotionReelPanel', () => {
     const render1 = screen.getByText('Latest render')
     expect(tasks.compareDocumentPosition(render1) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
     expect(screen.getByText('Beat check: 7 of 7 cuts on the grid')).toBeTruthy()
-    expect(container.querySelectorAll('[data-task]')).toHaveLength(7)
+    expect(container.querySelectorAll('[data-task]')).toHaveLength(8)
   })
 
   it('before a render: the Tasks and where the reel will play', () => {

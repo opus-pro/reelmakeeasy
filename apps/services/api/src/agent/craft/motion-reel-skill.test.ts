@@ -7,6 +7,7 @@ import {
   MOTION_MUSIC_TOOL,
   MOTION_REEL_SKILL_NAME,
   MOTION_RENDER_TOOL,
+  MOTION_REVIEW_TOOL,
   MOTION_SETUP_TOOL,
   MOTION_STILL_TOOL,
   renderMotionReelSkill,
@@ -27,12 +28,13 @@ describe('renderMotionReelSkill', () => {
     expect(description.slice('description: '.length)).not.toMatch(/: | #/)
   })
 
-  it('names the setup, music and render tools, the helpers and every sound effect', () => {
+  it('names the setup, music, render and review tools, the helpers and every sound effect', () => {
     for (const tool of [
       MOTION_SETUP_TOOL,
       MOTION_MUSIC_TOOL,
       MOTION_STILL_TOOL,
       MOTION_RENDER_TOOL,
+      MOTION_REVIEW_TOOL,
     ])
       expect(skill).toContain(`\`${tool}\``)
     for (const file of ['brief.md', 'public/reel.json', 'music-map.md', 'music.wav', 'sfx/'])
@@ -49,13 +51,79 @@ describe('renderMotionReelSkill', () => {
     for (const name of SFX_NAMES) expect(skill).toContain(`\`${name}\``)
   })
 
-  it('is mechanics only: no styles, no creative method; the type and the user bring that', () => {
+  it('brings no styles or creative method: the type and the user bring the look', () => {
     expect(skill).toMatch(
       /The creative method comes from the reel's type \(in `brief.md`\) and the user/,
     )
     expect(skill).not.toMatch(/style\.md|style card|The styles|hud-showreel|product-ui-launch/)
     expect(skill).not.toMatch(/world|climax|Craft rules|How to work|Show the product working/i)
-    expect(skill.split('\n').length).toBeLessThan(80)
+    expect(skill.split('\n').length).toBeLessThan(100)
+  })
+
+  it('names motion_review and says what it returns', () => {
+    expect(MOTION_REVIEW_TOOL).toBe('motion_review')
+    expect(skill).toMatch(
+      /contact sheets \(a frame every 0\.5 s, 8 frames a row, so one row is 4 s/,
+    )
+    expect(skill).toMatch(/with a pace report/)
+    expect(skill).toMatch(/every stall of 0\.5 s or more by time and beat/)
+  })
+
+  it('has the pace rules: one idea in 4 s, 8 s only with a reason, light screens in 1-2 s', () => {
+    expect(skill).toMatch(/## Pace/)
+    expect(skill).toMatch(/One idea gets at most 4 s/)
+    expect(skill).toMatch(/over 8 s only with a reason written in the plan/)
+    expect(skill).toMatch(/A light screen \(a score, a stat, a title\) gets 1-2 s/)
+    expect(skill).toMatch(/split into two different shots on the same topic/)
+    // The check never reads the plan: a joining move needs a visible change at each idea.
+    expect(skill).toMatch(
+      /The sync check never reads the plan: it finds shots from cuts and big changes/,
+    )
+  })
+
+  it('has the space rules: scenes staged in depth, transitions that join them', () => {
+    expect(skill).toMatch(/## Space \(X, Y, Z\)/)
+    expect(skill).toMatch(/`perspective` with `translateZ`, `rotateX` and `rotateY`, or three\.js/)
+    expect(skill).toMatch(/Stage the next scene behind or beside the current one before the cut/)
+    expect(skill).toMatch(/A flat 2D slide or a plain cut is the exception, not the default/)
+    // Shot's moves are flat: how to build a join in depth instead.
+    expect(skill).toMatch(/These moves are flat 2D, the exception/)
+    expect(skill).toMatch(/one `<Sequence>` inside one `perspective` container/)
+  })
+
+  it('bans stall frames: something moves on every frame, holds at most 0.5 s', () => {
+    expect(skill).toMatch(/## No stall frames/)
+    expect(skill).toMatch(/Something visible moves on every frame/)
+    expect(skill).toMatch(/A hold lasts at most 0\.5 s; only the end card holds longer/)
+    expect(skill).toMatch(/once a reel a payoff beat .* of up to 1\.5 s/)
+    expect(skill).toMatch(
+      /starts on a cut or a big change in the reel's last fifth and at most 6 s from the end/,
+    )
+    expect(skill).toMatch(
+      /A slow drift \(2% of the width a second\) or a glow alone reads as still/,
+    )
+  })
+
+  it('has a plan.md block per scene with its idea, depth staging, transitions and motion', () => {
+    expect(skill).toMatch(/one short block per scene: its seconds and its beats or bars/)
+    expect(skill).toMatch(/the one idea it shows; its staging in X, Y and Z/)
+    expect(skill).toMatch(/how each joins the neighbouring scene in depth; and what keeps moving/)
+  })
+
+  it('makes the review loop mandatory, with review.md and a fresh reviewer subagent', () => {
+    expect(skill).toMatch(/## The review loop/)
+    expect(skill).toMatch(/After every render, call `motion_review` and open every contact sheet/)
+    expect(skill).toMatch(/Write `reel\/review\.md`: the problems by time/)
+    expect(skill).toMatch(/the change of strategy/)
+    expect(skill).toMatch(
+      /If your harness has a subagent, give a fresh reviewer subagent the sheets/,
+    )
+    expect(skill).toMatch(/up to 3 rounds\. Never tell the user the reel is done after one render/)
+    // Generic: no harness-specific tool names.
+    expect(skill).not.toMatch(/\bAgent tool\b|\bTask tool\b/)
+    // The render tool's own line sends the agent to the review too.
+    expect(skill).toMatch(/Whether it passes or not, call `motion_review` next/)
+    expect(skill).toMatch(/At most 3 renders, one per review round/)
   })
 
   it('sends composed music to the composer skill, and keeps the music models', () => {

@@ -64,6 +64,8 @@ export interface ReelFacts {
   musicScore: boolean
   /** `plan.md`, if written: its section and scene counts. */
   plan: null | { scenes: number; sections: number }
+  /** `review.md`, if written: its first line and how many problems it lists (its list items). */
+  review?: null | { firstLine: string; problems: number }
   /** The scene files under `src/scenes/`, by name, and the newest change (ms). */
   scenes: { lastChange: number; names: string[] }
 }
@@ -78,6 +80,7 @@ export function motionTasks(input: MotionTaskInput): AgentMotionTask[] {
     music: musicPhase(input),
     plan: planPhase(input.facts),
     render: renderPhase(input.calls),
+    review: reviewPhase(input),
     setup: setupPhase(input),
     sync: syncPhase(input.calls),
   }
@@ -95,6 +98,7 @@ export function readReelFacts(projectDir: string): ReelFacts {
     ),
     musicScore: fs.existsSync(path.join(projectDir, 'music', 'music.mjs')),
     plan: readPlan(path.join(projectDir, 'plan.md')),
+    review: readReview(path.join(projectDir, 'review.md')),
     scenes: readScenes(path.join(projectDir, 'src', 'scenes')),
   }
 }
@@ -416,6 +420,22 @@ function readPlan(file: string): ReelFacts['plan'] {
   return { scenes, sections: headings.filter((l) => !/^#{2,4}\s+\**scene\b/i.test(l)).length }
 }
 
+function readReview(file: string): ReelFacts['review'] {
+  let stat: fs.Stats
+  try {
+    stat = fs.lstatSync(file)
+  } catch {
+    return null
+  }
+  // The agent writes it: a plain file only (a link is not followed), and only so much of it.
+  if (!stat.isFile()) return null
+  if (stat.size > MAX_PLAN_BYTES) return { firstLine: 'review.md written', problems: 0 }
+  const lines = fs.readFileSync(file, 'utf8').split('\n')
+  const first = lines.map((l) => l.replace(/^#+\s*/, '').trim()).find(Boolean) ?? ''
+  const problems = lines.filter((l) => /^\s*(?:[-*]|\d+\.)\s+\S/.test(l)).length
+  return { firstLine: first.length > 120 ? `${first.slice(0, 119)}…` : first, problems }
+}
+
 function readScenes(dir: string): ReelFacts['scenes'] {
   let names: string[]
   try {
@@ -443,6 +463,56 @@ function renderPhase(calls: MotionToolCall[]): Phase {
   if (last.ok === undefined) return { result: `Rendering ${of(made + 1)}…`, state: 'running' }
   if (!last.ok) return failedPhase(last.text)
   return { result: `Render ${of(made)}`, state: 'done' }
+}
+
+/**
+ * The review after a render (`motion_review`): running while it makes its sheets; done with how
+ * many and the round (the renders reviewed so far), and what `review.md` says (its problem count,
+ * else its first line); waiting again once a newer render has not been reviewed (a failed review
+ * included: the render after it is what waits).
+ */
+function reviewPhase({ calls, facts }: MotionTaskInput): Phase {
+  const reviews = callsOf(calls, 'motion_review')
+  const last = reviews.at(-1)
+  if (!last) return { result: null, state: 'waiting' }
+  const renders = callsOf(calls, 'motion_render').filter((c) => c.ok)
+  const round = renders.filter((c) => c.startedAt < last.startedAt).length
+  if (last.ok === undefined) return { result: 'Making contact sheets…', state: 'running' }
+  const newest = renders.at(-1)
+  // A failed review is stale once a newer render is out: that render waits for its review.
+  const staleFail = !last.ok && !!newest && newest.startedAt > last.startedAt
+  if (!last.ok && !staleFail) return failedPhase(last.text)
+  const reviewed = reviews.findLast((c) => c.ok)
+  if (!reviewed) return { result: `Render ${renders.length} not reviewed yet`, state: 'waiting' }
+  const sheets = Number(/Made (\d+) contact sheet/.exec(reviewed.text ?? '')?.[1] ?? 0)
+  const notes = facts.review
+    ? facts.review.problems
+      ? `review.md: ${facts.review.problems} problem${facts.review.problems === 1 ? '' : 's'}`
+      : facts.review.firstLine && `review.md: ${facts.review.firstLine}`
+    : ''
+  const result = [`${sheets} sheet${sheets === 1 ? '' : 's'}, round ${Math.max(1, round)}`, notes]
+    .filter(Boolean)
+    .join(' · ')
+  const details = paceLines(reviewed.text)
+  const withDetails = details.length ? { details } : {}
+  if (newest && newest.startedAt > reviewed.startedAt)
+    return {
+      ...withDetails,
+      result: `${result}; render ${renders.length} not reviewed yet`,
+      state: 'waiting',
+    }
+  return { ...withDetails, result, state: 'done' }
+}
+
+/** The pace report's lines in a motion_review answer, without the per-shot list. */
+function paceLines(text: string | undefined): string[] {
+  const after = (text ?? '').split(/Pace report[^\n]*:\n/)[1]
+  if (!after) return []
+  return (after.split('\n\n')[0] ?? '')
+    .split('\n')
+    .filter((l) => l && !l.startsWith('- ') && !l.startsWith('Shots ('))
+    .slice(0, MAX_DETAILS)
+    .map((l) => (l.length > 200 ? `${l.slice(0, 199)}…` : l))
 }
 
 function setupPhase({ calls, mode, setup }: MotionTaskInput): Phase {

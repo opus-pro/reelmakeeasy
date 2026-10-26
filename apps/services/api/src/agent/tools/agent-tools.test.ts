@@ -131,14 +131,17 @@ describe('a Motion Reel chat', () => {
         'motion_music',
         'motion_still',
         'motion_render',
+        'motion_review',
       ])
       expect(toolsForSession({ mode: 'motion_free' }, harness).map((t) => t.name)).toEqual([
         'motion_setup',
         'motion_music',
         'motion_still',
         'motion_render',
+        'motion_review',
       ])
     }
+    expect(toolSummary('motion_review', {})).toBe('Reviewing the render (contact sheets)')
     expect(toolSummary('motion_setup', {})).toBe('Looking at the reel types and music')
     expect(toolSummary('motion_setup', { type: 'launch' })).toBe('Setting up the reel')
   })

@@ -67,6 +67,7 @@ const noFacts = {
   musicChangedAt: 0,
   musicScore: false,
   plan: null,
+  review: null,
   scenes: { lastChange: 0, names: [] },
 }
 
@@ -90,7 +91,7 @@ function tasks(
 }
 
 describe('motionTasks', () => {
-  it('lists the seven phases in order, all waiting before the setup', () => {
+  it('lists the eight phases in order, all waiting before the setup', () => {
     const list = motionTasks({
       calls: [],
       facts: noFacts,
@@ -106,6 +107,7 @@ describe('motionTasks', () => {
       ['look', 'Look (stills)', 'waiting'],
       ['render', 'Render', 'waiting'],
       ['sync', 'Sync check', 'waiting'],
+      ['review', 'Review', 'waiting'],
     ])
     expect(list[0]?.result).toBe('Waiting for the setup card')
   })
@@ -243,6 +245,109 @@ describe('motionTasks', () => {
     })
     // The last render that went through still has the word on the sync.
     expect(broken.sync.result).toBe('Sync: passes')
+  })
+})
+
+const REVIEW = [
+  'Made 3 contact sheets of the render (the user sees them too): a frame every 0.5 s from 0 s to 30 s, 8 to a row (4 s), left to right. Open every sheet:',
+  '- reel/out/review/1/sheet-1.png: rows start at 0 s (beat 0), 4 s (beat 8), 8 s (beat 16)',
+  '',
+  'Pace report (the whole reel):',
+  'Shots (from the cuts and big changes; one idea is at most 4 s, a shot over 8 s fails):',
+  '- 0 s (beat 0): 2 s',
+  'Scenes: 1 shot, the longest 2 s.',
+  'Stalls: 2 where nothing visibly moves for 0.5 s or more before the end card at 27 s: 3.5-4.4 s (beats 7-8.8), 9-9.9 s (beats 18-19.8).',
+  'Pace: 2 stalls to fix.',
+  '',
+  'Write what you find in reel/review.md.',
+].join('\n')
+
+describe('motionTasks: the review', () => {
+  it('waits for a review, runs while it makes its sheets, and is done with the sheets and the round', () => {
+    expect(tasks({ setup: SETUP }).review).toEqual({ result: null, state: 'waiting' })
+    const rendered = call('motion_render', true, RENDER_PASS, 1000)
+    expect(
+      tasks({ calls: [rendered, call('motion_review', undefined, undefined, 2000)] }).review,
+    ).toEqual({
+      result: 'Making contact sheets…',
+      state: 'running',
+    })
+    const reviewed = [rendered, call('motion_review', true, REVIEW, 2000)]
+    expect(tasks({ calls: reviewed }).review).toEqual({
+      details: [
+        'Scenes: 1 shot, the longest 2 s.',
+        'Stalls: 2 where nothing visibly moves for 0.5 s or more before the end card at 27 s: 3.5-4.4 s (beats 7-8.8), 9-9.9 s (beats 18-19.8).',
+        'Pace: 2 stalls to fix.',
+      ],
+      result: '3 sheets, round 1',
+      state: 'done',
+    })
+    // The render phase keeps counting renders.
+    expect(tasks({ calls: reviewed }).render.result).toBe('Render 1 of 3')
+  })
+
+  it("shows review.md's problem count, else its first line; the second render's review is round 2", () => {
+    const calls = [
+      call('motion_render', true, RENDER_PASS, 1000),
+      call('motion_review', true, REVIEW, 2000),
+      call('motion_render', true, RENDER_PASS, 3000),
+      call('motion_review', true, REVIEW, 4000),
+    ]
+    const facts = { ...noFacts, review: { firstLine: 'Round 2', problems: 3 } }
+    expect(tasks({ calls, facts }).review.result).toBe('3 sheets, round 2 · review.md: 3 problems')
+    const noList = { ...noFacts, review: { firstLine: 'Round 2: all clear', problems: 0 } }
+    expect(tasks({ calls, facts: noList }).review.result).toBe(
+      '3 sheets, round 2 · review.md: Round 2: all clear',
+    )
+    // A newer render is not reviewed yet.
+    const newer = [...calls, call('motion_render', true, RENDER_PASS, 5000)]
+    expect(tasks({ calls: newer, facts }).review).toMatchObject({
+      result: '3 sheets, round 2 · review.md: 3 problems; render 3 not reviewed yet',
+      state: 'waiting',
+    })
+  })
+
+  it('a review refused before a render says why', () => {
+    const refused = call(
+      'motion_review',
+      false,
+      'Nothing to review yet: render the reel with motion_render first, then call motion_review.',
+    )
+    expect(tasks({ calls: [refused] }).review).toEqual({
+      result:
+        'Nothing to review yet: render the reel with motion_render first, then call motion_review.',
+      state: 'failed',
+    }) // A render after the refusal: that render waits for its review, the refusal is stale.
+    const stale = [
+      call('motion_review', false, 'Nothing to review yet: render the reel first.', 1000),
+      call('motion_render', true, RENDER_PASS, 2000),
+    ]
+    expect(tasks({ calls: stale }).review).toEqual({
+      result: 'Render 1 not reviewed yet',
+      state: 'waiting',
+    })
+    // After an earlier review, a refused one before the next render keeps that review's result.
+    const again = [
+      call('motion_render', true, RENDER_PASS, 1000),
+      call('motion_review', true, REVIEW, 2000),
+      call('motion_review', false, 'src/scenes/A.tsx changed after the last render.', 3000),
+      call('motion_render', true, RENDER_PASS, 4000),
+    ]
+    expect(tasks({ calls: again }).review).toMatchObject({
+      result: '3 sheets, round 1; render 2 not reviewed yet',
+      state: 'waiting',
+    })
+  })
+
+  it('reads review.md from the reel folder: its first line and its list items', () => {
+    const dir = reelDir()
+    fs.mkdirSync(dir, { recursive: true })
+    expect(readReelFacts(dir).review).toBeNull()
+    fs.writeFileSync(
+      path.join(dir, 'review.md'),
+      '# Review, round 1\n\n- 3.5 s: stall, add a drift\n- 9 s: stall\n1. 14 s: scene 6 s, split\n',
+    )
+    expect(readReelFacts(dir).review).toEqual({ firstLine: 'Review, round 1', problems: 3 })
   })
 })
 
