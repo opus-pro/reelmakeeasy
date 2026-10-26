@@ -822,6 +822,39 @@ describe('a Ranking chat', () => {
   })
 })
 
+describe('Claude Animation events', () => {
+  const setup = {
+    lengthSec: 30,
+    lookId: '2d' as const,
+    lookLabel: '2D',
+    music: { source: 'none' as const },
+    musicTitle: null,
+    subject: 'Why honey never spoils',
+  }
+
+  it('opens the animation setup card, then shows what was chosen in its place', () => {
+    const open = run([{ id: 1, type: 'animation_setup_request' }])
+    expect(open.entries).toEqual([
+      { id: 'animation-setup-1', kind: 'animation_setup', state: 'open' },
+    ])
+    const chosen = run([
+      { id: 1, type: 'animation_setup_request' },
+      { id: 2, setup, type: 'animation_setup' },
+    ])
+    expect(chosen.entries).toEqual([
+      { id: 'animation-setup-1', kind: 'animation_setup', setup, state: 'chosen' },
+    ])
+  })
+
+  it('keeps one animation card when a failed setup asks again', () => {
+    const t = run([
+      { id: 1, type: 'animation_setup_request' },
+      { id: 2, type: 'animation_setup_request' },
+    ])
+    expect(t.entries).toEqual([{ id: 'animation-setup-2', kind: 'animation_setup', state: 'open' }])
+  })
+})
+
 describe('Motion Reel events', () => {
   const setup = {
     bars: 8,

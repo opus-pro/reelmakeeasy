@@ -5,15 +5,58 @@ export type AgentAnswers = Record<string, string[]>
  *  (Advanced); a ranking short's guided chat (Easy: one question at a time, then the agent builds
  *  it) or free chat (Advanced), both in the Ranking Builder; a Motion Reel's setup card, then a
  *  chat that builds it in Remotion (Easy, `motion`), or a free chat in which the agent sets it up
- *  itself (Advanced, `motion_free`). Chosen once, right after the session is created. A former
+ *  itself (Advanced, `motion_free`); a Claude Animation's setup card, then a chat in which Claude
+ *  builds it in Remotion (Easy, `animation`), or a free chat in which Claude sets it up itself
+ *  (Advanced, `animation_free`). Chosen once, right after the session is created. A former
  *  mode, 'guided', was removed: chats saved with it load as 'free' (`agentModeFromStored`). */
 export type AgentMode =
+  | 'animation'
+  | 'animation_free'
   | 'autonomous'
   | 'free'
   | 'motion'
   | 'motion_free'
   | 'ranking'
   | 'ranking_easy'
+
+/** A Claude Animation's look: the visual style it is drawn in. */
+export type AnimationLookId = '2d' | '3d' | '8bit'
+
+/** What the Claude Animation setup card sends (`POST /api/agent/sessions/:id/animation`). */
+export type AgentAnimationSetup = {
+  /** About this long, in seconds (one of the look's lengths). */
+  lengthSec: number
+  lookId: AnimationLookId
+  /** Motion Reel's music choices. */
+  music: AgentMotionSetup['music']
+  /** What it is about; null: Claude picks a fun fact itself (Surprise me). */
+  subject: null | string
+}
+
+/** `GET /api/agent/animation/options`: what the Claude Animation setup card offers. */
+export type AgentAnimationOptions = {
+  composers: AgentMotionOptions['composers']
+  looks: {
+    defaultLengthSec: number
+    /** The track the card picks with this look. */
+    defaultTrackId: null | string
+    description: string
+    /** Why the look can't be picked here (no way to make its voices), when it can't. */
+    disabledReason?: string
+    id: AnimationLookId
+    label: string
+    lengths: number[]
+    /** A short silent clip of the look (null until the preset pack has one). */
+    previewUrl: null | string
+  }[]
+  tracks: AgentMotionOptions['tracks']
+}
+
+/** The setup a Claude Animation chat settled on, as its card shows it once chosen. */
+export type AgentAnimationSetupView = AgentAnimationSetup & {
+  lookLabel: string
+  musicTitle: null | string
+}
 
 /** What the Motion Reel setup card sends (`POST /api/agent/sessions/:id/motion-reel`). */
 export type AgentMotionSetup = {
@@ -102,7 +145,7 @@ export type AgentMotionTaskId =
 export type AgentMotionTaskState = 'done' | 'failed' | 'running' | 'waiting'
 
 /** What a chat makes: a tool, each with an Easy and an Advanced mode. */
-export type AgentTool = 'motion' | 'ranking' | 'short'
+export type AgentTool = 'animation' | 'motion' | 'ranking' | 'short'
 
 /** A short silent clip that shows what an option looks like (ReelMakeEasy's own cards only). The
  *  chat's transcript keeps their addresses; the browser gets the URLs. */
@@ -309,6 +352,8 @@ export interface AgentSession {
    *  user stopped it, its video started, it failed). */
   interrupted?: boolean
   mode?: AgentMode
+  /** A Claude Animation chat's setup, once its card was sent (the chat opens then). */
+  animation?: AgentAnimationSetupView
   /** A Motion Reel chat's setup, once its card was sent (the chat opens then). */
   motionReel?: AgentMotionSetupView
   /** The project an autonomous session started its video in. */
@@ -418,6 +463,10 @@ export type AgentUiEvent = { id?: number } & (
   | { type: 'flow_cancelled' }
   /** Autonomous mode wants the user to pick a style (the inline style picker). */
   | { type: 'style_request' }
+  /** A Claude Animation chat wants its setup (the inline setup card). */
+  | { type: 'animation_setup_request' }
+  /** The Claude Animation setup was sent and its project is ready. */
+  | { setup: AgentAnimationSetupView; type: 'animation_setup' }
   /** A Motion Reel chat wants its setup (the inline setup card). */
   | { type: 'motion_setup_request' }
   /** The Motion Reel setup was sent and its project is ready. */
@@ -541,6 +590,7 @@ export interface BeatLoopStoryboard {
 
 /** Each tool's modes: Easy (guided) first, then Advanced (free chat). */
 export const AGENT_TOOL_MODES: Record<AgentTool, { advanced: AgentMode; easy: AgentMode }> = {
+  animation: { advanced: 'animation_free', easy: 'animation' },
   motion: { advanced: 'motion_free', easy: 'motion' },
   ranking: { advanced: 'ranking', easy: 'ranking_easy' },
   short: { advanced: 'free', easy: 'autonomous' },
@@ -548,6 +598,7 @@ export const AGENT_TOOL_MODES: Record<AgentTool, { advanced: AgentMode; easy: Ag
 
 /** The tool a mode belongs to. */
 export function toolOfMode(mode: AgentMode): AgentTool {
+  if (mode === 'animation' || mode === 'animation_free') return 'animation'
   if (mode === 'motion' || mode === 'motion_free') return 'motion'
   return mode === 'ranking' || mode === 'ranking_easy' ? 'ranking' : 'short'
 }
@@ -555,6 +606,17 @@ export function toolOfMode(mode: AgentMode): AgentTool {
 /** A Motion Reel chat, Easy (its setup card) or Advanced (the agent sets it up). */
 export function isMotionMode(mode: AgentMode | null | undefined): boolean {
   return !!mode && toolOfMode(mode) === 'motion'
+}
+
+/** A Claude Animation chat, Easy (its setup card) or Advanced (Claude sets it up). */
+export function isAnimationMode(mode: AgentMode | null | undefined): boolean {
+  return !!mode && toolOfMode(mode) === 'animation'
+}
+
+/** A chat whose agent writes the video as code (Motion Reel or Claude Animation): it runs on the
+ *  strongest model only, and is driven by chat after its setup. */
+export function isCodeVideoMode(mode: AgentMode | null | undefined): boolean {
+  return isMotionMode(mode) || isAnimationMode(mode)
 }
 
 /** A Ranking chat, Easy or Advanced: it builds ranking shorts with the ranking tools. */

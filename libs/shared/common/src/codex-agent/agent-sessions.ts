@@ -19,6 +19,8 @@ export const PROJECT_CREATED_VIA_AGENT = 'agent'
 
 /** The welcome card's names for the modes. */
 export const AGENT_MODE_LABEL: Record<AgentMode, string> = {
+  animation: 'Claude Animation (Easy)',
+  animation_free: 'Claude Animation',
   autonomous: 'Easy',
   free: 'Advanced',
   motion: 'Motion Reel (Easy)',

@@ -120,6 +120,25 @@ export const MOTION_REEL_FREE_BRIEF = [
   'Then call motion_setup with all of it: it readies `reel/` (the first time it also installs Remotion, a few minutes) and says what to read next. From there, work as the skill says: write `reel/plan.md`, write the plan in your reply, then ask whether to build it. Call motion_setup again only when the user changes the type, length, frame, music or reference: the scenes and plan you wrote are kept, so re-check them against the new grid.',
 ].join('\n')
 
+/** Developer instructions for a Claude Animation chat: the look's skill carries the method. */
+export const ANIMATION_BRIEF = [
+  'You make a Claude Animation with the user in ReelMakeEasy: a short narrated animation (2D, 3D or 8-bit) that you draw and animate yourself, every frame in code, as a Remotion project in `animation/`. No AI video model is used. Before anything else, read `animation/look.md` and the skill it names (`reelmakeeasy-animation-2d`, `-3d` or `-8bit`) and follow it; Remotion\'s own skills have its API. Keep replies short and use markdown. Write in English. When a decision has clear options, offer them with {ASK} (2-4 options, the best first with " (Recommended)").',
+  "Work only inside `animation/`. Don't browse, don't install packages and don't render with the shell: animation_voice records the voices, animation_still and animation_render render for you, and the chat shows what they make.",
+  SHOW_THE_USER_RULE,
+].join('\n')
+
+/**
+ * Developer instructions for an Advanced (free chat) Claude Animation: there is no setup card,
+ * so Claude talks it through with the user and sets it up itself with animation_setup.
+ */
+export const ANIMATION_FREE_BRIEF = [
+  ANIMATION_BRIEF,
+  '',
+  '## Advanced: you set the animation up',
+  'The user picked Advanced: there is no setup card, and `animation/` doesn\'t exist until you call animation_setup. Call it with no arguments first: it answers the looks, their lengths and the music. Then settle with the user, one question at a time, as a card with {ASK} wherever there are options (the best first, with " (Recommended)"): what it is about (or a fun fact you pick), the look (2D, 3D or 8-bit), the length (one of the look\'s), and the music: a library track that suits the look, their own file through the paperclip, none, or music you make with a music model ("ElevenLabs Music" at $0.60 a minute, or "ACE-Step" at about $0.01). Don\'t ask what they already told you, and suggest the rest.',
+  'Then call animation_setup with all of it: it readies `animation/` (the first time it also installs Remotion, a few minutes) and says what to read next. Call it again only when the user changes the look, length or music: the scenes you wrote are kept.',
+].join('\n')
+
 /** The tool names the briefs use, per harness: Codex asks with request_user_input and has its
  *  own image tool; Claude asks with AskUserQuestion and makes images with generate_image. */
 export const BRIEF_TOOL_NAMES: Record<AgentHarnessName, { ask: string; image: string }> = {
@@ -226,6 +245,8 @@ export function rankingTopicQuestion(count = 4, random: () => number = Math.rand
 export const RANKING_EASY_BRIEF = [RANKING_BRIEF, '', RANKING_EASY_STEPS].join('\n')
 
 const BRIEF_BY_MODE: Record<AgentMode, string> = {
+  animation: ANIMATION_BRIEF,
+  animation_free: ANIMATION_FREE_BRIEF,
   autonomous: AUTONOMOUS_BRIEF,
   free: FREE_CHAT_BRIEF,
   motion: MOTION_REEL_BRIEF,
