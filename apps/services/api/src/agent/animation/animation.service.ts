@@ -5,9 +5,14 @@ import { ANIMATION_LOOKS, animationLook } from '@reelmakeeasy/common/animation/l
 import { Logger } from '@reelmakeeasy/common/logger'
 import { motionReelTrack, motionReelTracks } from '@reelmakeeasy/common/motion-reel/music'
 import {
+  isMotionMusicEngine,
   MOTION_MUSIC_ENGINE_INFO,
   MOTION_MUSIC_ENGINES,
+  type MotionMusicEngine,
+  motionMusicEngineOf,
 } from '@reelmakeeasy/common/motion-reel/reel-config'
+import { storeUri } from '@reelmakeeasy/common/storage/address'
+import { uploadToStore } from '@reelmakeeasy/common/storage/stored-files'
 import { presetPath, presetUrl } from '@reelmakeeasy/common/storage/presets'
 import { generateForcedAlignment } from '@reelmakeeasy/common/asr/elevenlabs'
 import {
@@ -25,7 +30,9 @@ import {
 } from '@shared/types/api/agent'
 
 import { resolveAttachment } from '../agent-attachments'
-import { animationKickoff } from '../agent-brief'
+import { animationKickoff, animationNextSteps } from '../agent-brief'
+import { composeMusic, parseComposeRequest } from '../motion-reel/motion-music'
+import { MAX_STILLS, renderReel, renderStills, typeCheck } from '../motion-reel/motion-render'
 import type { ReelMusicSource } from '../motion-reel/motion-project'
 import { ensureMotionReelRuntime } from '../motion-reel/motion-runtime'
 import type { ToolCallResult } from '../tools/agent-tools'
@@ -36,13 +43,23 @@ import {
   readAnimationJson,
   writeAnimationJson,
 } from './animation-project'
-import { AnimationSetupError, parseAnimationSetup, voiceReadiness } from './animation-setup'
+import {
+  animationSetupFromTool,
+  AnimationSetupError,
+  parseAnimationSetup,
+  voiceReadiness,
+} from './animation-setup'
 import { parseVoiceArgs, recordVoices, VoiceArgsError, type VoiceDeps } from './animation-voice'
 
 const logger = new Logger('AnimationService')
 
 /** Why the 2D look can't be picked: its characters need designed voices. */
 export const NO_DESIGNED_VOICES = 'Needs Qwen3 voices on this computer or a fal key.'
+
+/** Where rendered animations are stored (served at /api/files/agent-animation/...). */
+const STORE_FOLDER = 'agent-animation'
+/** The project's one composition (presets/animation/template/src/Root.tsx). */
+const COMPOSITION = 'Animation'
 
 /** A narrator's voice when designed voices can't be made here: a calm, clear Kokoro preset. */
 const NARRATOR_PRESET = 'kokoro-am_michael'
@@ -106,6 +123,7 @@ export class AnimationSetupTakenError extends Error {
 export class AnimationService {
   protected readonly busy = new Set<string>()
   protected readonly preparing = new Set<string>()
+  private renders = 0
 
   private readonly voice: VoiceDeps
 
@@ -121,6 +139,7 @@ export class AnimationService {
     if (this.busy.has(id) || this.preparing.has(id))
       return { success: false, text: 'A render or setup is already running; wait for it.' }
     const session = this.sessions.getSession(id)
+    if (tool === 'animation_setup') return await this.setupFromChat(id, session, args)
     if (!isAnimationMode(session.mode) || !session.animation)
       return {
         success: false,
@@ -133,13 +152,170 @@ export class AnimationService {
     this.busy.add(id)
     try {
       if (tool === 'animation_voice') return await this.recordVoice(session.animation, projectDir, args)
-      return { success: false, text: `Unknown tool ${tool}.` }
+      if (tool === 'animation_music') return await this.compose(id, session.animation, args)
+      if (tool !== 'animation_still' && tool !== 'animation_render')
+        return { success: false, text: `Unknown tool ${tool}.` }
+      const errors = await typeCheck(projectDir)
+      if (errors)
+        return { success: false, text: `The animation doesn't type-check; fix these first:\n${errors}` }
+      return tool === 'animation_still'
+        ? await this.stills(id, projectDir, args)
+        : await this.render(id, projectDir)
     } catch (error) {
       if (error instanceof VoiceArgsError || error instanceof AnimationSetupError)
         return { success: false, text: error.message }
       return { success: false, text: `It failed:\n${ensureError(error).message.slice(-3000)}` }
     } finally {
       this.busy.delete(id)
+    }
+  }
+
+  /** animation_music: Claude composes the music with the model the user picked (else the one
+   *  it names), then it is fitted to the length and put under the voice. */
+  private async compose(
+    id: string,
+    setup: AgentAnimationSetupView,
+    args: unknown,
+  ): Promise<ToolCallResult> {
+    const asked = (args as null | Record<string, unknown>)?.['engine']
+    if (asked !== undefined && !isMotionMusicEngine(asked))
+      return { success: false, text: `engine is ${MOTION_MUSIC_ENGINES.join(' or ')}.` }
+    const engine: MotionMusicEngine =
+      asked ?? motionMusicEngineOf(setup.music.source === 'agent' ? setup.music.engine : undefined)
+    const request = parseComposeRequest(args)
+    if (typeof request === 'string') return { success: false, text: request }
+    const workspace = this.sessions.workingDir(id)
+    const composed = await composeMusic(
+      request,
+      setup.lengthSec,
+      path.join(workspace, ANIMATION_DIR, 'music'),
+      engine,
+    )
+    const title = `${MOTION_MUSIC_ENGINE_INFO[engine].label}: ${request.prompt.replace(/\s+/g, ' ').slice(0, 40)}`
+    await prepareAnimationProject({
+      music: { file: composed.file, title },
+      musicOnly: true,
+      setup: setupFrom(setup),
+      workspace,
+    })
+    this.sessions.updateAnimation(id, { ...setup, musicTitle: title })
+    return {
+      success: true,
+      text: `Made the music (${composed.model}) and put it under the voice: public/music.wav, ${setup.lengthSec} s, fading out at the end (the kit ducks it while anyone speaks). Make it again only if the user wants different music: each one is a paid generation.`,
+    }
+  }
+
+  private async render(id: string, projectDir: string): Promise<ToolCallResult> {
+    const result = await renderReel(projectDir, {
+      composition: COMPOSITION,
+      name: 'animation',
+      sync: false,
+    })
+    const stamp = `${Date.now()}-${++this.renders}`
+    const videoKey = `${STORE_FOLDER}/${id}/animation-${stamp}.mp4`
+    const posterKey = `${STORE_FOLDER}/${id}/animation-${stamp}.jpg`
+    await uploadToStore(result.file, storeUri(videoKey))
+    await uploadToStore(result.poster, storeUri(posterKey))
+    this.sessions.emitAutonomousEvent(id, {
+      itemId: `animation-${stamp}`,
+      posterUrl: storeUri(posterKey),
+      type: 'motion_video',
+      videoUrl: storeUri(videoKey),
+    })
+    return {
+      success: true,
+      text: `Rendered the animation and showed it to the user. The file is ${ANIMATION_DIR}/out/animation.mp4. You can't hear it: say so, and ask the user to listen to the voices.`,
+    }
+  }
+
+  /** An Advanced chat's animation_setup: with no look, the options to choose from; otherwise
+   *  the setup checked like the card's, the project readied, the chat's card shown as chosen,
+   *  and what to read next. Again later: readied anew around Claude's scenes and voices. */
+  private async setupFromChat(
+    id: string,
+    session: AgentSession,
+    args: unknown,
+  ): Promise<ToolCallResult> {
+    if (session.mode !== 'animation_free')
+      return {
+        success: false,
+        text: "This chat's animation is set up with its setup card, not animation_setup.",
+      }
+    let setup: AgentAnimationSetup | null
+    let music: null | ReelMusicSource
+    try {
+      setup = animationSetupFromTool(args)
+      if (!setup) return { success: true, text: await this.optionsText() }
+      music = this.musicFor(id, setup)
+    } catch (error) {
+      if (error instanceof AnimationSetupError) return { success: false, text: error.message }
+      throw error
+    }
+    const again = !!session.animation
+    this.preparing.add(id)
+    try {
+      const view = await this.ready(id, setup, music)
+      this.sessions.updateAnimation(id, view)
+      const musicNote = view.musicTitle
+        ? `music: ${view.musicTitle}`
+        : setup.music.source === 'agent'
+          ? `music: yours to make (${MOTION_MUSIC_ENGINE_INFO[setup.music.engine].label})`
+          : 'no music'
+      return {
+        success: true,
+        text: [
+          `\`${ANIMATION_DIR}/\` is ${again ? 'set up again' : 'ready'}: ${view.lookLabel}, about ${view.lengthSec} s, ${musicNote}. The user sees the setup in the chat.`,
+          animationNextSteps(setup, !again),
+          ...(again ? ['Your scenes were kept, and so were the voices: record again only if the script changed.'] : []),
+        ].join(' '),
+      }
+    } catch (error) {
+      logger.warn(`Claude Animation setup for ${id} failed: ${ensureError(error).message}`)
+      return {
+        success: false,
+        text: `Couldn't set up the animation: ${ensureError(error).message.split('\n')[0]?.slice(0, 300)}`,
+      }
+    } finally {
+      this.preparing.delete(id)
+    }
+  }
+
+  /** The choices animation_setup takes, for Claude to offer. */
+  private async optionsText(): Promise<string> {
+    const options = await this.options()
+    return [
+      'Looks (lookId: label, its lengths in seconds, then what it is):',
+      ...options.looks.map(
+        (l) =>
+          `- ${l.id}: ${l.label} (lengths ${l.lengths.join(', ')}). ${l.description}${l.disabledReason ? ` Not available here: ${l.disabledReason}` : ''}`,
+      ),
+      'Library tracks (music "library", musicId):',
+      ...options.tracks.map((t) => `- ${t.id}: ${t.title}`),
+      'Or music "upload" (the user\'s own file through the paperclip; musicId: its path), "none", or "agent": you make it with animation_music right after the setup, with the music model the user picks (musicEngine):',
+      ...MOTION_MUSIC_ENGINES.map(
+        (e) =>
+          `- ${e}: ${MOTION_MUSIC_ENGINE_INFO[e].label} (${MOTION_MUSIC_ENGINE_INFO[e].cost}). ${MOTION_MUSIC_ENGINE_INFO[e].description}`,
+      ),
+    ].join('\n')
+  }
+
+  /** animation_still: frames at the seconds asked, shown to Claude and the user. */
+  private async stills(id: string, projectDir: string, args: unknown): Promise<ToolCallResult> {
+    const seconds = parseStillSeconds(args)
+    const spec = readAnimationJson(projectDir)
+    const lastFrame = Math.round(videoSeconds(projectDir, spec) * spec.fps) - 1
+    const frames = seconds.map((t) => Math.min(lastFrame, Math.round(t * spec.fps)))
+    // A folder per call: the chat keeps showing earlier stills after the next look.
+    const outDir = path.join(projectDir, 'out', 'stills', String(Date.now()))
+    const files = await renderStills(projectDir, frames, outDir, COMPOSITION)
+    for (const file of files) this.sessions.emitImage(id, file)
+    const lines = seconds.map(
+      (t, i) =>
+        `- ${t} s (frame ${frames[i]}): ${ANIMATION_DIR}/${path.relative(projectDir, files[i] as string)}`,
+    )
+    return {
+      success: true,
+      text: `Rendered ${files.length} stills (the user sees them too). Open each file and look at it:\n${lines.join('\n')}`,
     }
   }
 
@@ -294,6 +470,51 @@ export class AnimationService {
       lookLabel: animationLook(setup.lookId)?.label ?? setup.lookId,
       musicTitle: music?.title ?? null,
     }
+  }
+}
+
+/** The seconds an animation_still call asks for: up to 6 distinct, non-negative numbers. */
+export function parseStillSeconds(raw: unknown): number[] {
+  const text =
+    raw && typeof raw === 'object' && typeof (raw as Record<string, unknown>)['seconds'] === 'string'
+      ? ((raw as Record<string, unknown>)['seconds'] as string)
+      : ''
+  const seconds = [
+    ...new Set(
+      text
+        .split(/[\s,]+/)
+        .filter(Boolean)
+        .map(Number)
+        .filter((n) => Number.isFinite(n) && n >= 0),
+    ),
+  ]
+  if (!seconds.length)
+    throw new AnimationSetupError('Pass the moments to look at, in seconds, e.g. "0, 4.5, 12".')
+  return seconds.slice(0, MAX_STILLS)
+}
+
+/** How long the video is: its length, or the voice plus a second, whichever is longer (as the
+ *  project's clock counts it). */
+function videoSeconds(projectDir: string, spec: { lengthSec: number }): number {
+  let lastEnd = 0
+  try {
+    const lines = JSON.parse(
+      fs.readFileSync(path.join(projectDir, 'public', 'voice', 'lines.json'), 'utf8'),
+    ) as { end: number }[]
+    lastEnd = lines.at(-1)?.end ?? 0
+  } catch {
+    lastEnd = 0
+  }
+  return Math.max(spec.lengthSec, lastEnd + 1)
+}
+
+/** The setup card's choices back out of the chat's saved setup. */
+function setupFrom(view: AgentAnimationSetupView): AgentAnimationSetup {
+  return {
+    lengthSec: view.lengthSec,
+    lookId: view.lookId,
+    music: view.music,
+    subject: view.subject,
   }
 }
 

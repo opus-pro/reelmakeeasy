@@ -4,6 +4,11 @@ import path from 'node:path'
 
 import type { AgentAnimationSetupView, AgentSession } from '@shared/types/api/agent'
 
+import { presetPath } from '@reelmakeeasy/common/storage/presets'
+
+import { composeMusic } from '../motion-reel/motion-music'
+import { renderReel, renderStills } from '../motion-reel/motion-render'
+
 import { voiceReadiness } from './animation-setup'
 import type { VoiceDeps } from './animation-voice'
 import { sineWav } from './test-wav'
@@ -15,6 +20,37 @@ jest.mock('../motion-reel/motion-runtime', () => ({
   ensureMotionReelRuntime: jest.fn(async (say: (line: string) => void) =>
     say('Remotion is ready.'),
   ),
+}))
+jest.mock('../motion-reel/motion-render', () => ({
+  ...jest.requireActual('../motion-reel/motion-render'),
+  renderReel: jest.fn(async (dir: string) => {
+    const out = path.join(dir, 'out')
+    fs.mkdirSync(out, { recursive: true })
+    fs.writeFileSync(path.join(out, 'animation.mp4'), 'mp4')
+    fs.writeFileSync(path.join(out, 'poster.jpg'), 'jpg')
+    return { file: path.join(out, 'animation.mp4'), poster: path.join(out, 'poster.jpg') }
+  }),
+  renderStills: jest.fn(async (_dir: string, frames: number[], outDir: string) => {
+    fs.mkdirSync(outDir, { recursive: true })
+    return frames.map((f) => {
+      const file = path.join(outDir, `frame-${f}.png`)
+      fs.writeFileSync(file, 'png')
+      return file
+    })
+  }),
+  typeCheck: jest.fn(async () => null),
+}))
+jest.mock('../motion-reel/motion-music', () => ({
+  ...jest.requireActual('../motion-reel/motion-music'),
+  composeMusic: jest.fn(async (_request: unknown, _sec: number, dir: string, key?: string) => {
+    fs.mkdirSync(dir, { recursive: true })
+    const file = path.join(dir, `composed-${Date.now()}.mp3`)
+    fs.copyFileSync(presetPath('motion-reel/music/data-pulse-60s.mp3'), file)
+    return { file, model: key ?? 'role' }
+  }),
+}))
+jest.mock('@reelmakeeasy/common/storage/stored-files', () => ({
+  uploadToStore: jest.fn(async () => undefined),
 }))
 jest.mock('./animation-setup', () => ({
   ...jest.requireActual('./animation-setup'),
@@ -226,5 +262,105 @@ describe('AnimationService, animation_voice', () => {
       success: false,
       text: 'Set the animation up first: call animation_setup.',
     })
+  })
+})
+
+describe('AnimationService, look, music and render', () => {
+  async function ready(card: object = {}) {
+    const made = makeAnimation('animation')
+    made.service.setup('s1', { ...CARD, ...card })
+    await waitFor(() => made.started.length === 1)
+    return made
+  }
+
+  it('renders stills at the seconds asked, and shows them', async () => {
+    const { service, sessions } = await ready()
+    const result = await service.callTool('s1', 'animation_still', { seconds: '0, 12.5, 99' })
+    expect(result.success).toBe(true)
+    expect(jest.mocked(renderStills).mock.calls.at(-1)?.[1]).toEqual([0, 375, 899])
+    expect(jest.mocked(renderStills).mock.calls.at(-1)?.[3]).toBe('Animation')
+    expect(sessions.emitImage).toHaveBeenCalledTimes(3)
+    expect(result.text).toMatch(/- 12.5 s \(frame 375\): animation\/out\/stills\//)
+  })
+
+  it('shows the render as a video in the chat', async () => {
+    const { service, sessions } = await ready()
+    const result = await service.callTool('s1', 'animation_render', {})
+    expect(result.success).toBe(true)
+    expect(jest.mocked(renderReel).mock.calls.at(-1)?.[1]).toEqual({
+      composition: 'Animation',
+      name: 'animation',
+      sync: false,
+    })
+    const event = jest.mocked(sessions.emitAutonomousEvent).mock.calls.at(-1)?.[1] as {
+      type: string
+      videoUrl: string
+    }
+    expect(event.type).toBe('motion_video')
+    expect(event.videoUrl).toMatch(/^store:\/\/agent-animation\/s1\/animation-.*\.mp4$/)
+    expect(result.text).toMatch(/animation\/out\/animation.mp4/)
+  })
+
+  it('puts the music Claude made under the voice, fitted to the length', async () => {
+    const { service, updated, workspace } = await ready({
+      music: { engine: 'ace-step', source: 'agent' },
+    })
+    const result = await service.callTool('s1', 'animation_music', {
+      prompt: 'gentle ukulele, warm and curious',
+    })
+    expect(result.success).toBe(true)
+    expect(jest.mocked(composeMusic).mock.calls.at(-1)?.[3]).toBe('ace-step')
+    const spec = JSON.parse(
+      fs.readFileSync(path.join(workspace, 'animation/public/animation.json'), 'utf8'),
+    ) as { musicFile: string }
+    expect(spec.musicFile).toBe('music.wav')
+    expect(updated.at(-1)?.musicTitle).toMatch(/^ACE-Step: gentle ukulele/)
+  })
+})
+
+describe('AnimationService, an Advanced chat', () => {
+  it('lists the looks, lengths and music when animation_setup names no look', async () => {
+    const { service, updated } = makeAnimation('animation_free')
+    const result = await service.callTool('s1', 'animation_setup', {})
+    expect(result.success).toBe(true)
+    expect(result.text).toMatch(/- 2d: 2D \(lengths 30\)\. Cartoon characters/)
+    expect(result.text).toMatch(/- 8bit: 8-bit \(lengths 30, 45, 60\)/)
+    expect(result.text).toMatch(/- data-pulse: /)
+    expect(updated).toEqual([])
+  })
+
+  it('readies the project, shows the setup and says what to read next', async () => {
+    const { messages, service, updated } = makeAnimation('animation_free')
+    const result = await service.callTool('s1', 'animation_setup', {
+      lengthSec: 45,
+      lookId: '3d',
+      music: 'none',
+      subject: 'How a heart pumps',
+    })
+    expect(result.success).toBe(true)
+    expect(result.text).toMatch(/^`animation\/` is ready: 3D, about 45 s, no music\./)
+    expect(result.text).toMatch(/reelmakeeasy-animation-3d/)
+    expect(updated.at(-1)).toMatchObject({ lookId: '3d', lookLabel: '3D' })
+    expect(messages).toContain('Remotion is ready.')
+    const again = await service.callTool('s1', 'animation_setup', {
+      lengthSec: 30,
+      lookId: '3d',
+      music: 'none',
+      subject: 'How a heart pumps',
+    })
+    expect(again.text).toMatch(/set up again.*Your scenes were kept/)
+  })
+
+  it('refuses a bad setup plainly', async () => {
+    const { service } = makeAnimation('animation_free')
+    await expect(
+      service.callTool('s1', 'animation_setup', { lengthSec: 60, lookId: '2d' }),
+    ).resolves.toEqual({ success: false, text: 'The length must be one of 30 seconds.' })
+  })
+
+  it("won't set up an Easy chat from the tool", async () => {
+    const { service } = makeAnimation('animation')
+    const result = await service.callTool('s1', 'animation_setup', { lookId: '2d' })
+    expect(result.success).toBe(false)
   })
 })

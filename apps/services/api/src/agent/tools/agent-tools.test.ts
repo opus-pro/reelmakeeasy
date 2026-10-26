@@ -300,3 +300,29 @@ describe('a Claude Animation chat', () => {
     expect(toolSummary('animation_voice', { lines: [] })).toBe('Recording the voices')
   })
 })
+
+describe('the tools of a Claude Animation chat', () => {
+  it('gives an Easy chat its four tools and Advanced the setup too', () => {
+    expect(toolsForSession({ mode: 'animation' }, 'claude').map((t) => t.name)).toEqual([
+      'animation_voice',
+      'animation_music',
+      'animation_still',
+      'animation_render',
+    ])
+    expect(toolsForSession({ mode: 'animation_free' }, 'claude').map((t) => t.name)).toEqual([
+      'animation_setup',
+      'animation_voice',
+      'animation_music',
+      'animation_still',
+      'animation_render',
+    ])
+  })
+
+  it('says what each call is doing', () => {
+    expect(toolSummary('animation_music', {})).toBe('Making the music')
+    expect(toolSummary('animation_still', {})).toBe('Looking at frames of the animation')
+    expect(toolSummary('animation_render', {})).toBe('Rendering the animation')
+    expect(toolSummary('animation_setup', {})).toBe('Looking at the looks and music')
+    expect(toolSummary('animation_setup', { lookId: '2d' })).toBe('Setting up the animation')
+  })
+})

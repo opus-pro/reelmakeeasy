@@ -423,6 +423,8 @@ export class MotionReelService {
 
   private async render(id: string, projectDir: string): Promise<ToolCallResult> {
     const result = await renderReel(projectDir)
+    // A reel is always checked against its music (only an animation skips it).
+    const sync = result.sync ?? { lines: ['(not checked)'], passes: true }
     const n = ++this.renders
     const stamp = `${Date.now()}-${n}`
     const videoKey = `${STORE_FOLDER}/${id}/reel-${stamp}.mp4`
@@ -439,7 +441,7 @@ export class MotionReelService {
     })
     return {
       success: true,
-      text: `Rendered the reel (${reel.lengthSec} s, ${reel.bars} bars at ${reel.bpm} BPM) and showed it to the user. The file is ${REEL_DIR}/out/reel.mp4.\n\nSync check (the picture against the music):\n${result.sync.lines.join('\n')}\n\n${result.sync.passes ? REVIEW_AFTER_PASS : REVIEW_AFTER_FAIL}`,
+      text: `Rendered the reel (${reel.lengthSec} s, ${reel.bars} bars at ${reel.bpm} BPM) and showed it to the user. The file is ${REEL_DIR}/out/reel.mp4.\n\nSync check (the picture against the music):\n${sync.lines.join('\n')}\n\n${sync.passes ? REVIEW_AFTER_PASS : REVIEW_AFTER_FAIL}`,
     }
   }
 
