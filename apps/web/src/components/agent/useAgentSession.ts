@@ -23,7 +23,8 @@ import { useRefCallback } from '@/hooks/use-ref-callback'
 import { type CreateSSEConnection, useApi } from '@/hooks/useApi'
 import { ApiError } from '@/lib/api-error'
 
-import { HARNESS_LABEL, HARNESS_SHORT } from './agent-harness'
+import { HARNESS_SHORT } from './agent-harness'
+import { modeConflictNotice } from './mode-conflict'
 import { noteVideoRenderedAtom } from './renderedVersions'
 import { resumeRefusedNotice } from './resume-chat'
 
@@ -394,12 +395,9 @@ export function useAgentSession(sessionId: string | undefined) {
           return false
         }
         const message = error instanceof Error ? error.message : ''
-        const conflict = /not ready/.test(message)
-          ? `${HARNESS_LABEL[harness ?? 'codex']} isn't ready. Check it is installed and signed in, then try again.`
-          : message.startsWith('Motion Reel needs')
-            ? message
-            : 'A mode was already chosen.'
-        addLocalNotice(status === 409 ? conflict : 'Could not start that mode. Try again.')
+        addLocalNotice(
+          status === 409 ? modeConflictNotice(message, harness) : 'Could not start that mode. Try again.',
+        )
         return false
       }
     },

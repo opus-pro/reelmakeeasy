@@ -361,11 +361,16 @@ export function animationKickoff(setup: AgentAnimationSetupView): string {
 
 /** What Claude does once `animation/` is ready: read, make the music when asked, write the
  *  script, plan, ask. `readSkill`: read the look's skill first (a chat's first turn). */
-export function animationNextSteps(setup: AgentAnimationSetup, readSkill = false): string {
+export function animationNextSteps(
+  setup: AgentAnimationSetup,
+  readSkill = false,
+  /** Claude makes the music first (the user picked it, and none was made yet). */
+  makeMusic = setup.music.source === 'agent',
+): string {
   const skill = `reelmakeeasy-animation-${setup.lookId}`
   return [
     `${readSkill ? `Read the \`${skill}\` skill, then` : `Follow the \`${skill}\` skill:`} read \`animation/brief.md\` and \`animation/look.md\`.`,
-    ...(setup.music.source === 'agent'
+    ...(makeMusic && setup.music.source === 'agent'
       ? [
           `The user asked for music from ${MOTION_MUSIC_ENGINE_INFO[setup.music.engine].label}: make it with animation_music (engine "${setup.music.engine}") before you build.`,
         ]

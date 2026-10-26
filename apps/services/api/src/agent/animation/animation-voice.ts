@@ -2,6 +2,8 @@ import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
 
+import { captionWords, normalizedWord } from '@reelmakeeasy/common/asr/align-text'
+
 import { run } from '../motion-reel/motion-runtime'
 
 import { medianPitchHz, wavSamples } from './pitch'
@@ -21,10 +23,12 @@ export type VoiceLine = {
   words: { end: number; start: number; text: string }[]
 }
 
-/** How a take is made and timed: the app's voices and aligner (stand-ins in tests). */
+/** How a take is made, timed and checked: the app's voices, its aligner (word times for the
+ *  script's own words) and its speech to text (what the take really says). Stand-ins in tests. */
 export type VoiceDeps = {
   align(file: string, text: string): Promise<{ end: number; start: number; text: string }[]>
   speak(line: { text: string; voice: string }): Promise<{ audio: Buffer; ranOn: 'fal' | 'local' }>
+  transcribe(file: string): Promise<string[]>
 }
 
 /** An animation_voice call that can't be recorded; the message says what to fix. */
@@ -91,15 +95,33 @@ export function parseVoiceArgs(args: unknown): {
   }
 }
 
-/** A script's words as compared: lowercase letters and digits only (digits stay digits). */
+/** Words as compared: split as captions and transcripts split them (a dash splits two words),
+ *  then lowercase letters and digits only (digits stay digits). */
 const comparable = (words: string[]): string[] =>
-  words.map((w) => w.toLowerCase().replace(/[^a-z0-9']/g, '').replace(/'/g, '')).filter(Boolean)
+  captionWords(words.join(' ')).map(normalizedWord).filter(Boolean)
 
-/** Whether what the aligner heard is the script, word for word. */
+/** Word-level edit distance (insertions, deletions, swaps). */
+function wordDistance(a: string[], b: string[]): number {
+  let prev = Array.from({ length: b.length + 1 }, (_, j) => j)
+  for (let i = 1; i <= a.length; i++) {
+    const row = [i]
+    for (let j = 1; j <= b.length; j++)
+      row[j] = Math.min(
+        (prev[j] as number) + 1,
+        (row[j - 1] as number) + 1,
+        (prev[j - 1] as number) + (a[i - 1] === b[j - 1] ? 0 : 1),
+      )
+    prev = row
+  }
+  return prev[b.length] as number
+}
+
+/** Whether a take's transcript says the script: word for word in a short line, one slip allowed
+ *  in 12 words or more (speech to text mishears now and then too). */
 export function wordsMatch(script: string, heard: string[]): boolean {
-  const a = comparable(script.split(/\s+/))
+  const a = comparable([script])
   const b = comparable(heard)
-  return a.length === b.length && a.every((w, i) => w === b[i])
+  return wordDistance(a, b) <= Math.floor(a.length / 12)
 }
 
 type Take = {
@@ -123,6 +145,7 @@ export async function recordVoices(o: {
   pauseMs?: number
   projectDir: string
 }): Promise<{ lines: VoiceLine[]; ranOnFal: boolean; totalSec: number; warnings: string[] }> {
+  const checks = { failed: false }
   const pauseSec = (o.pauseMs ?? DEFAULT_PAUSE_MS) / 1000
   const voiceDir = path.join(o.projectDir, 'public', 'voice')
   fs.mkdirSync(voiceDir, { recursive: true })
@@ -136,7 +159,12 @@ export async function recordVoices(o: {
       const takes: Take[] = []
       const ref = firstPitch.get(input.who)
       for (let t = 0; t < TAKES; t++) {
-        const take = await recordTake(o.deps, input, path.join(work, `line${i + 1}-take${t}.wav`))
+        const take = await recordTake(
+          o.deps,
+          input,
+          path.join(work, `line${i + 1}-take${t}.wav`),
+          checks,
+        )
         ranOnFal ||= take.ranOn === 'fal'
         takes.push(take)
         if (take.matches && (ref === undefined || nearPitch(take.pitch, ref))) break
@@ -180,14 +208,25 @@ export async function recordVoices(o: {
     }
     fs.writeFileSync(path.join(o.projectDir, 'public', 'voice.wav'), toWav(chunks, RATE))
     fs.writeFileSync(path.join(voiceDir, 'lines.json'), `${JSON.stringify(lines)}\n`)
+    if (checks.failed)
+      warnings.push(
+        "Couldn't check the takes' words (no speech to text ran): ask the user to listen to every line.",
+      )
     return { lines, ranOnFal, totalSec: round(at), warnings }
   } finally {
     fs.rmSync(work, { force: true, recursive: true })
   }
 }
 
-/** One take: spoken, trimmed of silence at both ends (24 kHz mono WAV), timed and measured. */
-async function recordTake(deps: VoiceDeps, input: VoiceLineInput, file: string): Promise<Take> {
+/** One take: spoken, trimmed of silence at both ends (24 kHz mono WAV), checked against the
+ *  script by a transcript, timed and measured. A transcript that can't be made passes the take
+ *  (and `checks.failed` says the words went unchecked). */
+async function recordTake(
+  deps: VoiceDeps,
+  input: VoiceLineInput,
+  file: string,
+  checks: { failed: boolean },
+): Promise<Take> {
   const spoken = await deps.speak({ text: input.text, voice: input.voice })
   const raw = `${file}.in`
   fs.writeFileSync(raw, spoken.audio)
@@ -214,14 +253,17 @@ async function recordTake(deps: VoiceDeps, input: VoiceLineInput, file: string):
   )
   const wav = fs.readFileSync(file)
   const duration = wavSamples(wav).samples.length / RATE
-  const words = await deps.align(file, input.text)
+  let matches = true
+  try {
+    matches = wordsMatch(input.text, await deps.transcribe(file))
+  } catch {
+    checks.failed = true
+  }
+  const words = await deps.align(file, captionWords(input.text).join(' '))
   return {
     duration,
     file,
-    matches: wordsMatch(
-      input.text,
-      words.map((w) => w.text),
-    ),
+    matches,
     pitch: medianPitchHz(wav),
     ranOn: spoken.ranOn,
     words: words.map((w) => ({

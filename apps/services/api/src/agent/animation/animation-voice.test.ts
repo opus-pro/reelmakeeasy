@@ -27,6 +27,20 @@ describe('wordsMatch', () => {
     expect(wordsMatch('Did you know I move?', ['Did', 'you', 'no', 'I', 'move'])).toBe(false)
     expect(wordsMatch('It is 500 km.', ['It', 'is', 'five', 'hundred', 'km'])).toBe(false)
   })
+
+  it('splits dashed words the way captions and transcripts do', () => {
+    expect(wordsMatch('Honey never spoils\u2014ever.', ['Honey', 'never', 'spoils', 'ever.'])).toBe(
+      true,
+    )
+  })
+
+  it('forgives one slip in a long line, never in a short one', () => {
+    const line = 'The ball hangs from 8 thick cables so it lags just behind the tower'
+    expect(wordsMatch(line, line.replace('thick', 'think').split(' '))).toBe(true)
+    expect(wordsMatch(line, line.replace('thick', 'think').replace('lags', 'legs').split(' '))).toBe(
+      false,
+    )
+  })
 })
 
 describe('parseVoiceArgs', () => {
@@ -73,17 +87,18 @@ describe('recordVoices', () => {
   })
   afterEach(() => fs.rmSync(projectDir, { force: true, recursive: true }))
 
+  // Like the real ones: the aligner times the script's own words; only a transcript says what
+  // the take really said.
   const deps = (hz: number[] = [200], heard?: (text: string, take: number) => string): VoiceDeps => {
     let take = 0
+    let last = ''
     return {
-      align: jest.fn(async (_file: string, text: string) => {
-        const said = heard ? heard(text, take - 1) : text
-        return timed(said, 1)
+      align: jest.fn(async (_file: string, text: string) => timed(text, 1)),
+      speak: jest.fn(async ({ text }: { text: string }) => {
+        last = heard ? heard(text, take) : text
+        return { audio: sineWav(hz[take++ % hz.length] as number, 1), ranOn: 'local' as const }
       }),
-      speak: jest.fn(async () => ({
-        audio: sineWav(hz[take++ % hz.length] as number, 1),
-        ranOn: 'local' as const,
-      })),
+      transcribe: jest.fn(async () => last.split(/\s+/)),
     }
   }
 
@@ -165,6 +180,7 @@ describe('recordVoices', () => {
     const d: VoiceDeps = {
       align: async (_f, text) => timed(text, 1),
       speak: async () => ({ audio: sineWav(200, 1), ranOn: 'fal' }),
+      transcribe: async () => ['hi', 'there'],
     }
     const result = await recordVoices({
       deps: d,

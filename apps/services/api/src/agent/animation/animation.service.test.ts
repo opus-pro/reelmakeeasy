@@ -185,6 +185,9 @@ describe('AnimationService, animation_voice', () => {
         voices.push(voice)
         return { audio: sineWav(200, 1.2), ranOn: 'local' as const }
       }),
+      transcribe: jest.fn(async () => {
+        throw new Error('no transcript here')
+      }),
       voices,
     }
   }
@@ -351,6 +354,23 @@ describe('AnimationService, an Advanced chat', () => {
       subject: 'How a heart pumps',
     })
     expect(again.text).toMatch(/set up again.*Your scenes were kept/)
+  })
+
+  it('keeps the music it made when set up again the same way (no second paid track)', async () => {
+    const { service, updated, workspace } = makeAnimation('animation_free')
+    const ARGS = { lengthSec: 45, lookId: '3d', music: 'agent', musicEngine: 'ace-step', subject: 'Volcanoes' }
+    await service.callTool('s1', 'animation_setup', ARGS)
+    await service.callTool('s1', 'animation_music', { prompt: 'deep drums' })
+    const made = updated.at(-1)?.musicTitle
+    expect(made).toMatch(/^ACE-Step: deep drums/)
+    jest.mocked(composeMusic).mockClear()
+
+    const again = await service.callTool('s1', 'animation_setup', { ...ARGS, lengthSec: 60 })
+    expect(again.text).toMatch(/The music you made is kept/)
+    expect(again.text).not.toMatch(/make it with animation_music/)
+    expect(composeMusic).not.toHaveBeenCalled()
+    expect(updated.at(-1)).toMatchObject({ lengthSec: 60, musicTitle: made })
+    expect(fs.existsSync(path.join(workspace, 'animation/public/music.wav'))).toBe(true)
   })
 
   it('refuses a bad setup plainly', async () => {

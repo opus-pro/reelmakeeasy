@@ -14,7 +14,11 @@ import {
 import { storeUri } from '@reelmakeeasy/common/storage/address'
 import { uploadToStore } from '@reelmakeeasy/common/storage/stored-files'
 import { presetPath, presetUrl } from '@reelmakeeasy/common/storage/presets'
-import { generateForcedAlignment } from '@reelmakeeasy/common/asr/elevenlabs'
+import {
+  DEFAULT_ASR_MODEL_ID,
+  generateForcedAlignment,
+  speechToText,
+} from '@reelmakeeasy/common/asr/elevenlabs'
 import {
   KOKORO_VOICE_PREFIX,
   kokoroTextToSpeech,
@@ -73,6 +77,16 @@ const APP_VOICES: VoiceDeps = {
       start: w.start,
       text: w.text,
     })),
+  transcribe: async (file) =>
+    (
+      await speechToText({
+        file: new Blob([fs.readFileSync(file)]),
+        languageCode: 'en',
+        modelId: DEFAULT_ASR_MODEL_ID,
+      })
+    ).words
+      .filter((w) => w.type === 'word')
+      .map((w) => w.text),
   speak: async ({ text, voice }) => {
     const result = voice.startsWith(KOKORO_VOICE_PREFIX)
       ? await kokoroTextToSpeech({ text, voiceId: voice })
@@ -252,6 +266,18 @@ export class AnimationService {
       throw error
     }
     const again = !!session.animation
+    // Music Claude already made stays through a new setup made the same way (a new length or
+    // look needs no new paid track): its newest take, fitted to the length asked for now.
+    const before = session.animation
+    const sameWay =
+      setup.music.source === 'agent' &&
+      before?.music.source === 'agent' &&
+      before.music.engine === setup.music.engine
+    const made = sameWay
+      ? newestComposed(path.join(this.sessions.workingDir(id), ANIMATION_DIR, 'music'))
+      : null
+    const kept = made && before?.musicTitle ? { file: made, title: before.musicTitle } : null
+    if (kept) music = kept
     this.preparing.add(id)
     try {
       const view = await this.ready(id, setup, music)
@@ -265,7 +291,10 @@ export class AnimationService {
         success: true,
         text: [
           `\`${ANIMATION_DIR}/\` is ${again ? 'set up again' : 'ready'}: ${view.lookLabel}, about ${view.lengthSec} s, ${musicNote}. The user sees the setup in the chat.`,
-          animationNextSteps(setup, !again),
+          ...(kept
+            ? ['The music you made is kept: make it again only if the user asks for different music.']
+            : []),
+          animationNextSteps(setup, !again, setup.music.source === 'agent' && !kept),
           ...(again ? ['Your scenes were kept, and so were the voices: record again only if the script changed.'] : []),
         ].join(' '),
       }
@@ -471,6 +500,22 @@ export class AnimationService {
       musicTitle: music?.title ?? null,
     }
   }
+}
+
+/** The newest track Claude made (`animation_music` writes `composed-<time>.mp3`), if any. */
+function newestComposed(dir: string): null | string {
+  let names: string[]
+  try {
+    names = fs.readdirSync(dir)
+  } catch {
+    return null
+  }
+  const newest = names
+    .map((name) => ({ name, time: Number(/^composed-(\d+)\.mp3$/.exec(name)?.[1]) }))
+    .filter((m) => Number.isFinite(m.time))
+    .sort((a, b) => a.time - b.time)
+    .at(-1)
+  return newest ? path.join(dir, newest.name) : null
 }
 
 /** The seconds an animation_still call asks for: up to 6 distinct, non-negative numbers. */
