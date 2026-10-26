@@ -1,5 +1,6 @@
+import { splitRecommended } from '@reelmakeeasy/common/codex-agent/agent-storyboard'
 import type { TranscriptEntry } from '@reelmakeeasy/common/codex-agent/agent-transcript'
-import type { AgentMode, AgentSession } from '@shared/types/api/agent'
+import type { AgentAnswers, AgentMode, AgentQuestion, AgentSession } from '@shared/types/api/agent'
 
 /**
  * Whether the chat offers "Pick up where you left off": an Easy chat that ReelMakeEasy stopping
@@ -50,4 +51,36 @@ export function resumeRefusedNotice(
 ): string {
   if ((status === 409 || status === 503) && message) return message
   return "Couldn't pick up where you left off. Try again."
+}
+
+/**
+ * The agent's card a chat can still answer though it expired (ReelMakeEasy restarted, or the
+ * agent stopped, while it waited): the last card, when nothing was said after it. Answering it
+ * sends the answer as a message, and the agent carries on from its saved conversation. Not
+ * ReelMakeEasy's own cards, nor one with a secret question (a message would show the secret).
+ */
+export function carryOnCardId(
+  entries: readonly TranscriptEntry[],
+  /** `busy`: the chat takes no message now (no mode yet, a flow or turn running, or over). */
+  { busy = false }: { busy?: boolean } = {},
+): null | string {
+  if (busy) return null
+  const last = entries.findLastIndex((e) => e.kind === 'question')
+  const card = entries[last]
+  if (card?.kind !== 'question' || card.state !== 'expired' || card.server) return null
+  if (card.questions.some((q) => q.isSecret)) return null
+  if (entries.slice(last + 1).some((e) => e.kind === 'user' || e.kind === 'question')) return null
+  return card.id
+}
+
+/** An expired card's answer as a message: the answer, and the question it answers. */
+export function carryOnMessage(questions: readonly AgentQuestion[], answers: AgentAnswers): string {
+  const said = (q: AgentQuestion) =>
+    (answers[q.id] ?? []).map((answer) => splitRecommended(answer).text).join(', ')
+  const [only] = questions
+  if (questions.length === 1 && only) return `${said(only)}\n\n(My answer to: ${only.question})`
+  return questions
+    .filter((q) => said(q))
+    .map((q) => `${q.question} ${said(q)}`)
+    .join('\n')
 }

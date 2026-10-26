@@ -1,7 +1,13 @@
 import type { TranscriptEntry } from '@reelmakeeasy/common/codex-agent/agent-transcript'
 import type { AgentSession } from '@shared/types/api/agent'
 
-import { canPickUp, expiredHintsFor, resumeRefusedNotice } from './resume-chat'
+import {
+  canPickUp,
+  carryOnCardId,
+  carryOnMessage,
+  expiredHintsFor,
+  resumeRefusedNotice,
+} from './resume-chat'
 
 const SESSION: AgentSession = {
   createdAt: '2026-10-12T06:41:42.823Z',
@@ -91,5 +97,50 @@ describe('resumeRefusedNotice', () => {
     expect(resumeRefusedNotice(500, 'Internal server error')).toBe(tryAgain)
     expect(resumeRefusedNotice(undefined, 'Failed to fetch')).toBe(tryAgain)
     expect(resumeRefusedNotice(503, '')).toBe(tryAgain)
+  })
+})
+
+describe('carrying on from an expired card', () => {
+  const plan = {
+    header: 'Plan',
+    id: 'plan',
+    isOther: true,
+    isSecret: false,
+    options: [
+      { description: '', label: 'Build it (Recommended)' },
+      { description: '', label: 'Change something' },
+    ],
+    question: 'Shall I build the reel from this plan?',
+  }
+  const card = (over: Partial<Extract<TranscriptEntry, { kind: 'question' }>> = {}) =>
+    ({
+      id: 'q1',
+      kind: 'question',
+      questions: [plan],
+      state: 'expired',
+      ...over,
+    }) as TranscriptEntry
+  const said = { id: 'u1', kind: 'user', text: 'go' } as TranscriptEntry
+  const note = { id: 'a1', kind: 'assistant', text: 'Plan…' } as TranscriptEntry
+
+  it("is the agent's last card when it expired and nothing was said after it", () => {
+    expect(carryOnCardId([note, card()])).toBe('q1')
+    expect(carryOnCardId([card(), note])).toBe('q1')
+    expect(carryOnCardId([card(), said])).toBeNull()
+    expect(carryOnCardId([card({ state: 'open' })])).toBeNull()
+    expect(carryOnCardId([card({ state: 'answered' })])).toBeNull()
+    expect(carryOnCardId([card({ server: true })])).toBeNull()
+    expect(carryOnCardId([card({ questions: [{ ...plan, isSecret: true }] })])).toBeNull()
+    expect(carryOnCardId([card({ id: 'old' }), card({ id: 'new', state: 'answered' })])).toBeNull()
+  })
+
+  it('sends the answer, without its Recommended mark, with the question it answers', () => {
+    expect(carryOnMessage([plan], { plan: ['Build it (Recommended)'] })).toBe(
+      'Build it\n\n(My answer to: Shall I build the reel from this plan?)',
+    )
+    const length = { ...plan, id: 'len', question: 'How long?' }
+    expect(carryOnMessage([plan, length], { len: ['15 s'], plan: ['Change something'] })).toBe(
+      'Shall I build the reel from this plan? Change something\nHow long? 15 s',
+    )
   })
 })

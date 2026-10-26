@@ -45,7 +45,13 @@ import { AgentMarkdown } from './AgentMarkdown'
 import { AgentPlan } from './AgentPlan'
 import { composerCard } from './card-answer'
 import { QuestionCard } from './QuestionCard'
-import { canPickUp, type ExpiredHints, expiredHintsFor } from './resume-chat'
+import {
+  canPickUp,
+  carryOnCardId,
+  carryOnMessage,
+  type ExpiredHints,
+  expiredHintsFor,
+} from './resume-chat'
 import { ResumeCard, resumeWords } from './ResumeCard'
 import { Spinner } from './Spinner'
 import { StyleRequestCard } from './StyleRequestCard'
@@ -131,11 +137,14 @@ function ImageEntry({
 
 function QuestionRow({
   answer,
+  carryOn,
   entry,
   expiredHint,
   submitted,
 }: {
   answer: AnswerFn
+  /** Sends a message: set when this expired card can still be answered (`carryOnCardId`). */
+  carryOn?: (text: string) => Promise<boolean>
   entry: QuestionEntry
   expiredHint?: string
   submitted: boolean
@@ -144,11 +153,19 @@ function QuestionRow({
     (answers: AgentAnswers) => answer(entry.id, answers),
     [answer, entry.id],
   )
+  const onCarryOn = useMemo(
+    () =>
+      carryOn
+        ? (answers: AgentAnswers) => carryOn(carryOnMessage(entry.questions, answers))
+        : undefined,
+    [carryOn, entry.questions],
+  )
   return (
     <QuestionCard
       entry={entry}
       expiredHint={expiredHint}
       onAnswer={onAnswer}
+      {...(onCarryOn ? { onCarryOn } : {})}
       submitted={submitted}
     />
   )
@@ -241,6 +258,7 @@ function toolLabel(name: string | undefined): string {
 
 function TranscriptRow({
   answer,
+  carryOn,
   chooseStyle,
   editing,
   entry,
@@ -252,6 +270,8 @@ function TranscriptRow({
   submittedIds,
 }: {
   answer: AnswerFn
+  /** Set on the expired card the chat can still answer: sends the answer as a message. */
+  carryOn?: (text: string) => Promise<boolean>
   chooseStyle: ChooseStyleFn
   /** The chat is editing its finished video. */
   editing: boolean
@@ -290,6 +310,7 @@ function TranscriptRow({
       return (
         <QuestionRow
           answer={answer}
+          {...(carryOn ? { carryOn } : {})}
           entry={entry}
           expiredHint={expiredHints?.question}
           submitted={submittedIds.has(entry.id)}
@@ -462,6 +483,11 @@ export function AgentChat({
   // An Easy chat a restart cut off before its video: "Pick up where you left off" below it.
   const pickUp = canPickUp(session, transcript.entries, flowActive)
   const expiredHints = expiredHintsFor({ editing, flowActive, mode, pickUp })
+  // The agent's last card, expired by a restart: still answerable while the chat takes messages.
+  const carryOnId = carryOnCardId(transcript.entries, {
+    busy: !modeChosen || motionSetupPending || flowFinished || flowActive || transcript.working,
+  })
+  const carryOn = useCallback((message: string) => send(message), [send])
   const lastEntry = transcript.entries[transcript.entries.length - 1]
   // The question wait needs no line of its own: the card is the prompt.
   const waitingOnCard = !!activity && openQuestions.some((q) => q.id === activity.id)
@@ -663,6 +689,7 @@ export function AgentChat({
             ) : (
               <TranscriptRow
                 answer={answerQuestion}
+                {...(item.entry.id === carryOnId ? { carryOn } : {})}
                 chooseStyle={chooseStyle}
                 editing={editing}
                 entry={item.entry}
