@@ -2,7 +2,6 @@ import fs from 'node:fs'
 import path from 'node:path'
 
 import { Logger } from '@reelmakeeasy/common/logger'
-import type { BeatGrid } from '@reelmakeeasy/common/motion-reel/beat-grid'
 import {
   defaultTrackFor,
   motionReelTrack,
@@ -17,9 +16,9 @@ import {
   MOTION_REEL_LENGTHS,
   MOTION_REEL_RATIOS,
   type MotionMusicEngine,
+  motionMusicEngineOf,
   type MotionReelSetup,
 } from '@reelmakeeasy/common/motion-reel/reel-config'
-import { parseScore, renderScore, wavBytes } from '@reelmakeeasy/common/motion-reel/score'
 import { MOTION_REEL_STYLES, motionReelStyle } from '@reelmakeeasy/common/motion-reel/styles'
 import { storeUri } from '@reelmakeeasy/common/storage/address'
 import { presetPath, presetUrl } from '@reelmakeeasy/common/storage/presets'
@@ -186,9 +185,9 @@ export class MotionReelService {
     void this.prepare(id, session, setup, music).finally(() => this.preparing.delete(id))
   }
 
-  /** The agent made the reel's own music (`motion_music`), in the engine it names (else the one
-   *  the user picked): a score it wrote, rendered here, or a track from a music model. The grid
-   *  (reel.json) follows the new music, so beat-timed scenes follow it too. */
+  /** The agent made the reel's own music (`motion_music`) with the music model it names (else the
+   *  one the user picked), then fitted to whole bars; the grid (reel.json) follows the new track,
+   *  so beat-timed scenes follow it too. */
   private async compose(
     id: string,
     session: AgentSession,
@@ -198,10 +197,9 @@ export class MotionReelService {
     const view = session.motionReel as AgentMotionSetupView
     const asked = (args as null | Record<string, unknown>)?.['engine']
     if (asked !== undefined && !isMotionMusicEngine(asked))
-      return { success: false, text: 'engine is code, eleven-music or ace-step.' }
+      return { success: false, text: `engine is ${MOTION_MUSIC_ENGINES.join(' or ')}.` }
     const engine: MotionMusicEngine =
-      asked ?? (view.music.source === 'agent' && view.music.engine ? view.music.engine : 'code')
-    if (engine === 'code') return this.writeScore(id, view, projectDir, args)
+      asked ?? motionMusicEngineOf(view.music.source === 'agent' ? view.music.engine : undefined)
     const request = parseComposeRequest(args)
     if (typeof request === 'string') return { success: false, text: request }
     const composed = await composeMusic(
@@ -404,19 +402,18 @@ export class MotionReelService {
     }
     const again = !!session.motionReel
     // Music the agent already made for this reel stays through a new setup made the same way (a
-    // new style or frame needs no new track): its newest take. A score only while the length
-    // holds (its bars are the reel's); a model's track is fitted to the new length.
+    // new style or frame needs no new paid track): its newest take, fitted to the length asked
+    // for now. A score an earlier version wrote only while the length holds (its bars were the
+    // old reel's).
     const before = session.motionReel
     const sameWay =
       setup.music.source === 'agent' &&
       before?.music.source === 'agent' &&
-      before.music.engine === setup.music.engine &&
-      !!before.musicTitle
+      motionMusicEngineOf(before.music.engine) === setup.music.engine
     const made = sameWay ? newestMade(path.join(this.sessions.workingDir(id), REEL_DIR)) : null
-    const composed =
-      made && before?.musicTitle && (!made.grid || before.lengthSec === setup.lengthSec)
-        ? { ...made, title: before.musicTitle }
-        : null
+    const keep =
+      made && (!path.basename(made).startsWith('score-') || before?.lengthSec === setup.lengthSec)
+    const composed = keep && before?.musicTitle ? { file: made, title: before.musicTitle } : null
     if (composed) music = composed
     this.preparing.add(id)
     try {
@@ -476,71 +473,17 @@ export class MotionReelService {
       text: `Rendered ${files.length} stills (the user sees them too). Open each file and look at it:\n${lines.join('\n')}`,
     }
   }
-
-  /** The music from a score the agent wrote: rendered here (free), its grid exactly the score's. */
-  private async writeScore(
-    id: string,
-    view: AgentMotionSetupView,
-    projectDir: string,
-    args: unknown,
-  ): Promise<ToolCallResult> {
-    const raw = (args as null | Record<string, unknown>)?.['score']
-    let parsed: unknown
-    try {
-      parsed = typeof raw === 'string' ? JSON.parse(raw) : raw
-    } catch {
-      return { success: false, text: 'score is a JSON object (see the skill).' }
-    }
-    const bpm = (parsed as null | Record<string, unknown>)?.['bpm']
-    if (typeof bpm !== 'number' || bpm < 70 || bpm > 180)
-      return { success: false, text: 'Give the score a bpm, 70 to 180.' }
-    // The reel is whole bars at the score's tempo; the last holds the final hit's ring-out.
-    const barSec = 240 / bpm
-    const reelBars = Math.max(2, Math.round(view.lengthSec / barSec))
-    const score = parseScore(parsed, reelBars - 1)
-    if (typeof score === 'string') return { success: false, text: score }
-    const rendered = renderScore(score, { tailSec: barSec + 0.25 })
-    const { clash, offbeat, triad } = rendered.issues
-    if (clash.length + offbeat.length + triad.length)
-      return {
-        success: false,
-        text: `The score broke its harmony rules: ${[...clash, ...offbeat, ...triad].slice(0, 5).join('; ')}`,
-      }
-    const dir = path.join(projectDir, 'music')
-    fs.mkdirSync(dir, { recursive: true })
-    const file = path.join(dir, `score-${Date.now()}.wav`)
-    fs.writeFileSync(file, wavBytes(rendered.left, rendered.right, rendered.sampleRate))
-    const grid: BeatGrid = {
-      beats: rendered.plan.beats,
-      beatsPerBar: 4,
-      bpm: score.bpm,
-      downbeats: rendered.plan.downbeats,
-      durationSec: rendered.plan.durationSec,
-      events: rendered.plan.events,
-      strongHits: rendered.plan.strongHits,
-    }
-    const key = `${score.key} ${score.mode}`
-    // The key rides along in the grid file so a later prepare's music map still names it.
-    fs.writeFileSync(`${file}.grid.json`, `${JSON.stringify({ ...grid, key })}\n`)
-    const title = `Score: ${key}, ${score.bpm} BPM`
-    const { reel } = await this.refit(id, view, { file, grid, key, title })
-    return {
-      success: true,
-      text: [
-        `Rendered your score and put it under the reel: ${reel.lengthSec} s, ${reel.bars} bars at ${reel.bpm} BPM; the final hit is on bar ${reel.bars}'s downbeat (beat ${(reel.bars - 1) * 4}).`,
-        'public/music.wav and public/reel.json are rewritten from the score itself, so its beats and hits are exact. Re-check anything that assumed the old bar count.',
-        `The strongest moments: beats ${rendered.plan.strongHits.map((t) => Math.round(((t * score.bpm) / 60) * 100) / 100).join(', ')}.`,
-        'Write it again freely (it is free) when the plan changes.',
-      ].join(' '),
-    }
-  }
 }
 
 /** The setup card's choices back out of the chat's saved setup. */
 function setupFrom(view: AgentMotionSetupView): MotionReelSetup {
   return {
     lengthSec: view.lengthSec as MotionReelSetup['lengthSec'],
-    music: view.music,
+    // A chat saved when music could be written in code reads as made by the default model.
+    music:
+      view.music.source === 'agent'
+        ? { engine: motionMusicEngineOf(view.music.engine), source: 'agent' }
+        : view.music,
     ratio: view.ratio,
     ...(view.reference ? { reference: view.reference } : {}),
     styleId: view.styleId as MotionReelSetup['styleId'],
@@ -548,9 +491,9 @@ function setupFrom(view: AgentMotionSetupView): MotionReelSetup {
   }
 }
 
-/** The newest music the agent made for the reel in `projectDir` (`motion_music`): a model's
- *  track, or a score with its exact grid. */
-function newestMade(projectDir: string): null | { file: string; grid?: BeatGrid; key?: string } {
+/** The newest music the agent made for the reel in `projectDir` (`motion_music`), if any: a
+ *  model's track, or a score an earlier version wrote there, used as a plain track. */
+function newestMade(projectDir: string): null | string {
   const dir = path.join(projectDir, 'music')
   let names: string[]
   try {
@@ -558,7 +501,7 @@ function newestMade(projectDir: string): null | { file: string; grid?: BeatGrid;
   } catch {
     return null
   }
-  // Named composed-<time>.mp3 or score-<time>.wav: the newest has the largest time.
+  // Named composed-<time>.mp3 (or score-<time>.wav): the newest has the largest time.
   const newest = names
     .map((name) => ({
       name,
@@ -567,19 +510,7 @@ function newestMade(projectDir: string): null | { file: string; grid?: BeatGrid;
     .filter((m) => Number.isFinite(m.time))
     .sort((a, b) => a.time - b.time)
     .at(-1)
-  if (!newest) return null
-  const file = path.join(dir, newest.name)
-  if (!newest.name.startsWith('score-')) return { file }
-  try {
-    const { key, ...grid } = JSON.parse(
-      fs.readFileSync(`${file}.grid.json`, 'utf8'),
-    ) as BeatGrid & {
-      key?: string
-    }
-    return { file, grid, ...(key ? { key } : {}) }
-  } catch {
-    return null
-  }
+  return newest ? path.join(dir, newest.name) : null
 }
 
 /** A style's thumbnail in the presets, when there is one. */

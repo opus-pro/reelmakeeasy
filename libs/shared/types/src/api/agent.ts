@@ -20,9 +20,9 @@ export type AgentMotionSetup = {
   /** About this long, in seconds; the reel is whole bars of its music. */
   lengthSec: number
   /** A library track's id, an attachment's name (`upload`), no music, or made by the agent
-   *  (`agent`): written in code, or by a music model (`engine`). */
+   *  (`agent`) with a music model (`engine`). */
   music:
-    | { engine: 'ace-step' | 'code' | 'eleven-music'; source: 'agent' }
+    | { engine: 'ace-step' | 'eleven-music'; source: 'agent' }
     | { id: string; source: 'library' | 'upload' }
     | { source: 'none' }
   ratio: '1:1' | '9:16' | '16:9'
@@ -39,7 +39,7 @@ export type AgentMotionOptions = {
   composers: {
     cost: string
     description: string
-    id: 'ace-step' | 'code' | 'eleven-music'
+    id: 'ace-step' | 'eleven-music'
     label: string
   }[]
   defaultLengthSec: number

@@ -37,16 +37,8 @@ export type PreparedReel = {
   reel: ReelJson
 }
 
-/** A music track to put under the reel: a file on this computer, with its known tempo when we
- *  have one, or its exact grid (a score the agent wrote: nothing to detect), and its key when
- *  known (for the music map). */
-export type ReelMusicSource = {
-  bpm?: number
-  file: string
-  grid?: BeatGrid
-  key?: string
-  title: string
-}
+/** A music track to put under the reel: a file on this computer, with its known tempo when we have one. */
+export type ReelMusicSource = { bpm?: number; file: string; title: string }
 
 /**
  * Sets up the reel's project in `workspace/reel`: the template, a link to the shared runtime,
@@ -77,31 +69,15 @@ export async function prepareReelProject(o: {
   let grid: BeatGrid | null = null
   let fit: null | ReelFit = null
   if (o.music) {
-    if (o.music.grid) {
-      // A score: its grid is what was written, from its first bar. A score made before its events
-      // were written down has them found by ear, on its exact grid.
-      grid = o.music.grid.events
-        ? o.music.grid
-        : {
-            ...o.music.grid,
-            events: analyseMusicEvents(
-              await decodeAudioMono(o.music.file),
-              ANALYSIS_SAMPLE_RATE,
-              o.music.grid,
-            ),
-          }
-      fit = fitReel(grid, o.setup.lengthSec)
-    } else {
-      const samples = await decodeAudioMono(o.music.file)
-      grid = analyseBeatGrid(samples)
-      // A library track's tempo is known exactly; trust it over the estimate when they disagree,
-      // and find its events again on that grid (the estimate's spacing rules thinned them wrongly).
-      if (o.music.bpm && Math.abs(grid.bpm - o.music.bpm) > 2) {
-        const moved = regrid(grid, o.music.bpm)
-        grid = { ...moved, events: analyseMusicEvents(samples, ANALYSIS_SAMPLE_RATE, moved) }
-      }
-      fit = fitReel(grid, o.setup.lengthSec, (from, to) => rmsBetween(samples, from, to))
+    const samples = await decodeAudioMono(o.music.file)
+    grid = analyseBeatGrid(samples)
+    // A library track's tempo is known exactly; trust it over the estimate when they disagree,
+    // and find its events again on that grid (the estimate's spacing rules thinned them wrongly).
+    if (o.music.bpm && Math.abs(grid.bpm - o.music.bpm) > 2) {
+      const moved = regrid(grid, o.music.bpm)
+      grid = { ...moved, events: analyseMusicEvents(samples, ANALYSIS_SAMPLE_RATE, moved) }
     }
+    fit = fitReel(grid, o.setup.lengthSec, (from, to) => rmsBetween(samples, from, to))
     await run(
       'ffmpeg',
       [
@@ -143,13 +119,12 @@ export async function prepareReelProject(o: {
   if (!o.musicOnly)
     fs.writeFileSync(path.join(projectDir, 'style.md'), `${renderStyleCard(style)}\n`)
   fs.writeFileSync(path.join(projectDir, 'brief.md'), renderBrief(o.setup, reel, o.music))
-  fs.writeFileSync(path.join(projectDir, 'music-map.md'), renderMusicMap(reel, o.music?.key))
+  fs.writeFileSync(path.join(projectDir, 'music-map.md'), renderMusicMap(reel))
   return { grid, projectDir, reel }
 }
 
 /** How the brief says the agent makes the music. */
 function makeWith(engine: MotionMusicEngine): string {
-  if (engine === 'code') return 'written as a score (engine "code")'
   return `with ${MOTION_MUSIC_ENGINE_INFO[engine].label} (engine "${engine}")`
 }
 

@@ -23,12 +23,12 @@ export const MOTION_REEL_FPS = 30
 export const MOTION_REEL_SUBJECT_MAX = 600
 
 /**
- * How the agent makes a reel's own music (`motion_music`): written as a score in code, which
- * ReelMakeEasy renders on this computer (free; every hit lands where the agent planned it), or
- * composed by a music model on fal (ElevenLabs Music, or the cheaper ACE-Step).
+ * How the agent makes a reel's own music (`motion_music`): composed by a music model on fal
+ * (ElevenLabs Music, or the cheaper ACE-Step), the recommended first.
  */
-export const MOTION_MUSIC_ENGINES = ['code', 'eleven-music', 'ace-step'] as const
+export const MOTION_MUSIC_ENGINES = ['eleven-music', 'ace-step'] as const
 export type MotionMusicEngine = (typeof MOTION_MUSIC_ENGINES)[number]
+export const DEFAULT_MOTION_MUSIC_ENGINE: MotionMusicEngine = 'eleven-music'
 
 /** What each way of making the music is, as the setup card and the agent offer it. */
 export const MOTION_MUSIC_ENGINE_INFO: Record<
@@ -40,12 +40,6 @@ export const MOTION_MUSIC_ENGINE_INFO: Record<
     description: 'A quick, cheap generated track from style tags; rougher than ElevenLabs.',
     label: 'ACE-Step',
   },
-  code: {
-    cost: 'free',
-    description:
-      'The agent writes the music as a score in bars, so every hit lands exactly where its plan puts a cut or a move. A clean electronic band, made on this computer.',
-    label: 'Written in code by the agent',
-  },
   'eleven-music': {
     cost: '$0.60 a minute',
     description: 'A produced track from a description: the richest sound, its hits found by ear.',
@@ -55,6 +49,11 @@ export const MOTION_MUSIC_ENGINE_INFO: Record<
 
 export const isMotionMusicEngine = (v: unknown): v is MotionMusicEngine =>
   (MOTION_MUSIC_ENGINES as readonly unknown[]).includes(v)
+
+/** An engine read back from a card or a saved setup: anything else (none, or one no longer
+ *  offered, such as the old "code") reads as the default. */
+export const motionMusicEngineOf = (v: unknown): MotionMusicEngine =>
+  isMotionMusicEngine(v) ? v : DEFAULT_MOTION_MUSIC_ENGINE
 
 /** Where the reel's music comes from: a library track, one of the user's own tracks, none, or
  *  made by the agent (`motion_music`, in its `engine`) before it plans. */

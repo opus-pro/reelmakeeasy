@@ -2,7 +2,6 @@ import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
 
-import type { BeatGrid } from '@reelmakeeasy/common/motion-reel/beat-grid'
 import type { MotionReelSetup } from '@reelmakeeasy/common/motion-reel/reel-config'
 
 import { prepareReelProject, REEL_DIR } from './motion-project'
@@ -66,20 +65,11 @@ describe('prepareReelProject (the music)', () => {
     expect(map.split('\n').filter((line) => line.startsWith('bar ')).length).toBe(reel.bars)
   })
 
-  it("finds a score's events by ear when its grid was written before they were", async () => {
-    const file = path.join(workspace, 'score.wav')
+  it("finds a track's events by ear, on its beat grid", async () => {
+    const file = path.join(workspace, 'kicks.wav')
     kickWav(file, 12)
-    const beats = Array.from({ length: 24 }, (_, i) => i * 0.5)
-    const grid: BeatGrid = {
-      beats,
-      beatsPerBar: 4,
-      bpm: 120,
-      downbeats: [0, 2, 4, 6, 8, 10],
-      durationSec: 12,
-      strongHits: [],
-    }
     const { reel } = await prepareReelProject({
-      music: { file, grid, title: 'Score' },
+      music: { bpm: 120, file, title: 'Kicks' },
       musicOnly: true,
       setup: { ...setup, lengthSec: 10 },
       workspace,

@@ -229,10 +229,10 @@ describe('the music map', () => {
       lengthSec: 8,
       music: 'music.wav',
     }
-    expect(renderMusicMap(reel, 'A minor')).toMatchInlineSnapshot(`
+    expect(renderMusicMap(reel)).toMatchInlineSnapshot(`
       "# Music map
 
-      120 BPM, 4 bars of 4 beats, 8 s, key A minor.
+      120 BPM, 4 bars of 4 beats, 8 s.
       Beats are reel beat numbers (what \`beat(n)\` takes; fractions are parts of a beat). Accents: melody notes of strength 0.8 and up.
       Sections: intro beats 0-4 (energy 1), drop beats 4-12 (energy 3), outro beats 12-16 (energy 0).
 

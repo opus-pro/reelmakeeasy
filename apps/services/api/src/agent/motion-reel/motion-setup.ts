@@ -1,9 +1,11 @@
 import { motionReelTrack } from '@reelmakeeasy/common/motion-reel/music'
 import {
   isMotionMusicEngine,
+  MOTION_MUSIC_ENGINES,
   MOTION_REEL_LENGTHS,
   MOTION_REEL_RATIOS,
   MOTION_REEL_SUBJECT_MAX,
+  motionMusicEngineOf,
   type MotionReelLength,
   type MotionReelSetup,
 } from '@reelmakeeasy/common/motion-reel/reel-config'
@@ -22,15 +24,12 @@ export class MotionSetupError extends Error {}
 const isRecord = (v: unknown): v is Record<string, unknown> =>
   typeof v === 'object' && v !== null && !Array.isArray(v)
 
-/** The card's music: a library track, the user's own file, made by the agent (written in code
- *  unless a music model was picked), or none. */
+/** The card's music: a library track, the user's own file, made by the agent (by the music model
+ *  picked; a saved setup with none, or one no longer offered, reads as the default), or none. */
 function parseMusic(music: unknown): MotionReelSetup['music'] {
   if (!isRecord(music) || music['source'] === 'none') return { source: 'none' }
   if (music['source'] === 'agent')
-    return {
-      engine: isMotionMusicEngine(music['engine']) ? music['engine'] : 'code',
-      source: 'agent',
-    }
+    return { engine: motionMusicEngineOf(music['engine']), source: 'agent' }
   if (
     music['source'] === 'library' &&
     typeof music['id'] === 'string' &&
@@ -140,7 +139,7 @@ export function motionSetupFromTool(
         ? // A path in the working folder (attachments/song.mp3) or the file's own name.
           { id: musicId.split(/[\\/]/).pop() ?? '', source }
         : source === 'agent'
-          ? { engine: text('musicEngine') || 'code', source }
+          ? { engine: text('musicEngine'), source }
           : { source }
   if ((source === 'library' || source === 'upload') && !musicId)
     throw new MotionSetupError(
@@ -151,7 +150,7 @@ export function motionSetupFromTool(
   if (!['agent', 'library', 'none', 'upload'].includes(source))
     throw new MotionSetupError('music is one of library, upload, agent or none.')
   if (source === 'agent' && text('musicEngine') && !isMotionMusicEngine(text('musicEngine')))
-    throw new MotionSetupError('musicEngine is code, eleven-music or ace-step.')
+    throw new MotionSetupError(`musicEngine is ${MOTION_MUSIC_ENGINES.join(' or ')}.`)
   const reference = userReference(text('referenceUrl'), userTexts)
   return parseMotionSetup({
     lengthSec: Number(a['lengthSec']),

@@ -40,7 +40,6 @@ const SUBJECT_MAX = 600
 /** How a chosen setup names music the agent is still to make. */
 const COMPOSER_LABEL: Record<string, string> = {
   'ace-step': 'ACE-Step music, to come',
-  code: 'Music written in code, to come',
   'eleven-music': 'ElevenLabs Music, to come',
 }
 const RATIO_LABEL: Record<Ratio, string> = {
@@ -364,7 +363,8 @@ function MusicPicker({
           onChange={(e) => {
             const value = e.target.value
             if (value === 'none') onPick({ kind: 'none' })
-            else if (value === 'agent') onPick({ engine: 'code', kind: 'agent' })
+            else if (value === 'agent')
+              onPick({ engine: composers[0]?.id ?? 'eleven-music', kind: 'agent' })
             else if (value !== 'upload') onPick({ kind: 'library', trackId: value })
           }}
           value={music.kind === 'library' ? music.trackId : music.kind}

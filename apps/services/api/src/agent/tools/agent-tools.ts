@@ -119,33 +119,29 @@ export const AGENT_TOOLS: Record<AgentToolName, DynamicToolSpec> = {
   },
   motion_music: {
     description:
-      'Make the Motion Reel\'s own music, the way the user picked (engine): "code" (free, a few seconds): you write it as a score in bars and ReelMakeEasy renders it on this computer, so every hit lands exactly where your plan puts it; "eleven-music" (ElevenLabs Music, $0.60 a minute) or "ace-step" (about $0.01): a music model composes it from your description and its hits are found by ear. ReelMakeEasy rewrites reel/public/music.wav and reel/public/reel.json, so scenes timed with beat() and bar() follow the new music. The reply gives the new length, tempo and strongest moments.',
+      'Compose the Motion Reel\'s own music with the music model the user picked (engine: "eleven-music", ElevenLabs Music, $0.60 a minute; or "ace-step", about $0.01), about a minute. ReelMakeEasy measures its beat, keeps the most energetic whole bars, and rewrites reel/public/music.wav and reel/public/reel.json, so scenes timed with beat() and bar() follow the new music. Use it when the user asks for different or original music, or chose to have you make it. The reply gives the new length, tempo and strongest hits.',
     inputSchema: {
       additionalProperties: false,
       properties: {
         bpm: {
           description:
-            'For a music model: the tempo to ask for (the grid follows what the model actually plays).',
+            'Optional: the tempo to ask for (the grid follows what the model actually plays).',
           maximum: 180,
           minimum: 60,
           type: 'integer',
         },
         engine: {
-          description: 'How to make it (default: the one the user picked).',
-          enum: ['code', 'eleven-music', 'ace-step'],
+          description: 'The music model (default: the one the user picked).',
+          enum: ['eleven-music', 'ace-step'],
           type: 'string',
         },
         prompt: {
           description:
-            'For a music model: the music as it reads it: genre, mood, instruments, energy, and its shape in bars (e.g. "4-bar intro with a riser, big drop at bar 5, hits on the downbeats"). Instrumental.',
-          type: 'string',
-        },
-        score: {
-          description:
-            'For "code": a JSON object { "bpm": 70-180, "key": "D", "mode": "minor"|"major", "groove": "half"|"backbeat"|"four", "sections": [{ "name": "intro"|"build"|"groove"|"stop"|"break"|"drop"|..., "bars": n, "energy": 0-3 }], "hits": [{ "bar": n, "beat": 1-4.5, "kind": "crash"|"hit"|"stab" }] }. The sections\' bars add up to the reel\'s bars at that tempo less one (the last bar holds the final hit); the reply says the count if it is off. The skill explains the score.',
+            'The music, as the music model reads it: genre, mood, instruments, energy, and its shape in bars (e.g. "4-bar intro with a riser, big drop at bar 5, hits on the downbeats"). Instrumental.',
           type: 'string',
         },
       },
+      required: ['prompt'],
       type: 'object',
     },
     name: 'motion_music',
@@ -175,8 +171,8 @@ export const AGENT_TOOLS: Record<AgentToolName, DynamicToolSpec> = {
         },
         musicEngine: {
           description:
-            'With music "agent": how you make it, as the user picked: code (you write a score; free, recommended), eleven-music (ElevenLabs Music, $0.60 a minute) or ace-step (about $0.01).',
-          enum: ['code', 'eleven-music', 'ace-step'],
+            'With music "agent": the music model you make it with, as the user picked: eleven-music (ElevenLabs Music, $0.60 a minute, recommended) or ace-step (about $0.01).',
+          enum: ['eleven-music', 'ace-step'],
           type: 'string',
         },
         musicId: {

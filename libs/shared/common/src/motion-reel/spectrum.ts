@@ -3,7 +3,7 @@
 /**
  * How far an onset's flux peak runs ahead of the sound itself: a frame is stamped with its
  * window's start, and the log spectrum jumps as soon as an attack enters the window. Measured on
- * clicks, a rendered score and produced tracks (about 25-35 ms); every time the grid reports is
+ * clicks and produced tracks (about 25-35 ms); every time the grid reports is
  * moved by it, so beats land on the hits rather than a frame before them.
  */
 export const ONSET_LAG_SEC = 0.028

@@ -16,11 +16,14 @@ const base = {
 }
 
 describe('parseMotionSetup', () => {
-  it('makes music the agent writes in code unless the card picked a music model', () => {
+  it('makes music the agent makes with ElevenLabs Music unless the card picked ACE-Step', () => {
     expect(parseMotionSetup({ ...base, music: { source: 'agent' } }).music).toEqual({
-      engine: 'code',
+      engine: 'eleven-music',
       source: 'agent',
     })
+    // A setup saved when music could be written in code reads as ElevenLabs Music.
+    const saved = parseMotionSetup({ ...base, music: { engine: 'code', source: 'agent' } })
+    expect(saved.music).toEqual({ engine: 'eleven-music', source: 'agent' })
     expect(
       parseMotionSetup({ ...base, music: { engine: 'ace-step', source: 'agent' } }).music,
     ).toEqual({ engine: 'ace-step', source: 'agent' })
@@ -148,15 +151,15 @@ describe('motionSetupFromTool', () => {
         ?.music,
     ).toEqual({ id: 'song.mp3', source: 'upload' })
     expect(motionSetupFromTool({ ...args, music: 'agent' }, said)?.music).toEqual({
-      engine: 'code',
+      engine: 'eleven-music',
       source: 'agent',
     })
     expect(
-      motionSetupFromTool({ ...args, music: 'agent', musicEngine: 'eleven-music' }, said)?.music,
-    ).toEqual({ engine: 'eleven-music', source: 'agent' })
+      motionSetupFromTool({ ...args, music: 'agent', musicEngine: 'ace-step' }, said)?.music,
+    ).toEqual({ engine: 'ace-step', source: 'agent' })
     expect(() =>
-      motionSetupFromTool({ ...args, music: 'agent', musicEngine: 'kazoo' }, said),
-    ).toThrow(/musicEngine is code, eleven-music or ace-step/)
+      motionSetupFromTool({ ...args, music: 'agent', musicEngine: 'code' }, said),
+    ).toThrow(/musicEngine is eleven-music or ace-step/)
     expect(motionSetupFromTool({ ...args, music: 'none' }, said)?.music).toEqual({ source: 'none' })
     expect(() => motionSetupFromTool({ ...args, musicId: '' }, said)).toThrow(/library track id/)
     expect(() => motionSetupFromTool({ ...args, music: 'radio' }, said)).toThrow(MotionSetupError)

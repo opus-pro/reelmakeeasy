@@ -104,7 +104,7 @@ export const MOTION_REEL_FREE_BRIEF = [
   MOTION_REEL_BRIEF,
   '',
   '## Advanced: you set the reel up',
-  'The user picked Advanced: there is no setup card, and `reel/` doesn\'t exist until you call motion_setup. Call it with no arguments first: it answers the styles, lengths, frames and music tracks. Then settle with the user what the reel needs, one question at a time, as a card with {ASK} wherever there are options (the best first, with " (Recommended)"): what it is about (the words and facts it may show), the style (the 2-4 that suit the subject), the length, the frame, and the music: a library track that suits the style, their own file through the paperclip, none, or music you make; when it is yours, ask how in the same card or the next: "Written in code by you (Recommended)" (free: you score it in bars, so every hit lands on your cuts), "ElevenLabs Music" ($0.60 a minute, the richest sound) or "ACE-Step" (about $0.01). A reference is optional: a YouTube video to copy the look and rhythm from, or a website (its colours, words and screenshots when it is the subject\'s own). Only a link the user pasted in this chat can be a reference. Don\'t ask what they already told you, and suggest the rest.',
+  'The user picked Advanced: there is no setup card, and `reel/` doesn\'t exist until you call motion_setup. Call it with no arguments first: it answers the styles, lengths, frames and music tracks. Then settle with the user what the reel needs, one question at a time, as a card with {ASK} wherever there are options (the best first, with " (Recommended)"): what it is about (the words and facts it may show), the style (the 2-4 that suit the subject), the length, the frame, and the music: a library track that suits the style, their own file through the paperclip, none, or music you make; when it is yours, ask with which music model in the same card or the next: "ElevenLabs Music (Recommended)" ($0.60 a minute, the richest sound) or "ACE-Step" (about $0.01). A reference is optional: a YouTube video to copy the look and rhythm from, or a website (its colours, words and screenshots when it is the subject\'s own). Only a link the user pasted in this chat can be a reference. Don\'t ask what they already told you, and suggest the rest.',
   'Then call motion_setup with all of it: it readies `reel/` (the first time it also installs Remotion, a few minutes) and says what to read next. From there, work as the skill says. Call motion_setup again only when the user changes the style, length, frame, music or reference: the scenes and plan you wrote are kept, so re-check them against the new grid and style card.',
 ].join('\n')
 
@@ -286,7 +286,7 @@ export function briefFor(
 export function motionReelKickoff(
   harness: AgentHarnessName,
   hasReference: boolean,
-  /** The music the agent makes first (the user chose to have it made), and how. */
+  /** The music the agent makes first (the user chose to have it made), and with which model. */
   makeMusic: MotionMusicEngine | null = null,
 ): string {
   return `[ReelMakeEasy] The user filled in the Motion Reel card and \`reel/\` is ready. ${motionReelNextSteps(harness, hasReference, makeMusic, true)}`
@@ -310,10 +310,8 @@ export function motionReelNextSteps(
   )
 }
 
-/** The step that makes the reel's music, in the engine the user picked. */
+/** The step that makes the reel's music, with the music model the user picked. */
 function makeMusicStep(engine: MotionMusicEngine): string {
-  if (engine === 'code')
-    return 'The user asked you to write the music: sketch the reel in bars first, then write it as a score with motion_music (engine "code"), whose sections are your worlds (an intro, a build, a stop before the drop, the drop on the biggest moment, energy rising to the end) and whose hits sit on the beats where your biggest cuts land, at a tempo in the style card\'s range. Then read `reel/music-map.md` again: its grid and events are your score\'s.'
   return `The user asked for music from ${MOTION_MUSIC_ENGINE_INFO[engine].label}: before planning, compose it with motion_music (engine "${engine}": one description written for this reel, its style and subject, a tempo in the style card's range, and its shape in bars: an intro that builds, a riser into a drop, an ending that resolves), then read \`reel/music-map.md\` again: the grid and events are the new track's.`
 }
 
