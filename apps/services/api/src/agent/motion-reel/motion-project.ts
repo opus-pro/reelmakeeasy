@@ -10,6 +10,8 @@ import {
 import { decodeAudioMono, rmsBetween } from '@reelmakeeasy/common/motion-reel/decode-audio'
 import {
   buildReelJson,
+  MOTION_MUSIC_ENGINE_INFO,
+  type MotionMusicEngine,
   type MotionReelSetup,
   type ReelJson,
 } from '@reelmakeeasy/common/motion-reel/reel-config'
@@ -33,8 +35,9 @@ export type PreparedReel = {
   reel: ReelJson
 }
 
-/** A music track to put under the reel: a file on this computer, with its known tempo when we have one. */
-export type ReelMusicSource = { bpm?: number; file: string; title: string }
+/** A music track to put under the reel: a file on this computer, with its known tempo when we
+ *  have one, or its exact grid (a score the agent wrote: nothing to detect). */
+export type ReelMusicSource = { bpm?: number; file: string; grid?: BeatGrid; title: string }
 
 /**
  * Sets up the reel's project in `workspace/reel`: the template, a link to the shared runtime,
@@ -63,11 +66,17 @@ export async function prepareReelProject(o: {
   let grid: BeatGrid | null = null
   let fit: null | ReelFit = null
   if (o.music) {
-    const samples = await decodeAudioMono(o.music.file)
-    grid = analyseBeatGrid(samples)
-    // A library track's tempo is known exactly; trust it over the estimate when they disagree.
-    if (o.music.bpm && Math.abs(grid.bpm - o.music.bpm) > 2) grid = regrid(grid, o.music.bpm)
-    fit = fitReel(grid, o.setup.lengthSec, (from, to) => rmsBetween(samples, from, to))
+    if (o.music.grid) {
+      // A score: its grid is what was written, from its first bar.
+      grid = o.music.grid
+      fit = fitReel(grid, o.setup.lengthSec)
+    } else {
+      const samples = await decodeAudioMono(o.music.file)
+      grid = analyseBeatGrid(samples)
+      // A library track's tempo is known exactly; trust it over the estimate when they disagree.
+      if (o.music.bpm && Math.abs(grid.bpm - o.music.bpm) > 2) grid = regrid(grid, o.music.bpm)
+      fit = fitReel(grid, o.setup.lengthSec, (from, to) => rmsBetween(samples, from, to))
+    }
     await run(
       'ffmpeg',
       [
@@ -106,9 +115,16 @@ export async function prepareReelProject(o: {
     path.join(projectDir, 'public', 'reel.json'),
     `${JSON.stringify(reel, null, 1)}\n`,
   )
-  if (!o.musicOnly) fs.writeFileSync(path.join(projectDir, 'style.md'), `${renderStyleCard(style)}\n`)
+  if (!o.musicOnly)
+    fs.writeFileSync(path.join(projectDir, 'style.md'), `${renderStyleCard(style)}\n`)
   fs.writeFileSync(path.join(projectDir, 'brief.md'), renderBrief(o.setup, reel, o.music))
   return { grid, projectDir, reel }
+}
+
+/** How the brief says the agent makes the music. */
+function makeWith(engine: MotionMusicEngine): string {
+  if (engine === 'code') return 'written as a score (engine "code")'
+  return `with ${MOTION_MUSIC_ENGINE_INFO[engine].label} (engine "${engine}")`
 }
 
 /** The brief the agent reads first: what the user chose, in plain words. */
@@ -121,7 +137,7 @@ export function renderBrief(
   const musicLine = music
     ? `"${music.title}", trimmed to the reel and fading out over the last ${reel.fadeOutSec} s`
     : setup.music.source === 'agent'
-      ? `none yet: compose it with motion_music before you plan (the grid below is a placeholder at ${reel.bpm} BPM until then)`
+      ? `none yet: make it with motion_music before you plan, ${makeWith(setup.music.engine)} (the grid below is a placeholder at ${reel.bpm} BPM until then)`
       : `none (a silent reel on a steady ${reel.bpm} BPM grid; sound effects still work)`
   const referenceKind =
     setup.reference?.kind === 'youtube'

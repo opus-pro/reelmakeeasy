@@ -1,5 +1,6 @@
 import { motionReelTrack } from '@reelmakeeasy/common/motion-reel/music'
 import {
+  isMotionMusicEngine,
   MOTION_REEL_LENGTHS,
   MOTION_REEL_RATIOS,
   MOTION_REEL_SUBJECT_MAX,
@@ -20,6 +21,26 @@ export class MotionSetupError extends Error {}
 
 const isRecord = (v: unknown): v is Record<string, unknown> =>
   typeof v === 'object' && v !== null && !Array.isArray(v)
+
+/** The card's music: a library track, the user's own file, made by the agent (written in code
+ *  unless a music model was picked), or none. */
+function parseMusic(music: unknown): MotionReelSetup['music'] {
+  if (!isRecord(music) || music['source'] === 'none') return { source: 'none' }
+  if (music['source'] === 'agent')
+    return {
+      engine: isMotionMusicEngine(music['engine']) ? music['engine'] : 'code',
+      source: 'agent',
+    }
+  if (
+    music['source'] === 'library' &&
+    typeof music['id'] === 'string' &&
+    motionReelTrack(music['id'])
+  )
+    return { id: music['id'], source: 'library' }
+  if (music['source'] === 'upload' && typeof music['id'] === 'string' && music['id'].trim())
+    return { id: music['id'].trim(), source: 'upload' }
+  throw new MotionSetupError("That music isn't available.")
+}
 
 /** The setup card's body, checked: every field the card sends, nothing else trusted. */
 export function parseMotionSetup(body: unknown): MotionReelSetup {
@@ -42,19 +63,7 @@ export function parseMotionSetup(body: unknown): MotionReelSetup {
   if (!MOTION_REEL_RATIOS.includes(ratio as MotionReelRatio))
     throw new MotionSetupError('Pick a frame shape.')
 
-  const music = body['music']
-  let parsedMusic: MotionReelSetup['music']
-  if (!isRecord(music) || music['source'] === 'none') parsedMusic = { source: 'none' }
-  else if (music['source'] === 'agent') parsedMusic = { source: 'agent' }
-  else if (
-    music['source'] === 'library' &&
-    typeof music['id'] === 'string' &&
-    motionReelTrack(music['id'])
-  )
-    parsedMusic = { id: music['id'], source: 'library' }
-  else if (music['source'] === 'upload' && typeof music['id'] === 'string' && music['id'].trim())
-    parsedMusic = { id: music['id'].trim(), source: 'upload' }
-  else throw new MotionSetupError("That music isn't available.")
+  const parsedMusic = parseMusic(body['music'])
 
   const reference = body['reference']
   let parsedReference: MotionReelSetup['reference']
@@ -130,7 +139,9 @@ export function motionSetupFromTool(
       : source === 'upload'
         ? // A path in the working folder (attachments/song.mp3) or the file's own name.
           { id: musicId.split(/[\\/]/).pop() ?? '', source }
-        : { source }
+        : source === 'agent'
+          ? { engine: text('musicEngine') || 'code', source }
+          : { source }
   if ((source === 'library' || source === 'upload') && !musicId)
     throw new MotionSetupError(
       source === 'library'
@@ -139,18 +150,9 @@ export function motionSetupFromTool(
     )
   if (!['agent', 'library', 'none', 'upload'].includes(source))
     throw new MotionSetupError('music is one of library, upload, agent or none.')
-  const referenceUrl = text('referenceUrl')
-  let reference: undefined | { kind: 'website' | 'youtube'; url: string }
-  if (referenceUrl) {
-    const link = comparableLink(referenceUrl)
-    if (!link || !linksIn(userTexts).has(link))
-      throw new MotionSetupError(
-        'A reference must be a link the user pasted in this chat; leave it out otherwise.',
-      )
-    const host = new URL(link).hostname.toLowerCase()
-    const youtube = host === 'youtu.be' || host === 'youtube.com' || host.endsWith('.youtube.com')
-    reference = { kind: youtube ? 'youtube' : 'website', url: link }
-  }
+  if (source === 'agent' && text('musicEngine') && !isMotionMusicEngine(text('musicEngine')))
+    throw new MotionSetupError('musicEngine is code, eleven-music or ace-step.')
+  const reference = userReference(text('referenceUrl'), userTexts)
   return parseMotionSetup({
     lengthSec: Number(a['lengthSec']),
     music,
@@ -159,6 +161,22 @@ export function motionSetupFromTool(
     styleId: text('styleId'),
     subject: text('subject'),
   })
+}
+
+/** A reference the agent passed, only when it is a link the user typed in this chat. */
+function userReference(
+  url: string,
+  userTexts: readonly string[],
+): undefined | { kind: 'website' | 'youtube'; url: string } {
+  if (!url) return undefined
+  const link = comparableLink(url)
+  if (!link || !linksIn(userTexts).has(link))
+    throw new MotionSetupError(
+      'A reference must be a link the user pasted in this chat; leave it out otherwise.',
+    )
+  const host = new URL(link).hostname.toLowerCase()
+  const youtube = host === 'youtu.be' || host === 'youtube.com' || host.endsWith('.youtube.com')
+  return { kind: youtube ? 'youtube' : 'website', url: link }
 }
 
 /** The beats a `motion_still` call asks for: up to `max` distinct, non-negative numbers. */

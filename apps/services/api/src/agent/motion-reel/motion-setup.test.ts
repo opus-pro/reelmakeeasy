@@ -16,6 +16,16 @@ const base = {
 }
 
 describe('parseMotionSetup', () => {
+  it('makes music the agent writes in code unless the card picked a music model', () => {
+    expect(parseMotionSetup({ ...base, music: { source: 'agent' } }).music).toEqual({
+      engine: 'code',
+      source: 'agent',
+    })
+    expect(
+      parseMotionSetup({ ...base, music: { engine: 'ace-step', source: 'agent' } }).music,
+    ).toEqual({ engine: 'ace-step', source: 'agent' })
+  })
+
   it('takes a full card', () => {
     expect(parseMotionSetup(base)).toEqual({
       ...base,
@@ -138,8 +148,15 @@ describe('motionSetupFromTool', () => {
         ?.music,
     ).toEqual({ id: 'song.mp3', source: 'upload' })
     expect(motionSetupFromTool({ ...args, music: 'agent' }, said)?.music).toEqual({
+      engine: 'code',
       source: 'agent',
     })
+    expect(
+      motionSetupFromTool({ ...args, music: 'agent', musicEngine: 'eleven-music' }, said)?.music,
+    ).toEqual({ engine: 'eleven-music', source: 'agent' })
+    expect(() =>
+      motionSetupFromTool({ ...args, music: 'agent', musicEngine: 'kazoo' }, said),
+    ).toThrow(/musicEngine is code, eleven-music or ace-step/)
     expect(motionSetupFromTool({ ...args, music: 'none' }, said)?.music).toEqual({ source: 'none' })
     expect(() => motionSetupFromTool({ ...args, musicId: '' }, said)).toThrow(/library track id/)
     expect(() => motionSetupFromTool({ ...args, music: 'radio' }, said)).toThrow(MotionSetupError)

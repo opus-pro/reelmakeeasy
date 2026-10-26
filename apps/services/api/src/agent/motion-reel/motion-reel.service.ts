@@ -12,8 +12,13 @@ import {
   DEFAULT_MOTION_REEL_RATIO,
   MOTION_REEL_LENGTHS,
   MOTION_REEL_RATIOS,
+  isMotionMusicEngine,
+  MOTION_MUSIC_ENGINE_INFO,
+  MOTION_MUSIC_ENGINES,
+  type MotionMusicEngine,
   type MotionReelSetup,
 } from '@reelmakeeasy/common/motion-reel/reel-config'
+import type { BeatGrid } from '@reelmakeeasy/common/motion-reel/beat-grid'
 import { MOTION_REEL_STYLES, motionReelStyle } from '@reelmakeeasy/common/motion-reel/styles'
 import { storeUri } from '@reelmakeeasy/common/storage/address'
 import { presetPath, presetUrl } from '@reelmakeeasy/common/storage/presets'
@@ -43,6 +48,7 @@ import {
 } from './motion-render'
 import { ensureMotionReelRuntime } from './motion-runtime'
 import { composeMusic, parseComposeRequest } from './motion-music'
+import { parseScore, renderScore, wavBytes } from '@reelmakeeasy/common/motion-reel/score'
 import {
   MotionSetupError,
   motionSetupFromTool,
@@ -141,6 +147,7 @@ export class MotionReelService {
   /** What the setup card offers. */
   options(): AgentMotionOptions {
     return {
+      composers: MOTION_MUSIC_ENGINES.map((id) => ({ id, ...MOTION_MUSIC_ENGINE_INFO[id] })),
       defaultLengthSec: DEFAULT_MOTION_REEL_LENGTH,
       defaultRatio: DEFAULT_MOTION_REEL_RATIO,
       lengths: [...MOTION_REEL_LENGTHS],
@@ -179,33 +186,32 @@ export class MotionReelService {
     void this.prepare(id, session, setup, music).finally(() => this.preparing.delete(id))
   }
 
-  /** The agent composed its own music: made by Setup's music model, then fitted to whole bars;
-   *  the grid (reel.json) follows the new track, so beat-timed scenes follow it too. */
+  /** The agent made the reel's own music (`motion_music`), in the engine it names (else the one
+   *  the user picked): a score it wrote, rendered here, or a track from a music model. The grid
+   *  (reel.json) follows the new music, so beat-timed scenes follow it too. */
   private async compose(
     id: string,
     session: AgentSession,
     projectDir: string,
     args: unknown,
   ): Promise<ToolCallResult> {
+    const view = session.motionReel as AgentMotionSetupView
+    const asked = (args as null | Record<string, unknown>)?.['engine']
+    if (asked !== undefined && !isMotionMusicEngine(asked))
+      return { success: false, text: 'engine is code, eleven-music or ace-step.' }
+    const engine: MotionMusicEngine =
+      asked ?? (view.music.source === 'agent' && view.music.engine ? view.music.engine : 'code')
+    if (engine === 'code') return this.writeScore(id, view, projectDir, args)
     const request = parseComposeRequest(args)
     if (typeof request === 'string') return { success: false, text: request }
-    const view = session.motionReel as AgentMotionSetupView
-    const composed = await composeMusic(request, view.lengthSec, path.join(projectDir, 'music'))
-    const title = `Composed: ${request.prompt.replace(/\s+/g, ' ').slice(0, 48)}`
-    const prepared = await prepareReelProject({
-      music: { file: composed.file, title },
-      musicOnly: true,
-      setup: setupFrom(view),
-      workspace: this.sessions.workingDir(id),
-    })
-    const { reel } = prepared
-    this.sessions.updateMotionReel(id, {
-      ...view,
-      bars: reel.bars,
-      bpm: reel.bpm,
-      musicTitle: title,
-      reelSec: reel.lengthSec,
-    })
+    const composed = await composeMusic(
+      request,
+      view.lengthSec,
+      path.join(projectDir, 'music'),
+      engine,
+    )
+    const title = `${MOTION_MUSIC_ENGINE_INFO[engine].label}: ${request.prompt.replace(/\s+/g, ' ').slice(0, 40)}`
+    const { reel } = await this.refit(id, view, { file: composed.file, title })
     const hits = reel.strongHits.map((t) => beatAt(reel, t)).slice(0, 8)
     const tempoNote =
       request.bpm && Math.abs(reel.bpm - request.bpm) > 2
@@ -249,7 +255,11 @@ export class MotionReelService {
       `Lengths (lengthSec): ${options.lengths.join(', ')} (default ${options.defaultLengthSec}). Frames (ratio): ${options.ratios.join(', ')} (default ${options.defaultRatio}).`,
       'Library tracks (music "library", musicId: title, tempo, the styles it suits):',
       ...options.tracks.map((t) => `- ${t.id}: ${t.title}, ${t.bpm} BPM (${t.styles.join(', ')})`),
-      'Or music "upload" (the user\'s own file through the paperclip; musicId: its path), "agent" (you compose it with motion_music, a paid generation) or "none".',
+      'Or music "upload" (the user\'s own file through the paperclip; musicId: its path), "none", or "agent": you make it with motion_music right after the setup, in the way the user picks (musicEngine):',
+      ...MOTION_MUSIC_ENGINES.map(
+        (e) =>
+          `- ${e}: ${MOTION_MUSIC_ENGINE_INFO[e].label} (${MOTION_MUSIC_ENGINE_INFO[e].cost}). ${MOTION_MUSIC_ENGINE_INFO[e].description}`,
+      ),
     ].join('\n')
   }
 
@@ -267,7 +277,11 @@ export class MotionReelService {
       this.sessions.startMotionReel(
         id,
         view,
-        motionReelKickoff(session.harness ?? 'codex', hasReference, setup.music.source === 'agent'),
+        motionReelKickoff(
+          session.harness ?? 'codex',
+          hasReference,
+          setup.music.source === 'agent' ? setup.music.engine : null,
+        ),
       )
     } catch (error) {
       logger.warn(`Motion Reel setup for ${id} failed: ${ensureError(error).message}`)
@@ -321,6 +335,25 @@ export class MotionReelService {
     return { hasReference: !!referenceNote, view }
   }
 
+  /** Puts new music under the reel (its grid rewritten) and shows the updated setup. */
+  private async refit(id: string, view: AgentMotionSetupView, music: ReelMusicSource) {
+    const prepared = await prepareReelProject({
+      music,
+      musicOnly: true,
+      setup: setupFrom(view),
+      workspace: this.sessions.workingDir(id),
+    })
+    const { reel } = prepared
+    this.sessions.updateMotionReel(id, {
+      ...view,
+      bars: reel.bars,
+      bpm: reel.bpm,
+      musicTitle: music.title,
+      reelSec: reel.lengthSec,
+    })
+    return prepared
+  }
+
   private async render(id: string, projectDir: string): Promise<ToolCallResult> {
     const result = await renderReel(projectDir)
     const n = ++this.renders
@@ -370,14 +403,21 @@ export class MotionReelService {
       throw error
     }
     const again = !!session.motionReel
-    // Music the agent already composed for this reel stays through a new setup (a new style or
-    // frame needs no new paid track): its newest take, fitted to the length asked for now.
+    // Music the agent already made for this reel stays through a new setup made the same way (a
+    // new style or frame needs no new track): its newest take. A score only while the length
+    // holds (its bars are the reel's); a model's track is fitted to the new length.
+    const before = session.motionReel
+    const sameWay =
+      setup.music.source === 'agent' &&
+      before?.music.source === 'agent' &&
+      before.music.engine === setup.music.engine &&
+      !!before.musicTitle
+    const made = sameWay ? newestMade(path.join(this.sessions.workingDir(id), REEL_DIR)) : null
     const composed =
-      setup.music.source === 'agent' && session.motionReel?.musicTitle
-        ? newestComposed(path.join(this.sessions.workingDir(id), REEL_DIR))
+      made && before?.musicTitle && (!made.grid || before.lengthSec === setup.lengthSec)
+        ? { ...made, title: before.musicTitle }
         : null
-    if (composed && session.motionReel?.musicTitle)
-      music = { file: composed, title: session.motionReel.musicTitle }
+    if (composed) music = composed
     this.preparing.add(id)
     try {
       const { hasReference, view } = await this.ready(id, setup, music)
@@ -385,7 +425,7 @@ export class MotionReelService {
       const musicNote = view.musicTitle
         ? `music: ${view.musicTitle}`
         : setup.music.source === 'agent'
-          ? 'music: yours to compose'
+          ? `music: yours to make (${MOTION_MUSIC_ENGINE_INFO[setup.music.engine].label})`
           : 'no music'
       return {
         success: true,
@@ -393,13 +433,13 @@ export class MotionReelService {
           `\`reel/\` is ${again ? 'set up again' : 'ready'}: ${view.styleLabel}, ${view.ratio}, ${view.reelSec} s (${view.bars} bars at ${view.bpm} BPM), ${musicNote}. The user sees the setup in the chat.`,
           ...(composed
             ? [
-                'The music you composed is kept: compose again only if the user asks for different music.',
+                'The music you made is kept: make it again only if the user asks for different music.',
               ]
             : []),
           motionReelNextSteps(
             session.harness ?? 'codex',
             hasReference,
-            setup.music.source === 'agent' && !composed,
+            setup.music.source === 'agent' && !composed ? setup.music.engine : null,
           ),
           ...(again
             ? [
@@ -436,6 +476,61 @@ export class MotionReelService {
       text: `Rendered ${files.length} stills (the user sees them too). Open each file and look at it:\n${lines.join('\n')}`,
     }
   }
+
+  /** The music from a score the agent wrote: rendered here (free), its grid exactly the score's. */
+  private async writeScore(
+    id: string,
+    view: AgentMotionSetupView,
+    projectDir: string,
+    args: unknown,
+  ): Promise<ToolCallResult> {
+    const raw = (args as null | Record<string, unknown>)?.['score']
+    let parsed: unknown
+    try {
+      parsed = typeof raw === 'string' ? JSON.parse(raw) : raw
+    } catch {
+      return { success: false, text: 'score is a JSON object (see the skill).' }
+    }
+    const bpm = (parsed as null | Record<string, unknown>)?.['bpm']
+    if (typeof bpm !== 'number' || bpm < 70 || bpm > 180)
+      return { success: false, text: 'Give the score a bpm, 70 to 180.' }
+    // The reel is whole bars at the score's tempo; the last holds the final hit's ring-out.
+    const barSec = 240 / bpm
+    const reelBars = Math.max(2, Math.round(view.lengthSec / barSec))
+    const score = parseScore(parsed, reelBars - 1)
+    if (typeof score === 'string') return { success: false, text: score }
+    const rendered = renderScore(score, { tailSec: barSec + 0.25 })
+    const { clash, offbeat, triad } = rendered.issues
+    if (clash.length + offbeat.length + triad.length)
+      return {
+        success: false,
+        text: `The score broke its harmony rules: ${[...clash, ...offbeat, ...triad].slice(0, 5).join('; ')}`,
+      }
+    const dir = path.join(projectDir, 'music')
+    fs.mkdirSync(dir, { recursive: true })
+    const file = path.join(dir, `score-${Date.now()}.wav`)
+    fs.writeFileSync(file, wavBytes(rendered.left, rendered.right, rendered.sampleRate))
+    const grid: BeatGrid = {
+      beats: rendered.plan.beats,
+      beatsPerBar: 4,
+      bpm: score.bpm,
+      downbeats: rendered.plan.downbeats,
+      durationSec: rendered.plan.durationSec,
+      strongHits: rendered.plan.strongHits,
+    }
+    fs.writeFileSync(`${file}.grid.json`, `${JSON.stringify(grid)}\n`)
+    const title = `Score: ${score.key} ${score.mode}, ${score.bpm} BPM`
+    const { reel } = await this.refit(id, view, { file, grid, title })
+    return {
+      success: true,
+      text: [
+        `Rendered your score and put it under the reel: ${reel.lengthSec} s, ${reel.bars} bars at ${reel.bpm} BPM; the final hit is on bar ${reel.bars}'s downbeat (beat ${(reel.bars - 1) * 4}).`,
+        'public/music.wav and public/reel.json are rewritten from the score itself, so its beats and hits are exact. Re-check anything that assumed the old bar count.',
+        `The strongest moments: beats ${rendered.plan.strongHits.map((t) => Math.round(((t * score.bpm) / 60) * 100) / 100).join(', ')}.`,
+        'Write it again freely (it is free) when the plan changes.',
+      ].join(' '),
+    }
+  }
 }
 
 /** The setup card's choices back out of the chat's saved setup. */
@@ -450,8 +545,9 @@ function setupFrom(view: AgentMotionSetupView): MotionReelSetup {
   }
 }
 
-/** The newest track the agent composed for the reel in `projectDir` (`motion_music`), if any. */
-function newestComposed(projectDir: string): null | string {
+/** The newest music the agent made for the reel in `projectDir` (`motion_music`): a model's
+ *  track, or a score with its exact grid. */
+function newestMade(projectDir: string): null | { file: string; grid?: BeatGrid } {
   const dir = path.join(projectDir, 'music')
   let names: string[]
   try {
@@ -459,12 +555,23 @@ function newestComposed(projectDir: string): null | string {
   } catch {
     return null
   }
-  // Named composed-<time>.mp3: the newest sorts last.
+  // Named composed-<time>.mp3 or score-<time>.wav: the newest has the largest time.
   const newest = names
-    .filter((name) => /^composed-\d+\.mp3$/.test(name))
-    .sort()
+    .map((name) => ({
+      name,
+      time: Number(/^(?:composed|score)-(\d+)\.(?:mp3|wav)$/.exec(name)?.[1]),
+    }))
+    .filter((m) => Number.isFinite(m.time))
+    .sort((a, b) => a.time - b.time)
     .at(-1)
-  return newest ? path.join(dir, newest) : null
+  if (!newest) return null
+  const file = path.join(dir, newest.name)
+  if (!newest.name.startsWith('score-')) return { file }
+  try {
+    return { file, grid: JSON.parse(fs.readFileSync(`${file}.grid.json`, 'utf8')) as BeatGrid }
+  } catch {
+    return null
+  }
 }
 
 /** A style's thumbnail in the presets, when there is one. */

@@ -23,8 +23,9 @@ export type MotionReelSetupCardProps = {
   sessionId: string
 }
 
+type Composer = AgentMotionOptions['composers'][number]['id']
 type MusicPick =
-  | { kind: 'agent' }
+  | { engine: Composer; kind: 'agent' }
   | { kind: 'library'; trackId: string }
   | { kind: 'none' }
   | { kind: 'upload'; name: string; title: string }
@@ -36,6 +37,12 @@ const CARD_CLASS =
   'flex w-full max-w-2xl flex-col gap-4 rounded-xl border border-white/10 bg-fill-secondary/50 p-4'
 const LABEL_CLASS = 'text-xs font-medium tracking-wide text-secondary uppercase'
 const SUBJECT_MAX = 600
+/** How a chosen setup names music the agent is still to make. */
+const COMPOSER_LABEL: Record<string, string> = {
+  'ace-step': 'ACE-Step music, to come',
+  code: 'Music written in code, to come',
+  'eleven-music': 'ElevenLabs Music, to come',
+}
 const RATIO_LABEL: Record<Ratio, string> = {
   '16:9': '16:9 wide',
   '1:1': '1:1 square',
@@ -61,7 +68,7 @@ function ChosenSetup({ setup }: { setup: AgentMotionSetupView }) {
     setup.musicTitle
       ? `♪ ${setup.musicTitle}`
       : setup.music.source === 'agent'
-        ? '♪ Composing its own music'
+        ? `♪ ${COMPOSER_LABEL[setup.music.engine] ?? 'Its own music'}`
         : 'No music',
     ...(setup.reference
       ? [setup.reference.kind === 'youtube' ? 'Video reference' : 'Website reference']
@@ -159,7 +166,7 @@ function SetupForm({
           : music.kind === 'upload'
             ? { id: music.name, source: 'upload' }
             : music.kind === 'agent'
-              ? { source: 'agent' }
+              ? { engine: music.engine, source: 'agent' }
               : { source: 'none' },
       ratio,
       ...(referenceKind === 'none'
@@ -211,6 +218,7 @@ function SetupForm({
           />
         </div>
         <MusicPicker
+          composers={options.composers}
           music={music}
           onPick={pickMusic}
           sessionId={sessionId}
@@ -314,11 +322,13 @@ function ChipRow<T extends number | string>({
 }
 
 function MusicPicker({
+  composers,
   music,
   onPick,
   sessionId,
   tracks,
 }: {
+  composers: AgentMotionOptions['composers']
   music: MusicPick
   onPick: (music: MusicPick) => void
   sessionId: string
@@ -354,7 +364,7 @@ function MusicPicker({
           onChange={(e) => {
             const value = e.target.value
             if (value === 'none') onPick({ kind: 'none' })
-            else if (value === 'agent') onPick({ kind: 'agent' })
+            else if (value === 'agent') onPick({ engine: 'code', kind: 'agent' })
             else if (value !== 'upload') onPick({ kind: 'library', trackId: value })
           }}
           value={music.kind === 'library' ? music.trackId : music.kind}
@@ -365,7 +375,7 @@ function MusicPicker({
             </option>
           ))}
           {music.kind === 'upload' && <option value="upload">{music.title}</option>}
-          <option value="agent">Let the agent compose it</option>
+          <option value="agent">Let the agent make it</option>
           <option value="none">No music</option>
         </select>
         <Button
@@ -388,10 +398,38 @@ function MusicPicker({
         />
       </div>
       {music.kind === 'agent' && (
-        <p className="text-xs text-secondary">
-          The agent writes a track for this reel with your music model (one paid generation), then
-          builds the reel on its beat.
-        </p>
+        <div
+          aria-label="How the agent makes it"
+          className="flex flex-col gap-1.5"
+          role="radiogroup"
+        >
+          {composers.map((c, i) => (
+            <button
+              aria-checked={music.engine === c.id}
+              className={cn(
+                'flex flex-col gap-0.5 rounded-md border px-2.5 py-1.5 text-left transition-colors',
+                music.engine === c.id
+                  ? 'border-white/50 bg-white/10'
+                  : 'border-white/10 hover:border-white/25',
+              )}
+              key={c.id}
+              onClick={() => onPick({ engine: c.id, kind: 'agent' })}
+              role="radio"
+              type="button"
+            >
+              <span className="flex items-center gap-2 text-xs font-medium text-primary">
+                {c.label}
+                <span className="font-normal text-secondary">{c.cost}</span>
+                {i === 0 && (
+                  <span className="rounded bg-accent-green/15 px-1.5 py-0.5 text-[10px] font-medium text-accent-green">
+                    Recommended
+                  </span>
+                )}
+              </span>
+              <span className="text-xs text-secondary">{c.description}</span>
+            </button>
+          ))}
+        </div>
       )}
       {selectedTrack && <TrackPreview src={selectedTrack.previewUrl} />}
       {uploadError && <p className="text-xs text-amber-400">{uploadError}</p>}

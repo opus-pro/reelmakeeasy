@@ -19,9 +19,12 @@ export type AgentMode =
 export type AgentMotionSetup = {
   /** About this long, in seconds; the reel is whole bars of its music. */
   lengthSec: number
-  /** A library track's id, an attachment's name (`upload`), no music, or composed by the
-   *  agent (`agent`). */
-  music: { id: string; source: 'library' | 'upload' } | { source: 'agent' } | { source: 'none' }
+  /** A library track's id, an attachment's name (`upload`), no music, or made by the agent
+   *  (`agent`): written in code, or by a music model (`engine`). */
+  music:
+    | { engine: 'ace-step' | 'code' | 'eleven-music'; source: 'agent' }
+    | { id: string; source: 'library' | 'upload' }
+    | { source: 'none' }
   ratio: '1:1' | '9:16' | '16:9'
   /** A video or web page to take the look from (never the content). */
   reference?: { kind: 'website' | 'youtube'; url: string }
@@ -32,6 +35,13 @@ export type AgentMotionSetup = {
 
 /** `GET /api/agent/motion-reel/options`: what the Motion Reel setup card offers. */
 export type AgentMotionOptions = {
+  /** The ways the agent can make the music itself, the recommended first. */
+  composers: {
+    cost: string
+    description: string
+    id: 'ace-step' | 'code' | 'eleven-music'
+    label: string
+  }[]
   defaultLengthSec: number
   defaultRatio: AgentMotionSetup['ratio']
   lengths: number[]

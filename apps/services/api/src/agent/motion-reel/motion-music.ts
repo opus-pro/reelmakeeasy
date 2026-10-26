@@ -48,8 +48,10 @@ export async function composeMusic(
   request: ComposeRequest,
   reelSec: number,
   dir: string,
+  /** A music model's key (`eleven-music`, `ace-step`); else the one Setup picked. */
+  modelKey?: string,
 ): Promise<{ file: string; limitSec?: number; model: string }> {
-  const model = resolveRole('music')
+  const model = modelKey ? { key: modelKey } : resolveRole('music')
   if (!model) throw new Error('No music model is set up: open Setup and add a fal or Gemini key.')
   const caps = capabilitiesFor('music', model.key) as null | { maxDurationSec?: number }
   const durationSec = Math.min(Math.ceil(reelSec) + EXTRA_SEC, caps?.maxDurationSec ?? 120)

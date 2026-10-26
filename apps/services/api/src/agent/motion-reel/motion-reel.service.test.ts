@@ -4,6 +4,7 @@ import path from 'node:path'
 
 import type { AgentMotionSetupView, AgentSession } from '@shared/types/api/agent'
 
+import { composeMusic } from './motion-music'
 import { prepareReelProject } from './motion-project'
 import { MotionReelService, type MotionReelSessions } from './motion-reel.service'
 
@@ -19,7 +20,24 @@ jest.mock('./motion-project', () => ({
     const projectDir = path.join(o.workspace, 'reel')
     fs.mkdirSync(projectDir, { recursive: true })
     fs.writeFileSync(path.join(projectDir, 'brief.md'), '# Brief\n')
-    return { grid: null, projectDir, reel: { bars: 8, beatsPerBar: 4, bpm: 128, lengthSec: 15 } }
+    return {
+      grid: null,
+      projectDir,
+      reel: { bars: 8, beatsPerBar: 4, beats: [], bpm: 128, lengthSec: 15, strongHits: [] },
+    }
+  }),
+}))
+jest.mock('./motion-render', () => ({
+  ...jest.requireActual('./motion-render'),
+  typeCheck: jest.fn(async () => null),
+}))
+jest.mock('./motion-music', () => ({
+  ...jest.requireActual('./motion-music'),
+  composeMusic: jest.fn(async (_request: unknown, _sec: number, dir: string, key?: string) => {
+    fs.mkdirSync(dir, { recursive: true })
+    const file = path.join(dir, `composed-${Date.now()}.mp3`)
+    fs.writeFileSync(file, 'mp3')
+    return { file, model: key ?? 'role' }
   }),
 }))
 jest.mock('./motion-reference', () => ({
@@ -125,7 +143,7 @@ describe('MotionReelService, an Advanced chat', () => {
       title: 'Composed: punchy synthwave',
     })
     expect(again.text).toMatch(/music: Composed: punchy synthwave/)
-    expect(again.text).toMatch(/The music you composed is kept/)
+    expect(again.text).toMatch(/The music you made is kept/)
     expect(again.text).not.toMatch(/compose it with motion_music/)
   })
 
@@ -154,4 +172,81 @@ describe('MotionReelService, an Advanced chat', () => {
     expect(result.text).toMatch(/setup card/)
     expect(updated).toEqual([])
   })
+})
+
+describe('the music the agent makes', () => {
+  async function setUp(music?: Record<string, unknown>) {
+    const ctx = setup('motion_free')
+    await ctx.service.callTool('s1', 'motion_setup', { ...ARGS, ...(music ?? { music: 'agent' }) })
+    jest.mocked(prepareReelProject).mockClear()
+    jest.mocked(composeMusic).mockClear()
+    return ctx
+  }
+  const SCORE = {
+    bpm: 128,
+    groove: 'four',
+    hits: [{ bar: 3, beat: 1, kind: 'hit' }],
+    key: 'D',
+    mode: 'minor',
+    sections: [
+      { bars: 2, energy: 1, name: 'intro' },
+      { bars: 5, energy: 3, name: 'drop' },
+    ],
+  }
+
+  it("renders a score written in code, its grid exactly the score's, the reel ending on its final hit", async () => {
+    const { service, updated } = await setUp()
+    // 15 s at 128 BPM is 8 bars: the score fills 7, the last holds the final hit.
+    const result = await service.callTool('s1', 'motion_music', { score: JSON.stringify(SCORE) })
+    expect(result.success).toBe(true)
+    expect(result.text).toMatch(/Rendered your score/)
+    const music = jest.mocked(prepareReelProject).mock.calls[0]?.[0].music
+    expect(music?.file).toMatch(/music\/score-\d+\.wav$/)
+    expect(fs.existsSync(music?.file ?? '')).toBe(true)
+    expect(music?.grid).toMatchObject({ beatsPerBar: 4, bpm: 128 })
+    expect(music?.grid?.downbeats.slice(0, 3)).toEqual([0, 1.875, 3.75])
+    expect(music?.grid?.strongHits[0]).toBe(13.125)
+    expect(updated.at(-1)?.musicTitle).toBe('Score: D minor, 128 BPM')
+    expect(composeMusic).not.toHaveBeenCalled()
+  }, 60000)
+
+  it('says how many bars the score needs when it is off', async () => {
+    const { service } = await setUp()
+    const result = await service.callTool('s1', 'motion_music', {
+      engine: 'code',
+      score: JSON.stringify({ ...SCORE, sections: [{ bars: 4, energy: 2, name: 'groove' }] }),
+    })
+    expect(result).toEqual({
+      success: false,
+      text: expect.stringMatching(/add up to 4 bars; at 128 BPM they must add up to 7/),
+    })
+  })
+
+  it('composes with the music model the user picked', async () => {
+    const { service, updated } = await setUp({ music: 'agent', musicEngine: 'eleven-music' })
+    const result = await service.callTool('s1', 'motion_music', { prompt: 'a bright launch track' })
+    expect(result.success).toBe(true)
+    expect(jest.mocked(composeMusic).mock.calls[0]?.[3]).toBe('eleven-music')
+    expect(updated.at(-1)?.musicTitle).toMatch(/^ElevenLabs Music: a bright launch track/)
+    expect(await service.callTool('s1', 'motion_music', { engine: 'kazoo', prompt: 'x' })).toEqual({
+      success: false,
+      text: 'engine is code, eleven-music or ace-step.',
+    })
+  })
+
+  it("keeps a score through a new frame, but not through a new length (its bars are the reel's)", async () => {
+    const { service } = await setUp()
+    await service.callTool('s1', 'motion_music', { score: JSON.stringify(SCORE) })
+    jest.mocked(prepareReelProject).mockClear()
+    await service.callTool('s1', 'motion_setup', { ...ARGS, music: 'agent', ratio: '1:1' })
+    expect(jest.mocked(prepareReelProject).mock.calls[0]?.[0].music?.grid?.bpm).toBe(128)
+    jest.mocked(prepareReelProject).mockClear()
+    const longer = await service.callTool('s1', 'motion_setup', {
+      ...ARGS,
+      lengthSec: 30,
+      music: 'agent',
+    })
+    expect(jest.mocked(prepareReelProject).mock.calls[0]?.[0].music).toBeNull()
+    expect(longer.text).toMatch(/write it as a score with motion_music/)
+  }, 60000)
 })
