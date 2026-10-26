@@ -652,6 +652,7 @@ export class AgentSessionService implements OnModuleDestroy {
       AgentUiEvent,
       {
         type:
+          | 'animation_setup_request'
           | 'brief'
           | 'flow_cancelled'
           | 'motion_setup_request'

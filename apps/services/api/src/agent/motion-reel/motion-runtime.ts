@@ -30,7 +30,7 @@ export const sfxDir = (root?: string) => path.join(motionReelDir(root), 'sfx')
 export const remotionSkillsDir = (root?: string) =>
   path.join(motionReelDir(root), 'remotion-skills')
 
-/** The runtime's package.json: Remotion and the packages a reel may use. */
+/** The runtime's package.json: Remotion and the packages a reel or an animation may use. */
 export function runtimePackageJson(): string {
   const remotion = (name: string) => [name, REMOTION_VERSION] as const
   const dependencies = Object.fromEntries([
@@ -42,13 +42,17 @@ export function runtimePackageJson(): string {
     remotion('@remotion/noise'),
     remotion('@remotion/layout-utils'),
     remotion('@remotion/google-fonts'),
+    // Claude Animation's 3D and 8-bit looks draw with three.js.
+    remotion('@remotion/three'),
+    ['@react-three/fiber', '9.8.1'],
+    ['three', '0.186.1'],
     ['react', '19.2.0'],
     ['react-dom', '19.2.0'],
   ])
   return `${JSON.stringify(
     {
       dependencies,
-      devDependencies: { '@types/react': '19.2.2', typescript: '5.9.3' },
+      devDependencies: { '@types/react': '19.2.2', '@types/three': '0.186.0', typescript: '5.9.3' },
       name: 'reelmakeeasy-motion-reel-runtime',
       private: true,
       version: '1.0.0',

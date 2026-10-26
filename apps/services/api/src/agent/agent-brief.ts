@@ -9,6 +9,8 @@ import {
 } from '@reelmakeeasy/common/motion-reel/reel-config'
 import { type GenerationProvider, modelRegistry } from '@reelmakeeasy/llm/registry'
 import type {
+  AgentAnimationSetup,
+  AgentAnimationSetupView,
   AgentHarnessName,
   AgentMode,
   AgentQuestion,
@@ -349,6 +351,27 @@ function makeMusicStep(engine: MotionMusicEngine): string {
   if (engine === 'composer')
     return 'The user asked you to compose the music: before planning, read the `reelmakeeasy-music-composer` skill, sketch the reel in bars, write `reel/music/music.mjs` and set its bpm in `reel/music/reel.config.mjs` (the sections add up to the reel\'s whole bars at that tempo), run the composer (`cd reel/music && node tools/score.mjs --no-cues`), fix every FAIL and every WARN the skill does not let you keep, then call motion_music with engine "composer" (no prompt). Then read `reel/music-map.md` again: its grid and events are your score\'s.'
   return `The user asked for music from ${MOTION_MUSIC_ENGINE_INFO[engine].label}: before planning, compose it with motion_music (engine "${engine}": one description written for this reel, its type and subject, with a tempo), then read \`reel/music-map.md\` again: the grid and events are the new track's.`
+}
+
+/** The hidden first turn of an Easy Claude Animation chat, once its card is in and
+ *  `animation/` is ready. */
+export function animationKickoff(setup: AgentAnimationSetupView): string {
+  return `[ReelMakeEasy] The user filled in the Claude Animation card and \`animation/\` is ready. ${animationNextSteps(setup, true)}`
+}
+
+/** What Claude does once `animation/` is ready: read, make the music when asked, write the
+ *  script, plan, ask. `readSkill`: read the look's skill first (a chat's first turn). */
+export function animationNextSteps(setup: AgentAnimationSetup, readSkill = false): string {
+  const skill = `reelmakeeasy-animation-${setup.lookId}`
+  return [
+    `${readSkill ? `Read the \`${skill}\` skill, then` : `Follow the \`${skill}\` skill:`} read \`animation/brief.md\` and \`animation/look.md\`.`,
+    ...(setup.music.source === 'agent'
+      ? [
+          `The user asked for music from ${MOTION_MUSIC_ENGINE_INFO[setup.music.engine].label}: make it with animation_music (engine "${setup.music.engine}") before you build.`,
+        ]
+      : []),
+    'Then write the script the skill asks for and a plan of one short line per scene, in your reply so the user reads them. Then ask with {ASK} whether to build it (options: build it, or change something).',
+  ].join(' ')
 }
 
 /** The hidden first turn of an Advanced Claude Animation chat (it has no setup card). */

@@ -33,6 +33,7 @@ import {
   type AgentAnswers,
   type AgentAttachment,
   type AgentHarnessName,
+  type AgentAnimationOptions,
   type AgentMode,
   type AgentMotionOptions,
   type AgentSession,
@@ -58,6 +59,8 @@ import { defaultHarness } from './claude/claude-config'
 import { getClaudeStatus } from './claude/claude-locator'
 import { getCodexStatus } from './codex/codex-locator'
 import { AgentEditService, EditNotReadyError } from './edit/agent-edit.service'
+import { AnimationSetupError } from './animation/animation-setup'
+import { AnimationService, AnimationSetupTakenError } from './animation/animation.service'
 import { MotionReelService, MotionSetupTakenError } from './motion-reel/motion-reel.service'
 import { MotionSetupError } from './motion-reel/motion-setup'
 import {
@@ -131,6 +134,7 @@ export class AgentController {
     private readonly chatModels: ChatModelService,
     private readonly rankings: RankingService,
     private readonly motion: MotionReelService,
+    private readonly animation: AnimationService,
   ) {}
 
   @Post('sessions/:id/questions/:questionId/answer')
@@ -552,6 +556,27 @@ export class AgentController {
     return isAnimationMode(mode)
       ? this.chatModels.animationGate(harness)
       : this.chatModels.motionGate(harness)
+  }
+
+  @Get('animation/options')
+  animationOptions(): Promise<AgentAnimationOptions> {
+    return this.animation.options()
+  }
+
+  /** A Claude Animation chat's setup card. Answers once it is checked; the project is readied in
+   *  the background and the chat opens with an `animation_setup` event (or the card comes back
+   *  with a notice saying what went wrong). */
+  @Post('sessions/:id/animation')
+  setupAnimation(@Param('id') id: string, @Body() body: unknown): { ok: true } {
+    checkSessionId(id)
+    try {
+      this.animation.setup(id, body)
+    } catch (error) {
+      if (error instanceof AnimationSetupError) throw new BadRequestException(error.message)
+      if (error instanceof AnimationSetupTakenError) throw new ConflictException(error.message)
+      throw error
+    }
+    return { ok: true }
   }
 
   /** A Motion Reel chat's setup card. Answers once it is checked; the project is readied in the
