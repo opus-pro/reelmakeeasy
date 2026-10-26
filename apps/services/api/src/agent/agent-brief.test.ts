@@ -445,3 +445,38 @@ describe('an Advanced Motion Reel', () => {
     }
   })
 })
+
+describe('Claude Animation chats', () => {
+  const view = {
+    lengthSec: 30,
+    lookId: '2d' as const,
+    lookLabel: '2D',
+    music: { engine: 'ace-step' as const, source: 'agent' as const },
+    musicTitle: null,
+    subject: 'Why honey never spoils',
+  }
+
+  it("starts with the look's skill, the music to make, the script and the plan", () => {
+    const kickoff = briefs.animationKickoff(view)
+    expect(kickoff).toMatch(/^\[ReelMakeEasy\] The user filled in the Claude Animation card/)
+    expect(kickoff).toContain('`reelmakeeasy-animation-2d`')
+    expect(kickoff).toMatch(/animation_music \(engine "ace-step"\)/)
+    expect(kickoff).toMatch(/script.*plan of one short line per scene.*\{ASK\}/)
+  })
+
+  it('makes no music when the user picked some', () => {
+    expect(briefs.animationKickoff({ ...view, music: { source: 'none' } })).not.toContain(
+      'animation_music',
+    )
+  })
+
+  it('briefs both modes to work only in animation/ and to read the look skill', () => {
+    for (const mode of ['animation', 'animation_free'] as const) {
+      const brief = briefs.briefFor({ mode }, 'claude')
+      expect(brief).toContain('Work only inside `animation/`')
+      expect(brief).toContain('reelmakeeasy-animation-2d')
+    }
+    expect(briefs.briefFor({ mode: 'animation_free' }, 'claude')).toMatch(/call animation_setup/)
+    expect(briefs.ANIMATION_FREE_KICKOFF).toMatch(/animation_setup with no arguments/)
+  })
+})
