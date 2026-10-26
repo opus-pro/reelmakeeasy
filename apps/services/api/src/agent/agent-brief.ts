@@ -370,7 +370,7 @@ export function animationNextSteps(setup: AgentAnimationSetup, readSkill = false
           `The user asked for music from ${MOTION_MUSIC_ENGINE_INFO[setup.music.engine].label}: make it with animation_music (engine "${setup.music.engine}") before you build.`,
         ]
       : []),
-    'Then write the script the skill asks for and a plan of one short line per scene. Write your reply first, as text the user reads in the chat (your thinking and files are hidden from them): the script, one "Who: words" row per line, then the plan, one line per scene. Only then ask with {ASK} whether to build it (options: build it, or change something); never ask about a script the user hasn\'t seen.',
+    'Then write the script the skill asks for and a plan of one short line per scene. End this turn with your reply, written for the user to read in the chat (your thinking and files are hidden from them): the script, one "Who: words" row per line, then the plan, one line per scene, then one last line: "Shall I build it, or change something?". Use no {ASK} card for this: the user answers in the chat.',
   ].join(' ')
 }
 
