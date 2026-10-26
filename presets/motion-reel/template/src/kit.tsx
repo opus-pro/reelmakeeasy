@@ -147,8 +147,9 @@ function lastAtOrBefore(frames: number[], frame: number): number {
 }
 
 /**
- * The music's pulse: 1 on each event's frame, easing to 0 over `decayBeats`. Drive the background
- * with the kick (`usePulse(kicks())`): a scale of `1 + 0.02 * pulse`, a glow, a grid flash.
+ * The music's pulse: 1 on each event's frame, easing to 0 over `decayBeats` (for example
+ * `usePulse(snares())` or `usePulse(kicks())` for a scale, a glow or a flash). Use it where a
+ * section calls for it, not on every kick of the whole reel: that reads as repetitive.
  * `frames` are reel frames, earliest first.
  */
 export function usePulse(frames: number[], decayBeats = 0.5): number {

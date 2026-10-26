@@ -130,7 +130,7 @@ bar count).
   is on (Murch's eye-trace [8]) and leave the rest to the music; viewers predict sync and fill the gaps [1].
 - **Hero hits stay rare**, each followed by 0.5-1.5 s of near-stillness [16]. A gap of one 16th to one beat before
   the biggest hit lands it "on air" (practice; section `gap16`/`gap8`).
-- **On the beat without cutting:** 2-4 % scale pulse on the kick · 5-10 % light pulse on the snare (WCAG-safe) ·
+- **On the beat without cutting:** 2-4 % scale pulse on the kick in a section that calls for it (never on every kick of the whole reel: it reads as repetitive) · 5-10 % light pulse on the snare (WCAG-safe) ·
   elements popping on motif notes · LFO periods of whole bars.
 
 ## 5. Cut density

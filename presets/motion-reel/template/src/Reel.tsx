@@ -1,18 +1,17 @@
 import { AbsoluteFill } from 'remotion'
 
-import { bar, bars, grid, kicks, melody } from './grid'
-import { Music, Sfx, useOvershootAt, usePulse, useReelFrame } from './kit'
+import { bar, bars, grid, melody } from './grid'
+import { Music, Sfx, useOvershootAt, useReelFrame } from './kit'
 
 /**
  * The reel. ReelMakeEasy's starter, so a render works before anything else is built: the ground
- * drifts all the time and breathes on every kick, and the title pops on the first accented melody
- * note (or the first bar). Replace it with the planned scenes.
+ * drifts all the time and the title pops on the first accented melody note (or the first bar).
+ * Replace it with the planned scenes.
  */
 export function Reel() {
-  const pulse = usePulse(kicks())
   const titleAt = melody(0.8)[0] ?? bar(0)
   const pop = useOvershootAt(titleAt)
-  // A constant drift, so the ground moves between kicks too (kicks can be bars apart).
+  // A constant drift, so the ground is never still.
   const drift = (useReelFrame() / bars(1)) * 2 * Math.PI
   return (
     <AbsoluteFill
@@ -23,8 +22,7 @@ export function Reel() {
       <AbsoluteFill
         style={{
           background: `radial-gradient(circle at ${50 + 15 * Math.sin(drift)}% ${50 + 10 * Math.cos(drift)}%, #2a2a33 0%, #0b0b0d 60%)`,
-          opacity: 0.6 + 0.4 * pulse,
-          transform: `scale(${1 + 0.02 * pulse})`,
+          opacity: 0.8,
         }}
       />
       <div

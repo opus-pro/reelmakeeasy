@@ -91,20 +91,20 @@ describe('visual events and big changes', () => {
 })
 
 describe('syncReport', () => {
-  it('passes a reel that pulses on the kick, pops on the melody and cuts into the drop', () => {
+  it('passes a reel that pops on the melody and cuts into the drop (its kick pulse reported as information)', () => {
     const report = syncReport(reel(), goodReel(), [2])
     expect(report.lines).toEqual([
       'Cuts: 1 cuts: 1 on a beat, none off the grid.',
       'Section starts: every energy change has a cut or a big change.',
       'Melody: 4 of 4 accented notes get a visual event (100%; 38% half a beat off them, by chance).',
-      'Kick pulse: 2x the change after a kick as between kicks, 1 grey levels more (the picture pulses with the kick).',
+      'Kick pulse (information only): 2x the change after a kick as between kicks, 1 grey levels more (the picture pulses with the kick).',
       'Stills: none longer than a beat.',
       'Sync: passes.',
     ])
     expect(report.passes).toBe(true)
   })
 
-  it('fails a pulse too faint to see, and a picture busy at random as answering the melody', () => {
+  it('reports a faint kick pulse without failing it, and fails a picture busy at random as answering the melody', () => {
     // A tenth of a grey level more on every kick, and a pop on every eighth note.
     const list = changes(1)
     for (let k = 0; k < 240; k += 15) for (let f = k; f < k + 3; f++) list[f] = 1.3
@@ -113,7 +113,7 @@ describe('syncReport', () => {
     const report = syncReport(reel(), list, [2])
     expect(report.kickPulseLevels).toBeCloseTo(0.3)
     expect(report.melody.chance).toBeGreaterThanOrEqual(report.melody.hit / report.melody.total)
-    expect(report.lines.at(-1)).toBe('Sync: 2 to fix: melody notes, kick pulse.')
+    expect(report.lines.at(-1)).toBe('Sync: 1 to fix: melody notes.')
   })
 
   it('wants a shot change every three bars, and only suggests marking a same-energy part', () => {
@@ -150,9 +150,9 @@ describe('syncReport', () => {
       'Cuts: 1 cuts: 0 on a beat, 1 off the grid (at beats 6.2).',
       'Section starts: 1 without a cut or a big change (drop at beat 4).',
       "Melody: 0 of 4 accented notes get a visual event (0%; 0% half a beat off them, by chance): the picture doesn't answer the melody; pop something on beats 5, 7, 9, 10.5.",
-      'Kick pulse: 1x the change after a kick as between kicks, 0 grey levels more (under 1.15x: the background does not pulse on the kick).',
+      'Kick pulse (information only): 1x the change after a kick as between kicks, 0 grey levels more (no visible pulse on the kick).',
       'Stills: 1 longer than a beat (beats 6.67-8.73).',
-      'Sync: 5 to fix: cuts off the grid, section starts, melody notes, kick pulse, stills.',
+      'Sync: 4 to fix: cuts off the grid, section starts, melody notes, stills.',
     ])
   })
 

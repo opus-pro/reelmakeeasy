@@ -10,8 +10,9 @@ import { run } from './motion-runtime'
  * The sync check: after a render, how the picture moves with the music. Each frame's visual change
  * (the mean grey-level difference from the frame before, on a small grey copy of the reel) is set
  * against the reel's music events: do the section starts get a cut or a big change, do the accented
- * melody notes make something happen, does the picture pulse on the kick, and does it ever stand
- * still. Pure functions over the change list; only `measureChanges` runs FFmpeg.
+ * melody notes make something happen, and does it ever stand still. Whether the picture pulses on
+ * the kick is reported but never required. Pure functions over the change list; only
+ * `measureChanges` runs FFmpeg.
  */
 
 /** The small grey copy the change is measured on: enough to see a shape move, cheap to decode. */
@@ -24,8 +25,9 @@ export const SYNC_FRAME_HEIGHT = 54
  * 11 shot changes (2 and 5 needed), cuts on the grid 100% and 91%, accented melody notes answered
  * 25% and 24% (0% and 21% when the same notes are moved half a beat: the chance level), kick pulse
  * 1.42x and 1.45x (1.8 and 0.56 grey levels over the change between kicks), every section start
- * where the energy changes marked, and no stills. Reels that only drift, or flicker the background
- * a grey level on the kick, fail. A reel that moves with its music like the films do passes.
+ * where the energy changes marked, and no stills. Reels that only drift fail. A reel that moves
+ * with its music like the films do passes. The kick pulse marks only label the report's
+ * information line (a pulse on every kick in every reel reads as repetitive, so it isn't required).
  */
 export const SYNC_THRESHOLDS = {
   /** Shot changes (cuts, or a big change on a section start) needed: one per this many bars. */
@@ -380,12 +382,7 @@ type Findings = Omit<SyncReport, 'lines' | 'passes'> & { cuts: number[]; reel: R
 /** The report's lines and verdict from its numbers. */
 function describe(o: Findings): SyncReport {
   const fixes: string[] = []
-  const lines = [
-    cutsLine(o, fixes),
-    sectionLine(o, fixes),
-    melodyLine(o, fixes),
-    pulseLine(o, fixes),
-  ]
+  const lines = [cutsLine(o, fixes), sectionLine(o, fixes), melodyLine(o, fixes), pulseLine(o)]
   const stillList = o.stills.map((s) => s.fromBeat + '-' + s.toBeat).join(', ')
   lines.push(
     o.stills.length
@@ -438,22 +435,18 @@ function melodyLine(o: Findings, fixes: string[]): string {
   return `${head}: the picture doesn't answer the melody${misses}.`
 }
 
-/** The kick pulse line: the ratio, and a pulse big enough to see. */
-function pulseLine(o: Findings, fixes: string[]): string {
+/**
+ * The kick pulse line, for information only: it never fails the check. A pulse on every kick in
+ * every reel reads as repetitive, so whether the picture pulses with the kick is a creative choice.
+ */
+function pulseLine(o: Findings): string {
   const { kickPulse, kickPulseLevels } = o
-  if (kickPulse === null) return 'Kick pulse: no kicks to check.'
+  if (kickPulse === null) return 'Kick pulse (information only): no kicks to check.'
   const ratio = Number.isFinite(kickPulse) ? Math.round(kickPulse * 100) / 100 : kickPulse
   const levels = Math.round(kickPulseLevels * 100) / 100
-  const head = `Kick pulse: ${ratio}x the change after a kick as between kicks, ${levels} grey levels more`
-  if (kickPulse < SYNC_THRESHOLDS.kickPulse) {
-    fixes.push('kick pulse')
-    return `${head} (under ${SYNC_THRESHOLDS.kickPulse}x: the background does not pulse on the kick).`
-  }
-  if (kickPulseLevels < SYNC_THRESHOLDS.kickPulseLevels) {
-    fixes.push('kick pulse')
-    return `${head} (under ${SYNC_THRESHOLDS.kickPulseLevels}: too faint to see; make the pulse bigger).`
-  }
-  return `${head} (the picture pulses with the kick).`
+  const pulses =
+    kickPulse >= SYNC_THRESHOLDS.kickPulse && kickPulseLevels >= SYNC_THRESHOLDS.kickPulseLevels
+  return `Kick pulse (information only): ${ratio}x the change after a kick as between kicks, ${levels} grey levels more (${pulses ? 'the picture pulses with the kick' : 'no visible pulse on the kick'}).`
 }
 
 /**
