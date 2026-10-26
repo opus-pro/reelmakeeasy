@@ -23,7 +23,7 @@ const isRecord = (v: unknown): v is Record<string, unknown> =>
 
 /** The card's music: a library track, the user's own file, made by the agent (by the music model
  *  picked; a saved setup with none, or one no longer offered, reads as the default), or none. */
-function parseMusic(music: unknown): MotionReelSetup['music'] {
+export function parseMusic(music: unknown): MotionReelSetup['music'] {
   if (!isRecord(music) || music['source'] === 'none') return { source: 'none' }
   if (music['source'] === 'agent')
     return { engine: motionMusicEngineOf(music['engine']), source: 'agent' }
@@ -127,6 +127,24 @@ export function motionSetupFromTool(
   const a = isRecord(args) ? args : {}
   const text = (key: string) => (typeof a[key] === 'string' ? (a[key] as string).trim() : '')
   if (!text('type')) return null
+  const music = musicFromTool(a, 'motion_setup')
+  const reference = userReference(text('referenceUrl'), userTexts)
+  return parseMotionSetup({
+    lengthSec: Number(a['lengthSec']),
+    music,
+    ratio: text('ratio'),
+    ...(reference ? { reference } : {}),
+    subject: text('subject'),
+    type: text('type'),
+  })
+}
+
+/**
+ * A setup tool's flat music arguments (`music`, `musicId`, `musicEngine`) as the setup card's
+ * `music` (then checked by `parseMusic`). `tool` names the tool that lists the tracks.
+ */
+export function musicFromTool(a: Record<string, unknown>, tool: string): unknown {
+  const text = (key: string) => (typeof a[key] === 'string' ? (a[key] as string).trim() : '')
   const source = text('music') || 'none'
   const musicId = text('musicId')
   const music =
@@ -141,22 +159,14 @@ export function motionSetupFromTool(
   if ((source === 'library' || source === 'upload') && !musicId)
     throw new MotionSetupError(
       source === 'library'
-        ? 'Name the track: musicId is a library track id (call motion_setup with no arguments to list them).'
+        ? `Name the track: musicId is a library track id (call ${tool} with no arguments to list them).`
         : "Name the user's file: musicId is its path, e.g. attachments/song.mp3.",
     )
   if (!['agent', 'library', 'none', 'upload'].includes(source))
     throw new MotionSetupError('music is one of library, upload, agent or none.')
   if (source === 'agent' && text('musicEngine') && !isMotionMusicEngine(text('musicEngine')))
     throw new MotionSetupError(`musicEngine is ${MOTION_MUSIC_ENGINES.join(' or ')}.`)
-  const reference = userReference(text('referenceUrl'), userTexts)
-  return parseMotionSetup({
-    lengthSec: Number(a['lengthSec']),
-    music,
-    ratio: text('ratio'),
-    ...(reference ? { reference } : {}),
-    subject: text('subject'),
-    type: text('type'),
-  })
+  return music
 }
 
 /** A reference the agent passed, only when it is a link the user typed in this chat. */

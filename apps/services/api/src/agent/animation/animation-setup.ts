@@ -1,0 +1,79 @@
+import { ANIMATION_SUBJECT_MAX, animationLook } from '@reelmakeeasy/common/animation/looks'
+import { localTtsSupports } from '@reelmakeeasy/common/tts/local-tts'
+import { ensureError } from '@reelmakeeasy/common/utils/error-handler'
+import type { AgentAnimationSetup } from '@shared/types/api/agent'
+
+import { musicFromTool, MotionSetupError, parseMusic } from '../motion-reel/motion-setup'
+
+/** A setup card (or animation_setup call) the API can't take; the message says what to fix. */
+export class AnimationSetupError extends Error {}
+
+const isRecord = (v: unknown): v is Record<string, unknown> =>
+  typeof v === 'object' && v !== null && !Array.isArray(v)
+
+/** Motion Reel's music check, its refusals as this setup's. */
+function checkedMusic(music: unknown): AgentAnimationSetup['music'] {
+  try {
+    return parseMusic(music)
+  } catch (error) {
+    if (error instanceof MotionSetupError) throw new AnimationSetupError(error.message)
+    throw error
+  }
+}
+
+/** The setup card's body, checked: every field the card sends, nothing else trusted. */
+export function parseAnimationSetup(body: unknown): AgentAnimationSetup {
+  if (!isRecord(body)) throw new AnimationSetupError('The setup is missing.')
+  const look = typeof body['lookId'] === 'string' ? animationLook(body['lookId']) : undefined
+  if (!look) throw new AnimationSetupError('Pick a look.')
+  const lengthSec = body['lengthSec']
+  if (typeof lengthSec !== 'number' || !look.lengths.includes(lengthSec))
+    throw new AnimationSetupError(`The length must be one of ${look.lengths.join(', ')} seconds.`)
+  const subject = typeof body['subject'] === 'string' ? body['subject'].trim() : ''
+  if (subject.length > ANIMATION_SUBJECT_MAX)
+    throw new AnimationSetupError(
+      `Keep what it is about under ${ANIMATION_SUBJECT_MAX} characters.`,
+    )
+  return {
+    lengthSec,
+    lookId: look.id,
+    music: checkedMusic(body['music']),
+    subject: subject || null,
+  }
+}
+
+/**
+ * An Advanced chat's `animation_setup` call, as the setup card's body (then checked by
+ * `parseAnimationSetup`): null when it names no look yet (it asks for the options).
+ */
+export function animationSetupFromTool(args: unknown): AgentAnimationSetup | null {
+  const a = isRecord(args) ? args : {}
+  const lookId = typeof a['lookId'] === 'string' ? a['lookId'].trim() : ''
+  if (!lookId) return null
+  let music: unknown
+  try {
+    music = musicFromTool(a, 'animation_setup')
+  } catch (error) {
+    if (error instanceof MotionSetupError) throw new AnimationSetupError(error.message)
+    throw ensureError(error)
+  }
+  return parseAnimationSetup({
+    lengthSec: Number(a['lengthSec']),
+    lookId,
+    music,
+    subject: typeof a['subject'] === 'string' ? a['subject'] : null,
+  })
+}
+
+/** Where voices can be made: `designed` (Qwen3 voice design, from a description) and `preset`
+ *  (a Kokoro voice), each on this computer, on fal (paid, needs FAL_KEY), or nowhere. */
+export type VoiceReadiness = {
+  designed: 'fal' | 'local' | null
+  preset: 'fal' | 'local' | null
+}
+
+export async function voiceReadiness(): Promise<VoiceReadiness> {
+  const fal = process.env['FAL_KEY']?.trim() ? 'fal' : null
+  const [qwen3, kokoro] = await Promise.all([localTtsSupports('qwen3'), localTtsSupports('kokoro')])
+  return { designed: qwen3 ? 'local' : fal, preset: kokoro ? 'local' : fal }
+}
