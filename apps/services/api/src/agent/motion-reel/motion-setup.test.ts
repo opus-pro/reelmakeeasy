@@ -11,7 +11,7 @@ const base = {
   lengthSec: 15,
   music: { id: 'pulse-drive', source: 'library' },
   ratio: '16:9',
-  styleId: 'hud-showreel',
+  type: 'showreel',
   subject: 'ReelMakeEasy: make videos on your own computer',
 }
 
@@ -45,8 +45,18 @@ describe('parseMotionSetup', () => {
     expect(() => parseMotionSetup({ ...base, subject: 'x'.repeat(601) })).toThrow(MotionSetupError)
   })
 
-  it('refuses unknown styles, lengths, shapes and tracks', () => {
-    expect(() => parseMotionSetup({ ...base, styleId: 'nope' })).toThrow('Pick a style.')
+  it('takes the kind of reel, and reads a card from before reel types by its old style', () => {
+    expect(parseMotionSetup({ ...base, type: 'launch' }).type).toBe('launch')
+    const { type: _type, ...noType } = base
+    expect(parseMotionSetup({ ...noType, styleId: 'product-ui-launch' }).type).toBe('launch')
+    expect(parseMotionSetup({ ...noType, styleId: 'hud-showreel' }).type).toBe('showreel')
+    expect(parseMotionSetup({ ...noType, styleId: 'retro-pixel' })).not.toHaveProperty('styleId')
+  })
+
+  it('refuses unknown types, lengths, shapes and tracks', () => {
+    const { type: _type, ...noType } = base
+    expect(() => parseMotionSetup(noType)).toThrow('Pick the kind of reel: launch or showreel.')
+    expect(() => parseMotionSetup({ ...base, type: 'nope' })).toThrow(/Pick the kind of reel/)
     expect(() => parseMotionSetup({ ...base, lengthSec: 17 })).toThrow(MotionSetupError)
     expect(() => parseMotionSetup({ ...base, ratio: '4:3' })).toThrow(MotionSetupError)
     expect(() => parseMotionSetup({ ...base, music: { id: 'nope', source: 'library' } })).toThrow(
@@ -127,11 +137,11 @@ describe('motionSetupFromTool', () => {
     music: 'library',
     musicId: 'pulse-drive',
     ratio: '16:9',
-    styleId: 'hud-showreel',
+    type: 'showreel',
     subject: 'ReelMakeEasy: make videos on your own computer',
   }
 
-  it('asks for the options when it names no style', () => {
+  it('asks for the options when it names no type', () => {
     expect(motionSetupFromTool({}, said)).toBeNull()
     expect(motionSetupFromTool(undefined, said)).toBeNull()
   })
@@ -141,11 +151,14 @@ describe('motionSetupFromTool', () => {
       lengthSec: 15,
       music: { id: 'pulse-drive', source: 'library' },
       ratio: '16:9',
-      styleId: 'hud-showreel',
+      type: 'showreel',
       subject: args.subject,
     })
     expect(() => motionSetupFromTool({ ...args, lengthSec: 17 }, said)).toThrow(MotionSetupError)
-    expect(() => motionSetupFromTool({ ...args, styleId: 'nope' }, said)).toThrow('Pick a style.')
+    expect(() => motionSetupFromTool({ ...args, type: 'nope' }, said)).toThrow(
+      /Pick the kind of reel/,
+    )
+    expect(motionSetupFromTool({ ...args, type: 'launch' }, said)?.type).toBe('launch')
   })
 
   it("takes the user's file by its path, and music the agent composes or none", () => {

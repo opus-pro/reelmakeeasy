@@ -30,8 +30,8 @@ type MusicPick =
   | { kind: 'none' }
   | { kind: 'upload'; name: string; title: string }
 type Ratio = AgentMotionSetup['ratio']
+type ReelType = AgentMotionOptions['types'][number]
 type ReferenceKind = 'none' | 'website' | 'youtube'
-type Style = AgentMotionOptions['styles'][number]
 
 const CARD_CLASS =
   'flex w-full max-w-2xl flex-col gap-4 rounded-xl border border-white/10 bg-fill-secondary/50 p-4'
@@ -50,7 +50,8 @@ const RATIO_LABEL: Record<Ratio, string> = {
 }
 
 /**
- * A Motion Reel chat's first step: the style (one of nine), what the reel is about, an optional
+ * A Motion Reel chat's first step: the kind of reel (a product launch or a motion reel; the agent
+ * decides the look), what the reel is about, an optional
  * reference (a YouTube video or a website to take the look from), the length, the frame and the
  * music. Sending it locks the card while ReelMakeEasy readies the project; the chat then opens
  * and the card shows what was chosen.
@@ -62,7 +63,7 @@ export function MotionReelSetupCard({ entry, onSubmit, sessionId }: MotionReelSe
 
 function ChosenSetup({ setup }: { setup: AgentMotionSetupView }) {
   const facts = [
-    setup.styleLabel,
+    setup.typeLabel,
     `${Math.round(setup.reelSec)} s · ${setup.bars} bars at ${Math.round(setup.bpm)} BPM`,
     setup.ratio,
     setup.musicTitle
@@ -92,8 +93,8 @@ function ChosenSetup({ setup }: { setup: AgentMotionSetupView }) {
   )
 }
 
-function defaultMusic(options: AgentMotionOptions, style: Style | undefined): MusicPick {
-  const trackId = style?.defaultTrackId ?? options.tracks[0]?.id
+function defaultMusic(options: AgentMotionOptions): MusicPick {
+  const trackId = options.tracks[0]?.id
   return trackId ? { kind: 'library', trackId } : { kind: 'none' }
 }
 
@@ -102,7 +103,7 @@ function Header() {
     <div className="flex flex-col gap-1">
       <p className="text-sm font-semibold text-primary">Set up your Motion Reel</p>
       <p className="text-xs text-secondary">
-        Pick a look and say what it&apos;s about. Every cut, move and sound lands on the
+        Pick the kind of reel and say what it&apos;s about. Every cut, move and sound lands on the
         music&apos;s beat.
       </p>
     </div>
@@ -117,7 +118,7 @@ function OpenSetup({ onSubmit, sessionId }: Omit<MotionReelSetupCardProps, 'entr
         <Header />
         {error ? (
           <Button className="w-fit" onClick={retry} size="sm" variant="secondary">
-            Couldn&apos;t load the styles. Try again
+            Couldn&apos;t load the setup. Try again
           </Button>
         ) : (
           <Spinner className="text-secondary" />
@@ -132,30 +133,19 @@ function SetupForm({
   options,
   sessionId,
 }: Omit<MotionReelSetupCardProps, 'entry'> & { options: AgentMotionOptions }) {
-  const [styleId, setStyleId] = useState(options.styles[0]?.id ?? '')
+  const [type, setType] = useState<ReelType['id'] | undefined>(options.types[0]?.id)
   const [subject, setSubject] = useState('')
   const [lengthSec, setLengthSec] = useState(options.defaultLengthSec)
   const [ratio, setRatio] = useState<Ratio>(options.defaultRatio)
   const [referenceKind, setReferenceKind] = useState<ReferenceKind>('none')
   const [referenceUrl, setReferenceUrl] = useState('')
-  const [music, setMusic] = useState<MusicPick>(() => defaultMusic(options, options.styles[0]))
-  const [musicTouched, setMusicTouched] = useState(false)
+  const [music, setMusic] = useState<MusicPick>(() => defaultMusic(options))
   const [pending, setPending] = useState(false)
   const inFlightRef = useRef(false)
 
-  const pickStyle = (style: Style) => {
-    setStyleId(style.id)
-    // The style's own track follows it, until the user picks the music themselves.
-    if (!musicTouched) setMusic(defaultMusic(options, style))
-  }
-  const pickMusic = (next: MusicPick) => {
-    setMusicTouched(true)
-    setMusic(next)
-  }
-
-  const ready = !!subject.trim() && !!styleId && (referenceKind === 'none' || !!referenceUrl.trim())
+  const ready = !!subject.trim() && !!type && (referenceKind === 'none' || !!referenceUrl.trim())
   const submit = async () => {
-    if (!ready || inFlightRef.current) return
+    if (!ready || !type || inFlightRef.current) return
     inFlightRef.current = true
     setPending(true)
     const ok = await onSubmit({
@@ -172,8 +162,8 @@ function SetupForm({
       ...(referenceKind === 'none'
         ? {}
         : { reference: { kind: referenceKind, url: referenceUrl.trim() } }),
-      styleId,
       subject: subject.trim(),
+      type,
     })
     // On success stay locked until the chat opens (`motion_setup`) or the card comes back.
     if (!ok) {
@@ -186,7 +176,7 @@ function SetupForm({
     <div className={CARD_CLASS}>
       <Header />
       <fieldset className="flex flex-col gap-4" disabled={pending}>
-        <StyleGrid onPick={pickStyle} selected={styleId} styles={options.styles} />
+        <TypePicker onPick={setType} selected={type} types={options.types} />
         <label className="flex flex-col gap-1.5">
           <span className={LABEL_CLASS}>What&apos;s it about?</span>
           <textarea
@@ -220,7 +210,7 @@ function SetupForm({
         <MusicPicker
           composers={options.composers}
           music={music}
-          onPick={pickMusic}
+          onPick={setMusic}
           sessionId={sessionId}
           tracks={options.tracks}
         />
@@ -242,48 +232,7 @@ function SetupForm({
   )
 }
 
-function StyleGrid({
-  onPick,
-  selected,
-  styles,
-}: {
-  onPick: (style: Style) => void
-  selected: string
-  styles: Style[]
-}) {
-  const current = styles.find((style) => style.id === selected)
-  return (
-    <div className="flex flex-col gap-1.5">
-      <span className={LABEL_CLASS}>Style</span>
-      <div className="grid grid-cols-3 gap-2" role="radiogroup">
-        {styles.map((style) => (
-          <button
-            aria-checked={style.id === selected}
-            className={cn(
-              'group flex flex-col overflow-hidden rounded-lg border text-left transition-colors',
-              style.id === selected
-                ? 'border-white/70 ring-1 ring-white/50'
-                : 'border-white/10 hover:border-white/30',
-            )}
-            key={style.id}
-            onClick={() => onPick(style)}
-            role="radio"
-            title={style.description}
-            type="button"
-          >
-            <StyleThumb style={style} />
-            <span className="truncate px-2 py-1.5 text-xs font-medium text-primary">
-              {style.label}
-            </span>
-          </button>
-        ))}
-      </div>
-      {current && <p className="text-xs text-secondary">{current.description}</p>}
-    </div>
-  )
-}
-
-/** A style's thumbnail, or (until the presets have one) its palette. */
+/** A row of choices, one of them picked. */
 function ChipRow<T extends number | string>({
   label,
   onPick,
@@ -487,22 +436,45 @@ function ReferenceField({
   )
 }
 
-function StyleThumb({ style }: { style: Style }) {
-  if (style.thumbnailUrl)
-    return <img alt="" className="aspect-video w-full object-cover" src={style.thumbnailUrl} />
-  const [background, ...rest] = style.palette
-  return (
-    <span className="relative flex aspect-video w-full items-end gap-1 p-2" style={{ background }}>
-      {rest.slice(0, 4).map((color) => (
-        <span className="h-3 flex-1 rounded-sm" key={color} style={{ background: color }} />
-      ))}
-    </span>
-  )
-}
-
 function TrackPreview({ src }: { src: string }) {
   const ref = useRef<HTMLAudioElement>(null)
   // A new track: the player loads it from the start.
   useEffect(() => ref.current?.load(), [src])
   return <audio className="h-8 w-full max-w-sm" controls preload="none" ref={ref} src={src} />
+}
+
+function TypePicker({
+  onPick,
+  selected,
+  types,
+}: {
+  onPick: (type: ReelType['id']) => void
+  selected: ReelType['id'] | undefined
+  types: ReelType[]
+}) {
+  return (
+    <div className="flex flex-col gap-1.5">
+      <span className={LABEL_CLASS}>Kind of reel</span>
+      <div aria-label="Kind of reel" className="grid grid-cols-2 gap-2" role="radiogroup">
+        {types.map((type) => (
+          <button
+            aria-checked={type.id === selected}
+            className={cn(
+              'flex flex-col gap-0.5 rounded-lg border px-3 py-2 text-left transition-colors',
+              type.id === selected
+                ? 'border-white/70 bg-white/10 ring-1 ring-white/50'
+                : 'border-white/10 hover:border-white/30',
+            )}
+            key={type.id}
+            onClick={() => onPick(type.id)}
+            role="radio"
+            type="button"
+          >
+            <span className="text-sm font-medium text-primary">{type.label}</span>
+            <span className="text-xs text-secondary">{type.description}</span>
+          </button>
+        ))}
+      </div>
+    </div>
+  )
 }

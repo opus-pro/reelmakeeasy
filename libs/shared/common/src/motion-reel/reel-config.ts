@@ -1,6 +1,8 @@
 import type { BeatGrid, MusicEvents, ReelFit } from './beat-grid'
 import { steadyEvents } from './music-events'
-import type { MotionReelRatio, MotionReelStyleId } from './styles'
+import type { MotionReelType } from './reel-type'
+
+export type MotionReelRatio = '1:1' | '9:16' | '16:9'
 
 /** The reel lengths the setup card offers, in seconds (the grid rounds to whole bars). */
 export const MOTION_REEL_LENGTHS = [10, 15, 30, 60] as const
@@ -79,8 +81,8 @@ export type MotionReelSetup = {
   music: MotionReelMusic
   ratio: MotionReelRatio
   reference?: MotionReelReference
-  styleId: MotionReelStyleId
   subject: string
+  type: MotionReelType
 }
 
 /** `public/reel.json` in the reel's Remotion project: the template's `grid.ts` reads it. */
@@ -104,7 +106,8 @@ export type ReelJson = {
   width: number
 }
 
-/** The reel.json for a fitted track (or, with no music, a plain grid at `fallbackBpm`). */
+/** The reel.json for a fitted track (or, with no music, a plain grid at `fallbackBpm`, 120 by
+ *  default). */
 export function buildReelJson(o: {
   fallbackBpm?: number
   fit: null | ReelFit

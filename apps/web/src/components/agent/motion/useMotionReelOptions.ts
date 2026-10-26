@@ -7,7 +7,7 @@ import { useApi } from '@/hooks/useApi'
 
 let cached: AgentMotionOptions | null = null
 
-/** What the Motion Reel setup card offers (styles, music, lengths, shapes), loaded once. */
+/** What the Motion Reel setup card offers (reel types, music, lengths, shapes), loaded once. */
 export function useMotionReelOptions(): {
   error: boolean
   options: AgentMotionOptions | null

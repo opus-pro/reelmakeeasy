@@ -20,8 +20,8 @@ const SETUP: AgentMotionSetupView = {
   musicTitle: null,
   ratio: '16:9',
   reelSec: 15,
-  styleId: 'hud-showreel',
-  styleLabel: 'HUD Showreel',
+  type: 'showreel',
+  typeLabel: 'Motion reel',
   subject: 'A reel',
 } as AgentMotionSetupView
 
@@ -112,7 +112,7 @@ describe('motionTasks', () => {
       tasks({ calls: [call('motion_setup', false, 'That style is unknown.\nmore')] }).setup,
     ).toEqual({ details: ['more'], result: 'That style is unknown.', state: 'failed' })
     expect(tasks({ setup: SETUP }).setup).toEqual({
-      result: 'HUD Showreel, 16:9, 15 s (8 bars at 128 BPM)',
+      result: 'Motion reel, 16:9, 15 s (8 bars at 128 BPM)',
       state: 'done',
     })
   })

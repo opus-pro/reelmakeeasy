@@ -1,4 +1,4 @@
-import type { AgentSessionListItem } from '@shared/types/api/agent'
+import type { AgentMotionSetupView, AgentSessionListItem } from '@shared/types/api/agent'
 
 import {
   AGENT_MODE_LABEL,
@@ -6,6 +6,7 @@ import {
   chatTitleFrom,
   DEFAULT_CHAT_TITLE,
   isUnsetChatTitle,
+  motionSetupViewFromStored,
   sessionRowMenu,
   sessionRowStatus,
   sortSessionsByActivity,
@@ -201,5 +202,33 @@ describe('visibleSessions', () => {
   it('keeps the active chat even with no mode chosen yet', () => {
     const rows = [item({ id: 'a', mode: null }), item({ id: 'b', mode: 'autonomous' })]
     expect(visibleSessions(rows, 'a').map((r) => r.id)).toEqual(['a', 'b'])
+  })
+})
+
+describe('motionSetupViewFromStored', () => {
+  it('loads a setup saved with a style as its type, without the style fields', () => {
+    const saved = {
+      bars: 8,
+      bpm: 128,
+      lengthSec: 15,
+      music: { source: 'none' },
+      musicTitle: null,
+      ratio: '16:9',
+      reelSec: 15,
+      styleId: 'product-ui-launch',
+      styleLabel: 'Product UI Launch',
+      subject: 'ReelMakeEasy',
+    } as unknown as AgentMotionSetupView
+    const view = motionSetupViewFromStored(saved)
+    expect(view).toMatchObject({ type: 'launch', typeLabel: 'Product launch' })
+    expect(view).not.toHaveProperty('styleId')
+    expect(view).not.toHaveProperty('styleLabel')
+    expect(
+      motionSetupViewFromStored({ ...saved, styleId: 'glass-neon' } as AgentMotionSetupView),
+    ).toMatchObject({ type: 'showreel', typeLabel: 'Motion reel' })
+    // A setup saved with a type stays as it is.
+    const current = { ...view, type: 'showreel', typeLabel: 'Motion reel' } as const
+    expect(motionSetupViewFromStored(current)).toEqual(current)
+    expect(motionSetupViewFromStored(undefined)).toBeUndefined()
   })
 })

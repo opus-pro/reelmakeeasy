@@ -28,9 +28,11 @@ export type AgentMotionSetup = {
   ratio: '1:1' | '9:16' | '16:9'
   /** A video or web page to take the look from (never the content). */
   reference?: { kind: 'website' | 'youtube'; url: string }
-  styleId: string
   /** What the reel is about: the words and facts it may use. */
   subject: string
+  /** The kind of reel: a product launch (one product, shown working) or a motion reel (pure
+   *  show-off motion). The agent decides the look. */
+  type: 'launch' | 'showreel'
 }
 
 /** `GET /api/agent/motion-reel/options`: what the Motion Reel setup card offers. */
@@ -46,19 +48,10 @@ export type AgentMotionOptions = {
   defaultRatio: AgentMotionSetup['ratio']
   lengths: number[]
   ratios: AgentMotionSetup['ratio'][]
-  styles: {
-    /** The track the card picks with this style. */
-    defaultTrackId: null | string
-    description: string
-    id: string
-    label: string
-    /** Background first, then text, then accents (hex). */
-    palette: string[]
-    ratios: AgentMotionSetup['ratio'][]
-    /** A frame of the style (null until the preset pack has one). */
-    thumbnailUrl: null | string
-  }[]
-  tracks: { bpm: number; id: string; previewUrl: string; styles: string[]; title: string }[]
+  /** The library tracks, the card's default first. */
+  tracks: { bpm: number; id: string; previewUrl: string; title: string }[]
+  /** The kinds of reel, the card's default first. */
+  types: { description: string; id: AgentMotionSetup['type']; label: string }[]
 }
 
 /** The setup a Motion Reel chat settled on, as its card shows it once chosen. */
@@ -68,7 +61,8 @@ export type AgentMotionSetupView = AgentMotionSetup & {
   bpm: number
   musicTitle: null | string
   reelSec: number
-  styleLabel: string
+  /** The type's label (e.g. "Product launch"). */
+  typeLabel: string
 }
 
 export type AgentPlanStep = { status: 'completed' | 'inProgress' | 'pending'; step: string }

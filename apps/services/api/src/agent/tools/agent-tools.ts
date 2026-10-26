@@ -156,7 +156,7 @@ export const AGENT_TOOLS: Record<AgentToolName, DynamicToolSpec> = {
   },
   motion_setup: {
     description:
-      'Set up an Advanced Motion Reel (free, quick; the first time it also installs Remotion, a few minutes): readies reel/ with the style card, the brief, the music trimmed to whole bars and its beat grid, exactly as the setup card does in Easy. Call it with no arguments to get the styles, lengths, frames and library tracks. Call it with everything once the user has settled it, and again only when they change the style, length, frame, music or reference (the scenes and plan are kept). The reply says what to read next.',
+      'Set up an Advanced Motion Reel (free, quick; the first time it also installs Remotion, a few minutes): readies reel/ with the brief, the music trimmed to whole bars and its beat grid, exactly as the setup card does in Easy. Call it with no arguments to get the reel types, lengths, frames and library tracks. Call it with everything once the user has settled it, and again only when they change the type, length, frame, music or reference (the scenes and plan are kept). The reply says what to read next.',
     inputSchema: {
       additionalProperties: false,
       properties: {
@@ -187,13 +187,15 @@ export const AGENT_TOOLS: Record<AgentToolName, DynamicToolSpec> = {
             'Optional: a YouTube video or a website the user pasted in this chat, to take the look from.',
           type: 'string',
         },
-        styleId: {
-          description: 'The style id (from the list this tool answers with no arguments).',
-          type: 'string',
-        },
         subject: {
           description:
             'What the reel is about: the words, names and facts it may show (up to 600 characters).',
+          type: 'string',
+        },
+        type: {
+          description:
+            'The kind of reel: launch (a product launch: make one product memorable by showing it working) or showreel (a motion reel: pure show-off motion that looks super cool).',
+          enum: ['launch', 'showreel'],
           type: 'string',
         },
       },
@@ -203,7 +205,7 @@ export const AGENT_TOOLS: Record<AgentToolName, DynamicToolSpec> = {
   },
   motion_still: {
     description:
-      'Render single frames of the Motion Reel in reel/ (free, a few seconds) and get them back as pictures to look at. Pass the moments as beats (e.g. "0, 4, 8.5, 16": beat numbers from the reel\'s first beat, as grid.ts counts them). Look at each one and fix what is cut off, too small, crowded or off-style before rendering. The user sees them too.',
+      'Render single frames of the Motion Reel in reel/ (free, a few seconds) and get them back as pictures to look at. Pass the moments as beats (e.g. "0, 4, 8.5, 16": beat numbers from the reel\'s first beat, as grid.ts counts them). Look at each one and fix what is cut off, too small or crowded before rendering. The user sees them too.',
     inputSchema: {
       additionalProperties: false,
       properties: {
@@ -617,9 +619,9 @@ export function toolSummary(tool: string, args: unknown): string {
     return `Putting the new picture in as keyframe ${String(a.keyframe ?? '')}`.trim()
   if (tool === 'generate_image') return 'Making a preview image'
   if (tool === 'motion_setup')
-    return typeof a.styleId === 'string' && a.styleId.trim()
+    return typeof a.type === 'string' && a.type.trim()
       ? 'Setting up the reel'
-      : 'Looking at the styles and music'
+      : 'Looking at the reel types and music'
   if (tool === 'motion_music') return 'Composing the music'
   if (tool === 'motion_still') return 'Looking at frames of the reel'
   if (tool === 'motion_render') return 'Rendering the reel'

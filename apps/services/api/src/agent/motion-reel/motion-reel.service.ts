@@ -2,11 +2,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 
 import { Logger } from '@reelmakeeasy/common/logger'
-import {
-  defaultTrackFor,
-  motionReelTrack,
-  motionReelTracks,
-} from '@reelmakeeasy/common/motion-reel/music'
+import { motionReelTrack, motionReelTracks } from '@reelmakeeasy/common/motion-reel/music'
 import {
   DEFAULT_MOTION_REEL_LENGTH,
   DEFAULT_MOTION_REEL_RATIO,
@@ -19,7 +15,12 @@ import {
   motionMusicEngineOf,
   type MotionReelSetup,
 } from '@reelmakeeasy/common/motion-reel/reel-config'
-import { MOTION_REEL_STYLES, motionReelStyle } from '@reelmakeeasy/common/motion-reel/styles'
+import {
+  DEFAULT_MOTION_REEL_TYPE,
+  MOTION_REEL_TYPE_INFO,
+  MOTION_REEL_TYPES,
+  motionReelTypeOf,
+} from '@reelmakeeasy/common/motion-reel/reel-type'
 import { storeUri } from '@reelmakeeasy/common/storage/address'
 import { presetPath, presetUrl } from '@reelmakeeasy/common/storage/presets'
 import { uploadToStore } from '@reelmakeeasy/common/storage/stored-files'
@@ -166,22 +167,13 @@ export class MotionReelService {
       defaultRatio: DEFAULT_MOTION_REEL_RATIO,
       lengths: [...MOTION_REEL_LENGTHS],
       ratios: [...MOTION_REEL_RATIOS],
-      styles: MOTION_REEL_STYLES.map((style) => ({
-        defaultTrackId: defaultTrackFor(style.id)?.id ?? null,
-        description: style.description,
-        id: style.id,
-        label: style.label,
-        palette: [...style.palette],
-        ratios: [...style.ratios],
-        thumbnailUrl: thumbnailUrl(style.id),
-      })),
       tracks: motionReelTracks().map((track) => ({
         bpm: track.bpm,
         id: track.id,
         previewUrl: presetUrl(track.file),
-        styles: track.styles,
         title: track.title,
       })),
+      types: MOTION_REEL_TYPES.map((id) => ({ id, ...MOTION_REEL_TYPE_INFO[id] })),
     }
   }
 
@@ -305,13 +297,11 @@ export class MotionReelService {
   private optionsText(): string {
     const options = this.options()
     return [
-      'Styles (styleId: label, frames it suits, then what it is):',
-      ...options.styles.map(
-        (s) => `- ${s.id}: ${s.label} (${s.ratios.join(', ')}). ${s.description}`,
-      ),
+      'Types (type: label, then what it is):',
+      ...options.types.map((t) => `- ${t.id}: ${t.label}. ${t.description}`),
       `Lengths (lengthSec): ${options.lengths.join(', ')} (default ${options.defaultLengthSec}). Frames (ratio): ${options.ratios.join(', ')} (default ${options.defaultRatio}).`,
-      'Library tracks (music "library", musicId: title, tempo, the styles it suits):',
-      ...options.tracks.map((t) => `- ${t.id}: ${t.title}, ${t.bpm} BPM (${t.styles.join(', ')})`),
+      'Library tracks (music "library", musicId: title, tempo):',
+      ...options.tracks.map((t) => `- ${t.id}: ${t.title}, ${t.bpm} BPM`),
       'Or music "upload" (the user\'s own file through the paperclip; musicId: its path), "none", or "agent": you make it with motion_music right after the setup, in the way the user picks (musicEngine):',
       ...MOTION_MUSIC_ENGINES.map(
         (e) =>
@@ -380,14 +370,13 @@ export class MotionReelService {
         path.join(prepared.projectDir, 'brief.md'),
         `- **Reference files:** \`${REFERENCE_DIR}/\`: ${referenceNote}\n`,
       )
-    const style = motionReelStyle(setup.styleId)
     const view: AgentMotionSetupView = {
       ...setup,
       bars: prepared.reel.bars,
       bpm: prepared.reel.bpm,
       musicTitle: music?.title ?? null,
       reelSec: prepared.reel.lengthSec,
-      styleLabel: style?.label ?? setup.styleId,
+      typeLabel: MOTION_REEL_TYPE_INFO[setup.type].label,
     }
     return { hasReference: !!referenceNote, view }
   }
@@ -434,7 +423,7 @@ export class MotionReelService {
   }
 
   /**
-   * An Advanced chat's motion_setup: with no style, the options to choose from; otherwise the
+   * An Advanced chat's motion_setup: with no type, the options to choose from; otherwise the
    * setup checked like the card's (a reference only from a link the user typed), the project
    * readied, the chat's setup card shown as chosen, and what to read next. Again later: the
    * project is readied anew around the agent's scenes and plan.
@@ -461,7 +450,7 @@ export class MotionReelService {
     }
     const again = !!session.motionReel
     // Music the agent already made for this reel stays through a new setup made the same way (a
-    // new style or frame needs no new paid track): its newest take, fitted to the length asked
+    // new type or frame needs no new paid track): its newest take, fitted to the length asked
     // for now. A score an earlier version wrote only while the length holds (its bars were the
     // old reel's).
     const before = session.motionReel
@@ -484,7 +473,7 @@ export class MotionReelService {
       return {
         success: true,
         text: [
-          `\`reel/\` is ${again ? 'set up again' : 'ready'}: ${view.styleLabel}, ${view.ratio}, ${view.reelSec} s (${view.bars} bars at ${view.bpm} BPM), ${musicNote}. The user sees the setup in the chat.`,
+          `\`reel/\` is ${again ? 'set up again' : 'ready'}: ${view.typeLabel}, ${view.ratio}, ${view.reelSec} s (${view.bars} bars at ${view.bpm} BPM), ${musicNote}. The user sees the setup in the chat.`,
           ...(composed
             ? [
                 'The music you made is kept: make it again only if the user asks for different music.',
@@ -497,7 +486,7 @@ export class MotionReelService {
           ),
           ...(again
             ? [
-                'Your scenes and plan were kept: re-check their timing against the new grid and the style card before rendering.',
+                'Your scenes and plan were kept: re-check their timing against the new grid before rendering.',
               ]
             : []),
         ].join(' '),
@@ -543,8 +532,9 @@ function setupFrom(view: AgentMotionSetupView): MotionReelSetup {
         : view.music,
     ratio: view.ratio,
     ...(view.reference ? { reference: view.reference } : {}),
-    styleId: view.styleId as MotionReelSetup['styleId'],
     subject: view.subject,
+    // A chat saved when reels had styles reads as its type.
+    type: motionReelTypeOf(view) ?? DEFAULT_MOTION_REEL_TYPE,
   }
 }
 
@@ -590,14 +580,4 @@ function newestMade(projectDir: string): null | string {
     .sort((a, b) => a.time - b.time)
     .at(-1)
   return newest ? path.join(dir, newest.name) : null
-}
-
-/** A style's thumbnail in the presets, when there is one. */
-function thumbnailUrl(styleId: string): null | string {
-  const key = `motion-reel/styles/${styleId}.jpg`
-  try {
-    return fs.existsSync(presetPath(key)) ? presetUrl(key) : null
-  } catch {
-    return null
-  }
 }

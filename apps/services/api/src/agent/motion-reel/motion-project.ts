@@ -17,7 +17,10 @@ import {
   type MotionReelSetup,
   type ReelJson,
 } from '@reelmakeeasy/common/motion-reel/reel-config'
-import { motionReelStyle, renderStyleCard } from '@reelmakeeasy/common/motion-reel/styles'
+import {
+  MOTION_REEL_FALLBACK_BPM,
+  MOTION_REEL_TYPE_INFO,
+} from '@reelmakeeasy/common/motion-reel/reel-type'
 import { presetPath } from '@reelmakeeasy/common/storage/presets'
 
 import { composerTitle, installComposer } from './motion-composer'
@@ -45,21 +48,19 @@ export type ReelMusicSource = { bpm?: number; file: string; grid?: BeatGrid; tit
 
 /**
  * Sets up the reel's project in `workspace/reel`: the template, a link to the shared runtime,
- * the sound pack, the music trimmed to whole bars with its beat grid (`public/reel.json`), the
- * style card and the brief. Safe to run again: the template and data are rewritten, the agent's
+ * the sound pack, the music trimmed to whole bars with its beat grid (`public/reel.json`) and the
+ * brief. Safe to run again: the template and data are rewritten, the agent's
  * scenes (`src/scenes`) and plan are kept.
  */
 export async function prepareReelProject(o: {
   music: null | ReelMusicSource
-  /** Only the music changes (the agent composed a track): the links, style card and the agent's
-   *  files stay as they are; only ReelMakeEasy's own source files are refreshed. */
+  /** Only the music changes (the agent composed a track): the links and the agent's files stay
+   *  as they are; only ReelMakeEasy's own source files are refreshed. */
   musicOnly?: boolean
   setup: MotionReelSetup
   workspace: string
 }): Promise<PreparedReel> {
   const projectDir = path.join(o.workspace, REEL_DIR)
-  const style = motionReelStyle(o.setup.styleId)
-  if (!style) throw new Error(`Unknown Motion Reel style: ${o.setup.styleId}`)
 
   // ReelMakeEasy's own source files are refreshed every time, so a reel set up earlier gets the
   // current helpers when its music is re-made.
@@ -118,15 +119,15 @@ export async function prepareReelProject(o: {
     musicFile: o.music ? 'music.wav' : null,
     ratio: o.setup.ratio,
     subject: o.setup.subject,
-    // A reel without music still pulses at the style's own pace.
-    fallbackBpm: Math.round((style.tempo.min + style.tempo.max) / 2),
+    // A reel without music still pulses, at its type's tempo.
+    fallbackBpm: MOTION_REEL_FALLBACK_BPM[o.setup.type],
   })
   fs.writeFileSync(
     path.join(projectDir, 'public', 'reel.json'),
     `${JSON.stringify(reel, null, 1)}\n`,
   )
-  if (!o.musicOnly)
-    fs.writeFileSync(path.join(projectDir, 'style.md'), `${renderStyleCard(style)}\n`)
+  // A reel set up when reels had styles: its old style card goes, as the brief no longer names it.
+  if (!o.musicOnly) fs.rmSync(path.join(projectDir, 'style.md'), { force: true })
   fs.writeFileSync(path.join(projectDir, 'brief.md'), renderBrief(o.setup, reel, o.music))
   fs.writeFileSync(path.join(projectDir, 'music-map.md'), renderMusicMap(reel))
   // The agent composes the music itself: the composer and its config, in reel/music/.
@@ -152,7 +153,7 @@ export function renderBrief(
   reel: ReelJson,
   music: null | ReelMusicSource,
 ): string {
-  const style = motionReelStyle(setup.styleId)
+  const type = MOTION_REEL_TYPE_INFO[setup.type]
   const musicLine = music
     ? `"${music.title}", trimmed to the reel and fading out over the last ${reel.fadeOutSec} s`
     : setup.music.source === 'agent'
@@ -166,7 +167,7 @@ export function renderBrief(
     '# Motion Reel brief',
     '',
     `- **Subject:** ${setup.subject}`,
-    `- **Style:** ${style?.label ?? setup.styleId} (see style.md)`,
+    `- **Type:** ${type.label}: ${type.description}`,
     `- **Length:** ${reel.lengthSec} s: ${reel.bars} bars of ${reel.beatsPerBar} beats at ${reel.bpm} BPM (asked for about ${setup.lengthSec} s; the length is whole bars)`,
     `- **Frame:** ${setup.ratio}, ${reel.width}×${reel.height}, ${reel.fps} fps`,
     `- **Music:** ${musicLine}`,

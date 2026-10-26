@@ -831,10 +831,24 @@ describe('Motion Reel events', () => {
     musicTitle: 'Pulse Drive',
     ratio: '16:9' as const,
     reelSec: 15,
-    styleId: 'hud-showreel',
-    styleLabel: 'HUD Showreel',
+    type: 'showreel' as const,
+    typeLabel: 'Motion reel',
     subject: 'A launch reel',
   }
+
+  it('shows a setup saved when reels had styles with its type', () => {
+    const { type: _type, typeLabel: _label, ...rest } = setup
+    const old = { ...rest, styleId: 'product-ui-launch', styleLabel: 'Product UI Launch' }
+    const t = run([{ id: 1, setup: old as unknown as typeof setup, type: 'motion_setup' }])
+    expect(t.entries).toEqual([
+      {
+        id: 'motion-setup-1',
+        kind: 'motion_setup',
+        setup: { ...rest, type: 'launch', typeLabel: 'Product launch' },
+        state: 'chosen',
+      },
+    ])
+  })
 
   it('opens the setup card, then shows what was chosen in its place', () => {
     const open = run([{ id: 1, type: 'motion_setup_request' }])
@@ -905,7 +919,7 @@ describe('reduceTranscript, a Motion Reel', () => {
       {
         id: 2,
         tasks: [
-          { id: 'setup', label: 'Set up', result: 'HUD Showreel', state: 'done' },
+          { id: 'setup', label: 'Set up', result: 'Motion reel', state: 'done' },
           {
             details: ['Sync: passes.'],
             id: 'sync',
@@ -919,7 +933,7 @@ describe('reduceTranscript, a Motion Reel', () => {
       { id: 3, text: 'more pop', type: 'user_message' },
     ])
     expect(t.motionTasks?.map((task) => [task.id, task.state, task.result])).toEqual([
-      ['setup', 'done', 'HUD Showreel'],
+      ['setup', 'done', 'Motion reel'],
       ['sync', 'done', 'Sync: passes'],
     ])
     expect(t.lastEventId).toBe(3)
@@ -949,7 +963,7 @@ describe('reduceTranscript, a Motion Reel', () => {
         tasks: [
           { id: 'build', label: 'Build', result: '3 scene files', state: 'running' },
           { id: 'render', label: 'Render', result: 'Rendering 2 of 3…', state: 'running' },
-          { id: 'setup', label: 'Set up', result: 'HUD Showreel', state: 'done' },
+          { id: 'setup', label: 'Set up', result: 'Motion reel', state: 'done' },
         ],
         type: 'motion_tasks',
       },
@@ -958,7 +972,7 @@ describe('reduceTranscript, a Motion Reel', () => {
     expect(t.motionTasks?.map((task) => [task.id, task.state, task.result])).toEqual([
       ['build', 'done', '3 scene files'],
       ['render', 'failed', 'Stopped before it finished'],
-      ['setup', 'done', 'HUD Showreel'],
+      ['setup', 'done', 'Motion reel'],
     ])
   })
 })

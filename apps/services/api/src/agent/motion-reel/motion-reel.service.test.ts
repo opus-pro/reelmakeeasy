@@ -50,7 +50,7 @@ const ARGS = {
   music: 'library',
   musicId: 'pulse-drive',
   ratio: '16:9',
-  styleId: 'hud-showreel',
+  type: 'showreel',
   subject: 'ReelMakeEasy: make videos on your own computer',
 }
 
@@ -87,11 +87,14 @@ function setup(mode: AgentSession['mode'], userTexts: string[] = []) {
 }
 
 describe('MotionReelService, an Advanced chat', () => {
-  it('lists the styles, lengths, frames and tracks when motion_setup names no style', async () => {
+  it('lists the reel types, lengths, frames and tracks when motion_setup names no type', async () => {
     const { service, updated } = setup('motion_free')
     const result = await service.callTool('s1', 'motion_setup', {})
     expect(result.success).toBe(true)
-    expect(result.text).toMatch(/- hud-showreel: HUD Showreel/)
+    expect(result.text).toMatch(
+      /- launch: Product launch\. Make one product memorable: show it working\.\n- showreel: Motion reel\. Pure show-off motion that looks super cool\./,
+    )
+    expect(result.text).not.toMatch(/styleId|Styles/)
     expect(result.text).toMatch(/Lengths \(lengthSec\): 10, 15, 30, 60/)
     expect(result.text).toMatch(/- pulse-drive: Pulse Drive, \d+ BPM/)
     expect(updated).toEqual([])
@@ -107,12 +110,12 @@ describe('MotionReelService, an Advanced chat', () => {
     })
     expect(result.success).toBe(true)
     expect(result.text).toMatch(
-      /^`reel\/` is ready: HUD Showreel, 16:9, 15 s \(8 bars at 128 BPM\), music: Pulse Drive/,
+      /^`reel\/` is ready: Motion reel, 16:9, 15 s \(8 bars at 128 BPM\), music: Pulse Drive/,
     )
     expect(result.text).toMatch(/Read `reel\/brief.md`.*reel\/public\/reference/)
     expect(result.text).toMatch(/write `reel\/plan.md`/)
     expect(updated).toHaveLength(1)
-    expect(updated[0]).toMatchObject({ bars: 8, bpm: 128, reelSec: 15, styleLabel: 'HUD Showreel' })
+    expect(updated[0]).toMatchObject({ bars: 8, bpm: 128, reelSec: 15, typeLabel: 'Motion reel' })
     expect(messages).toContain('Remotion is ready.')
 
     // Again (the user changed the length): set up anew, the scenes kept.
@@ -204,6 +207,7 @@ function writeComposerRun(workspace: string, o: { fail?: boolean; stale?: boolea
   fs.writeFileSync(path.join(dir, 'audio', 'score.wav'), silentWav(60))
   fs.copyFileSync(COMPOSER_JSON, path.join(dir, 'build', 'music.json'))
   const checks = [
+    { id: 'harmony', msg: 'F# dorian: 555 pitched notes, every chord stable', status: 'PASS' },
     { id: 'loudness', msg: 'integrated -13.9 LUFS (target -14)', status: 'PASS' },
     { id: 'ending', msg: 'ring: rings out', status: o.fail ? 'FAIL' : 'PASS' },
     { id: 'phone', msg: '200 Hz high-passed (phone speaker) loses 6.4 LU', status: 'WARN' },
@@ -232,7 +236,7 @@ describe('the music the agent makes', () => {
     const result = await service.callTool('s1', 'motion_music', {})
     expect(result.success).toBe(true)
     expect(result.text).toMatch(/^Composed: F# dorian, 136 BPM\. Put under the reel/)
-    expect(result.text).toMatch(/QC passed: loudness, ending\. QC WARN phone: 200 Hz/)
+    expect(result.text).toMatch(/QC passed: harmony, loudness, ending\. QC WARN phone: 200 Hz/)
     expect(result.text).toMatch(/never how it sounds/)
     const music = jest.mocked(prepareReelProject).mock.calls[0]?.[0].music
     expect(music?.file).toMatch(/reel[\\/]music[\\/]composer-\d+\.wav$/)

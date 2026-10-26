@@ -10,7 +10,7 @@ const setup: MotionReelSetup = {
   lengthSec: 15,
   music: { source: 'none' },
   ratio: '16:9',
-  styleId: 'hud-showreel',
+  type: 'showreel',
   subject: 'ReelMakeEasy',
 }
 
@@ -27,7 +27,7 @@ describe('prepareReelProject (the template)', () => {
     fs.writeFileSync(path.join(src, 'kit.tsx'), '// old kit\n')
     fs.writeFileSync(path.join(src, 'Reel.tsx'), "// the agent's reel\n")
     fs.writeFileSync(path.join(src, 'scenes', 'Intro.tsx'), '// a scene\n')
-    fs.writeFileSync(path.join(workspace, REEL_DIR, 'style.md'), '# the style\n')
+    fs.writeFileSync(path.join(workspace, REEL_DIR, 'plan.md'), '# the plan\n')
   })
 
   afterEach(() => fs.rmSync(workspace, { force: true, recursive: true }))
@@ -42,10 +42,8 @@ describe('prepareReelProject (the template)', () => {
       )
     expect(fs.readFileSync(path.join(src, 'Reel.tsx'), 'utf8')).toBe("// the agent's reel\n")
     expect(fs.readFileSync(path.join(src, 'scenes', 'Intro.tsx'), 'utf8')).toBe('// a scene\n')
-    // The rest of the project (style card, package files, links) is left as it was.
-    expect(fs.readFileSync(path.join(workspace, REEL_DIR, 'style.md'), 'utf8')).toBe(
-      '# the style\n',
-    )
+    // The rest of the project (the agent's plan, package files, links) is left as it was.
+    expect(fs.readFileSync(path.join(workspace, REEL_DIR, 'plan.md'), 'utf8')).toBe('# the plan\n')
     expect(fs.existsSync(path.join(workspace, REEL_DIR, 'package.json'))).toBe(false)
     expect(fs.existsSync(path.join(workspace, REEL_DIR, 'node_modules'))).toBe(false)
   })

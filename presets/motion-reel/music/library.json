@@ -5,9 +5,6 @@
       "id": "pulse-drive",
       "title": "Pulse Drive",
       "bpm": 128,
-      "styles": [
-        "hud-showreel"
-      ],
       "file": "motion-reel/music/pulse-drive-60s.mp3",
       "durationSec": 60,
       "credit": {
@@ -21,9 +18,6 @@
       "id": "kinetic-bounce",
       "title": "Kinetic Bounce",
       "bpm": 140,
-      "styles": [
-        "kinetic-type"
-      ],
       "file": "motion-reel/music/kinetic-bounce-60s.mp3",
       "durationSec": 60,
       "credit": {
@@ -37,9 +31,6 @@
       "id": "launch-glow",
       "title": "Launch Glow",
       "bpm": 130,
-      "styles": [
-        "product-ui-launch"
-      ],
       "file": "motion-reel/music/launch-glow-60s.mp3",
       "durationSec": 60,
       "credit": {
@@ -53,9 +44,6 @@
       "id": "data-pulse",
       "title": "Data Pulse",
       "bpm": 90,
-      "styles": [
-        "data-story"
-      ],
       "file": "motion-reel/music/data-pulse-60s.mp3",
       "durationSec": 60,
       "credit": {
@@ -69,9 +57,6 @@
       "id": "shape-funk",
       "title": "Shape Funk",
       "bpm": 140,
-      "styles": [
-        "bauhaus-shapes"
-      ],
       "file": "motion-reel/music/shape-funk-60s.mp3",
       "durationSec": 60,
       "credit": {
@@ -85,9 +70,6 @@
       "id": "dark-precision",
       "title": "Dark Precision",
       "bpm": 96,
-      "styles": [
-        "dark-precision"
-      ],
       "file": "motion-reel/music/dark-precision-60s.mp3",
       "durationSec": 60,
       "credit": {
@@ -101,9 +83,6 @@
       "id": "neon-drive",
       "title": "Neon Drive",
       "bpm": 120,
-      "styles": [
-        "glass-neon"
-      ],
       "file": "motion-reel/music/neon-drive-60s.mp3",
       "durationSec": 60,
       "credit": {

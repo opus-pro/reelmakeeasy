@@ -5,13 +5,13 @@ import path from 'node:path'
 import type { BeatGrid } from '@reelmakeeasy/common/motion-reel/beat-grid'
 import type { MotionReelSetup } from '@reelmakeeasy/common/motion-reel/reel-config'
 
-import { prepareReelProject, REEL_DIR } from './motion-project'
+import { prepareReelProject, REEL_DIR, renderBrief } from './motion-project'
 
 const setup: MotionReelSetup = {
   lengthSec: 15,
   music: { source: 'none' },
   ratio: '16:9',
-  styleId: 'hud-showreel',
+  type: 'showreel',
   subject: 'ReelMakeEasy',
 }
 
@@ -156,5 +156,45 @@ describe('prepareReelProject (music the agent composes)', () => {
     await prepareReelProject({ music: null, musicOnly: true, setup, workspace: other })
     expect(fs.existsSync(path.join(other, REEL_DIR, 'music'))).toBe(false)
     fs.rmSync(other, { force: true, recursive: true })
+  })
+})
+
+describe('the brief and the type', () => {
+  let workspace: string
+
+  beforeEach(() => {
+    workspace = fs.mkdtempSync(path.join(os.tmpdir(), 'motion-brief-'))
+  })
+
+  afterEach(() => fs.rmSync(workspace, { force: true, recursive: true }))
+
+  it('says the type with its one-line description, and names no style', async () => {
+    const launch: MotionReelSetup = { ...setup, type: 'launch' }
+    const { reel } = await prepareReelProject({
+      music: null,
+      musicOnly: true,
+      setup: launch,
+      workspace,
+    })
+    const brief = fs.readFileSync(path.join(workspace, REEL_DIR, 'brief.md'), 'utf8')
+    expect(brief).toContain(
+      '- **Type:** Product launch: Make one product memorable: show it working.\n',
+    )
+    expect(brief).not.toMatch(/style/i)
+    expect(renderBrief(setup, reel, null)).toContain(
+      '- **Type:** Motion reel: Pure show-off motion that looks super cool.\n',
+    )
+  })
+
+  it("runs a reel without music on its type's tempo: 120 BPM for a launch, 124 for a showreel", async () => {
+    const launch = await prepareReelProject({
+      music: null,
+      musicOnly: true,
+      setup: { ...setup, type: 'launch' },
+      workspace,
+    })
+    expect(launch.reel.bpm).toBe(120)
+    const showreel = await prepareReelProject({ music: null, musicOnly: true, setup, workspace })
+    expect(showreel.reel.bpm).toBe(124)
   })
 })

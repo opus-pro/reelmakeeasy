@@ -753,8 +753,8 @@ describe('AgentSessionService', () => {
         musicTitle: null,
         ratio: '16:9' as const,
         reelSec: 15,
-        styleId: 'hud-showreel',
-        styleLabel: 'HUD Showreel',
+        type: 'showreel' as const,
+        typeLabel: 'Motion reel',
         subject: 'A launch reel',
       }
       svc.startMotionReel(session.id, setup, '[ReelMakeEasy] go')
@@ -793,8 +793,8 @@ describe('AgentSessionService', () => {
         musicTitle: null,
         ratio: '16:9' as const,
         reelSec: 15,
-        styleId: 'hud-showreel',
-        styleLabel: 'HUD Showreel',
+        type: 'showreel' as const,
+        typeLabel: 'Motion reel',
         subject: 'A launch reel',
       }
       svc.updateMotionReel(session.id, setup)

@@ -89,7 +89,7 @@ export const FREE_CHAT_KICKOFF =
 export const AUTONOMOUS_BRIEF =
   "You find and shape ideas for short vertical videos in ReelMakeEasy's autonomous mode. ReelMakeEasy runs each step and says exactly what to return; follow that request's format. Use web search whenever a request needs recent or real-world facts, prefer reputable sources, and never invent a news story. Write in English. Don't run shell commands or read or write files."
 
-/** Developer instructions for a Motion Reel chat: the skill carries the method. */
+/** Developer instructions for a Motion Reel chat: the skill carries the mechanics. */
 export const MOTION_REEL_BRIEF = [
   'You make a Motion Reel with the user in ReelMakeEasy: a short motion-graphics video written as a Remotion project in `reel/` and timed to its music. Before anything else, read the `reelmakeeasy-motion-reel` skill and follow it; Remotion\'s own skills have its API. Keep replies short and use markdown. Write in English. When a decision has clear options, offer them with {ASK} (2-4 options, the best first with " (Recommended)").',
   "Work only inside `reel/`. Don't browse, don't install packages and don't render with the shell: motion_still and motion_render render for you, and the chat shows what they make.",
@@ -104,8 +104,8 @@ export const MOTION_REEL_FREE_BRIEF = [
   MOTION_REEL_BRIEF,
   '',
   '## Advanced: you set the reel up',
-  'The user picked Advanced: there is no setup card, and `reel/` doesn\'t exist until you call motion_setup. Call it with no arguments first: it answers the styles, lengths, frames and music tracks. Then settle with the user what the reel needs, one question at a time, as a card with {ASK} wherever there are options (the best first, with " (Recommended)"): what it is about (the words and facts it may show), the style (the 2-4 that suit the subject), the length, the frame, and the music: a library track that suits the style, their own file through the paperclip, none, or music you make; when it is yours, ask how in the same card or the next: "Composed by you (Recommended)" (free: you write it note by note with the `reelmakeeasy-music-composer` skill, so every hit lands on your cuts), "ElevenLabs Music" ($0.60 a minute, a produced track) or "ACE-Step" (about $0.01). A reference is optional: a YouTube video to copy the look and rhythm from, or a website (its colours, words and screenshots when it is the subject\'s own). Only a link the user pasted in this chat can be a reference. Don\'t ask what they already told you, and suggest the rest.',
-  'Then call motion_setup with all of it: it readies `reel/` (the first time it also installs Remotion, a few minutes) and says what to read next. From there, work as the skill says. Call motion_setup again only when the user changes the style, length, frame, music or reference: the scenes and plan you wrote are kept, so re-check them against the new grid and style card.',
+  'The user picked Advanced: there is no setup card, and `reel/` doesn\'t exist until you call motion_setup. Call it with no arguments first: it answers the reel types, lengths, frames and music tracks. Then settle with the user what the reel needs, one question at a time, as a card with {ASK} wherever there are options (the best first, with " (Recommended)"): what it is about (the words and facts it may show), the type ("Product launch": make one product memorable by showing it working, or "Motion reel": pure show-off motion that looks super cool), the length, the frame, and the music: a library track, their own file through the paperclip, none, or music you make; when it is yours, ask how in the same card or the next: "Composed by you (Recommended)" (free: you write it note by note with the `reelmakeeasy-music-composer` skill, so every hit lands on your cuts), "ElevenLabs Music" ($0.60 a minute, a produced track) or "ACE-Step" (about $0.01). A reference is optional: a YouTube video to copy the look and rhythm from, or a website (its colours, words and screenshots when it is the subject\'s own). Only a link the user pasted in this chat can be a reference. Don\'t ask what they already told you, and suggest the rest.',
+  'Then call motion_setup with all of it: it readies `reel/` (the first time it also installs Remotion, a few minutes) and says what to read next. From there, work as the skill says. Call motion_setup again only when the user changes the type, length, frame, music or reference: the scenes and plan you wrote are kept, so re-check them against the new grid.',
 ].join('\n')
 
 /** The tool names the briefs use, per harness: Codex asks with request_user_input and has its
@@ -302,9 +302,9 @@ export function motionReelNextSteps(
 ): string {
   return fillToolNames(
     [
-      `${readSkill ? 'Read the skill, then' : 'Read'} \`reel/brief.md\`, \`reel/style.md\` and \`reel/music-map.md\`${hasReference ? ', and the files in `reel/public/reference/` (look at the images)' : ''}.`,
+      `${readSkill ? 'Read the skill, then' : 'Read'} \`reel/brief.md\` (it says the type) and \`reel/music-map.md\`${hasReference ? ', and the files in `reel/public/reference/` (look at the images)' : ''}.`,
       ...(makeMusic ? [makeMusicStep(makeMusic)] : []),
-      'Then write `reel/plan.md` from the music (one world per section), and write the plan in your reply too: one short line per scene (its beats, what is on screen, what the kick and melody drive), so the user reads it in the chat. Then ask with {ASK} whether to build it (options: build it, or change something).',
+      'Then write `reel/plan.md`, and write the plan in your reply too: one short line per scene (its beats and what is on screen), so the user reads it in the chat. Then ask with {ASK} whether to build it (options: build it, or change something).',
     ].join(' '),
     harness,
   )
@@ -314,13 +314,13 @@ export function motionReelNextSteps(
 function makeMusicStep(engine: MotionMusicEngine): string {
   if (engine === 'composer')
     return 'The user asked you to compose the music: before planning, read the `reelmakeeasy-music-composer` skill, sketch the reel in bars, write `reel/music/music.mjs` and set its bpm in `reel/music/reel.config.mjs` (the sections add up to the reel\'s whole bars at that tempo), run the composer (`cd reel/music && node tools/score.mjs --no-cues`), fix every FAIL and every WARN the skill does not let you keep, then call motion_music with engine "composer" (no prompt). Then read `reel/music-map.md` again: its grid and events are your score\'s.'
-  return `The user asked for music from ${MOTION_MUSIC_ENGINE_INFO[engine].label}: before planning, compose it with motion_music (engine "${engine}": one description written for this reel, its style and subject, a tempo in the style card's range, and its shape in bars: an intro that builds, a riser into a drop, an ending that resolves), then read \`reel/music-map.md\` again: the grid and events are the new track's.`
+  return `The user asked for music from ${MOTION_MUSIC_ENGINE_INFO[engine].label}: before planning, compose it with motion_music (engine "${engine}": one description written for this reel, its type and subject, with a tempo), then read \`reel/music-map.md\` again: the grid and events are the new track's.`
 }
 
 /** The hidden first turn of an Advanced Motion Reel chat (it has no setup card). */
 export function motionReelFreeKickoff(harness: AgentHarnessName): string {
   return fillToolNames(
-    '[ReelMakeEasy] The user chose Motion Reel, Advanced (free chat). Read the skill, and call motion_setup with no arguments to see the styles and music. Then, in one or two short sentences, ask what the reel is for (a product launch, a showreel, a website demo, a promo) and say they can paste a website or a YouTube video whose look to borrow, or drop in their own music. Nothing else yet.',
+    '[ReelMakeEasy] The user chose Motion Reel, Advanced (free chat). Read the skill, and call motion_setup with no arguments to see the reel types and music. Then, in one or two short sentences, ask what the reel is about and which kind it is (a product launch or a motion reel), and say they can paste a website or a YouTube video whose look to borrow, or drop in their own music. Nothing else yet.',
     harness,
   )
 }

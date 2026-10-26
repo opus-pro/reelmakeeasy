@@ -47,7 +47,7 @@ export function MotionReelPanel({ transcript }: { transcript: Transcript }) {
       ) : (
         <div className="flex flex-1 items-center justify-center p-6 text-center text-sm text-secondary">
           {setup?.kind === 'motion_setup' && setup.setup
-            ? `Your ${setup.setup.styleLabel} reel will play here once it's rendered.`
+            ? `${setup.setup.typeLabel}: your reel will play here once it's rendered.`
             : 'Set up your Motion Reel in the chat; it will play here once it is rendered.'}
         </div>
       )}

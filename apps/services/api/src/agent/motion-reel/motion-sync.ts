@@ -50,7 +50,7 @@ const PEAK_FLOOR = 1
 /** A big change (a section start without a cut) is this many times the median change of the half
  *  second before it... */
 const BIG_RATIO = 3
-/** ...and at least this many grey levels (a world change, not a slight shift of the ground). */
+/** ...and at least this many grey levels (a new picture, not a slight shift of the ground). */
 const BIG_FLOOR = 8
 /** A frame changing less than this (grey levels) is still. */
 const STILL_LEVEL = 0.15
@@ -191,7 +191,7 @@ export function gridReport(reel: ReelJson, allCuts: number[]): string {
 
 /**
  * Whether the picture changes a lot at `frame` (within the tolerance): a spike well above how much it
- * was changing in the half second before (a flash, a whip, a new world), or a shift in how much it
+ * was changing in the half second before (a flash, a whip, a new scene), or a shift in how much it
  * moves, from the half second before to the half second after (a busy scene stopping dead, or a
  * still one bursting into motion).
  */
@@ -407,7 +407,7 @@ function cutsLine(o: Findings, fixes: string[]): string {
   if (count >= needed) return `Cuts: ${gridReport(o.reel, o.cuts)}`
   fixes.push('too few cuts')
   const changes = count === 1 ? '1 shot change' : `${count} shot changes`
-  return `Cuts: ${gridReport(o.reel, o.cuts)} Only ${changes} in ${o.reel.bars} bars: it needs at least ${needed} (a new world on each section start, hard cuts on downbeats inside a section).`
+  return `Cuts: ${gridReport(o.reel, o.cuts)} Only ${changes} in ${o.reel.bars} bars: it needs at least ${needed} shot changes (cuts on beats or downbeats, or a big change on a section start).`
 }
 
 /** The section starts line: the energy changes must be marked, a new part at the same energy

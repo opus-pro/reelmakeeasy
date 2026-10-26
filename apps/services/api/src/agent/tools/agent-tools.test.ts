@@ -139,8 +139,8 @@ describe('a Motion Reel chat', () => {
         'motion_render',
       ])
     }
-    expect(toolSummary('motion_setup', {})).toBe('Looking at the styles and music')
-    expect(toolSummary('motion_setup', { styleId: 'glass-neon' })).toBe('Setting up the reel')
+    expect(toolSummary('motion_setup', {})).toBe('Looking at the reel types and music')
+    expect(toolSummary('motion_setup', { type: 'launch' })).toBe('Setting up the reel')
   })
 })
 

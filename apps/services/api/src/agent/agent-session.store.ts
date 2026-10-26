@@ -1,7 +1,10 @@
 import fs from 'node:fs'
 import path from 'node:path'
 
-import { agentModeFromStored } from '@reelmakeeasy/common/codex-agent/agent-sessions'
+import {
+  agentModeFromStored,
+  motionSetupViewFromStored,
+} from '@reelmakeeasy/common/codex-agent/agent-sessions'
 import type { AgentSession, AgentUiEvent } from '@shared/types/api/agent'
 
 type Stored = AgentUiEvent & { id: number }
@@ -144,8 +147,11 @@ export class AgentSessionStore {
     if (!fs.existsSync(file)) return {}
     const all = JSON.parse(fs.readFileSync(file, 'utf8')) as Record<string, AgentSession>
     // A chat saved in the removed Guided mode reads as Free chat (and is saved so on its next write).
-    for (const session of Object.values(all))
+    // A Motion Reel saved when reels had styles reads as its type.
+    for (const session of Object.values(all)) {
       if (session.mode !== undefined) session.mode = agentModeFromStored(session.mode)
+      if (session.motionReel) session.motionReel = motionSetupViewFromStored(session.motionReel)
+    }
     return all
   }
 
@@ -158,6 +164,9 @@ export class AgentSessionStore {
       .filter(Boolean)
       .map((l) => {
         const stored = JSON.parse(l) as Stored
+        // A Motion Reel setup saved when reels had styles replays as its type.
+        if (stored.type === 'motion_setup')
+          return { ...stored, setup: motionSetupViewFromStored(stored.setup) }
         // The `mode` event of a chat saved in the removed Guided mode replays as Free chat.
         if (stored.type !== 'mode') return stored
         return { ...stored, mode: agentModeFromStored(stored.mode) ?? stored.mode }

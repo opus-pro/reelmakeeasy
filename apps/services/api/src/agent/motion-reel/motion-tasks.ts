@@ -392,7 +392,7 @@ function setupPhase({ calls, mode, setup }: MotionTaskInput): Phase {
   if (last && last.ok === undefined) return { result: 'Setting up the reel…', state: 'running' }
   if (setup)
     return {
-      result: `${setup.styleLabel}, ${setup.ratio}, ${setup.reelSec} s (${setup.bars} bars at ${setup.bpm} BPM)`,
+      result: `${setup.typeLabel}, ${setup.ratio}, ${setup.reelSec} s (${setup.bars} bars at ${setup.bpm} BPM)`,
       state: 'done',
     }
   if (last && !last.ok) return failedPhase(last.text)

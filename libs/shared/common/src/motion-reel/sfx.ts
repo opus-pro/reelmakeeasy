@@ -32,7 +32,7 @@ export const SFX_DESCRIPTIONS: Record<SfxName, string> = {
   shimmer: 'a bright sparkle tail (logo reveals, end cards)',
   'sub-drop': 'a deep falling boom (scene drops, dark reveals)',
   swish: 'a fast light swish (small moves, text sliding in)',
-  tick: 'a crisp tick (counters, timecode, every cut in precise styles)',
+  tick: 'a crisp tick (counters, timecode, precise cuts)',
   whoosh: 'an air whoosh (transitions, big moves across the frame)',
 }
 

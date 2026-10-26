@@ -10,6 +10,8 @@ import type {
   AgentUiEvent,
 } from '@shared/types/api/agent'
 
+import { motionSetupViewFromStored } from './agent-sessions'
+
 export type Transcript = {
   /** What Codex is doing right now, for the live activity line; null when nothing is running. */
   activity: null | { id: string; label: string }
@@ -542,7 +544,8 @@ const handleMotionSetup = (
         ? `motion-setup-${event.id ?? state.entries.length}`
         : state.entries[openIndex].id,
     kind: 'motion_setup',
-    setup: event.setup,
+    // A setup saved when reels had styles shows its type.
+    setup: motionSetupViewFromStored(event.setup),
     state: 'chosen',
   }
   return {

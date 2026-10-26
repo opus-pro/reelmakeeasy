@@ -353,9 +353,26 @@ describe('an Advanced Motion Reel', () => {
     )
   })
 
-  it("leaves the Easy kickoff's words as they were", () => {
+  it('asks for the type, never a style, and points to the brief for it', () => {
+    const free = briefFor({ mode: 'motion_free' }, 'codex')
+    expect(free).toMatch(/it answers the reel types, lengths, frames and music tracks/)
+    expect(free).toMatch(
+      /the type \("Product launch": make one product memorable by showing it working, or "Motion reel": pure show-off motion that looks super cool\)/,
+    )
+    expect(motionReelFreeKickoff('codex')).toMatch(/a product launch or a motion reel/)
+    for (const text of [
+      free,
+      briefFor({ mode: 'motion' }, 'codex'),
+      motionReelFreeKickoff('codex'),
+      motionReelKickoff('codex', true, 'eleven-music'),
+      motionReelKickoff('codex', false, 'composer'),
+    ])
+      expect(text).not.toMatch(/style card|style\.md|the style|styles|one world per section/)
+  })
+
+  it('opens an Easy reel by reading the brief and the music map, then planning', () => {
     expect(motionReelKickoff('codex', false)).toBe(
-      '[ReelMakeEasy] The user filled in the Motion Reel card and `reel/` is ready. Read the skill, then `reel/brief.md`, `reel/style.md` and `reel/music-map.md`. Then write `reel/plan.md` from the music (one world per section), and write the plan in your reply too: one short line per scene (its beats, what is on screen, what the kick and melody drive), so the user reads it in the chat. Then ask with request_user_input whether to build it (options: build it, or change something).',
+      '[ReelMakeEasy] The user filled in the Motion Reel card and `reel/` is ready. Read the skill, then `reel/brief.md` (it says the type) and `reel/music-map.md`. Then write `reel/plan.md`, and write the plan in your reply too: one short line per scene (its beats and what is on screen), so the user reads it in the chat. Then ask with request_user_input whether to build it (options: build it, or change something).',
     )
   })
 })

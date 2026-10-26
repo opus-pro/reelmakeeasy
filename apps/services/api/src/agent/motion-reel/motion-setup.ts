@@ -7,13 +7,10 @@ import {
   MOTION_REEL_SUBJECT_MAX,
   motionMusicEngineOf,
   type MotionReelLength,
+  type MotionReelRatio,
   type MotionReelSetup,
 } from '@reelmakeeasy/common/motion-reel/reel-config'
-import {
-  MOTION_REEL_STYLE_IDS,
-  type MotionReelRatio,
-  type MotionReelStyleId,
-} from '@reelmakeeasy/common/motion-reel/styles'
+import { MOTION_REEL_TYPES, motionReelTypeOf } from '@reelmakeeasy/common/motion-reel/reel-type'
 import { ensureError } from '@reelmakeeasy/common/utils/error-handler'
 
 import { checkReference } from './motion-reference'
@@ -50,9 +47,9 @@ export function parseMotionSetup(body: unknown): MotionReelSetup {
     throw new MotionSetupError(
       `Keep what the reel is about under ${MOTION_REEL_SUBJECT_MAX} characters.`,
     )
-  const styleId = body['styleId']
-  if (typeof styleId !== 'string' || !MOTION_REEL_STYLE_IDS.includes(styleId as MotionReelStyleId))
-    throw new MotionSetupError('Pick a style.')
+  // A card from before reel types sends a style: it reads as its type.
+  const type = motionReelTypeOf(body)
+  if (!type) throw new MotionSetupError(`Pick the kind of reel: ${MOTION_REEL_TYPES.join(' or ')}.`)
   const lengthSec = body['lengthSec']
   if (!MOTION_REEL_LENGTHS.includes(lengthSec as MotionReelLength))
     throw new MotionSetupError(
@@ -80,8 +77,8 @@ export function parseMotionSetup(body: unknown): MotionReelSetup {
     music: parsedMusic,
     ratio: ratio as MotionReelRatio,
     ...(parsedReference ? { reference: parsedReference } : {}),
-    styleId: styleId as MotionReelStyleId,
     subject,
+    type,
   }
 }
 
@@ -119,7 +116,7 @@ export function comparableLink(raw: string): null | string {
 
 /**
  * An Advanced Motion Reel chat's `motion_setup` call, as the setup card's body (then checked by
- * `parseMotionSetup`): null when it names no style yet (it asks for the options). A reference
+ * `parseMotionSetup`): null when it names no type yet (it asks for the options). A reference
  * must be a link the user typed in this chat (`userTexts`): the agent has a shell, so it may
  * never send ReelMakeEasy to an address of its own making.
  */
@@ -129,7 +126,7 @@ export function motionSetupFromTool(
 ): MotionReelSetup | null {
   const a = isRecord(args) ? args : {}
   const text = (key: string) => (typeof a[key] === 'string' ? (a[key] as string).trim() : '')
-  if (!text('styleId')) return null
+  if (!text('type')) return null
   const source = text('music') || 'none'
   const musicId = text('musicId')
   const music =
@@ -144,7 +141,7 @@ export function motionSetupFromTool(
   if ((source === 'library' || source === 'upload') && !musicId)
     throw new MotionSetupError(
       source === 'library'
-        ? 'Name the track: musicId is a library track id (call motion_setup with no style to list them).'
+        ? 'Name the track: musicId is a library track id (call motion_setup with no arguments to list them).'
         : "Name the user's file: musicId is its path, e.g. attachments/song.mp3.",
     )
   if (!['agent', 'library', 'none', 'upload'].includes(source))
@@ -157,8 +154,8 @@ export function motionSetupFromTool(
     music,
     ratio: text('ratio'),
     ...(reference ? { reference } : {}),
-    styleId: text('styleId'),
     subject: text('subject'),
+    type: text('type'),
   })
 }
 

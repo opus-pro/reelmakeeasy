@@ -1,8 +1,7 @@
 /**
  * What a reel's music plays when: kicks, snares, melody notes, chord changes and sections, found
  * by ear here from the spectrum and snapped onto the track's beat grid. The reel's picture is
- * then driven by them: the kick pulses the background, the melody brings elements in, the
- * sections change the world.
+ * then timed to them: kicks, melody notes and section starts are where things can happen.
  *
  * Pure functions over mono samples and plain data; `music-map.md` (`renderMusicMap`) is how the
  * agent reads them.
@@ -188,7 +187,7 @@ export function analyseMusicEvents(
 
 /**
  * `reel/music-map.md`: the music bar by bar, in the reel's beat numbers (what `beat(n)` takes),
- * so the agent plans its worlds on the sections and its pops on the melody.
+ * so the agent can time the picture to the sections and the melody.
  */
 export function renderMusicMap(
   reel: Pick<

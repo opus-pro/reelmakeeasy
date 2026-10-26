@@ -133,7 +133,7 @@ describe('syncReport', () => {
     expect(report.sectionMisses).toEqual([])
     expect(report.sectionSoftMisses).toEqual([{ beat: 8, name: 'groove' }])
     expect(report.lines[0]).toBe(
-      'Cuts: 1 cuts: 1 on a beat, none off the grid. Only 1 shot change in 8 bars: it needs at least 2 (a new world on each section start, hard cuts on downbeats inside a section).',
+      'Cuts: 1 cuts: 1 on a beat, none off the grid. Only 1 shot change in 8 bars: it needs at least 2 shot changes (cuts on beats or downbeats, or a big change on a section start).',
     )
     expect(report.lines.at(-1)).toBe('Sync: 1 to fix: too few cuts.')
   })

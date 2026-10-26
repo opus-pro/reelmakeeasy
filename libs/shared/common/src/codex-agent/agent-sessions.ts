@@ -1,9 +1,15 @@
-import type { AgentMode, AgentSessionListItem } from '@shared/types/api/agent'
+import type { AgentMode, AgentMotionSetupView, AgentSessionListItem } from '@shared/types/api/agent'
 import {
   isSettledProjectStage,
   isStaleInProgressProject,
   PROJECT_STAGE,
 } from '@shared/types/enums/project'
+
+import {
+  DEFAULT_MOTION_REEL_TYPE,
+  MOTION_REEL_TYPE_INFO,
+  motionReelTypeOf,
+} from '../motion-reel/reel-type'
 
 /** The title a new agent chat starts with, until a rule below names it. */
 export const DEFAULT_CHAT_TITLE = 'New chat'
@@ -54,6 +60,22 @@ export function agentModeFromStored(mode: unknown): AgentMode | undefined {
     mode === 'ranking_easy'
     ? mode
     : undefined
+}
+
+/** A saved setup as it reads now: its type and type label (from an old style when it has one),
+ *  without the style fields reels had before. */
+export function motionSetupViewFromStored<T extends AgentMotionSetupView | undefined>(view: T): T {
+  if (!view) return view
+  const {
+    styleId: _styleId,
+    styleLabel: _styleLabel,
+    ...rest
+  } = view as AgentMotionSetupView & {
+    styleId?: unknown
+    styleLabel?: unknown
+  }
+  const type = motionReelTypeOf(view) ?? DEFAULT_MOTION_REEL_TYPE
+  return { ...rest, type, typeLabel: MOTION_REEL_TYPE_INFO[type].label } as T
 }
 
 /** Titles that mean "not named yet": the default, and the one chats got before it. */

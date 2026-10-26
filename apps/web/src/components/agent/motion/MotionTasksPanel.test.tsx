@@ -15,7 +15,7 @@ jest.mock('../AgentVideoPlayer', () => ({
 const transcript = (over: Partial<Transcript>): Transcript => ({ ...initialTranscript, ...over })
 
 const TASKS: Transcript['motionTasks'] = [
-  { id: 'setup', label: 'Set up', result: 'HUD Showreel, 16:9, 15 s', state: 'done' },
+  { id: 'setup', label: 'Set up', result: 'Motion reel, 16:9, 15 s', state: 'done' },
   { id: 'music', label: 'Music', result: 'Pulse Drive, 128 BPM', state: 'done' },
   { id: 'plan', label: 'Plan', result: 'plan.md: 3 sections', state: 'done' },
   { id: 'build', label: 'Build', result: '4 scene files', state: 'done' },
