@@ -186,34 +186,43 @@ export function useMouth(who: string): { mouth: number; vowel: Vowel } {
  */
 export function Captions({
   accent = '#FFD166',
+  align = 'center',
   bottom = 0.16,
   box = false,
   color = '#FFFFFF',
   fontFamily = 'Inter, Helvetica, Arial, sans-serif',
   maxWords = 3,
+  size = 1,
   style,
+  top,
 }: {
   accent?: string
+  /** `left` for a headline caption at the top-left (with `top`). */
+  align?: 'center' | 'left'
   bottom?: number
   box?: boolean
   color?: string
   fontFamily?: string
   maxWords?: number
+  /** Font size against the default (3.4% of the height): 1.6 for a big headline caption. */
+  size?: number
   style?: CSSProperties
+  /** Place it from the top instead (a share of the height), e.g. 0.07 for a headline. */
+  top?: number
 }) {
   const { height, width } = useVideoConfig()
   const t = useCurrentFrame() / spec.fps
   const line = voiceLines.find((l) => t >= l.start - 0.1 && t <= l.end + 0.4)
   const chunk = line ? chunkAt(captionChunks(line.words, maxWords), t) : null
   if (!chunk) return null
-  const fontSize = Math.max(height * 0.034, 40)
+  const fontSize = Math.max(height * 0.034, 40) * size
   const lit = litWord(chunk, t)
   return (
     <div
       style={{
-        bottom: height * bottom,
+        ...(top === undefined ? { bottom: height * bottom } : { top: height * top }),
         display: 'flex',
-        justifyContent: 'center',
+        justifyContent: align === 'left' ? 'flex-start' : 'center',
         left: width * 0.06,
         position: 'absolute',
         right: width * 0.06,
@@ -234,7 +243,7 @@ export function Captions({
           fontSize,
           fontWeight: 800,
           lineHeight: 1.15,
-          textAlign: 'center',
+          textAlign: align,
           textShadow: '0 4px 14px rgba(0,0,0,0.55)',
         }}
       >

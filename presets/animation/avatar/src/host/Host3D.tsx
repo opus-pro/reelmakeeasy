@@ -15,6 +15,7 @@ export const WAIST_Y = 1
  *  host on the screen's left has the camera moved right). */
 const CAMERA: Record<Shot, { d: number; side: number; y: number }> = {
   close: { d: 1.3, side: 0, y: 1.64 },
+  corner: { d: 5.2, side: -0.95, y: 2.55 },
   left: { d: 3, side: 0.22, y: 1.8 },
   medium: { d: 3, side: 0, y: 1.84 },
   right: { d: 3, side: -0.22, y: 1.8 },

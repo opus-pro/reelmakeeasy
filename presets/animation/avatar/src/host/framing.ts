@@ -6,8 +6,10 @@ import { voiceLines } from '../clock'
  * - `close`: the face fills the frame (for the hook and the big moments).
  * - `left` / `right`: the host on that side, smaller; pictures go on the other side.
  * - `wide`: the host small at the bottom, more of the set; a big picture above.
+ * - `corner`: the host small in the bottom-right corner, the frame left for the pictures and a
+ *   headline (the editorial explainer: UI cards, stamps and a big caption at the top).
  */
-export type Shot = 'close' | 'left' | 'medium' | 'right' | 'wide'
+export type Shot = 'close' | 'corner' | 'left' | 'medium' | 'right' | 'wide'
 
 /** Where pictures can go in a shot without covering the host, in screen pixels (1080×1920),
  *  inside the 6% margin. */
@@ -15,6 +17,7 @@ export type Area = { h: number; w: number; x: number; y: number }
 
 export const BOARD: Record<Shot, Area> = {
   close: { h: 330, w: 950, x: 65, y: 150 },
+  corner: { h: 1150, w: 950, x: 65, y: 380 },
   left: { h: 1150, w: 460, x: 555, y: 300 },
   medium: { h: 640, w: 950, x: 65, y: 150 },
   right: { h: 1150, w: 460, x: 65, y: 300 },

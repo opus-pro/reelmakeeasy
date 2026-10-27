@@ -10,6 +10,7 @@ import { type GestureSounds, GestureSoundTrack } from './sounds'
 /** Where the avatar's box sits in each shot: its waist at (x, y) on screen, scaled. */
 const PLACE: Record<Shot, { s: number; x: number; y: number }> = {
   close: { s: 1.45, x: 540, y: 2330 },
+  corner: { s: 0.5, x: 820, y: 1950 },
   left: { s: 0.8, x: 300, y: 1960 },
   medium: { s: 0.92, x: 540, y: 1960 },
   right: { s: 0.8, x: 780, y: 1960 },
