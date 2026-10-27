@@ -20,9 +20,12 @@ describe('renderAnimationSkill', () => {
       'animation_voice',
       'animation_still',
       'animation_render',
+      'animation_review',
       'animation_music',
     ])
       expect(skill).toContain(tool)
+    // Never one render and done: check, fix, render again.
+    expect(skill).toMatch(/\*\*Check and fix\.\*\*.*animation_review.*review\.md.*up to 3 rounds/)
   })
 
   it.each(LOOKS)('the %s skill keeps Claude off the renderer and the network', (look) => {

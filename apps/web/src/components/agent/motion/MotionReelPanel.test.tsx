@@ -69,7 +69,16 @@ describe('MotionReelPanel', () => {
       />,
     )
     expect(screen.getAllByText('Tasks').length).toBeGreaterThan(0)
-    for (const label of ['Set up', 'Plan', 'Voices', 'Music', 'Build', 'Look (stills)', 'Render'])
+    for (const label of [
+      'Set up',
+      'Plan',
+      'Voices',
+      'Music',
+      'Build',
+      'Look (stills)',
+      'Render',
+      'Check & fix',
+    ])
       expect(screen.getAllByText(label).length).toBeGreaterThan(0)
     expect(screen.queryByText('Sync check')).toBeNull()
     expect(screen.getByText(/a cloud weighs as much as 100 elephants/)).toBeTruthy()

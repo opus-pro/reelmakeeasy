@@ -308,6 +308,7 @@ describe('the tools of a Claude Animation chat', () => {
       'animation_music',
       'animation_still',
       'animation_render',
+      'animation_review',
     ])
     expect(toolsForSession({ mode: 'animation_free' }, 'claude').map((t) => t.name)).toEqual([
       'animation_setup',
@@ -315,7 +316,9 @@ describe('the tools of a Claude Animation chat', () => {
       'animation_music',
       'animation_still',
       'animation_render',
+      'animation_review',
     ])
+    expect(toolSummary('animation_review', {})).toBe('Checking the render (contact sheets)')
   })
 
   it('says what each call is doing', () => {

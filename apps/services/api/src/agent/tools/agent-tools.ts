@@ -5,6 +5,7 @@ import { MAKE_LOOP_LABEL } from '../craft/beat-loop-skill'
 export type AgentToolName =
   | 'animation_music'
   | 'animation_render'
+  | 'animation_review'
   | 'animation_setup'
   | 'animation_still'
   | 'animation_voice'
@@ -153,6 +154,32 @@ export const AGENT_TOOLS: Record<AgentToolName, DynamicToolSpec> = {
       'Render the animation in animation/ to a video (free, a few minutes): type-checks it, renders it with its voice and music, evens out the loudness and shows it to the user in the chat. Call it when the stills look right, and again after each change the user asks for.',
     inputSchema: { additionalProperties: false, properties: {}, type: 'object' },
     name: 'animation_render',
+  },
+  animation_review: {
+    description:
+      'Check the last render of the animation (free, a few seconds; render with animation_render first): lays it out as contact sheets, a frame every 0.5 s (or 1 s), 8 to a row, and shows them to you and the user, with where nothing moves for 0.5 s or more and the scenes held over 10 s. Call it after every render, open every sheet, write what is wrong by time in animation/review.md with its fix, fix it, render and check again (up to 3 rounds).',
+    inputSchema: {
+      additionalProperties: false,
+      properties: {
+        every: {
+          description: 'Seconds between frames: 0.5 (default) or 1.',
+          enum: [0.5, 1],
+          type: 'number',
+        },
+        from: {
+          description: 'Optional: start here (seconds; default 0).',
+          minimum: 0,
+          type: 'number',
+        },
+        to: {
+          description: 'Optional: stop here (seconds; default the end).',
+          minimum: 0,
+          type: 'number',
+        },
+      },
+      type: 'object',
+    },
+    name: 'animation_review',
   },
   animation_setup: {
     description:
@@ -731,6 +758,7 @@ const ANIMATION_TOOLS: AgentToolName[] = [
   'animation_music',
   'animation_still',
   'animation_render',
+  'animation_review',
 ]
 
 const EDIT_TOOLS: AgentToolName[] = [
@@ -780,6 +808,7 @@ export function toolsForSession(
 const FIXED_SUMMARIES: Record<string, string> = {
   animation_music: 'Making the music',
   animation_render: 'Rendering the animation',
+  animation_review: 'Checking the render (contact sheets)',
   animation_still: 'Looking at frames of the animation',
   animation_voice: 'Recording the voices',
   generate_image: 'Making a preview image',

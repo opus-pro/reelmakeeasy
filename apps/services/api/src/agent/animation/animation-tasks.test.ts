@@ -51,6 +51,7 @@ describe('animationTasks', () => {
       ['build', 'Build'],
       ['look', 'Look (stills)'],
       ['render', 'Render'],
+      ['review', 'Check & fix'],
     ])
   })
 
@@ -122,6 +123,43 @@ describe('animationTasks', () => {
       result: 'It failed: Chrome crashed',
       state: 'failed',
     })
+  })
+})
+
+describe('the Check & fix row', () => {
+  const SHEETS = 'Made 2 contact sheets of the render (the user sees them too): …'
+  it('waits for a check after each render, and shows the round and review.md', () => {
+    const rendered = animationTasks(
+      input({ calls: [call('animation_render', true, 'Rendered', 1000)] }),
+    )
+    expect(row(rendered, 'review')).toMatchObject({
+      result: 'Render 1 not checked yet',
+      state: 'waiting',
+    })
+    const checked = animationTasks(
+      input({
+        calls: [
+          call('animation_render', true, 'Rendered', 1000),
+          call('animation_review', true, SHEETS, 2000),
+        ],
+        facts: { ...NO_FACTS, review: { firstLine: 'Review', problems: 3 } },
+      }),
+    )
+    expect(row(checked, 'review')).toMatchObject({
+      result: '2 sheets, round 1 · review.md: 3 problems',
+      state: 'done',
+    })
+    const again = animationTasks(
+      input({
+        calls: [
+          call('animation_render', true, 'Rendered', 1000),
+          call('animation_review', true, SHEETS, 2000),
+          call('animation_render', true, 'Rendered', 3000),
+        ],
+      }),
+    )
+    expect(row(again, 'review')).toMatchObject({ state: 'waiting' })
+    expect(row(again, 'review')?.result).toMatch(/render 2 not checked yet/)
   })
 })
 

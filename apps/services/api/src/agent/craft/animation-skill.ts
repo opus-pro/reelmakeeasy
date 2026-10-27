@@ -7,6 +7,7 @@ export const ANIMATION_MUSIC_TOOL = 'animation_music'
 export const ANIMATION_STILL_TOOL = 'animation_still'
 export const ANIMATION_RENDER_TOOL = 'animation_render'
 export const ANIMATION_SETUP_TOOL = 'animation_setup'
+export const ANIMATION_REVIEW_TOOL = 'animation_review'
 
 export const animationSkillName = (look: AnimationLookId) => `reelmakeeasy-animation-${look}`
 export const ANIMATION_SKILL_NAMES: readonly string[] = ANIMATION_LOOKS.map((l) =>
@@ -160,7 +161,8 @@ export function renderAnimationSkill(lookId: AnimationLookId): string {
     "5. **Build.** One component per scene in `src/scenes/`, placed in `Animation.tsx` with `<Sequence from={lineStart(i)}>` so every scene starts on its line. Keep `<Voice />`, `<Music />` and `<Captions />` in `Animation.tsx` (captions in the look's palette and font).",
     `6. **Look.** Call \`${ANIMATION_STILL_TOOL}\` on the important moments (each scene's start and its key word) and look at the images. Fix what is cut off, too small, crowded, off-palette or off-look before rendering.`,
     `7. **Render** with \`${ANIMATION_RENDER_TOOL}\`: it shows the video to the user. You can't hear it: say so and ask the user to listen to the voices.`,
-    '8. **Change it** when the user asks: edit the scene (record again only when the words change), look at a still, render again. Say what you changed in one line.',
+    `8. **Check and fix.** A render is never the end: call \`${ANIMATION_REVIEW_TOOL}\` (contact sheets of the render, with where nothing moves and the scenes held too long), open every sheet, and write \`animation/review.md\`: every problem by time (a mouth that doesn't move, something under the bubble or captions, cut-off or tiny text, a label off its part, a picture that misses its word, a stall, an empty or crowded frame) with its fix. Fix them, render again and check that render: up to 3 rounds, then say what is still off.`,
+    '9. **Change it** when the user asks: edit the scene (record again only when the words change), look at a still, render, check. Say what you changed in one line.',
     '',
     '## Timing rules',
     '',

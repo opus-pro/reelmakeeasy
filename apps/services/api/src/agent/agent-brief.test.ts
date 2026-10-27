@@ -492,6 +492,9 @@ describe('Claude Animation chats', () => {
       expect(brief).toContain('reelmakeeasy-animation-2d')
     }
     expect(briefs.briefFor({ mode: 'animation_free' }, 'claude')).toMatch(/call animation_setup/)
+    expect(briefs.briefFor({ mode: 'animation' }, 'claude')).toMatch(
+      /Never one-shot an animation: render, call animation_review.*up to 3 rounds/,
+    )
     expect(briefs.ANIMATION_FREE_KICKOFF).toMatch(/animation_setup with no arguments/)
   })
 })

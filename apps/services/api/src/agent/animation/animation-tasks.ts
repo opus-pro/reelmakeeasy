@@ -36,6 +36,7 @@ export function animationTasks(input: AnimationTaskInput): AgentMotionTask[] {
     music: musicPhase(input),
     plan: planPhase(input.facts),
     render: renderPhase(input.calls),
+    review: reviewPhase(input),
     setup: setupPhase(input),
     voice: voicePhase(input.calls),
   }
@@ -135,6 +136,38 @@ function renderPhase(calls: MotionToolCall[]): Phase {
   if (last.ok === undefined) return { result: `Rendering ${made + 1}…`, state: 'running' }
   if (!last.ok) return failedPhase(last.text)
   return { result: made === 1 ? 'Rendered' : `Render ${made}`, state: 'done' }
+}
+
+/**
+ * The check after a render (`animation_review`): running while it makes its sheets; done with how
+ * many and the round, and what `review.md` says; waiting again once a newer render is unchecked.
+ */
+function reviewPhase({ calls, facts }: AnimationTaskInput): Phase {
+  const renders = callsOf(calls, 'animation_render').filter((c) => c.ok)
+  const reviews = callsOf(calls, 'animation_review')
+  const last = reviews.at(-1)
+  if (!last)
+    return renders.length
+      ? { result: `Render ${renders.length} not checked yet`, state: 'waiting' }
+      : { result: null, state: 'waiting' }
+  if (last.ok === undefined) return { result: 'Making contact sheets…', state: 'running' }
+  const newest = renders.at(-1)
+  if (!last.ok && !(newest && newest.startedAt > last.startedAt)) return failedPhase(last.text)
+  const checked = reviews.findLast((c) => c.ok)
+  if (!checked) return { result: `Render ${renders.length} not checked yet`, state: 'waiting' }
+  const round = renders.filter((c) => c.startedAt < checked.startedAt).length
+  const sheets = Number(/Made (\d+) contact sheet/.exec(checked.text ?? '')?.[1] ?? 0)
+  const notes = facts.review
+    ? facts.review.problems
+      ? `review.md: ${facts.review.problems} problem${facts.review.problems === 1 ? '' : 's'}`
+      : facts.review.firstLine && `review.md: ${facts.review.firstLine}`
+    : ''
+  const result = [`${sheets} sheet${sheets === 1 ? '' : 's'}, round ${Math.max(1, round)}`, notes]
+    .filter(Boolean)
+    .join(' · ')
+  if (newest && newest.startedAt > checked.startedAt)
+    return { result: `${result}; render ${renders.length} not checked yet`, state: 'waiting' }
+  return { result, state: 'done' }
 }
 
 /** The still lines of an animation_still answer ("12.5 s"). */

@@ -301,6 +301,14 @@ describe('AnimationService, look, music and render', () => {
     expect(result.text).toMatch(/- 12.5 s \(frame 375\): animation\/out\/stills\//)
   })
 
+  it('asks for a render before a check', async () => {
+    const { service } = await ready()
+    await expect(service.callTool('s1', 'animation_review', {})).resolves.toEqual({
+      success: false,
+      text: 'Nothing to check yet: render the animation with animation_render first, then call animation_review.',
+    })
+  })
+
   it('shows the render as a video in the chat', async () => {
     const { service, sessions } = await ready()
     const result = await service.callTool('s1', 'animation_render', {})
@@ -317,6 +325,8 @@ describe('AnimationService, look, music and render', () => {
     expect(event.type).toBe('motion_video')
     expect(event.videoUrl).toMatch(/^store:\/\/agent-animation\/s1\/animation-.*\.mp4$/)
     expect(result.text).toMatch(/animation\/out\/animation.mp4/)
+    // A render is never the end: the check comes next.
+    expect(result.text).toMatch(/Now call animation_review, open every sheet/)
   })
 
   it('puts the music Claude made under the voice, fitted to the length', async () => {
@@ -347,9 +357,9 @@ describe('AnimationService, music Claude composes', () => {
   it('installs the composer in animation/music when the user picked it', async () => {
     const { workspace } = await composerReady()
     expect(fs.existsSync(path.join(workspace, 'animation/music/tools/score.mjs'))).toBe(true)
-    expect(fs.readFileSync(path.join(workspace, 'animation/music/reel.config.mjs'), 'utf8')).toMatch(
-      /bpm: \d+/,
-    )
+    expect(
+      fs.readFileSync(path.join(workspace, 'animation/music/reel.config.mjs'), 'utf8'),
+    ).toMatch(/bpm: \d+/)
   })
 
   it("says what to fix, with the animation's own paths, when there is no score yet", async () => {
@@ -386,7 +396,9 @@ describe('AnimationService, an Advanced chat', () => {
     const result = await service.callTool('s1', 'animation_setup', {})
     expect(result.success).toBe(true)
     expect(result.text).toMatch(/- 2d: 2D\. Cartoon characters/)
-    expect(result.text).toMatch(/Length \(lengthSec\): any whole number of seconds from 10 to 90 \(15, 30, 45, 60 or 90 suggested; default 30\)/)
+    expect(result.text).toMatch(
+      /Length \(lengthSec\): any whole number of seconds from 10 to 90 \(15, 30, 45, 60 or 90 suggested; default 30\)/,
+    )
     expect(result.text).toMatch(/- data-pulse: /)
     expect(updated).toEqual([])
   })

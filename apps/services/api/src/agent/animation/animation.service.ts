@@ -43,12 +43,14 @@ import {
 import { resolveAttachment } from '../agent-attachments'
 import { animationKickoff, animationNextSteps } from '../agent-brief'
 import { ensureComposer, readComposedMusic } from '../motion-reel/motion-composer'
+import { MotionSetupError } from '../motion-reel/motion-setup'
 import { composeMusic, parseComposeRequest } from '../motion-reel/motion-music'
 import { MAX_STILLS, renderReel, renderStills, typeCheck } from '../motion-reel/motion-render'
 import type { ReelMusicSource } from '../motion-reel/motion-project'
 import { ensureMotionReelRuntime } from '../motion-reel/motion-runtime'
 import type { ToolCallResult } from '../tools/agent-tools'
 
+import { animationReviewBlocker, reviewAnimation } from './animation-review'
 import {
   ANIMATION_DIR,
   composerSettings,
@@ -184,6 +186,7 @@ export class AnimationService {
       if (tool === 'animation_voice')
         return await this.recordVoice(session.animation, projectDir, args)
       if (tool === 'animation_music') return await this.compose(id, session.animation, args)
+      if (tool === 'animation_review') return await this.review(id, projectDir, args)
       if (tool !== 'animation_still' && tool !== 'animation_render')
         return { success: false, text: `Unknown tool ${tool}.` }
       const errors = await typeCheck(projectDir)
@@ -298,7 +301,7 @@ export class AnimationService {
     })
     return {
       success: true,
-      text: `Rendered the animation and showed it to the user. The file is ${ANIMATION_DIR}/out/animation.mp4. You can't hear it: say so, and ask the user to listen to the voices.`,
+      text: `Rendered the animation and showed it to the user. The file is ${ANIMATION_DIR}/out/animation.mp4. Now call animation_review, open every sheet and write ${ANIMATION_DIR}/review.md; fix what it finds and render again (at most 3 renders, one per check), or tell the user what is still off. Never say it is done after one render. You can't hear it: say so, and ask the user to listen to the voices.`,
     }
   }
 
@@ -393,6 +396,21 @@ export class AnimationService {
           `- ${e}: ${MOTION_MUSIC_ENGINE_INFO[e].label} (${MOTION_MUSIC_ENGINE_INFO[e].cost}). ${MOTION_MUSIC_ENGINE_INFO[e].description}`,
       ),
     ].join('\n')
+  }
+
+  /** animation_review: the last render as contact sheets with its stalls and long scenes, shown
+   *  to Claude and the user. */
+  private async review(id: string, projectDir: string, args: unknown): Promise<ToolCallResult> {
+    const blocker = animationReviewBlocker(projectDir)
+    if (blocker) return { success: false, text: blocker }
+    try {
+      const result = await reviewAnimation(projectDir, args)
+      for (const file of result.sheets) this.sessions.emitImage(id, file)
+      return { success: true, text: result.text }
+    } catch (error) {
+      if (error instanceof MotionSetupError) return { success: false, text: error.message }
+      throw error
+    }
   }
 
   /** animation_still: frames at the seconds asked, shown to Claude and the user. */
