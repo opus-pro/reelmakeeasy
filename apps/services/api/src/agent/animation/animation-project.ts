@@ -9,7 +9,7 @@ import {
 } from '@reelmakeeasy/common/animation/looks'
 import { MOTION_MUSIC_ENGINE_INFO } from '@reelmakeeasy/common/motion-reel/reel-config'
 import { presetPath } from '@reelmakeeasy/common/storage/presets'
-import type { AgentAnimationSetup, AnimationLookId } from '@shared/types/api/agent'
+import type { AgentAnimationSetup, AnimationLookId, AvatarStyle } from '@shared/types/api/agent'
 
 import { composerTitle, installComposer } from '../motion-reel/motion-composer'
 import type { ReelMusicSource } from '../motion-reel/motion-project'
@@ -39,8 +39,26 @@ export function composerSettings(setup: AgentAnimationSetup): {
   }
 }
 
+/** A Talking head's avatar as the project gets it: a saved one (`id`, its rig file in the
+ *  library) or a new one (`id` null, the photo to draw it from). */
+export type ProjectAvatar = {
+  id: null | string
+  name: string
+  /** The photo a new avatar is drawn from (a file on this computer). */
+  photo?: string
+  /** A saved avatar's rig (`avatar.ts` in the library). */
+  rig?: string
+  style: AvatarStyle
+}
+
+/** Where the avatar's rig is in the project, and the note of which avatar it is. */
+export const AVATAR_RIG = path.join('src', 'avatar', 'avatar.ts')
+const AVATAR_FROM = path.join('src', 'avatar', '.from')
+
 /** `public/animation.json`: what the project's clock reads. */
 export type AnimationJson = {
+  /** The Talking head's avatar (null id: a new one, not saved yet). */
+  avatar?: { id: null | string; name: string; style: AvatarStyle }
   fps: number
   height: number
   lengthSec: number
@@ -70,6 +88,8 @@ const CLAUDES_FILES = new Set([path.join('src', 'Animation.tsx')])
  * the music changed (Claude made a track), so the links and look are left as they are.
  */
 export async function prepareAnimationProject(o: {
+  /** The Talking head's avatar (the look `avatar` only). */
+  avatar?: ProjectAvatar
   music: null | ReelMusicSource
   musicOnly?: boolean
   setup: AgentAnimationSetup
@@ -80,8 +100,11 @@ export async function prepareAnimationProject(o: {
   if (!look) throw new Error(`Unknown look: ${o.setup.lookId}`)
 
   copyTree(presetPath('animation/template'), projectDir)
-  copyTree(presetPath(`animation/${look.id}`), projectDir)
+  // A Talking head draws its avatar in 2D or 3D: both libraries, then its own host kit.
+  for (const lib of look.id === 'avatar' ? ['2d', '3d', 'avatar'] : [look.id])
+    copyTree(presetPath(`animation/${lib}`), projectDir)
   if (!o.musicOnly) linkRuntime(projectDir)
+  if (o.avatar && !o.musicOnly) placeAvatar(projectDir, o.avatar)
 
   // Claude composes the music itself: the composer goes in `animation/music/`.
   if (o.setup.music.source === 'agent' && o.setup.music.engine === 'composer' && !o.musicOnly)
@@ -119,7 +142,16 @@ export async function prepareAnimationProject(o: {
     fs.rmSync(musicFile, { force: true })
   }
 
+  const before = fs.existsSync(path.join(projectDir, 'public', 'animation.json'))
+    ? readAnimationJson(projectDir)
+    : null
+  const avatar = o.avatar
+    ? { id: o.avatar.id, name: o.avatar.name, style: o.avatar.style }
+    : o.musicOnly
+      ? before?.avatar
+      : undefined
   const spec: AnimationJson = {
+    ...(avatar ? { avatar } : {}),
     fps: ANIMATION_FPS,
     height: ANIMATION_SIZE.height,
     lengthSec: o.setup.lengthSec,
@@ -133,9 +165,52 @@ export async function prepareAnimationProject(o: {
   if (!o.musicOnly) fs.writeFileSync(path.join(projectDir, 'look.md'), renderLookCard(look))
   fs.writeFileSync(
     path.join(projectDir, 'brief.md'),
-    renderAnimationBrief(o.setup, o.music?.title ?? null),
+    renderAnimationBrief(o.setup, o.music?.title ?? null, avatar),
   )
   return { projectDir, spec }
+}
+
+/**
+ * Puts the avatar's rig in `src/avatar/avatar.ts`: a saved avatar's own, or for a new one the
+ * starter of its style, with its photo in `public/avatar/`. A rig already there for the same
+ * avatar is kept (Claude may be changing it); another avatar's is replaced.
+ */
+export function placeAvatar(projectDir: string, avatar: ProjectAvatar): void {
+  const rig = path.join(projectDir, AVATAR_RIG)
+  const from = path.join(projectDir, AVATAR_FROM)
+  const want = avatar.id ?? `new:${avatar.style}`
+  const had = fs.existsSync(from) ? fs.readFileSync(from, 'utf8').trim() : null
+  if (had !== want || !fs.existsSync(rig)) {
+    fs.mkdirSync(path.dirname(rig), { recursive: true })
+    fs.copyFileSync(avatar.rig ?? presetPath(`animation/avatar-starters/${avatar.style}.ts`), rig)
+    fs.writeFileSync(from, `${want}\n`)
+  }
+  if (avatar.photo) {
+    const dir = path.join(projectDir, 'public', 'avatar')
+    fs.mkdirSync(dir, { recursive: true })
+    for (const old of fs.readdirSync(dir).filter((n) => n.startsWith('photo.')))
+      fs.rmSync(path.join(dir, old))
+    fs.copyFileSync(
+      avatar.photo,
+      path.join(dir, `photo${path.extname(avatar.photo).toLowerCase()}`),
+    )
+  }
+}
+
+/** Notes that the project's rig is now the saved avatar `id` (after avatar_save). */
+export function markAvatarSaved(projectDir: string, id: string): void {
+  fs.writeFileSync(path.join(projectDir, AVATAR_FROM), `${id}\n`)
+}
+
+/** The photo a new avatar is drawn from, in the project, if any. */
+export function avatarPhoto(projectDir: string): null | string {
+  const dir = path.join(projectDir, 'public', 'avatar')
+  try {
+    const name = fs.readdirSync(dir).find((n) => n.startsWith('photo.'))
+    return name ? path.join(dir, name) : null
+  } catch {
+    return null
+  }
 }
 
 export function readAnimationJson(projectDir: string): AnimationJson {
@@ -155,6 +230,7 @@ export function writeAnimationJson(projectDir: string, spec: AnimationJson): voi
 export function renderAnimationBrief(
   setup: AgentAnimationSetup,
   musicTitle: null | string,
+  avatar?: AnimationJson['avatar'],
 ): string {
   const look = animationLook(setup.lookId)
   const music =
@@ -173,6 +249,13 @@ export function renderAnimationBrief(
     `- **Length:** about ${setup.lengthSec} s`,
     `- **Frame:** 9:16, ${ANIMATION_SIZE.width}×${ANIMATION_SIZE.height}, ${ANIMATION_FPS} fps`,
     `- **Music:** ${music}`,
+    ...(avatar
+      ? [
+          avatar.id
+            ? `- **Avatar:** ${avatar.name}, saved (${avatar.style.toUpperCase()}): \`src/avatar/avatar.ts\` is its rig. Use it as it is; change it only when the user asks (then avatar_check and avatar_save again).`
+            : `- **Avatar:** new, ${avatar.style.toUpperCase()}, named "${avatar.name}": draw it first from the photo in \`public/avatar/\` into \`src/avatar/avatar.ts\` (now the ${avatar.style.toUpperCase()} starter), check it with avatar_check, and save it with avatar_save once the user keeps it.`,
+        ]
+      : []),
     '',
   ].join('\n')
 }

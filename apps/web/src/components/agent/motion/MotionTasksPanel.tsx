@@ -18,8 +18,9 @@ import { Spinner } from '../Spinner'
  *  shows that phase as waiting, in its place. */
 export function shownMotionTasks(transcript: Transcript): AgentMotionTask[] {
   // A Claude Animation shows its own phases in the same panel.
-  const animation = transcript.entries.some((e) => e.kind === 'animation_setup')
-  const waiting = animation ? waitingAnimationTasks : waitingMotionTasks
+  const animation = transcript.entries.find((e) => e.kind === 'animation_setup')
+  const talkingHead = animation?.kind === 'animation_setup' && animation.setup?.lookId === 'avatar'
+  const waiting = animation ? () => waitingAnimationTasks(talkingHead) : waitingMotionTasks
   const sent = transcript.motionTasks
   if (sent?.length) {
     const byId = new Map(sent.map((t) => [t.id, t]))

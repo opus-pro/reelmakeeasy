@@ -387,7 +387,7 @@ describe('ClaudeAppServer review fixes', () => {
     const options = q.calls[0]?.options
     expect(options).toMatchObject({ strictMcpConfig: true })
     // ReelMakeEasy's own skills first; Remotion's follow once its runtime has downloaded them.
-    expect((options.skills as string[]).slice(0, 8)).toEqual([
+    expect((options.skills as string[]).slice(0, 9)).toEqual([
       'reelmakeeasy:reelmakeeasy-camera',
       'reelmakeeasy:reelmakeeasy-beat-loop',
       'reelmakeeasy:reelmakeeasy-ranking',
@@ -395,9 +395,10 @@ describe('ClaudeAppServer review fixes', () => {
       'reelmakeeasy:reelmakeeasy-animation-2d',
       'reelmakeeasy:reelmakeeasy-animation-3d',
       'reelmakeeasy:reelmakeeasy-animation-8bit',
+      'reelmakeeasy:reelmakeeasy-animation-avatar',
       'reelmakeeasy:reelmakeeasy-music-composer',
     ])
-    for (const skill of (options.skills as string[]).slice(8))
+    for (const skill of (options.skills as string[]).slice(9))
       expect(skill).toMatch(/^reelmakeeasy:remotion-/)
     expect(options.tools).toContain('Skill')
     const signal = new AbortController().signal

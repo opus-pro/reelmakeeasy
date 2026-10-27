@@ -13,6 +13,7 @@ import { renderReel, renderStills } from '../motion-reel/motion-render'
 import { voiceReadiness } from './animation-setup'
 import type { VoiceDeps } from './animation-voice'
 import { sineWav } from './test-wav'
+import { saveAvatar } from './avatar-library'
 import {
   AnimationService,
   type AnimationSessions,
@@ -124,7 +125,7 @@ const waitFor = async (check: () => boolean) => {
 }
 
 describe('AnimationService, the setup card', () => {
-  it('lists the three looks with their lengths and tracks', async () => {
+  it('lists the four looks with their lengths and tracks', async () => {
     const { service } = makeAnimation('animation')
     const options = await service.options()
     const lengths = [15, 30, 45, 60, 90]
@@ -132,6 +133,7 @@ describe('AnimationService, the setup card', () => {
       ['2d', '2D', lengths, null],
       ['3d', '3D', lengths, null],
       ['8bit', '8-bit', lengths, null],
+      ['avatar', 'Talking head', lengths, null],
     ])
     expect([options.minLengthSec, options.maxLengthSec]).toEqual([10, 90])
     expect(options.looks[0]?.defaultTrackId).toBe('data-pulse')
@@ -149,6 +151,7 @@ describe('AnimationService, the setup card', () => {
     const looks = (await service.options()).looks
     expect(looks.map((l) => l.disabledReason ?? null)).toEqual([
       'Needs Qwen3 voices on this computer or a fal key.',
+      null,
       null,
       null,
     ])
@@ -219,6 +222,60 @@ describe('AnimationService, animation_voice', () => {
     await waitFor(() => made.started.length === 1)
     return { ...made, voice }
   }
+
+  it("speaks a Talking head's host with its saved avatar's voice, once the avatar is saved", async () => {
+    const data = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'animation-avatars-')))
+    const before = process.env['DATA_DIR']
+    process.env['DATA_DIR'] = data
+    try {
+      const rig = path.join(data, 'rig.ts')
+      fs.writeFileSync(rig, 'export const avatar = 1')
+      saveAvatar({
+        id: 'av-0123456789',
+        name: 'Sam',
+        preview: rig,
+        rig,
+        style: '2d',
+        voice: 'warm',
+      })
+      const voice = fakeVoice()
+      const made = makeAnimation('animation', voice)
+      made.service.setup('s1', { ...CARD, avatar: { id: 'av-0123456789' }, lookId: 'avatar' })
+      await waitFor(() => made.started.length === 1)
+      expect(made.started[0]?.setup).toMatchObject({
+        avatar: { id: 'av-0123456789' },
+        avatarName: 'Sam',
+      })
+      const result = await made.service.callTool('s1', 'animation_voice', {
+        lines: 'Host: Did you know honey never spoils?',
+        voices: 'Host: avatar',
+      })
+      expect(result.success).toBe(true)
+      expect(voice.voices[0]).toBe('avatar:av-0123456789')
+
+      // A new avatar has no voice until it is saved.
+      const fresh = makeAnimation('animation', fakeVoice())
+      fs.mkdirSync(path.join(fresh.workspace, 'attachments'), { recursive: true })
+      fs.writeFileSync(path.join(fresh.workspace, 'attachments', 'me.jpg'), 'jpg')
+      fresh.service.setup('s1', {
+        ...CARD,
+        avatar: { name: 'Ana', photo: 'me.jpg', style: '2d' },
+        lookId: 'avatar',
+      })
+      await waitFor(() => fresh.started.length === 1)
+      const refused = await fresh.service.callTool('s1', 'animation_voice', {
+        lines: 'Host: Hi!',
+        voices: 'Host: avatar',
+      })
+      expect(refused).toMatchObject({
+        success: false,
+        text: expect.stringMatching(/save it with avatar_save/),
+      })
+    } finally {
+      process.env['DATA_DIR'] = before
+      fs.rmSync(data, { force: true, recursive: true })
+    }
+  })
 
   it('records the lines and points the project at the voice', async () => {
     const { service, workspace } = await ready()

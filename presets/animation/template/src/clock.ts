@@ -12,7 +12,7 @@ export type Spec = {
   fps: number
   height: number
   lengthSec: number
-  lookId: '2d' | '3d' | '8bit'
+  lookId: '2d' | '3d' | '8bit' | 'avatar'
   /** File in public/ (the trimmed music), or null. */
   musicFile: null | string
   /** What it is about, or null when Claude picks a fun fact. */

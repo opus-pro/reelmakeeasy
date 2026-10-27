@@ -18,6 +18,47 @@ const ok = {
 }
 
 describe('parseAnimationSetup', () => {
+  it("takes a Talking head's avatar: a saved one, or a new one with a name, photo and style", () => {
+    const head = { ...ok, lookId: 'avatar' }
+    expect(parseAnimationSetup({ ...head, avatar: { id: 'av-0123456789' } }).avatar).toEqual({
+      id: 'av-0123456789',
+    })
+    expect(
+      parseAnimationSetup({ ...head, avatar: { name: ' Sam ', photo: 'me.jpg', style: '3d' } })
+        .avatar,
+    ).toEqual({ name: 'Sam', photo: 'me.jpg', style: '3d' })
+    expect(() => parseAnimationSetup(head)).toThrow(/Pick an avatar/)
+    expect(() =>
+      parseAnimationSetup({ ...head, avatar: { name: 'Sam', photo: '', style: '2d' } }),
+    ).toThrow(/Add a photo/)
+    expect(() =>
+      parseAnimationSetup({ ...head, avatar: { name: 'Sam', photo: 'me.jpg', style: '4d' } }),
+    ).toThrow(/2D or 3D/)
+    // Another look never carries an avatar.
+    expect(parseAnimationSetup({ ...ok, avatar: { id: 'av-0123456789' } }).avatar).toBeUndefined()
+  })
+
+  it("takes an Advanced chat's avatar from flat arguments", () => {
+    expect(
+      animationSetupFromTool({
+        avatarName: 'Sam',
+        avatarPhoto: 'attachments/me.jpg',
+        avatarStyle: '2d',
+        lengthSec: 30,
+        lookId: 'avatar',
+        music: 'none',
+      })?.avatar,
+    ).toEqual({ name: 'Sam', photo: 'attachments/me.jpg', style: '2d' })
+    expect(
+      animationSetupFromTool({
+        avatarId: 'av-0123456789',
+        lengthSec: 30,
+        lookId: 'avatar',
+        music: 'none',
+      })?.avatar,
+    ).toEqual({ id: 'av-0123456789' })
+  })
+
   it('takes a 2D setup with a library track', () => {
     expect(parseAnimationSetup(ok)).toEqual({
       lengthSec: 30,

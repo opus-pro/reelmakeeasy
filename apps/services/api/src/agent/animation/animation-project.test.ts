@@ -4,7 +4,7 @@ import path from 'node:path'
 
 import type { AgentAnimationSetup } from '@shared/types/api/agent'
 
-import { ANIMATION_DIR, prepareAnimationProject } from './animation-project'
+import { ANIMATION_DIR, markAvatarSaved, prepareAnimationProject } from './animation-project'
 
 const setup2d: AgentAnimationSetup = {
   lengthSec: 30,
@@ -111,5 +111,63 @@ describe('prepareAnimationProject', () => {
       /none yet: make it with animation_music.*ACE-Step/,
     )
     expect(fs.existsSync(path.join(projectDir, 'src/stage/index.ts'))).toBe(true)
+  })
+
+  describe('a Talking head', () => {
+    const head: AgentAnimationSetup = {
+      ...setup2d,
+      avatar: { name: 'Sam', photo: 'me.jpg', style: '3d' },
+      lookId: 'avatar',
+    }
+    const rig = (dir: string) =>
+      fs.readFileSync(path.join(dir, 'src', 'avatar', 'avatar.ts'), 'utf8')
+
+    it("gets both libraries, the host kit, the style's starter rig and the photo", async () => {
+      const photo = path.join(workspace, 'me.JPG')
+      fs.writeFileSync(photo, 'jpg')
+      const { projectDir, spec } = await prepareAnimationProject({
+        avatar: { id: null, name: 'Sam', photo, style: '3d' },
+        music: null,
+        setup: head,
+        workspace,
+      })
+      for (const lib of ['toon', 'stage', 'host'])
+        expect(fs.existsSync(path.join(projectDir, 'src', lib, 'index.ts'))).toBe(true)
+      // The avatar look's own Root (with the check sheet) replaces the template's.
+      expect(fs.readFileSync(path.join(projectDir, 'src', 'Root.tsx'), 'utf8')).toContain(
+        'AvatarSheet',
+      )
+      expect(rig(projectDir)).toContain("style: '3d'")
+      expect(fs.readFileSync(path.join(projectDir, 'public', 'avatar', 'photo.jpg'), 'utf8')).toBe(
+        'jpg',
+      )
+      expect(spec.avatar).toEqual({ id: null, name: 'Sam', style: '3d' })
+      expect(fs.readFileSync(path.join(projectDir, 'brief.md'), 'utf8')).toMatch(
+        /\*\*Avatar:\*\* new, 3D, named "Sam": draw it first from the photo/,
+      )
+    })
+
+    it("keeps Claude's rig for the same avatar, and swaps in another avatar's", async () => {
+      const { projectDir } = await prepareAnimationProject({
+        avatar: { id: null, name: 'Sam', style: '2d' },
+        music: null,
+        setup: head,
+        workspace,
+      })
+      fs.writeFileSync(path.join(projectDir, 'src', 'avatar', 'avatar.ts'), '// Sam, drawn')
+      markAvatarSaved(projectDir, 'av-0123456789')
+      const saved = { id: 'av-0123456789', name: 'Sam', style: '2d' as const }
+      await prepareAnimationProject({ avatar: saved, music: null, setup: head, workspace })
+      expect(rig(projectDir)).toBe('// Sam, drawn')
+      const other = path.join(workspace, 'other.ts')
+      fs.writeFileSync(other, '// Ana')
+      await prepareAnimationProject({
+        avatar: { id: 'av-abcdefabcd', name: 'Ana', rig: other, style: '2d' },
+        music: null,
+        setup: head,
+        workspace,
+      })
+      expect(rig(projectDir)).toBe('// Ana')
+    })
   })
 })

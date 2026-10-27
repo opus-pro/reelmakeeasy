@@ -1,4 +1,4 @@
-import { ANIMATION_TASKS } from '@reelmakeeasy/common/motion-reel/motion-tasks'
+import { animationTaskRows } from '@reelmakeeasy/common/motion-reel/motion-tasks'
 import type {
   AgentAnimationSetupView,
   AgentMotionTask,
@@ -31,6 +31,7 @@ export interface AnimationTaskInput {
  *  chat's animation tool calls), never from what Claude says. */
 export function animationTasks(input: AnimationTaskInput): AgentMotionTask[] {
   const phases: Partial<Record<AgentMotionTaskId, Phase>> = {
+    avatar: avatarPhase(input),
     build: buildPhase(input),
     look: lookPhase(input.calls),
     music: musicPhase(input),
@@ -40,7 +41,7 @@ export function animationTasks(input: AnimationTaskInput): AgentMotionTask[] {
     setup: setupPhase(input),
     voice: voicePhase(input.calls),
   }
-  return ANIMATION_TASKS.map(({ id, label }) => ({
+  return animationTaskRows(input.setup?.lookId === 'avatar').map(({ id, label }) => ({
     id,
     label,
     ...(phases[id] ?? { result: null, state: 'waiting' as const }),
@@ -54,6 +55,28 @@ function setupPhase({ calls, mode, setup }: AnimationTaskInput): Phase {
   if (setup) return { result: `${setup.lookLabel}, about ${setup.lengthSec} s`, state: 'done' }
   if (last && !last.ok) return failedPhase(last.text)
   return { result: mode === 'animation' ? 'Waiting for the setup card' : null, state: 'waiting' }
+}
+
+/** A Talking head's avatar: a saved one is done at once; a new one runs while Claude draws and
+ *  checks it (avatar_check), and is done once avatar_save keeps it. */
+function avatarPhase({ calls, setup }: AnimationTaskInput): Phase {
+  const avatar = setup?.avatar
+  if (!avatar) return { result: null, state: 'waiting' }
+  const saving = callsOf(calls, 'avatar_save').at(-1)
+  const checking = callsOf(calls, 'avatar_check').at(-1)
+  const last = [saving, checking]
+    .filter((c): c is MotionToolCall => !!c)
+    .sort((a, b) => b.startedAt - a.startedAt)[0]
+  if (last && last.ok === undefined)
+    return {
+      result: last.tool === 'avatar_save' ? 'Saving the avatar…' : 'Drawing the check sheet…',
+      state: 'running',
+    }
+  if (last && !last.ok) return failedPhase(last.text)
+  if ('id' in avatar) return { result: setup.avatarName ?? 'Saved avatar', state: 'done' }
+  if (checking)
+    return { result: `Drawn from the photo: ${avatar.name}, not saved yet`, state: 'running' }
+  return { result: `Drawing ${avatar.name} from the photo`, state: 'waiting' }
 }
 
 function planPhase({ plan }: ReelFacts): Phase {

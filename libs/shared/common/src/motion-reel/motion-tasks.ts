@@ -15,6 +15,8 @@ export const MOTION_TASKS: readonly { id: AgentMotionTaskId; label: string }[] =
 /** A Claude Animation's phases (it shows in the same Tasks panel), in order, with their names. */
 export const ANIMATION_TASKS: readonly { id: AgentMotionTaskId; label: string }[] = [
   { id: 'setup', label: 'Set up' },
+  // Only a Talking head has this row: Claude draws the avatar from a photo, or uses a saved one.
+  { id: 'avatar', label: 'Avatar' },
   { id: 'plan', label: 'Plan' },
   { id: 'voice', label: 'Voices' },
   { id: 'music', label: 'Music' },
@@ -24,9 +26,21 @@ export const ANIMATION_TASKS: readonly { id: AgentMotionTaskId; label: string }[
   { id: 'review', label: 'Review' },
 ]
 
-/** Every animation phase still to come. */
-export function waitingAnimationTasks(): AgentMotionTask[] {
-  return ANIMATION_TASKS.map(({ id, label }) => ({ id, label, result: null, state: 'waiting' }))
+/** An animation's rows: the Avatar row only for a Talking head. */
+export function animationTaskRows(
+  talkingHead: boolean,
+): readonly { id: AgentMotionTaskId; label: string }[] {
+  return talkingHead ? ANIMATION_TASKS : ANIMATION_TASKS.filter((t) => t.id !== 'avatar')
+}
+
+/** Every animation phase still to come (before the setup: the look isn't known yet). */
+export function waitingAnimationTasks(talkingHead = false): AgentMotionTask[] {
+  return animationTaskRows(talkingHead).map(({ id, label }) => ({
+    id,
+    label,
+    result: null,
+    state: 'waiting',
+  }))
 }
 
 /** How many renders the motion-reel skill allows before the agent says what is still off. */

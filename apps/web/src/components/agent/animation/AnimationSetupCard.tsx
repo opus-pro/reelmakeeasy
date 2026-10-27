@@ -22,6 +22,7 @@ import {
 } from '../motion/setup-parts'
 import { Spinner } from '../Spinner'
 
+import { avatarChoice, type AvatarPick, AvatarPicker, firstAvatarPick } from './AvatarPicker'
 import { useAnimationOptions } from './useAnimationOptions'
 
 export type AnimationSetupCardProps = {
@@ -47,6 +48,7 @@ export function AnimationSetupCard({ entry, onSubmit, sessionId }: AnimationSetu
 function ChosenSetup({ setup }: { setup: AgentAnimationSetupView }) {
   const facts = [
     setup.lookLabel,
+    ...(setup.avatarName ? [`Avatar: ${setup.avatarName}`] : []),
     `${setup.lengthSec} s`,
     setup.musicTitle
       ? `♪ ${setup.musicTitle}`
@@ -121,6 +123,9 @@ function SetupForm({
   const [lengthSec, setLengthSec] = useState(first?.defaultLengthSec ?? 30)
   const [music, setMusic] = useState<MusicPick>(() => defaultMusic(options, first))
   const [musicTouched, setMusicTouched] = useState(false)
+  const [avatar, setAvatar] = useState<AvatarPick>(() => firstAvatarPick(options.avatars))
+  const talkingHead = lookId === 'avatar'
+  const avatarSent = talkingHead ? avatarChoice(avatar) : null
   const [pending, setPending] = useState(false)
   const inFlightRef = useRef(false)
 
@@ -142,12 +147,15 @@ function SetupForm({
   }
 
   const lengthOk = !custom.trim() || customOk
-  const ready = !!look && !look.disabledReason && (surprise || !!subject.trim()) && lengthOk
+  const avatarOk = !talkingHead || !!avatarSent
+  const ready =
+    !!look && !look.disabledReason && (surprise || !!subject.trim()) && lengthOk && avatarOk
   const submit = async () => {
     if (!ready || !look || inFlightRef.current) return
     inFlightRef.current = true
     setPending(true)
     const ok = await onSubmit({
+      ...(avatarSent ? { avatar: avatarSent } : {}),
       lengthSec: length,
       lookId: look.id,
       music: musicChoice(music),
@@ -165,6 +173,14 @@ function SetupForm({
       <Header />
       <fieldset className="flex flex-col gap-4" disabled={pending}>
         <LookGrid looks={options.looks} onPick={pickLook} selected={lookId} />
+        {talkingHead && (
+          <AvatarPicker
+            avatars={options.avatars}
+            onPick={setAvatar}
+            pick={avatar}
+            sessionId={sessionId}
+          />
+        )}
         <div className="flex flex-col gap-1.5">
           <label className={LABEL_CLASS} htmlFor="animation-subject">
             What&apos;s it about?
@@ -175,7 +191,9 @@ function SetupForm({
             id="animation-subject"
             maxLength={SUBJECT_MAX}
             onChange={(e) => setSubject(e.target.value)}
-            placeholder="e.g. Why honey never goes bad"
+            placeholder={
+              talkingHead ? 'e.g. Why we yawn, told by me' : 'e.g. Why honey never goes bad'
+            }
             value={subject}
           />
           <button
@@ -237,9 +255,11 @@ function SetupForm({
         {pending && <Spinner className="text-secondary" />}
         {!ready && !pending && !look?.disabledReason && (
           <span className="text-xs text-secondary">
-            {lengthOk
-              ? "Say what it's about, or pick Surprise me."
-              : `Pick a length from ${options.minLengthSec} to ${options.maxLengthSec} seconds.`}
+            {!lengthOk
+              ? `Pick a length from ${options.minLengthSec} to ${options.maxLengthSec} seconds.`
+              : !avatarOk
+                ? 'Add a photo and a name for the new avatar.'
+                : "Say what it's about, or pick Surprise me."}
           </span>
         )}
       </div>
@@ -260,7 +280,7 @@ function LookGrid({
   return (
     <div className="flex flex-col gap-1.5">
       <span className={LABEL_CLASS}>Look</span>
-      <div className="grid grid-cols-3 gap-2" role="radiogroup">
+      <div className="grid grid-cols-4 gap-2" role="radiogroup">
         {looks.map((look) => (
           <button
             aria-checked={look.id === selected}
@@ -279,7 +299,7 @@ function LookGrid({
             type="button"
           >
             <LookPreview look={look} />
-            <span className="truncate px-2 py-1.5 text-xs font-medium text-primary">
+            <span className="px-2 py-1.5 text-xs leading-tight font-medium text-primary">
               {look.label}
             </span>
           </button>

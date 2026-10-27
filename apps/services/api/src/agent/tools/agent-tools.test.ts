@@ -302,13 +302,15 @@ describe('a Claude Animation chat', () => {
 })
 
 describe('the tools of a Claude Animation chat', () => {
-  it('gives an Easy chat its four tools and Advanced the setup too', () => {
+  it("gives an Easy chat its tools (a Talking head's avatar ones too) and Advanced the setup too", () => {
     expect(toolsForSession({ mode: 'animation' }, 'claude').map((t) => t.name)).toEqual([
       'animation_voice',
       'animation_music',
       'animation_still',
       'animation_render',
       'animation_review',
+      'avatar_check',
+      'avatar_save',
     ])
     expect(toolsForSession({ mode: 'animation_free' }, 'claude').map((t) => t.name)).toEqual([
       'animation_setup',
@@ -317,6 +319,8 @@ describe('the tools of a Claude Animation chat', () => {
       'animation_still',
       'animation_render',
       'animation_review',
+      'avatar_check',
+      'avatar_save',
     ])
     expect(toolSummary('animation_review', {})).toBe('Reviewing the render (contact sheets)')
   })

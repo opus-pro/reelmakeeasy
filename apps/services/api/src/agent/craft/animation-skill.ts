@@ -8,6 +8,8 @@ export const ANIMATION_STILL_TOOL = 'animation_still'
 export const ANIMATION_RENDER_TOOL = 'animation_render'
 export const ANIMATION_SETUP_TOOL = 'animation_setup'
 export const ANIMATION_REVIEW_TOOL = 'animation_review'
+export const AVATAR_CHECK_TOOL = 'avatar_check'
+export const AVATAR_SAVE_TOOL = 'avatar_save'
 
 export const animationSkillName = (look: AnimationLookId) => `reelmakeeasy-animation-${look}`
 export const ANIMATION_SKILL_NAMES: readonly string[] = ANIMATION_LOOKS.map((l) =>
@@ -19,6 +21,8 @@ const DESCRIPTION: Record<AnimationLookId, string> = {
   '3d': 'How to write and build a ReelMakeEasy Claude Animation in the 3D look (a narrated explainer around one detailed 3D object, drawn in code with three.js in Remotion). Use in every 3D Claude Animation chat, before writing the script, recording the voice, building scenes, rendering or changing it.',
   '8bit':
     'How to write and build a ReelMakeEasy Claude Animation in the 8-bit look (a narrated pixel-art explainer like an old video game, drawn in code with three.js in Remotion). Use in every 8-bit Claude Animation chat, before writing the script, recording the voice, building scenes, rendering or changing it.',
+  avatar:
+    "How to make a ReelMakeEasy Talking head (draw the user's digital avatar from their photo (2D or 3D, a rig of moving parts), save it, and build a video where it talks to the camera, waist up, with gestures and pictures). Use in every Talking head Claude Animation chat, before drawing or changing the avatar, writing the script, recording, building, rendering or changing it.",
 }
 
 /** What each look's script and scenes are, and how its library is used. */
@@ -122,6 +126,65 @@ const LOOK_SECTION: Record<AnimationLookId, string[]> = {
     '- **HUD (H, 1080×1920, pixel font, uppercase):** `H.C` palette (`ink yellow cyan red green orange dim`); `text(s, x, y, { u, color, align })`, `panel`, `hook([{ text, color }], t, t0, { y, out })` (types in), `stamp(s, t, t0, t1, { y, color, u })` (slams in), `caption`, `counter(label, value, x, y, w)`, `bar`, `gauge`, `scope`, `trace`, `tag(s, [px, py], [ox, oy], { color, k })` (a label on a dotted leader from a screen point), `ring(cx, cy, r)` (around the lens), `poly`, and `fmt(n)`. The font has A-Z, 0-9 and `.,!?:-+/%°$×▲▼@&#`; anything else draws `?`.',
     '- **Layout:** counters at y 80-236, the hook at 330, the lens mid-screen, a diagram panel at y 1150-1480, narration at 1712. Colour over 1.0 (`new THREE.Color(c).multiplyScalar(2)`) is what blooms.',
     '- Build the hero from boxes, cylinders and extrusions with real detail (floors, windows as `windowTexture`, a crown, the inside parts on the x-ray layer). Keep low-poly elsewhere.',
+  ],
+  avatar: [
+    '## The Talking head: your avatar talks to the camera',
+    '',
+    "A host, the user's own digital avatar, stands waist up in a simple set, looks into the camera and explains one thing, with gestures on its key words and pictures popping up beside or above it on the words they show. It is drawn in code like everything else: no AI picture or video model.",
+    '',
+    '### First: the avatar',
+    '',
+    '`brief.md` says whether the avatar is saved (use `src/avatar/avatar.ts` as it is; change it only when the user asks) or new (draw it from the photo in `animation/public/avatar/` first). A new one is the first thing you make, before the script:',
+    '',
+    "1. **Study the photo** (open it). Write down what makes this person recognisable: face shape (round, long, square, heart), skin tone (pick the hex from the photo), hair (style, length, parting, fringe, curls, colour and its highlight), eyebrows (shape, thickness, colour), eyes (colour, size, spacing), glasses, facial hair, ears, freckles or dimples, age, and the clothes (garment, collar, colours, a pattern or logo shape). Don't flatter it into a generic face, and don't caricature it: it should read as them at a glance, as a friendly cartoon.",
+    "2. **Draw the rig** in `src/avatar/avatar.ts`: it starts as the starter of its style (a plain person in a blue jumper). Keep its structure and the pose it reads; change the colours, then the shapes: the face outline, the hair (a back layer behind the head and a front layer over the forehead, both moving with the head), the brows, the eyes, the nose, the clothes, glasses and beard. Keep the face's centre, shoulders and waist where the starter has them (the stage frames the shots from them).",
+    `3. **Check** with \`${AVATAR_CHECK_TOOL}\`: a sheet of 16 poses. Open it beside the photo and fix what is off (likeness first, then every mouth shape, the blink, each gesture's hand). Two or three rounds are normal.`,
+    `4. **Ask** the user with a card whether to keep it ("Keep this avatar (Recommended)" or "Change something"), then **save** it with \`${AVATAR_SAVE_TOOL}\` and a voice that fits the person (\`voice\`: age, warmth, energy, pace). It goes into the user's avatars with a voice sample: every later video uses the same face and voice.`,
+    '',
+    'When the user asks to change a saved avatar (new glasses, a different shirt), change `avatar.ts`, check, and save again (the same avatar is updated; pass a new `voice` only to change the voice).',
+    '',
+    '### The rig contract',
+    '',
+    "`avatar.ts` exports `avatar`: a 2D one (`{ style: '2d', name, draw(p) }`, `draw` returning SVG for the avatar's own box: 1000 wide, origin at the waist (bottom centre), y up negative, the face's centre near y -900, shoulders near (±215, -560)) or a 3D one (`{ style: '3d', name, build(THREE) }` returning `{ root, pose(p) }`, metres, origin at the waist, facing +z, the head's centre near 0.72 m). Everything moves from the pose `p` alone:",
+    '- `p.mouth` (0 shut .. 1 wide) and `p.vowel` (`A E I O U M`): use `mouthShape(p.vowel)` for the width and height factors.',
+    '- `p.blink` (0 open .. 1 shut), `p.gaze` ([x, y], -1..1), `p.brows` (-1 frown .. 1 raised), `p.smile` (0..1).',
+    '- `p.head` (`nod`, `tilt`, `turn`, degrees): tilt the head about the neck, slide the features with turn and nod.',
+    '- `p.left`, `p.right` (screen sides): each `{ gesture, k, n, since }`. In 2D draw them with `drawArm(side, p.left, shoulder, { skin, sleeve, cuff })` after the head (raised hands go over the face); in 3D make them once with `makeArm3D(THREE, { side, skin, sleeve })` and call `.pose(p.left)`.',
+    '- `p.shrug` (0..1): lift the shoulders. The stage does the lean and the breathing.',
+    '',
+    '### The video',
+    '',
+    '- **Script:** one host, talking to the viewer as "you", about 2.4 words per second of length (72 words for 30 s). Line 1 is the hook ("Did you know…" with the surprising fact in everyday words); one idea per line; the last line closes the loop and ties it to daily life. Record it with voices "Host: avatar".',
+    '- **Shots:** one per line, `medium` (waist up, pictures above), `close` (the face: the hook and the big moments), `left` / `right` (the host to one side, pictures on the other) and `wide`. Change shot on most lines; start on `close` or `medium`.',
+    "- **Gestures** are cues on words: `{ at: word(i, 'three').start, gesture: 'count', n: 3, hand: 'right' }`. Gestures: `open` (both hands, presenting), `point` (toward the board side), `count` (n fingers), `thumb`, `wave` (hello and goodbye), `think`, `shrug`. One every line or two, on the word it means; `hold` sets how long (1.4 s by default). Also `{ at, look: 'right' }` (the eyes and head go to the board, then `'camera'` back), `{ at, mood: 'surprised' | 'serious' | 'smile' }`, `{ at, nod: true }`, `{ at, lean: 4 }`. The voice already drives the mouth, the blinks and small head moves.",
+    "- **The board:** `board(t, i, area)` draws the pictures for line i as SVG in screen pixels inside `area` (the shot's free space, above or beside the host): a number that counts up, an icon, a simple diagram, a labelled chip, each popping in on its word (`back(ss(w.start - 0.2, w.start + 0.2, t))`). Big and bold: at least 3% of the frame height for text.",
+    '- **The set:** behind the host, simple and in the palette: a soft gradient wall with a shape or two that drift (2D: `set(t, i, shot)` returns SVG for the screen; 3D: `set(E)` builds walls, a desk or shelves and lights once in `E.scene`, the host stands at the origin). Keep it calm; the host and the board carry the video.',
+    '- **Captions** under the host with `<Captions />` (they sit in the lower third, over the torso).',
+    '',
+    '### The host kit (`src/host/`)',
+    '',
+    '`Animation.tsx` holds `<Voice />`, `<Music />`, `<TalkingHead2D avatar={avatar} shots={shots} cues={cues} set={set} board={board} />` (or `<TalkingHead3D … />` for a 3D avatar) and `<Captions />` after it. Import `avatar` from `./avatar/avatar` and timing helpers from `./toon` (`L`, `word`, `ss`, `back`, `lerp`, `chip`): they work for both styles.',
+    '',
+    'A minimal `src/scenes/talk.ts`:',
+    '',
+    '```ts',
+    "import type { Area, Cue, Shot } from '../host'",
+    "import { back, chip, ss, word } from '../toon'",
+    '',
+    "export const shots: Shot[] = ['close', 'right', 'medium', 'left', 'close']",
+    'export const cues: Cue[] = [',
+    "  { at: word(0, 'know').start, gesture: 'open', hand: 'both' },",
+    "  { at: word(1, 'three').start, gesture: 'count', n: 3 },",
+    "  { at: word(3, 'look').start, look: 'right' },",
+    "  { at: word(4, 'bye').start, gesture: 'wave' },",
+    ']',
+    'export const set = () => `<rect width="1080" height="1920" fill="#1B1F2A"/><circle cx="860" cy="420" r="260" fill="#24304A"/>`',
+    'export function board(t: number, i: number, a: Area) {',
+    "  if (i !== 1) return ''",
+    "  const w = word(1, 'three')",
+    "  return chip(a.x + a.w / 2, a.y + 200, '3 TIMES', { size: 64, k: back(ss(w.start - 0.2, w.start + 0.2, t)) })",
+    '}',
+    '```',
   ],
 }
 

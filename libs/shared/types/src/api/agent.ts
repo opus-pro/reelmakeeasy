@@ -19,11 +19,33 @@ export type AgentMode =
   | 'ranking'
   | 'ranking_easy'
 
-/** A Claude Animation's look: the visual style it is drawn in. */
-export type AnimationLookId = '2d' | '3d' | '8bit'
+/** A Claude Animation's look: the visual style it is drawn in. `avatar`: a talking head, the
+ *  user's own avatar (2D or 3D) talking to the camera. */
+export type AnimationLookId = '2d' | '3d' | '8bit' | 'avatar'
+
+/** How an avatar is drawn. */
+export type AvatarStyle = '2d' | '3d'
+
+/** A saved avatar (`GET /api/agent/avatars`). */
+export type AgentAvatar = {
+  createdAt: string
+  id: string
+  name: string
+  /** Its picture (head and shoulders), or null before it has one. */
+  previewUrl: null | string
+  style: AvatarStyle
+}
+
+/** The Talking head's avatar: a saved one, or a new one Claude draws from a photo (an attachment
+ *  of the chat, by its name). */
+export type AgentAnimationAvatar =
+  | { id: string }
+  | { name: string; photo: string; style: AvatarStyle }
 
 /** What the Claude Animation setup card sends (`POST /api/agent/sessions/:id/animation`). */
 export type AgentAnimationSetup = {
+  /** The Talking head look's avatar (only with lookId `avatar`). */
+  avatar?: AgentAnimationAvatar
   /** About this long, in seconds: a whole number from 10 to 90. */
   lengthSec: number
   lookId: AnimationLookId
@@ -35,6 +57,8 @@ export type AgentAnimationSetup = {
 
 /** `GET /api/agent/animation/options`: what the Claude Animation setup card offers. */
 export type AgentAnimationOptions = {
+  /** The saved avatars, newest first (the Talking head look). */
+  avatars: AgentAvatar[]
   composers: AgentMotionOptions['composers']
   /** Any whole number of seconds in this range can be typed in. */
   maxLengthSec: number
@@ -57,6 +81,8 @@ export type AgentAnimationOptions = {
 
 /** The setup a Claude Animation chat settled on, as its card shows it once chosen. */
 export type AgentAnimationSetupView = AgentAnimationSetup & {
+  /** The Talking head's avatar's name. */
+  avatarName?: string
   lookLabel: string
   musicTitle: null | string
 }
@@ -136,6 +162,7 @@ export interface AgentMotionPlan {
 }
 
 export type AgentMotionTaskId =
+  | 'avatar'
   | 'build'
   | 'voice'
   | 'look'

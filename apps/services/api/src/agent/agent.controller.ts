@@ -34,6 +34,7 @@ import {
   type AgentAttachment,
   type AgentHarnessName,
   type AgentAnimationOptions,
+  type AgentAvatar,
   type AgentMode,
   type AgentMotionOptions,
   type AgentSession,
@@ -61,6 +62,7 @@ import { getCodexStatus } from './codex/codex-locator'
 import { AgentEditService, EditNotReadyError } from './edit/agent-edit.service'
 import { AnimationSetupError } from './animation/animation-setup'
 import { AnimationService, AnimationSetupTakenError } from './animation/animation.service'
+import { deleteAvatar, isAvatarId, listAvatars } from './animation/avatar-library'
 import { MotionReelService, MotionSetupTakenError } from './motion-reel/motion-reel.service'
 import { MotionSetupError } from './motion-reel/motion-setup'
 import {
@@ -561,6 +563,19 @@ export class AgentController {
   @Get('animation/options')
   animationOptions(): Promise<AgentAnimationOptions> {
     return this.animation.options()
+  }
+
+  /** The saved avatars (a Talking head's), newest first. */
+  @Get('avatars')
+  avatars(): AgentAvatar[] {
+    return listAvatars()
+  }
+
+  /** Deletes a saved avatar: its rig, picture, photo and voice sample. */
+  @Delete('avatars/:id')
+  deleteAvatar(@Param('id') id: string): { ok: true } {
+    if (!isAvatarId(id) || !deleteAvatar(id)) throw new NotFoundException('No such avatar.')
+    return { ok: true }
   }
 
   /** A Claude Animation chat's setup card. Answers once it is checked; the project is readied in
