@@ -68,6 +68,7 @@ export function buildAgentSessionList(
         flowActive: Boolean(s.flowActive),
         id: s.id,
         mode: s.mode ?? null,
+        posterUrl: s.videoPoster ?? null,
         project,
         rankingCoverUrl: s.rankingId ? rankingCover(s.rankingId) : null,
         status: s.status,

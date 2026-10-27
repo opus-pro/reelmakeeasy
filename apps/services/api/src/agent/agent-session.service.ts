@@ -425,6 +425,7 @@ export class AgentSessionService implements OnModuleDestroy {
     // session was idle waiting on one of its cards.
     // An Easy flow cut off that way can pick up where it left off (`resumeFlow`).
     for (const session of this.store.list()) {
+      this.keepEarlierPoster(session)
       if (session.status !== 'running' && !session.flowActive) {
         this.markEarlierCutOff(session)
         this.reopenServerCards(session)
@@ -670,6 +671,9 @@ export class AgentSessionService implements OnModuleDestroy {
       }
     >,
   ): void {
+    // A code video's newest poster is the chat's thumbnail in the list.
+    if (event.type === 'motion_video' && event.posterUrl)
+      this.store.update(id, { videoPoster: event.posterUrl }, { touch: false })
     this.emit(id, event)
   }
 
@@ -705,6 +709,16 @@ export class AgentSessionService implements OnModuleDestroy {
     this.cancelledFlows.delete(id)
     if (this.serverQuestions.get(id)?.size === 0) this.serverQuestions.delete(id)
     if (this.store.get(id)?.flowActive) this.store.update(id, { flowActive: false })
+  }
+
+  /** A code video chat that rendered before posters were kept: its newest render's poster. */
+  private keepEarlierPoster(session: AgentSession): void {
+    if (session.videoPoster || !isCodeVideoMode(session.mode)) return
+    const poster = this.store
+      .eventsAfter(session.id, 0)
+      .findLast((e) => e.type === 'motion_video' && e.posterUrl)
+    if (poster?.type === 'motion_video' && poster.posterUrl)
+      this.store.update(session.id, { videoPoster: poster.posterUrl }, { touch: false })
   }
 
   /** Every event of the session's chat, in order (an interrupted flow reads its answers here). */

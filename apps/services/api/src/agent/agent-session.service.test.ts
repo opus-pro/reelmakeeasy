@@ -885,6 +885,38 @@ describe('AgentSessionService', () => {
       expect(events.find((e) => e.type === 'animation_setup')).toMatchObject({ setup })
     })
 
+    it("keeps a code video's latest poster for the chat list", async () => {
+      const svc = makeService(root, [])
+      const session = await svc.createSession()
+      expect(svc.getSession(session.id).videoPoster).toBeUndefined()
+      for (const n of [1, 2])
+        svc.emitAutonomousEvent(session.id, {
+          itemId: `animation-${n}`,
+          posterUrl: `store://agent-animation/${session.id}/animation-${n}.jpg`,
+          type: 'motion_video',
+          videoUrl: `store://agent-animation/${session.id}/animation-${n}.mp4`,
+        })
+      expect(svc.getSession(session.id).videoPoster).toBe(
+        `store://agent-animation/${session.id}/animation-2.jpg`,
+      )
+    })
+
+    it('finds the poster of a code video chat that rendered before posters were kept', async () => {
+      const svc = makeService(root, [])
+      const { id } = await svc.createSession()
+      await svc.chooseMode(id, 'animation_free')
+      await waitFor(() => svc.getSession(id).status === 'idle')
+      svc.emitAutonomousEvent(id, {
+        itemId: 'animation-1',
+        posterUrl: `store://agent-animation/${id}/animation-1.jpg`,
+        type: 'motion_video',
+        videoUrl: `store://agent-animation/${id}/animation-1.mp4`,
+      })
+      new AgentSessionStore(root).update(id, { videoPoster: undefined }, { touch: false })
+      const again = makeService(root, [])
+      expect(again.getSession(id).videoPoster).toBe(`store://agent-animation/${id}/animation-1.jpg`)
+    })
+
     it('motion_free: starts the agent at once with its own kickoff, takes messages, and names itself after the setup', async () => {
       const log = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'agent-svc-mfree-')), 'log.jsonl')
       const svc = makeService(root, [], { FAKE_LOG: log })

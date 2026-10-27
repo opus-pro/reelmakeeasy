@@ -229,8 +229,11 @@ function AgentWorkspace({
   const flowCancelledCount = entries.filter(
     (e) => e.kind === 'notice' && e.text === FLOW_CANCELLED_NOTICE,
   ).length
+  // A Motion Reel or Claude Animation render: its poster is the row's thumbnail.
+  const renders = entries.filter((e) => e.kind === 'motion_video').length
   const rowKey = [
     projectIdsKey,
+    renders,
     mode ?? '',
     hasUserMessage,
     pickedIdea,

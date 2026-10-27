@@ -365,6 +365,9 @@ export interface AgentSession {
   /** A Ranking chat's ranking (the one its tools last read or changed, or the one it was opened
    *  from in the studio). */
   rankingId?: string
+  /** The poster (its address) of the newest video a Motion Reel or Claude Animation chat
+   *  rendered: the chat's thumbnail in the list. */
+  videoPoster?: string
   /** Only in the API's view of a chat that can pick up where it left off
    *  (`GET /api/agent/sessions/:id`), never saved: what picking up does. */
   resume?: AgentResumeAction
@@ -512,6 +515,8 @@ export interface AgentSessionListItem {
   flowActive: boolean
   id: string
   mode: AgentMode | null
+  /** The poster of the newest video a Motion Reel or Claude Animation chat rendered. */
+  posterUrl: null | string
   project: AgentSessionProject | null
   /** The cover of the ranking a Ranking chat works on, when it has one. */
   rankingCoverUrl: null | string
