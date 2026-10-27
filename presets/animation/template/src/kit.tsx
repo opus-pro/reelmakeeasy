@@ -10,7 +10,7 @@ import {
   useVideoConfig,
 } from 'remotion'
 
-import { captionChunks, chunkAt } from './caption-chunks'
+import { captionChunks, chunkAt, litWord } from './caption-chunks'
 import { sec, spec, type VoiceLine, voiceLines } from './clock'
 
 /**
@@ -207,6 +207,7 @@ export function Captions({
   const chunk = line ? chunkAt(captionChunks(line.words, maxWords), t) : null
   if (!chunk) return null
   const fontSize = Math.max(height * 0.034, 40)
+  const lit = litWord(chunk, t)
   return (
     <div
       style={{
@@ -238,10 +239,7 @@ export function Captions({
         }}
       >
         {chunk.words.map((w, i) => (
-          <span
-            key={`${chunk.from}-${i}`}
-            style={{ color: t >= w.start && t < w.end + 0.08 ? accent : color }}
-          >
+          <span key={`${chunk.from}-${i}`} style={{ color: i === lit ? accent : color }}>
             {w.text}
             {i < chunk.words.length - 1 ? ' ' : ''}
           </span>

@@ -1,4 +1,4 @@
-import { captionChunks } from '../caption-chunks'
+import { captionChunks, litWord } from '../caption-chunks'
 import { voiceLines } from '../clock'
 
 import { textWidth } from './font'
@@ -46,9 +46,10 @@ export function narration(
   const width = textWidth(text, U)
   H.panel(540 - width / 2 - 6 * U, y - 4 * U, width + 12 * U, 15 * U)
   let x = 540 - width / 2
-  for (const w of row) {
+  const lit = litWord({ from: 0, to: 0, words: row }, t)
+  for (const [i, w] of row.entries()) {
     const word = w.text.toUpperCase()
-    const now = t >= w.start && t <= w.end + 0.05
+    const now = i === lit
     H.text(word, x, y, { color: now ? (accent ?? H.C['yellow']) : H.C['ink'], u: U })
     x += textWidth(`${word} `, U) + U
   }

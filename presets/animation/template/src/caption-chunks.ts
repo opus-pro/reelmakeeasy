@@ -66,6 +66,17 @@ export function captionChunks(words: ChunkWord[], maxWords = 3): CaptionChunk[] 
   })
 }
 
+/** Which word of a chunk is lit at t: the last one that has started (one word only, even where
+ *  the aligner's word times overlap), until its end plus a short hold; -1 for none. */
+export function litWord(chunk: CaptionChunk, t: number): number {
+  let lit = -1
+  chunk.words.forEach((w, i) => {
+    if (w.start <= t) lit = i
+  })
+  const w = chunk.words[lit]
+  return w && t < w.end + 0.3 ? lit : -1
+}
+
 /** The chunk on screen at t, if any. */
 export function chunkAt(chunks: CaptionChunk[], t: number): CaptionChunk | null {
   return chunks.find((c) => t >= c.from && t < c.to) ?? null

@@ -2,6 +2,7 @@ import {
   captionChunks,
   chunkAt,
   chunkSizes,
+  litWord,
 } from '../../../../../presets/animation/template/src/caption-chunks'
 import { chunkCaptionWords } from '../long-take/beat-loop-captions'
 
@@ -47,5 +48,22 @@ describe("an animation's captions", () => {
       'I am Allen.',
     ])
     expect(chunkAt(chunks, 1.5)).toBeNull()
+  })
+
+  it('lights exactly one word, even where the word times overlap', () => {
+    const chunk = {
+      from: 0,
+      to: 2,
+      words: [
+        { end: 0.6, start: 0, text: "Tonight's" },
+        { end: 0.9, start: 0.5, text: 'top' },
+        { end: 1.4, start: 0.95, text: 'story:' },
+      ],
+    }
+    expect(litWord(chunk, 0.2)).toBe(0)
+    // Inside both "Tonight's" and "top": only the newer one is lit.
+    expect(litWord(chunk, 0.55)).toBe(1)
+    expect(litWord(chunk, 1.0)).toBe(2)
+    expect(litWord(chunk, 1.9)).toBe(-1)
   })
 })
