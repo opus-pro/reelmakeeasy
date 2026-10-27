@@ -252,6 +252,8 @@ export function readComposedMusic(projectDir: string, lengthSec: number): Compos
   const checks = 'error' in report ? [] : reportChecks(report.value)
   const harmony = harmonyRefusal(checks)
   if (harmony) return harmony
+  const kick = kickRefusal(checks)
+  if (kick) return kick
   const failed = checks.filter((c) => c.status === 'FAIL')
   if (failed.length) {
     const why = failed.map((c) => `${c.id}: ${c.msg}`).join('; ')
@@ -307,6 +309,21 @@ function harmonyRefusal(checks: { id: string; msg: string; status: string }[]): 
 
 function hitsOf(json: MusicJson, voices: string[]): { s: number; t: number }[] {
   return voices.flatMap((voice) => (json.hits[voice] ?? []).map(([t, vel]) => ({ s: vel, t })))
+}
+
+/**
+ * The composer's kick check (`tools/audio/kick.mjs`) must PASS: the owner approved one kick only,
+ * and rejected the elastic "rubber band" kick (a slow pitch slide, a long tail, a harmonics layer
+ * sliding with it) twice after it measured clean everywhere else. A report without the check is
+ * from a composer older than it. A message telling the agent what to fix, or null.
+ */
+function kickRefusal(checks: { id: string; msg: string; status: string }[]): null | string {
+  const check = checks.find((c) => c.id === 'kick')
+  const rerun = '`cd reel/music && node tools/score.mjs --no-cues`'
+  if (!check)
+    return `qc/score-report.json has no kick check (it is from an older composer): run ${rerun} again, fix what its kick line lists, then call motion_music.`
+  if (check.status === 'PASS') return null
+  return `The composer's kick check did not pass: ${check.msg.slice(0, 600)}. Use only the approved kick, { inst: 'kick', f0: 200, f1: 55, pitchTau: 0.008, decay: 0.1, click: 0.65, drive: 1.3, gain: 0.7 } with no harmonics layer (the full list is under "kick" in reel/music/qc/score-report.json; no slow pitch slide, no long tail, no harmonics on a kick or on any voice that glides, no sliding 808 hit), run ${rerun} again until kick is ok, then call motion_music.`
 }
 
 /** The kick voices: a kick instrument or a voice named as one, else the low hits (an 808 or a

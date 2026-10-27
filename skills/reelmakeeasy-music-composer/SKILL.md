@@ -37,8 +37,9 @@ Start from a recipe (`music-direction.md` §10, the code in `music-synthesis.md`
 
 - **No copying.** Never copy or imitate a song, an artist, a melody, a film score or a sonic logo, and never "make it sound like X". No 4+ note run with the same pitches and rhythm as a known tune.
 - **No clichés of a place or people.** Never a pentatonic "oriental" riff, a gong-and-pentatonic "Asia", a "tribal" chant, a fake language, a sitar drone for "India", a bandoneon for "Latin". Never any ethnic or national stereotype as a sound.
+- **One kick: the owner-approved one.** `{ inst: 'kick', f0: 200, f1: 55, pitchTau: 0.008, decay: 0.1, click: 0.65, drive: 1.3, gain: 0.7 }` with no `harmonics` layer (the kick instrument's defaults, recipe D). A slow pitch slide (`pitchTau` > 0.012 s), a long tail (`decay` > 0.15 s), a harmonics layer on a kick or on any voice that glides, a sliding 808 hit (`e808` with `from`/`slide`), and any other hit that slides into the kick register (<= 120 Hz) slower than 0.012 s with a tail > 0.15 s played as a beat (a `tom`, `conga`, `boom`, `logdrum`, `bloop`... on every beat: the same kick under another name) are the elastic "rubber band" kick the owner rejected twice. A voice that `mix.duck.by` ducks on is the kick and is held to the kick's limits. The composer's kick check FAILs them (exit 3) and `motion_music` refuses the score.
 - **The harmony check must pass.** `node tools/score.mjs` prints a `harmony` line; a FAIL (exit code 3) lists every clash, chord and note to fix, and `motion_music` refuses the score until it passes.
-- **You cannot hear.** The QC measures harmony arithmetic, loudness, peaks, mono, phone band, silences, gaps and the ending, never whether it sounds good. In replies say what was checked by measurement, and never claim how the music sounds ("punchy", "warm", "catchy"). The user hears it in the chat when the reel renders: ask them to listen to the hook, the drop and the ending.
+- **You cannot hear.** The QC measures harmony arithmetic, the kick, loudness, peaks, mono, phone band, silences, gaps and the ending, never whether it sounds good. In replies say what was checked by measurement, and never claim how the music sounds ("punchy", "warm", "catchy"). The user hears it in the chat when the reel renders: ask them to listen to the hook, the drop and the ending.
 - **ReelMakeEasy owns `reel/music/tools/`**: it is replaced on every setup; never edit it. Run only `node tools/score.mjs`; never install packages or fetch anything. No samples: every sound is synthesized.
 
 ## The workflow in a Motion Reel
@@ -47,15 +48,15 @@ Start from a recipe (`music-direction.md` §10, the code in `music-synthesis.md`
 2. **Decide the music** with `music-direction.md` and write it at the top of `reel/plan.md` under `## Music` (the template is its §12): the recipe you start from, the world, tempo, arc, key and mode, progression, motif, ending.
 3. **Tempo and bars.** The reel is whole 4/4 bars: `bars = round(length × bpm / 240)` with the reel's asked length (15 s at 136 BPM: round(8.5) = 9 bars, 15.88 s). Pick the tempo for the concept first, then read the bar count; choose another tempo that suits the concept if the count does not fit your phrases. The sections in `music.mjs` must add up to **exactly** that many bars, and the ring-out happens inside the last bars (put the final chord 1.5 s or more before the end). `motion_music` refuses another count and says the right one.
 4. **Write `reel/music/music.mjs`** and set `bpm` in `reel/music/reel.config.mjs` to your tempo (music.mjs reads `config.bpm`; ReelMakeEasy rewrites the rest of that file on every setup and keeps your bpm). 4/4 only: the reel's grid is 4/4.
-5. **Check the harmony first**: `cd reel/music && node tools/score.mjs --no-cues --harmony` (a few seconds, no master). Fix every line it lists and run it again until it prints `ok harmony`.
+5. **Check the harmony and the kick first**: `cd reel/music && node tools/score.mjs --no-cues --harmony` (a few seconds, no master). Fix every line it lists and run it again until it prints `ok harmony` and `ok kick`.
 6. **Render and measure**: `node tools/score.mjs --no-cues`. Read the console (sections, the `harmony` line, the `map` line of loudness per section, every `WARN` and `FAIL`) and `qc/score-report.json`; open `qc/audio.png` when a check points at something you can see (gaps, clipping, the arc). Fix every FAIL (exit code 3) and every WARN you can, and run it again. The arc must show in the `map` line: the break clearly down, the drop up.
-7. **Put it under the reel**: call `motion_music` with `engine: "composer"` and no prompt. It checks the score is newer than your music.mjs, is the reel's bars and passed the harmony check, then rewrites `public/music.wav`, `public/reel.json` and `music-map.md` from your score. Then read `music-map.md` again and plan the scenes on your own sections, kicks and motif notes (the motion-reel skill).
+7. **Put it under the reel**: call `motion_music` with `engine: "composer"` and no prompt. It checks the score is newer than your music.mjs, is the reel's bars and passed the harmony and kick checks, then rewrites `public/music.wav`, `public/reel.json` and `music-map.md` from your score. Then read `music-map.md` again and plan the scenes on your own sections, kicks and motif notes (the motion-reel skill).
 8. **Later changes** are free: edit, run the composer, call `motion_music` again, re-check the scenes.
 
 ## Commands (from `reel/music/`)
 
 ```bash
-node tools/score.mjs --no-cues --harmony  # the harmony check alone: key, mode, chords, bass, melody, clashes, timbres (exit 3 = FAIL)
+node tools/score.mjs --no-cues --harmony  # the harmony and kick checks alone: key, mode, chords, bass, melody, clashes, timbres, elastic kicks (exit 3 = FAIL)
 node tools/score.mjs --no-cues            # the full score: audio/score.wav, build/music.json, qc/score-report.json, qc/audio.png
 node tools/score.mjs --help               # the music.mjs schema
 node tools/score.mjs --list               # 80 instruments with parameters, voice inserts, scales
@@ -68,7 +69,7 @@ A slice (`--around`, `--bars`, `--from-bar`, `--section`, `--window`) writes `au
 
 ## What the picture gets
 
-ReelMakeEasy reads `build/music.json` as data. Kicks: `kick` instruments or voices named `kick…` (an `e808` or `sub` when there is none). Snares: `snare`/`clap`, by instrument or name. Melody: every motif note (strength 1, the accents `melody(0.8)` returns) and the other notes of the voices the motif plays on (1 when accented, else 0.6). Chords: your chord changes. Sections: your sections, energy 0-3 (4 counts as 3). So the arrangement *is* the picture's score: state the motif where elements should pop, put the drop where the biggest reveal is, give each section its own layer of the arrangement.
+ReelMakeEasy reads `build/music.json` as data. Kicks: `kick` instruments or voices named `kick…` (an `e808` or `sub` when there is none). Snares: `snare`/`clap`, by instrument or name. Melody: every motif note (strength 1, the accents `melody(0.8)` returns) and the other notes of the voices the motif plays on (1 when accented, else 0.6). Chords: your chord changes. Sections: your sections, energy 0-3 (4 counts as 3). So the arrangement *is* the picture's score: state the motif where new elements should arrive, put the drop where the biggest reveal is, give each section its own layer of the arrangement. The picture answers the music with new things (an arrival, a reveal, a cut, a counter step), never by bumping or flashing the same element on every note or kick.
 
 ## The reply after composing
 

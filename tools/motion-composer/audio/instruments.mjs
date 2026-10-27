@@ -16,6 +16,7 @@
 // Remember the realism caveat (critique G4): acoustic idioms from these voices read as toy/FM/lo-fi versions.
 // Pick the stylised route on purpose, or use an external track, and tell the user what you could not hear.
 
+import { KICK_DEFAULTS, LOGDRUM_DROP_TIME } from './kick.mjs';
 import { SR, TAU, S, clamp, mtof, saw, sqr, pulse, tri, pan, drive, lp1, hp1, biquad, svf, sinOsc, adExp, ahr } from './dsp.mjs';
 
 export const INST = {};
@@ -40,8 +41,10 @@ const notesOf = p => (p.notes && p.notes.length ? p.notes : [p.note ?? 60]);
 const fOf = (p, dflt = 60) => (p.f ?? mtof(p.note ?? dflt));
 
 // =============================================================== DRUMS AND PERCUSSION
-def('kick', 'drum', 0, 'f0 150 (Hz, pitch start) · f1 48 (Hz, end) · pitchTau .03 · decay .22 (s) · click .3 · drive 0 (tanh grit, not a phone fix: on 5 test scores drive left the phone QC open and the voice key harmonics cleared it)', (o, t, p) => {
-  const w = W(o, p, 0), s0 = S(t), f0 = p.f0 ?? 150, f1 = p.f1 ?? 48, pt = p.pitchTau ?? 0.03, dec = p.decay ?? 0.22, ck = p.click ?? 0.3, dr = p.drive ?? 0, nz = noiseOf(o), h = hp1(1200);
+// ReelMakeEasy: the defaults are the one kick the owner approved (audio/kick.mjs); the kick check fails pitchTau > .012,
+// decay > .15 or a harmonics layer on a kick (the elastic "rubber band" kick it rejected).
+def('kick', 'drum', 0, 'f0 200 (Hz, pitch start) · f1 55 (Hz, end) · pitchTau .008 (s; the kick check fails > .012) · decay .1 (s; fails > .15) · click .65 · drive 1.3 (the approved kick; no harmonics layer on a kick)', (o, t, p) => {
+  const K = KICK_DEFAULTS, w = W(o, p, 0), s0 = S(t), f0 = p.f0 ?? K.f0, f1 = p.f1 ?? K.f1, pt = p.pitchTau ?? K.pitchTau, dec = p.decay ?? K.decay, ck = p.click ?? K.click, dr = p.drive ?? K.drive, nz = noiseOf(o), h = hp1(1200);
   const n = N(o, s0, Math.min(3, dec * 7 + 0.03)), cn = Math.round(0.004 * SR); let ph = 0;
   for (let i = 0; i < n; i++) {
     const x = i / SR; ph += TAU * (f1 + (f0 - f1) * Math.exp(-x / pt)) / SR;
@@ -106,8 +109,8 @@ def('conga', 'drum', 0.2, 'note 62 · bend .4 · decay .25 · slap 0 (0..1, 2 kH
   const w = W(o, p, 0.2), s0 = S(t), f = mtof(p.note ?? 62), bend = p.bend ?? 0.4, dec = p.decay ?? 0.25, slap = p.slap ?? 0, b = biquad('bp', 2000, 1.5), nz = noiseOf(o), n = N(o, s0, dec * 5); let ph = 0;
   for (let i = 0; i < n; i++) { const x = i / SR; ph += TAU * f * (1 + bend * Math.exp(-x / 0.015)) / SR; w(s0 + i, Math.sin(ph) * Math.exp(-x / dec) * 0.6 + (x < 0.012 ? b(nz()) * slap * 1.5 * (1 - x / 0.012) : 0)); }
 });
-def('logdrum', 'drum', 0.15, 'note (plays bass lines) · drop 12 (semitones above) · dropTime .025 · decay .25 · drive 3 · knock 1 (1:1 FM index) · shape .3 (0 sine..1 triangle) · from (glide start) · glide .06 (s)', (o, t, p) => {
-  const w = W(o, p, 0.15), s0 = S(t), fN = mtof(p.note ?? 45), fFrom = p.from != null ? mtof(p.from) : fN, drop = p.drop ?? 12, dt = p.dropTime ?? 0.025, dec = p.decay ?? 0.25, dr = p.drive ?? 3, knock = p.knock ?? 1, shape = p.shape ?? 0.3, gl = Math.max(1e-4, p.glide ?? 0.06);
+def('logdrum', 'drum', 0.15, 'note (plays bass lines) · drop 12 (semitones above) · dropTime .012 (s; the kick check fails a slower drop down to <= 120 Hz with decay > .15 played as a beat) · decay .25 · drive 3 · knock 1 (1:1 FM index) · shape .3 (0 sine..1 triangle) · from (glide start) · glide .06 (s)', (o, t, p) => {
+  const w = W(o, p, 0.15), s0 = S(t), fN = mtof(p.note ?? 45), fFrom = p.from != null ? mtof(p.from) : fN, drop = p.drop ?? 12, dt = p.dropTime ?? LOGDRUM_DROP_TIME, dec = p.decay ?? 0.25, dr = p.drive ?? 3, knock = p.knock ?? 1, shape = p.shape ?? 0.3, gl = Math.max(1e-4, p.glide ?? 0.06);
   const n = N(o, s0, dec * 6), lp = lp1(3000); let ph = 0;
   for (let i = 0; i < n; i++) { const x = i / SR, base = fFrom + (fN - fFrom) * clamp(x / gl), f = base * Math.pow(2, drop / 12 * Math.exp(-x / dt));
     ph += f / SR; const idx = knock * Math.exp(-x / 0.02), car = ph + idx * Math.sin(TAU * ph) / TAU;

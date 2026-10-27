@@ -76,6 +76,43 @@ export async function typeCheck(projectDir: string): Promise<null | string> {
   }
 }
 
+/** ReelMakeEasy's own files under `src/` (the clock, the kit, the transitions, the root). */
+const OWNED_SOURCE = new Set(['grid.ts', 'index.ts', 'kit.tsx', 'Root.tsx', 'transitions.tsx'])
+/** A pulse on one of the music's whole event lists: a bump or flash on every kick, snare, hit,
+ *  chord change or note. */
+const PER_EVENT_PULSE = /\busePulse\(\s*(?:(?:kicks|snares|hitFrames|chordChanges)\(\s*\)|melody\()/
+
+/**
+ * Why the reel may not render (null: it may): a scene pulses on one of the music's whole event
+ * lists (`usePulse(kicks())`, `usePulse(melody(0.8))`...). The owner rejected a card that scaled
+ * and flashed on every melody note; the kit's `usePulse` also stops above a few accents. Reads the
+ * reel's own sources (`src/` but ReelMakeEasy's files).
+ */
+export function pulseRefusal(projectDir: string): null | string {
+  const src = path.join(projectDir, 'src')
+  const found: string[] = []
+  const walk = (dir: string): void => {
+    if (!fs.existsSync(dir)) return
+    for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+      const file = path.join(dir, entry.name)
+      if (entry.isDirectory()) walk(file)
+      else if (/\.tsx?$/.test(entry.name) && !(dir === src && OWNED_SOURCE.has(entry.name)))
+        fs.readFileSync(file, 'utf8')
+          .split('\n')
+          .forEach((line, i) => {
+            if (PER_EVENT_PULSE.test(line))
+              found.push(
+                `${path.relative(projectDir, file)}:${i + 1} (${line.trim().slice(0, 80)})`,
+              )
+          })
+    }
+  }
+  walk(src)
+  if (!found.length) return null
+  const more = found.length > 5 ? ` and ${found.length - 5} more` : ''
+  return `Not rendered: ${found.slice(0, 5).join('; ')}${more} pulses an element on every kick, snare or note. The owner rejected that (a card that scaled and flashed on every melody note). Take it out and answer the music with new things (an element arriving with usePopOn, a reveal, a cut, a counter step with useHitIndex); keep usePulse for a few chosen accents (the drop, the payoff: usePulse([bar(8)])), then render again.`
+}
+
 /** What `renderReel` delivers: the video, its poster, and how it sits on the music. */
 export type ReelRender = {
   /** The delivered video (loudness evened out). */

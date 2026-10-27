@@ -1,6 +1,10 @@
+import fs from 'node:fs'
+import os from 'node:os'
+import path from 'node:path'
+
 import type { ReelJson } from '@reelmakeeasy/common/motion-reel/reel-config'
 
-import { beatAt, beatTime, frameOfBeat, gridReport } from './motion-render'
+import { beatAt, beatTime, frameOfBeat, gridReport, pulseRefusal } from './motion-render'
 
 const reel = (over: Partial<ReelJson> = {}): ReelJson => ({
   bars: 2,
@@ -40,5 +44,38 @@ describe('gridReport', () => {
     )
     expect(gridReport(reel(), [1, 2])).toBe('2 cuts: 2 on a beat, none off the grid.')
     expect(gridReport(reel(), [])).toMatch(/No hard cuts/)
+  })
+})
+
+describe('pulseRefusal (no pulse on every kick, snare or note)', () => {
+  let dir: string
+  const scene = (name: string, code: string) => {
+    fs.mkdirSync(path.join(dir, 'src', 'scenes'), { recursive: true })
+    fs.writeFileSync(path.join(dir, 'src', 'scenes', name), code)
+  }
+  beforeEach(() => {
+    dir = fs.mkdtempSync(path.join(os.tmpdir(), 'motion-pulse-'))
+  })
+  afterEach(() => fs.rmSync(dir, { force: true, recursive: true }))
+
+  it("refuses the rejected reel's per-note pulse, and a pulse on every kick or snare", () => {
+    scene('Clips.tsx', 'const a = 1\n  const kick = usePulse(melody(0.8), 0.45)\n')
+    scene('Depth.tsx', 'const k = usePulse( kicks() )\nconst s = usePulse(snares())\n')
+    const why = pulseRefusal(dir)
+    expect(why).toMatch(
+      /^Not rendered: src\/scenes\/Clips\.tsx:2 \(const kick = usePulse\(melody\(0\.8\), 0\.45\)\); src\/scenes\/Depth\.tsx:1 .*; src\/scenes\/Depth\.tsx:2 .* pulses an element on every kick, snare or note/,
+    )
+    expect(why).toMatch(/answer the music with new things/)
+  })
+
+  it("lets a few chosen accents through, and reads only the reel's own sources", () => {
+    scene(
+      'Drop.tsx',
+      'const p = usePulse([bar(8)])\nconst q = usePulse(eventsBetween(melody(0.8), a, b))\n',
+    )
+    // The kit documents the rejected call; it is ReelMakeEasy's file, not the agent's.
+    fs.writeFileSync(path.join(dir, 'src', 'kit.tsx'), '// never `usePulse(kicks())`\n')
+    expect(pulseRefusal(dir)).toBeNull()
+    expect(pulseRefusal(path.join(dir, 'missing'))).toBeNull()
   })
 })

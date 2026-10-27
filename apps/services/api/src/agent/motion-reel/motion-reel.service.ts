@@ -49,6 +49,7 @@ import {
   beatAt,
   frameOfBeat,
   MAX_STILLS,
+  pulseRefusal,
   readReelJson,
   renderReel,
   renderStills,
@@ -163,6 +164,8 @@ export class MotionReelService {
           text: `The reel doesn't type-check; fix these first:\n${errors}`,
         }
       if (tool === 'motion_music') return await this.compose(id, session, projectDir, args)
+      const pulse = pulseRefusal(projectDir)
+      if (pulse) return { success: false, text: pulse }
       if (tool === 'motion_still') return await this.stills(id, projectDir, args)
       if (tool === 'motion_render') return await this.render(id, projectDir)
       return { success: false, text: `Unknown tool ${tool}.` }

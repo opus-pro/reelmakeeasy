@@ -12,6 +12,7 @@ import { parseNote, pcOf, resolveScale, degree, parseChord, voiceChord, chordTon
 import { VEL, RESTS, PITCH_TOKENS, expandGrid, meterInfo, swingOffset, euclid } from './rhythm.mjs';
 import { defaultCue, BUS_KINDS } from './cues.mjs';
 import { BUS_FX, swell, applyInserts } from './fx.mjs';
+import { checkKick } from './kick.mjs';
 import { checkHarmony, isPitchedEvent, eventPitches, soundingSec, inharmonicWhy, BASS_INST as HARMONY_BASS, CHORD_INST } from './harmony.mjs';
 
 const BASS_INST = new Set(['sub', 'sawBass', 'e808', 'reese', 'acid', 'wobble', 'logdrum', 'triangle', 'upright']);
@@ -543,6 +544,10 @@ export function compose(spec, sheet, opts = {}) {
     }),
   });
 
+  // ------------------------------------------------------------ ReelMakeEasy: the kick check (kick.mjs): no elastic kick, no sliding 808 hit,
+  // no sliding thump on a beat, no harmonics layer on a voice whose pitch moves. A voice the mix ducks on is the kick.
+  const kick = checkKick({ events, voices, duckBy: spec.mix?.duck ? spec.mix.duck.by ?? ['kick'] : [] });
+
   // ------------------------------------------------------------ render (voices with inserts or harmonics render privately first)
   events.sort((a, b) => a.t - b.t || (a.voice < b.voice ? -1 : a.voice > b.voice ? 1 : 0));
   const buses = { beat: new Bus(N, 'beat'), music: new Bus(N, 'music'), sfx: new Bus(N, 'sfx') };
@@ -664,7 +669,7 @@ export function compose(spec, sheet, opts = {}) {
     key: s0.keyless ? null : typeof (s0.key ?? spec.key) === 'string' && !s0.transpose ? String(s0.key ?? spec.key).trim() : nameOf(s0.keyPc + 60).replace(/-?\d+$/, ''), scale: spec.scale ?? null,
     sections: secs.map(s => ({ name: s.name, at: +s.at.toFixed(3), dur: +s.dur.toFixed(3), bars: +s.bars.toFixed(2), energy: s.energy, grid: typeof s.grid === 'string' ? s.grid : (spec.byEnergy?.[s.energy] ?? (typeof spec.grid === 'string' ? spec.grid : s.grid || s.play ? 'inline' : '-')),
       voices: [...new Set(events.filter(e => (e.sec !== undefined ? e.sec === s.index : e.t >= s.at && e.t < s.end) && !e.voice.startsWith('inst:') && !e.cue).map(e => e.voice))] })),
-    chords: chordsLog, hits: hitsLog, motif: motifLog, harmony, events: events.length, cueKinds: cueKindsSeen, fx: fxLog, warnings: warn, log,
+    chords: chordsLog, hits: hitsLog, motif: motifLog, harmony, kick, events: events.length, cueKinds: cueKindsSeen, fx: fxLog, warnings: warn, log,
     voices: Object.fromEntries(Object.entries(voices).map(([k, v]) => [k, { inst: v.inst, bus: busOf(v), fx: v.fx ? [].concat(v.fx).map(f => f.type ?? f.kind) : undefined,
       harmonics: v.harmonics != null && v.harmonics !== false ? harmonicsSpec(v.harmonics, k).db : undefined, gain: typeof v.gain === 'number' ? v.gain : undefined }])),
   };

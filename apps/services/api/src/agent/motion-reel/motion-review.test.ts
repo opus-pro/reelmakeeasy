@@ -90,6 +90,7 @@ describe('motion_review: the pace report', () => {
       '- 26 s (beat 52): 4 s',
       'Scenes: 7 shots, the longest 9 s; 1 too long (over 8 s: 3 s for 9 s (beat 6)): split each into different shots of at most 4 s; 1 long (over 4 s, information: 12 s for 5 s (beat 24)): one idea is at most 4 s.',
       'Stalls: 1 where nothing visibly moves for 0.5 s or more before the end card at 26 s: 3.5-5.67 s (beats 7-11.33). Keep something moving through each, big enough to see: a camera push, an element sliding or turning, a large counter, the next element coming in (a slow drift of 2% a second, or a glow, does not count).',
+      'Repeated pulsing/flashing: none (no element bumps or flashes at the beat or note rate for over 2 s).',
       'Pace: 1 shot over 8 s and 1 stall to fix (1 shot over 4 s to consider splitting).',
     ])
   })
@@ -102,7 +103,71 @@ describe('motion_review: the pace report', () => {
       [3, 6, 9, 12, 15, 18, 21, 24, 27],
       changes.map(() => 3),
     )
-    expect(paceReport(pace).at(-1)).toBe('Pace: no stalls and no shot over 8 s.')
+    expect(paceReport(pace).at(-1)).toBe(
+      'Pace: no stalls, no shot over 8 s and no repeated pulsing/flashing.',
+    )
+  })
+
+  /** A busy picture (change 2 a frame) with a cut every 3 s, and `bump` peaks on the frames given. */
+  const busyWith = (peaks: [number, number][]) => {
+    const changes = Array.from({ length: 900 }, (_, f): number => (f ? 2 : 0))
+    for (const [f, value] of peaks) changes[f] = value
+    return paceFindings(
+      reel,
+      changes,
+      [3, 6, 9, 12, 15, 18, 21, 24, 27],
+      changes.map(() => 3),
+    )
+  }
+
+  it('flags repeated pulsing/flashing: the same bump on every note for over 2 s (the rejected card)', () => {
+    // A bump and flash of the same size about every half beat, from 3.5 s to 8.5 s (a cut at 6 s
+    // in between is not a bump): the melody(0.8) pulse an agent put on its main card.
+    const notes = [3.5, 3.75, 4, 4.5, 4.75, 5, 5.5, 5.75, 6.5, 6.75, 7, 7.5, 7.75, 8, 8.5]
+    const pace = busyWith(notes.map((t) => [Math.round(t * 30), 12]))
+    expect(pace.pulsing).toEqual([
+      { count: 15, every: 0.27, from: 3.5, fromBeat: 7, to: 8.5, toBeat: 17 },
+    ])
+    const report = paceReport(pace)
+    expect(report.at(-2)).toMatch(
+      /^Repeated pulsing\/flashing: 1 stretch where the picture bumps or flashes alike at the beat or note rate for over 2 s: 3\.5-8\.5 s \(beats 7-17, 15 times, every 0\.27 s\)\. Check the sheets: if it is the same element scaling, shaking or flashing on every beat, kick or note, take that out and answer the music with new things/,
+    )
+    expect(report.at(-1)).toBe('Pace: 1 stretch of repeated pulsing/flashing to fix.')
+  })
+
+  it('flags the per-note bump while other elements move too (peaks of other sizes in between)', () => {
+    // The same bump on every note, two of them on a frame where another element also lands
+    // (a bigger change), and arrivals of their own between the notes: the run goes on.
+    const notes = [3.5, 3.75, 4, 4.5, 4.75, 5, 5.5, 5.75, 6.5, 6.75, 7, 7.5, 7.75, 8, 8.5]
+    const peaks: [number, number][] = notes.map((t, i) => [
+      Math.round(t * 30),
+      i === 3 || i === 9 ? 22 : 12,
+    ])
+    peaks.push([Math.round(4.25 * 30) + 1, 35], [Math.round(7.25 * 30) + 1, 5])
+    const pace = busyWith(peaks)
+    expect(pace.pulsing).toHaveLength(1)
+    expect(pace.pulsing[0]).toMatchObject({ from: 3.5, to: 8.5 })
+    expect(pace.pulsing[0]?.count).toBeGreaterThanOrEqual(13)
+  })
+
+  it('does not flag new elements arriving, a few accents, or a bump only every 2 beats', () => {
+    // Elements of different sizes arriving on the beat: changes of other sizes, not the same bump.
+    const sizes = [8, 30, 11, 45, 9, 26]
+    const arrivals = busyWith(
+      [4, 4.5, 5, 5.5, 6.5, 7].map((t, i) => [Math.round(t * 30) + 1, sizes[i] as number]),
+    )
+    expect(arrivals.pulsing).toEqual([])
+    // Three accents (the drop, a reveal, the payoff).
+    expect(
+      busyWith([
+        [130, 12],
+        [400, 12],
+        [700, 12],
+      ]).pulsing,
+    ).toEqual([])
+    // The same bump every 2 beats (1 s): slower than the beat.
+    const slow = busyWith([4, 5, 7, 8, 10, 11, 13].map((t) => [Math.round(t * 30) + 4, 12]))
+    expect(slow.pulsing).toEqual([])
   })
 })
 

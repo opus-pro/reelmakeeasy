@@ -146,14 +146,24 @@ function lastAtOrBefore(frames: number[], frame: number): number {
   return index
 }
 
+/** The most accents one `usePulse` takes: a pulse or flash is a rare accent, a few per reel. */
+export const MAX_PULSE_ACCENTS = 6
+
 /**
- * The music's pulse: 1 on each event's frame, easing to 0 over `decayBeats` (for example
- * `usePulse(snares())` or `usePulse(kicks())` for a scale, a glow or a flash). Use it where a
- * section calls for it, not on every kick of the whole reel: that reads as repetitive.
- * `frames` are reel frames, earliest first.
+ * The music's pulse: 1 on each event's frame, easing to 0 over `decayBeats`. A rare accent: pass
+ * it a few chosen moments, a few per reel at most (the drop, the payoff), for example
+ * `usePulse([bar(8)])` for one scale or glow on the drop. Never bump, shake, flash or pulse the same
+ * element on every beat, kick or note (`usePulse(kicks())`, `usePulse(melody(0.8))` on a scene's
+ * main element): the owner rejected it as repetitive. Answer the music with new things instead:
+ * an element arriving (`usePopOn`), a reveal, a cut, a counter step (`useHitIndex`).
+ * `frames` are reel frames, earliest first; more than MAX_PULSE_ACCENTS of them stops the render.
  */
 export function usePulse(frames: number[], decayBeats = 0.5): number {
   const frame = useReelFrame()
+  if (frames.length > MAX_PULSE_ACCENTS)
+    throw new Error(
+      `usePulse got ${frames.length} accents; it takes at most ${MAX_PULSE_ACCENTS} chosen moments (the drop, the payoff). Never pulse, bump or flash an element on every beat, kick or note: answer the music with new things (usePopOn, useHitIndex, a reveal, a cut).`,
+    )
   const last = frames[lastAtOrBefore(frames, frame)]
   if (last === undefined) return 0
   const t = (frame - last) / Math.max(1, beats(decayBeats))

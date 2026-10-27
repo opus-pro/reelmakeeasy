@@ -94,10 +94,12 @@ export function beatOf(frame: number): number {
 /** The strongest hits in the music, as frames, earliest first (good places for the biggest moments). */
 export const hitFrames = (): number[] => grid.strongHits.map(frameAt).sort((a, b) => a - b)
 
-/** The kick drum's hits, as frames: drive the background pulse with them (`usePulse(kicks())`). */
+/** The kick drum's hits, as frames: time cuts, layout steps and arrivals on the ones that matter
+ *  (never a pulse on every kick: `usePulse` is a rare accent). */
 export const kicks = (): number[] => grid.events.kicks.map(frameAt)
 
-/** The snare and clap hits, as frames: secondary accents (a flicker, a shake, a second element). */
+/** The snare and clap hits, as frames: where a second element arrives or a layout steps, on the
+ *  ones that matter (never a flicker, shake or pulse on every snare or clap). */
 export const snares = (): number[] => grid.events.snares.map(frameAt)
 
 /**

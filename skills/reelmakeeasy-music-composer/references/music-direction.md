@@ -130,8 +130,10 @@ bar count).
   is on (Murch's eye-trace [8]) and leave the rest to the music; viewers predict sync and fill the gaps [1].
 - **Hero hits stay rare**, each followed by 0.5-1.5 s of near-stillness [16]. A gap of one 16th to one beat before
   the biggest hit lands it "on air" (practice; section `gap16`/`gap8`).
-- **On the beat without cutting:** 2-4 % scale pulse on the kick in a section that calls for it (never on every kick of the whole reel: it reads as repetitive) · 5-10 % light pulse on the snare (WCAG-safe) ·
-  elements popping on motif notes · LFO periods of whole bars.
+- **On the beat without cutting:** answer the music with *new* things: an element arriving, a reveal, a cut, a
+  counter step, a layout step. Never bump, shake, flash or pulse the same element on every beat, kick or note: the
+  owner rejected it (a card scaled and flashed on ~25 notes in 15 s). A pulse or flash is a rare accent, a few per
+  reel at most (the drop, the payoff) · LFO periods of whole bars.
 
 ## 5. Cut density
 
@@ -201,7 +203,7 @@ rules (§8) and harmonic lead sounds; its drums carry its character.
 | Ambient pad | 60-90, sparse grid | spacious, calm | held pads and drones on the triad, slow filter, sparse sine or epiano notes; swells, not hits |
 
 Kick and snare names matter: ReelMakeEasy finds kicks and snares by instrument or by name (`kick…`, `snare…`,
-`clap…`), so the picture gets its pulse.
+`clap…`), so the picture can cut and bring new elements in on them (never a bump or flash on every kick or snare).
 
 ## 8. Harmony rules and bass
 
@@ -250,8 +252,16 @@ the chord under it: state the motif over a chord that holds all its notes, or ch
 tritone against the chord. Every note below C3 is the
 bass, whatever plays it: a piano, pluck or epiano down there follows the same rule. Practice: roots in E1-E2; offbeat roots or octave 8ths over
 four-on-the-floor, root-octave bends in garage, kick-following roots in half-time, the log drum on roots and fifths in
-amapiano. Kick and bass are never both long on one downbeat unless ducked. Give every bass harmonics so phone
-speakers can play it (`music-synthesis.md` §10).
+amapiano. Kick and bass are never both long on one downbeat unless ducked. Give every steady bass line harmonics so phone
+speakers can play it (`music-synthesis.md` §10); never the kick or a voice that glides.
+
+**The kick.** One kick only, the owner-approved one: `{ inst: 'kick', f0: 200, f1: 55, pitchTau: 0.008, decay: 0.1, click: 0.65, drive: 1.3, gain: 0.7 }`, no
+`harmonics` layer (the kick instrument's defaults). A slow pitch slide (`pitchTau` above 0.012 s), a long tail
+(`decay` above 0.15 s) or a harmonics layer that slides with the pitch is the elastic "rubber band" kick the owner
+rejected twice; so is a sliding 808 hit (`e808` with `from`/`slide`), and so is any other hit sliding into the kick
+register (<= 120 Hz) slower than 0.012 s with a tail above 0.15 s, played as a beat (three times or more): a `tom`,
+`conga`, `boom`, `logdrum`, `bloop` or `sweep` thump is the same kick under another name. A voice that `mix.duck.by`
+ducks on is the kick, whatever plays it, and takes the kick's limits. The composer's kick check FAILs all of them.
 
 **Timbre.** Lead, hook, chord and bass voices are harmonic: their overtones sit on the harmonic series, so they agree
 with the chord. `epiano`, `pluck`, `supersaw`, `pad`, `stab`, `sine`, `pulse`, `organ`, saw and square leads and

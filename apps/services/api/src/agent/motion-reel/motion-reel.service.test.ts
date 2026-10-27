@@ -29,6 +29,7 @@ jest.mock('./motion-project', () => ({
 }))
 jest.mock('./motion-render', () => ({
   ...jest.requireActual('./motion-render'),
+  pulseRefusal: jest.fn(() => null),
   readReelJson: jest.fn(() => ({ bars: 8, bpm: 128, lengthSec: 15 })),
   renderReel: jest.fn(),
   typeCheck: jest.fn(async () => null),
@@ -209,6 +210,19 @@ describe('MotionReelService, an Advanced chat', () => {
     expect(fail.text).toMatch(/at most 3 renders, one per review round/)
   })
 
+  it('motion_render refuses a scene that pulses on every kick, snare or note, before rendering', async () => {
+    const { service } = setup('motion_free')
+    await service.callTool('s1', 'motion_setup', ARGS)
+    const mocked = jest.requireMock<{ pulseRefusal: jest.Mock; renderReel: jest.Mock }>(
+      './motion-render',
+    )
+    mocked.renderReel.mockClear()
+    mocked.pulseRefusal.mockReturnValueOnce('Not rendered: src/scenes/Clips.tsx:28 (...) pulses')
+    const result = await service.callTool('s1', 'motion_render', {})
+    expect(result).toEqual({ success: false, text: expect.stringMatching(/^Not rendered: /) })
+    expect(mocked.renderReel).not.toHaveBeenCalled()
+  })
+
   it('leaves an Easy chat to its setup card', async () => {
     const { service, updated } = setup('motion')
     const result = await service.callTool('s1', 'motion_setup', ARGS)
@@ -249,6 +263,7 @@ function writeComposerRun(workspace: string, o: { fail?: boolean; stale?: boolea
   fs.copyFileSync(COMPOSER_JSON, path.join(dir, 'build', 'music.json'))
   const checks = [
     { id: 'harmony', msg: 'F# dorian: 555 pitched notes, every chord stable', status: 'PASS' },
+    { id: 'kick', msg: '41 kick hits, every one tight', status: 'PASS' },
     { id: 'loudness', msg: 'integrated -13.9 LUFS (target -14)', status: 'PASS' },
     { id: 'ending', msg: 'ring: rings out', status: o.fail ? 'FAIL' : 'PASS' },
     { id: 'phone', msg: '200 Hz high-passed (phone speaker) loses 6.4 LU', status: 'WARN' },
@@ -277,7 +292,9 @@ describe('the music the agent makes', () => {
     const result = await service.callTool('s1', 'motion_music', {})
     expect(result.success).toBe(true)
     expect(result.text).toMatch(/^Composed: F# dorian, 136 BPM\. Put under the reel/)
-    expect(result.text).toMatch(/QC passed: harmony, loudness, ending\. QC WARN phone: 200 Hz/)
+    expect(result.text).toMatch(
+      /QC passed: harmony, kick, loudness, ending\. QC WARN phone: 200 Hz/,
+    )
     expect(result.text).toMatch(/never how it sounds/)
     const music = jest.mocked(prepareReelProject).mock.calls[0]?.[0].music
     expect(music?.file).toMatch(/reel[\\/]music[\\/]composer-\d+\.wav$/)

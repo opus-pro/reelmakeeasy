@@ -109,7 +109,8 @@ export function transitionStyle(
 
 /**
  * A light flash on reel frame `at` (put it on a cut: `<Flash at={bar(8)} />`): full on that frame,
- * gone `frames` frames later (2-4 reads as a flash, not a fade).
+ * gone `frames` frames later (2-4 reads as a flash, not a fade). A rare accent: a few per reel at
+ * most, never on every beat, kick or note.
  */
 export function Flash({
   at,

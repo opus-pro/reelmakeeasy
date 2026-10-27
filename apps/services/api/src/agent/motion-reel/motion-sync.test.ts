@@ -60,8 +60,8 @@ const changes = (base: number, ...edits: [from: number, to: number, value: numbe
   return list
 }
 
-/** A reel that moves with its music: pulses on every kick, pops on each melody note, a cut into
- *  the drop. */
+/** A reel whose picture changes with its music: busy on every kick and every melody note (the sync
+ *  check no longer asks for either: both lines are information), a cut into the drop. */
 function goodReel(): number[] {
   const list = changes(1)
   for (let k = 0; k < 240; k += 15) for (let f = k; f < k + 3; f++) list[f] = 2
@@ -96,12 +96,12 @@ describe('visual events and big changes', () => {
 })
 
 describe('syncReport', () => {
-  it('passes a reel that pops on the melody and cuts into the drop (its kick pulse reported as information)', () => {
+  it('passes a reel that cuts into the drop (its melody and kick pulse reported as information)', () => {
     const report = syncReport(reel(), goodReel(), [2])
     expect(report.lines).toEqual([
       'Cuts: 1 cuts: 1 on a beat, none off the grid.',
       'Section starts: every energy change has a cut or a big change.',
-      'Melody: 4 of 4 accented notes get a visual event (100%; 38% half a beat off them, by chance).',
+      'Melody (information only): 4 of 4 accented notes get a visual event (100%; 38% half a beat off them, by chance). A low share is fine: never answer the notes by bumping or flashing the same element on each; bring in something new on the few that matter.',
       'Kick pulse (information only): 2x the change after a kick as between kicks, 1 grey levels more (the picture pulses with the kick).',
       'Scenes: 8 shots, the longest 2.7 s.',
       'Stalls: none (nothing stands still for 0.5 s before the end card at 6 s).',
@@ -110,7 +110,7 @@ describe('syncReport', () => {
     expect(report.passes).toBe(true)
   })
 
-  it('reports a faint kick pulse without failing it, and fails a picture busy at random as answering the melody', () => {
+  it('reports a faint kick pulse and a picture busy at random on the melody, failing neither', () => {
     // A tenth of a grey level more on every kick, and a pop on every eighth note.
     const list = changes(1)
     for (let k = 0; k < 240; k += 15) for (let f = k; f < k + 3; f++) list[f] = 1.3
@@ -119,7 +119,12 @@ describe('syncReport', () => {
     const report = syncReport(reel(), list, [2])
     expect(report.kickPulseLevels).toBeCloseTo(0.3)
     expect(report.melody.chance).toBeGreaterThanOrEqual(report.melody.hit / report.melody.total)
-    expect(report.lines.at(-1)).toBe('Sync: 1 to fix: melody notes.')
+    expect(report.lines[2]).toMatch(
+      /^Melody \(information only\): .*by chance\)\. A low share is fine: never answer the notes by bumping or flashing/,
+    )
+    expect(report.lines.at(-1)).toBe('Sync: passes.')
+    // A low share is no shortcoming: the line never says the picture fails to follow the notes.
+    expect(report.lines.join('\n')).not.toMatch(/follow the notes|does not follow/)
   })
 
   it('wants a shot change every three bars, and only suggests marking a same-energy part', () => {
@@ -157,12 +162,37 @@ describe('syncReport', () => {
     expect(report.lines).toEqual([
       'Cuts: 1 cuts: 0 on a beat, 1 off the grid (at beats 6.2).',
       'Section starts: 1 without a cut or a big change (drop at beat 4).',
-      "Melody: 0 of 4 accented notes get a visual event (0%; 0% half a beat off them, by chance): the picture doesn't answer the melody; pop something on beats 5, 7, 9, 10.5.",
+      'Melody (information only): 0 of 4 accented notes get a visual event (0%; 0% half a beat off them, by chance). A low share is fine: never answer the notes by bumping or flashing the same element on each; bring in something new on the few that matter.',
       'Kick pulse (information only): 1x the change after a kick as between kicks, 0 grey levels more (no visible pulse on the kick).',
       'Scenes: 2 shots, the longest 4.9 s; 1 long (over 4 s, information: 3.1 s for 4.9 s (beat 6.2)): one idea is at most 4 s.',
       'Stalls: none (nothing stands still for 0.5 s before the end card at 6 s). One hold let through as the payoff beat (at most 1.5 s, once a reel): 3.33-4.37 s (beats 6.67-8.73).',
-      'Sync: 3 to fix: cuts off the grid, section starts, melody notes.',
+      'Sync: 2 to fix: cuts off the grid, section starts.',
     ])
+  })
+
+  it('never lists the melody notes or the kick pulse among the fixes (an agent bumped and flashed a card on every note to pass)', () => {
+    // No pop on any note and no pulse on any kick, with a cut into the drop: passes, both lines information.
+    const quiet = changes(1)
+    quiet[0] = 0
+    quiet[61] = 30
+    const passes = syncReport(reel(), quiet, [2])
+    expect(passes.melody.hit).toBe(0)
+    expect(passes.lines.at(-1)).toBe('Sync: passes.')
+    // Every reel the other tests fail: the fixes never name the melody or the kick.
+    for (const report of [
+      passes,
+      syncReport(reel(), changes(1, [100, 130, 0]), [3.1]),
+      syncReport(reel(), changes(1), []),
+    ]) {
+      const verdict = report.lines.at(-1) ?? ''
+      expect(verdict).not.toMatch(/melody|kick|pulse|notes/i)
+      expect(
+        report.lines
+          .filter((l) => /^(Melody|Kick pulse) /.test(l))
+          .every((l) => /\(information only\)/.test(l)),
+      ).toBe(true)
+      expect(report.lines.join('\n')).not.toMatch(/pop something on beats/)
+    }
   })
 
   it('lets the end card hold the last bar', () => {
@@ -177,7 +207,7 @@ describe('syncReport', () => {
     const { events: _events, ...old } = reel()
     expect(reelEvents(old as ReelJson).kicks).toEqual(beats)
     expect(syncReport(old as ReelJson, goodReel(), [2]).lines[2]).toBe(
-      'Melody: no accented notes in the energetic sections to check.',
+      'Melody (information only): no accented notes in the energetic sections to check.',
     )
   })
 })

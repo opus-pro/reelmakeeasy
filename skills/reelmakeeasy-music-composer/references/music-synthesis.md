@@ -82,11 +82,14 @@ config }`; optional `export function step(ctx)` (§6). Accepted spellings: `voic
   `music-direction.md` §6).
 - **Inserts:** `fx: [{ type, ... }]`, a per-voice chain before the sends (§7).
 - **Phones:** `harmonics: -8` (or `true`, or `{ db, input, hp, lp }`) adds the harmonics 2-12 of a monophonic low
-  voice above 200 Hz, so a phone speaker plays the line; the recipe and its measurements are in §10.
+  voice whose pitch holds still above 200 Hz, so a phone speaker plays the line; the recipe and its measurements are
+  in §10. Never on a kick or a voice that glides: the layer slides with the pitch (the elastic sound), and the kick
+  check FAILs it.
 - **Glides:** `porta: true` starts each note of the voice from its previous note; `porta: 'legato'` only when the
   previous note is still sounding (a rest resets it). It works on `acid` `e808` `logdrum` `pulse`, over their own
   `glide` time; on any other instrument it WARNs and does nothing. One glide by hand: the note's `from` (MIDI) or
-  `slide` (semitones from the note) [checked].
+  `slide` (semitones from the note) [checked]. A downward glide on an `e808` hit is a sliding 808 (the rubber band):
+  the kick check FAILs it, and any `e808` glide played as a cue or raw instrument hit.
 - **Automation:** any *instrument parameter*, `pan` and `send` may be a function `c => value`, called per note with
   `{ t, energy, section, bar (in section), step, absStep, vel, chord, T }`. `gain`, `vel` and `dsend` must be numbers:
   a function there silenced the mix (gain, vel) or the delay (dsend) [checked]. Move levels with grid velocities,
@@ -156,7 +159,7 @@ sections: [{ name: '<name>', bars: 4, grid: 'body', fill: { grid: 'trip', last: 
   dim shift:<n>`, chained with `+` (re-check the beats after a transform: the harmony check reads every note). Derive
   the degrees (`music-direction.md` §9); cryptogram helper:
   `import { cryptogram } from './tools/audio/theory.mjs'` → `cryptogram('<word>', 7)` = degrees [checked]. Every note
-  of every statement is a melody accent in the reel (`melody(0.8)`): state it where elements should pop.
+  of every statement is a melody accent in the reel (`melody(0.8)`): state it where new elements should arrive (never as a bump or flash on every note).
 - **Section keys:** `name` · length by `bars` | `beats` | `dur` | `at` (+length) | `until: 'end'` · `energy` 0–4 ·
   `grid` (set name or inline set) · `add` (merge a set) · `play` (`{voice: pattern | 'motif…'}`, or an array = only
   these) · `only` · `mute` · `fill` `{ grid, every: n | bars: [..] | last: true }` (several in an array; a voice set to
@@ -179,10 +182,10 @@ means asking the user's ear after the render (`music-direction.md` §1).
 
 | Family | Instruments | Recipe notes |
 |---|---|---|
-| Kick, sub | `kick e808 sub` | kick = sine f0 → f1, τ 20–40 ms, decay 0.15–0.4 s, click (practice); `e808` `slide`/`from` glides over `glide`; `drive` is grit, not a phone fix: the voice key `harmonics` is (§10). A `kick` voice is the reel's kick track |
+| Kick, sub | `kick e808 sub` | **one kick: the owner-approved `{ inst: 'kick', f0: 200, f1: 55, pitchTau: 0.008, decay: 0.1, click: 0.65, drive: 1.3, gain: 0.7 }`** with no `harmonics` (the instrument's defaults): sine f0 → f1 with a fast drop, a short tail, a beater click. The kick check FAILs `pitchTau` > 0.012 s, `decay` > 0.15 s or a harmonics layer on a kick (the elastic "rubber band" kick: a slow slide and a layer sliding with it), an `e808` hit that slides down (`slide`/`from`), and any other hit (`tom conga taiko logdrum boom bloop sweep`...) that slides into the kick register (<= 120 Hz) slower than 0.012 s with a tail > 0.15 s, played three times or more: the same kick under another name. A voice `mix.duck.by` ducks on is held to the kick's limits. A `kick` voice is the reel's kick track |
 | Snare, hats | `snare clap hat ride shaker rim cowbell chipnoise` | metallic hat = six inharmonic squares [5]; `snare gated` [13]; `chipnoise` LFSR long/short [12]. `snare` and `clap` voices are the reel's snare track |
-| Tuned, hand perc | `tom conga taiko logdrum membrane wood body brush` | tune to scale degrees; `logdrum` = pitched bass, pitch drop + 1:1 FM knock [11]; `body` chest/thigh/snap/stomp; `brush` swirl/tap |
-| Bass | `sawBass reese acid wobble upright triangle` | `wobble div` locks the LFO to beats; `acid` `accent` and `from` (slide over `glide`, 60 ms); all need harmonics (§10) |
+| Tuned, hand perc | `tom conga taiko logdrum membrane wood body brush` | tune to scale degrees; `logdrum` = pitched bass, pitch drop (`dropTime` .012 s, as fast as the kick's) + 1:1 FM knock [11]; `body` chest/thigh/snap/stomp; `brush` swirl/tap |
+| Bass | `sawBass reese acid wobble upright triangle` | `wobble div` locks the LFO to beats; `acid` `accent` and `from` (slide over `glide`, 60 ms); all need harmonics (§10) while their pitch holds still; a gliding line takes none |
 | Keys, plucks | `pluck ks epiano piano organ fm bell pulse blip sine arpSaw` | `ks` Karplus-Strong, feedback .990–.998, `strum` [6]; `epiano` 1:1 body + tine FM [7]; `piano` (`felt`) is the weakest emulation; `pulse` duty 12.5/25/50 % + `arp` fake chords [12]. `fm` only with an integer `ratio` (1, 2, 3, 4) for anything pitched; the `bell` on any ratio (its partials read as a bell: the owner approved the 1.4 bell) |
 | Modal (inharmonic) | `bar glass modal membrane ceramic wood` | free-free bar 1:2.756:5.404:8.933 · circular membrane 1:1.594:2.136… (physics) · glass 1:2.32:4.25:6.63: partials off the harmonic series, so they fight the chord. Unpitched percussion and ticks under 0.15 s only (`decay` ≤ ~0.06 s); the tuned bar `bar tuned: true` (1:4:10) is the one harmonic modal voice |
 | Object gestures | `rattle scrape` | unpitched foley only: a drop settling in bounces, a click train |
@@ -273,14 +276,17 @@ bus fx → master sum → reverse swells → master chain: high-pass `hp` 25 Hz,
   harmonics *above* 200 Hz (QC `phone`: ≤ 6 LU lost after 2 × 200 Hz high-pass). The recipe [checked]:
   1. **Read the per-voice table** printed under the WARN (also `phoneByVoice` in `qc/score-report.json`): each
      voice's share of the full band and of the phone band, and the mix's drop without it, smallest first. The ranking
-     is the point. The top row is usually the kick-like voice.
-  2. **`harmonics: -8` on that voice** (a voice key, §3): harmonics 2-12 of its fundamental, in phase so the voice's
+     is the point. When the top row is the kick, it takes no harmonics (the kick check FAILs it): use the approved
+     kick (its click and drive put the attack above 200 Hz), take 2 dB of gain off it, and give the bass line the
+     harmonics.
+  2. **`harmonics: -8` on that voice** (a voice key, §3; a steady bass line or sub, never a kick or a gliding voice): harmonics 2-12 of its fundamental, in phase so the voice's
      peak barely grows, kept between 200 Hz and 3.5 kHz, in mono, 8 dB under the voice's RMS; the sub itself is
      untouched. Measured drops went from 7-8 LU to 5-6 LU (PASS).
   3. **Still above 6:** `-6`, and 2 dB less gain on that voice when it holds ≥ 50 % of the full band. The WARN's `fix`
      line prints the next step for the voice it names.
   4. **A `peaks` WARN after it** (limiter > 6 dB): take 2-3 dB of gain off the same voice.
-  - Monophonic low voices only (`kick e808 sub logdrum acid sawBass reese`, a bass line): on a chord or two low notes
+  - Monophonic low voices whose pitch holds still only (`sub sawBass reese`, a steady `e808` or `acid` line, a bass
+    line; never `kick`, a voice with `from`/`slide`/`porta`, or `logdrum`, whose drop moves): on a chord or two low notes
     at once it intermodulates into grit. A chord voice gets a higher register or an `hp` insert instead.
   - **What did not work:** `drive` 4-5 on the kick-like voice, with or without more `click`, or a `drive` insert:
     tanh harmonics peak with the bass's own peak, and every dB of peak is a dB the limiter takes back. Leave `drive`
@@ -358,8 +364,9 @@ motif notes (strength 1) and the other notes of the motif's voices (1 when accen
 your sections (energy 4 reads as 3). The scenes then use `kicks()`, `snares()`, `melody(0.8)` and the sections (the
 motion-reel skill). So:
 - name sections for what they are; one world per section;
-- state the motif where elements should pop, and keep its voice clean of other busy figures;
-- keep the kick on the beats the background should pulse to (a half-time section halves the pulse).
+- state the motif where new elements should arrive, and keep its voice clean of other busy figures;
+- keep the kick on the beats the picture should cut or step on (a half-time section halves the cutting rate). The
+  picture never bumps, shakes or flashes on every kick or note: it answers the music with new things.
 
 ## 15. Arrangement moves that keep it stable
 
@@ -370,12 +377,13 @@ one layer per section (assembly) · 5 swing decided per voice · 6 seeded humani
 automate filters, sends and decays per section (per-note functions, section patterns, `fx` strings) · 8 ≤ 1 ear candy
 (reverse swell, delay throw, tape stop) per phrase · 9 a counter-line in the last third on chord tones (`minEnergy` or
 late sections only) · 10 shaped dynamics: crescendos through `o x X`, not flat 1.0 · 11 the motif doubled an octave up
-at the peak · 12 move sounds in stereo with the picture's objects (`pan` functions) · 13 tune the kick: `f1` near the
-root · 14 a designed ending (§11).
+at the peak · 12 move sounds in stereo with the picture's objects (`pan` functions) · 13 keep the approved kick (§7):
+never tune it into a slide · 14 a designed ending (§11).
 
 ## 16. Four stable recipes (complete files to start from)
 
-Each passes the harmony check and was measured with this composer (not heard). Richness comes from 7ths and 9ths,
+Each passes the harmony check and the kick check (every one plays the approved kick) and was measured with this
+composer (not heard). Richness comes from 7ths and 9ths,
 swing, off-beat stabs and layering, never from a note outside the chord: A and D show it; B and C are triad-based, so
 voice them with 7ths and 9ths in the key. Start from the one nearest the reel
 (`music-direction.md` §10) and adapt it: `bpm` (then the bars), the key (move every chord with it; the Roman numerals
@@ -389,11 +397,12 @@ export default { title: '...', bpm: 136, meter: '4/4', duration: 60, fps: 30, au
 
 The owner's liked garage track with B9, the 1.4 bell and the F# 6/9 Picardy ending, and one change: its borrowed Dmaj7
 (bVI) is Amaj7 (IIImaj7). Two motif statements moved onto chords that hold all their notes (the keys' motif off the
-G#m7 bar, the break's bell motif from the Amaj7 bar). Measured: harmony ok (554 pitched notes, every chord in F#
-dorian), −13.9 LUFS, −1.0 dBTP, mono 0 LU, phone 5.7 LU, both gaps ≥ 32 dB, ring ending PASS; the `map` line −15.9 |
-−13.8 | −13.7 | −24.0 | −12.4 | −13.5 | −17.2 | −32.5 LUFS shows the two-drop arc. It kept two WARNs: a shaker onset
-inside each pre-drop gap (move the shaker or `keep` the bus) and `linear` (the quiet break pushed loudnorm to dynamic
-mode). The true peak sits on the ceiling: after any change, a true-peak FAIL of −0.9 dBTP is fixed by another `seed`
+G#m7 bar, the break's bell motif from the Amaj7 bar), and its elastic kick (a slow slide with harmonics) is the approved
+kick. Measured: harmony ok (554 pitched notes, every chord in F# dorian), kick ok, −13.9 LUFS, −1.0 dBTP, mono 0.2 LU,
+phone 3.9 LU, both gaps ≥ 44 dB, ring ending PASS; the `map` line −18.6 | −13.3 | −13.4 | −18.0 | −12.7 | −12.6 |
+−16.7 | −24.8 LUFS shows the two-drop arc. It kept three WARNs: a shaker onset inside each pre-drop gap (move the
+shaker or `keep` the bus) and `peaks` (the limiter takes up to 9 dB off the kick and snare in drop B: take the snare
+down 2 dB if it matters). The true peak sits on the ceiling: after any change, a true-peak FAIL of −0.9 dBTP is fixed by another `seed`
 (it moves the humanize, not the notes) or a lower hit gain.
 ```js
 // RECIPE A: a UK garage / 2-step loop for a 60 s showreel. F# dorian (cool, hopeful minor), 136 BPM, 34 bars.
@@ -415,7 +424,7 @@ export default ({ config }) => ({
   swing: { hat: 0.58, shaker: 0.58, ghost: 0.58, default: 0.5 },
 
   voices: {
-    kick: { inst: 'kick', f0: 140, f1: 46, decay: 0.28, click: 0.35, gain: 0.95, harmonics: -8 },
+    kick: { inst: 'kick', f0: 200, f1: 55, pitchTau: 0.008, decay: 0.1, click: 0.65, drive: 1.3, gain: 0.55 },   // the approved kick (§7): no harmonics, its gain lower under the busy 2-step
     snare: { inst: 'snare', body: 210, wires: 2200, decay: 0.07, mix: 0.55, gain: 0.55, send: 0.18 },
     clap: { inst: 'clap', tone: 1600, gain: 0.45, send: 0.25, minEnergy: 3 },
     ghost: { inst: 'rim', f1: 520, f2: 1800, gain: 0.25, pan: -0.2, human: { ms: 4, vel: 0.15 } },
@@ -448,7 +457,7 @@ export default ({ config }) => ({
 
   grids: {
     // intro: no drums, the bell states the motif over the pad, a rim tick keeps time.
-    air: { pad: 'hold', keys: { grid: 'C.......C.....x.', gate: 0.8 }, ghost: '..o...o...o...o.', kick: { grid: 'x...............', f0: 110, decay: 0.4 }, hiss: 'hold' },
+    air: { pad: 'hold', keys: { grid: 'C.......C.....x.', gate: 0.8 }, ghost: '..o...o...o...o.', kick: { grid: 'x...............', gain: 0.8 }, hiss: 'hold' },
     // build: the 2-step skeleton arrives, bass enters on the 2nd half.
     build: {
       pad: 'hold', kick: 'X.........x.....', snare: '....x.......x...', hat: '..x...x...x...x.',
@@ -504,8 +513,8 @@ export default ({ config }) => ({
 
 ### B. Minor launch: A minor, 128 BPM, 30 s (16 bars)
 
-Measured: harmony ok (272 pitched notes), −13.7 LUFS, −1.0 dBTP, phone 5.5 LU, ring ending PASS; `map` −15.5 | −12.6 |
-−13.1 | −24.5 | −24.4 LUFS; WARN `linear` kept (the quiet break and end).
+Measured: harmony ok (272 pitched notes), kick ok, −13.8 LUFS, −1.1 dBTP, phone 5.5 LU, ring ending PASS; `map`
+−13.5 | −14.0 | −12.9 | −16.1 | −17.2 LUFS; WARN `peaks` kept (the limiter takes up to 7.5 dB off the kick).
 ```js
 // RECIPE: a minor-key launch track. A natural minor, i-VI-III-VII (Am F C G), 128 BPM, four-on-the-floor.
 // 30 s = round(30 x 128 / 240) = 16 bars. Arc: intro 2 · build 2 · drop 8 · break 2 · end 2 (rings on Am).
@@ -515,7 +524,7 @@ export default ({ config }) => ({
   bpm: config.bpm, meter: config.meter, key: 'A', mode: 'aeolian', seed: 128,
   swing: { hat: 0.54, default: 0.5 },
   voices: {
-    kick: { inst: 'kick', f0: 150, f1: 45, decay: 0.3, click: 0.3, gain: 0.72, harmonics: -6 },
+    kick: { inst: 'kick', f0: 200, f1: 55, pitchTau: 0.008, decay: 0.1, click: 0.65, drive: 1.3, gain: 0.45 },   // the approved kick (§7): no harmonics, its gain lower under four-on-the-floor
     clap: { inst: 'clap', tone: 1500, gain: 0.42, send: 0.25 },
     hat: { inst: 'hat', mode: 'metal', tone: 8400, gain: 0.26, pan: 0.2, choke: 'hh' },
     ohat: { inst: 'hat', mode: 'metal', open: true, decay: 0.08, gain: 0.2, pan: 0.25, choke: 'hh' },
@@ -559,8 +568,8 @@ export default ({ config }) => ({
 
 ### C. Bright pop-house: C major, 124 BPM, 30 s (16 bars, 30.97 s)
 
-Measured: harmony ok (307 pitched notes), −14.0 LUFS, −1.0 dBTP, phone 4.4 LU, ring ending PASS; `map` −15.7 | −12.7 |
-−14.5 | −29.4 LUFS; WARN `linear` kept (the quiet end).
+Measured: harmony ok (307 pitched notes), kick ok, −13.9 LUFS, −1.1 dBTP, phone 5.5 LU, ring ending PASS; `map`
+−19.2 | −12.7 | −13.8 | −24.1 LUFS; no WARN.
 ```js
 // RECIPE: a bright major pop-house track. C major, I-V-vi-IV (C G Am F), 124 BPM, four-on-the-floor.
 // 30 s = round(30 x 124 / 240) = 16 bars (30.97 s). Arc: intro 2 · verse 4 · drop 8 · end 2 (V-I, rings on C).
@@ -568,7 +577,7 @@ export default ({ config }) => ({
   bpm: config.bpm, meter: config.meter, key: 'C', mode: 'ionian', seed: 124,
   swing: { hat: 0.55, shaker: 0.55, default: 0.5 },
   voices: {
-    kick: { inst: 'kick', f0: 145, f1: 48, decay: 0.28, click: 0.3, gain: 0.72, harmonics: -6 },
+    kick: { inst: 'kick', f0: 200, f1: 55, pitchTau: 0.008, decay: 0.1, click: 0.65, drive: 1.3, gain: 0.45 },   // the approved kick (§7): no harmonics, its gain lower under four-on-the-floor
     clap: { inst: 'clap', tone: 1600, gain: 0.4, send: 0.25 },
     hat: { inst: 'hat', mode: 'metal', tone: 8600, gain: 0.25, pan: 0.2, choke: 'hh' },
     ohat: { inst: 'hat', mode: 'metal', open: true, decay: 0.08, gain: 0.2, pan: 0.25, choke: 'hh' },

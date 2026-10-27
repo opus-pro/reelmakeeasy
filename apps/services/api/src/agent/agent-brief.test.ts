@@ -388,6 +388,10 @@ describe('an Advanced Motion Reel', () => {
       /mostly flat layouts; depth for one or two moments, never everything/,
     )
     expect(MOTION_PACE_SPACE_REVIEW_RULE).toMatch(/something visible moves on every frame/)
+    // The music is answered with new things, never a bump or flash on every beat, kick or note.
+    expect(MOTION_PACE_SPACE_REVIEW_RULE).toMatch(
+      /the picture answers the music with new things \(an element arriving, a reveal, a cut, a counter step\), never by bumping, shaking, flashing or pulsing the same element on every beat, kick or note \(a pulse or flash is a rare accent, a few per reel at most/,
+    )
     // The loop, in order: render, review, review.md, fix, render again.
     const loop = [
       'render with motion_render',

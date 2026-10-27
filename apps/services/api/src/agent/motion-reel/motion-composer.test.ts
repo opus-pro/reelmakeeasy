@@ -21,6 +21,7 @@ const musicJson = () => JSON.parse(fs.readFileSync(FIXTURE, 'utf8')) as Record<s
 const REPORT = {
   checks: [
     { id: 'harmony', msg: 'F# dorian: 555 pitched notes, every chord stable', status: 'PASS' },
+    { id: 'kick', msg: '41 kick hits, every one tight', status: 'PASS' },
     { id: 'loudness', msg: 'integrated -13.9 LUFS (target -14), LRA 9.7 LU', status: 'PASS' },
     { id: 'truepeak', msg: 'true peak -1 dBTP (ceiling -1)', status: 'PASS' },
     { id: 'linear', msg: 'loudnorm pass 2 ran dynamic', status: 'WARN' },
@@ -191,7 +192,7 @@ describe('the composer in a reel', () => {
     expect(fs.statSync(music.file).size).toBe(44 + 6000)
     expect(fs.existsSync(music.file.replace(/\.wav$/, '.json'))).toBe(true)
     expect(music.qc).toEqual([
-      'QC passed: harmony, loudness, truepeak.',
+      'QC passed: harmony, kick, loudness, truepeak.',
       'QC WARN linear: loudnorm pass 2 ran dynamic',
     ])
   })
@@ -241,6 +242,32 @@ describe('the composer in a reel', () => {
     writeComposerRun(projectDir, { report: { checks: REPORT.checks.slice(1) } })
     expect(readComposedMusic(projectDir, 60)).toMatch(
       /has no harmony check \(it is from an older composer\)/,
+    )
+    expect(
+      fs.readdirSync(path.join(projectDir, 'music')).some((f) => f.startsWith('composer-')),
+    ).toBe(false)
+  })
+
+  it('refuses a score whose kick check did not pass (the elastic kick), or that has none', () => {
+    const others = REPORT.checks.filter((c) => c.id !== 'kick')
+    const kick = {
+      id: 'kick',
+      msg: 'kick "kick": elastic kick sounds the owner rejected',
+      status: 'FAIL',
+    }
+    writeComposerRun(projectDir, { report: { checks: [...others, kick] } })
+    const refused = readComposedMusic(projectDir, 60)
+    expect(refused).toMatch(
+      /kick check did not pass: kick "kick": elastic kick sounds the owner rejected\. Use only the approved kick, \{ inst: 'kick', f0: 200, f1: 55, pitchTau: 0\.008, decay: 0\.1, click: 0\.65, drive: 1\.3, gain: 0\.7 \} with no harmonics layer/,
+    )
+    expect(refused).toMatch(
+      /run `cd reel\/music && node tools\/score.mjs --no-cues` again until kick is ok/,
+    )
+    writeComposerRun(projectDir, { report: { checks: [...others, { ...kick, status: 'WARN' }] } })
+    expect(readComposedMusic(projectDir, 60)).toMatch(/kick check did not pass/)
+    writeComposerRun(projectDir, { report: { checks: others } })
+    expect(readComposedMusic(projectDir, 60)).toMatch(
+      /has no kick check \(it is from an older composer\)/,
     )
     expect(
       fs.readdirSync(path.join(projectDir, 'music')).some((f) => f.startsWith('composer-')),

@@ -14,6 +14,7 @@ import { CUE_DOC, BUS_KINDS } from './audio/cues.mjs';
 import { INSERT_DOC } from './audio/fx.mjs';
 import { SCALES } from './audio/theory.mjs';
 import { meterInfo } from './audio/rhythm.mjs';
+import { KICK_NAME } from './audio/kick.mjs';
 
 const ROOT = process.cwd();
 const argv = process.argv.slice(2).flatMap(a => /^--[\w-]+=/.test(a) ? [a.slice(0, a.indexOf('=')), a.slice(a.indexOf('=') + 1)] : [a]); // --k=v is --k v
@@ -68,10 +69,11 @@ USAGE (run from the reel folder)
   --stem sfx            only the cue sound-design layer -> audio/sfx.wav (under an external track; works with sections: [])
   --mux [out.mp4]       the newest of exports/silent.mp4 and exports/draft-*.mp4 + audio/score.wav -> exports/reel.mp4
                         (a draft: exports/reel-draft-<a>-<b>.mp4, the score cut from the draft's start a) (aac 320k)
-  --harmony             the harmony check only (key, mode, chords, clashes, inharmonic voices): no master, no other QC;
-                        exit 3 when it FAILS, as the full run does (with --json: the whole check as JSON)
+  --harmony             the harmony and kick checks only (key, mode, chords, clashes, inharmonic voices; elastic kicks):
+                        no master, no other QC; exit 3 when either FAILS, as the full run does (with --json: the whole
+                        harmony check as JSON, the kick check under "kick")
   --no-master           write the raw mix only (no loudnorm, no QC) · --no-png · --no-mp3 · --json (report to stdout) · --quiet
-  Exit 0 = written (WARN lines are advice) · 1 = refused / error · 3 = a QC check FAILED (harmony, true peak or ending).
+  Exit 0 = written (WARN lines are advice) · 1 = refused / error · 3 = a QC check FAILED (harmony, kick, true peak or ending).
 
 MUSIC.MJS (data; every value is a decision for THIS reel, nothing is filled in for you)
   export default {                       // or export default (ctx) => ({...}); ctx = { sheet, T, lib, config }
@@ -96,11 +98,13 @@ MUSIC.MJS (data; every value is a decision for THIS reel, nothing is filled in f
     of the chord-tone register) transpose swing human{ms,vel} offset (ms, + = late) gate (0..1 of the cell) notes voicing
     ('close'|'spread'|'shell') center size steps (own grid resolution) velMap{X,x,o} mono|choke (true | 'group') minEnergy
     maxEnergy fx:[inserts] velHold arpOctaves notesReset ('bar')
-    harmonics (true | dB | { db -8, input 120, hp 200, lp 3500 }: a parallel exciter on a monophonic low voice: harmonics
-      2-12 of its fundamental, phase-designed so the voice's peak barely grows, kept above 200 Hz in mono, so phone
-      speakers play the line; the sub is untouched. db = their level under the voice's RMS)
+    harmonics (true | dB | { db -8, input 120, hp 200, lp 3500 }: a parallel exciter on a monophonic low voice whose
+      pitch holds still (a bass line, a sub): harmonics 2-12 of its fundamental, phase-designed so the voice's peak
+      barely grows, kept above 200 Hz in mono, so phone speakers play the line; the sub is untouched. db = their level
+      under the voice's RMS. Never on a kick or a voice that glides: the kick check FAILS it, the layer slides with the pitch)
     porta (true | 'legato': each note glides from the voice's previous note; acid e808 logdrum pulse, glide time = their
-      own glide parameter (acid, logdrum: 60 ms); 'legato' glides only out of a note still sounding).
+      own glide parameter (acid, logdrum: 60 ms); 'legato' glides only out of a note still sounding; a downward e808
+      glide is a sliding hit and FAILS the kick check).
     Every other key goes to the instrument (--list); a
     function value is called per note with ctx { t, energy, section, bar, step, absStep, vel, chord, T } (automation).
   PATTERN: '<grid string>' | 'hold' (one note/chord per chord change, held) | { grid, steps, notes, swing, vel, gain, pan,
@@ -132,6 +136,16 @@ MUSIC.MJS (data; every value is a decision for THIS reel, nothing is filled in f
     (bass instruments and any note below C3) on root/fifth · no m2/M7/tritone held >= 0.15 s between voices unless both
     are tones of the chord symbol · glass/modal/bar/membrane/wood/ceramic/rattle/shing and fm with a non-integer ratio
     never hold a pitch > 0.15 s (the bell is exempt). Cue sounds count.
+  KICK CHECK (audio/kick.mjs; every full run and --harmony; FAIL = exit 3, and motion_music refuses it): the only kick is
+    the approved one, { inst: 'kick', f0: 200, f1: 55, pitchTau: 0.008, decay: 0.1, click: 0.65, drive: 1.3, gain: 0.7 }
+    with no harmonics (the kick instrument's defaults). A kick-like voice (instrument kick, a voice named kick / bd..., or
+    a voice mix.duck.by ducks on) with a pitch move slower than 0.012 s (pitchTau), a tail > 0.15 s (decay) or a
+    harmonics layer FAILS (the elastic "rubber band" kick); so do an e808 or
+    sub named as a kick that glides or rings > 0.15 s, an e808 hit with a downward from / slide glide (or any e808 glide
+    as a cue or raw instrument hit), any other hit (tom conga taiko logdrum boom bloop sweep gel...) sliding >= 4
+    semitones into <= 120 Hz slower than 0.012 s with a tail > 0.15 s that one voice plays 3 times or more (the elastic
+    kick under another name), and a harmonics layer on any voice whose pitch moves (from / slide / porta, a logdrum
+    drop, a tom bend, a sweep). Cue sounds count.
   SECTION keys: name · bars | beats | dur | at | until: 'end' | picture: <index|label> · energy (0..4; the picture's when
     mirrored) · grid (set name or inline {voice: pattern}) · add (a set merged on top) · play ({voice: pattern | 'motif' |
     'motif:<transform>'}, or [voices] = only) · only · mute · prog | progression · chordBars · key · mode · transpose · swing
@@ -184,7 +198,8 @@ if (has('--list')) {
   for (const [k, v] of Object.entries(INSERT_DOC)) console.log(`  ${k.padEnd(11)} ${v}`);
   console.log('\nVOICE KEYS FOR PHONES AND GLIDES (composer keys on a voice, not instrument parameters; all keys: --help)');
   console.log('  harmonics   true | dB (-8) | { db -8, input 120, hp 200, lp 3500 }: parallel exciter for a monophonic low voice:');
-  console.log('              its harmonics 2-12 above 200 Hz, in mono, so phone speakers play it (the phone QC names the voice)');
+  console.log('              its harmonics 2-12 above 200 Hz, in mono, so phone speakers play it (the phone QC names the voice).');
+  console.log('              Never on a kick or a gliding voice: the kick check fails it (the layer slides with the pitch)');
   console.log('  porta       true | \'legato\': each note glides from the previous note (acid e808 logdrum pulse; time = their glide)');
   console.log('\nCUE KINDS (build/cues.json kind -> default sound; re-voice with music.mjs cues.<kind>)');
   for (const [k, v] of Object.entries(CUE_DOC)) if (!BUS_KINDS.has(k)) console.log(`  ${k.padEnd(11)} ${v}`);
@@ -347,15 +362,17 @@ for (const l of info.log) log('  ' + l);
 for (const w of info.warnings) console.warn('  WARN ' + w);
 if (win) log(`  slice     ${win[0].toFixed(3)}-${win[1].toFixed(3)} s (bar ${(win[0] / info.barSec + 1).toFixed(2)} to ${(win[1] / info.barSec + 1).toFixed(2)})${winWhy ? ': ' + winWhy : ''}`);
 
-if (has('--harmony')) {   // ReelMakeEasy: the harmony check alone (no master, no other QC, nothing but the raw mix written)
-  const h = info.harmony;
-  if (has('--json')) console.log(JSON.stringify(h, null, 1));
+if (has('--harmony')) {   // ReelMakeEasy: the harmony and kick checks alone (no master, no other QC, nothing but the raw mix written)
+  const h = info.harmony, k = info.kick;
+  if (has('--json')) console.log(JSON.stringify({ ...h, kick: k }, null, 1));
   else {
     (h.status === 'FAIL' ? console.warn : log)(`  ${(h.status === 'PASS' ? 'ok' : h.status).padEnd(4)} ${'harmony'.padEnd(9)} ${h.summary}`);
     if (h.status === 'FAIL') { for (const [k, list] of Object.entries(h.issues)) for (const r of list.slice(0, 4)) console.warn(`       ${k}: ${r.msg}`); for (const c of h.clashes.worst) console.warn(`       clash: ${c.msg}`); }
+    (k.status === 'FAIL' ? console.warn : log)(`  ${(k.status === 'PASS' ? 'ok' : k.status).padEnd(4)} ${'kick'.padEnd(9)} ${k.summary}`);
+    for (const r of k.issues) console.warn(`       ${r.kind}: ${r.msg}`);
   }
   fs.rmSync(RAW, { force: true });
-  process.exit(h.status === 'FAIL' ? 3 : 0);
+  process.exit(h.status === 'FAIL' || k.status === 'FAIL' ? 3 : 0);
 }
 if (has('--no-master')) { log(`raw mix -> ${rel(RAW)} (no mastering, no QC)`); process.exit(0); }
 
@@ -380,7 +397,7 @@ if (AUDITION) {
   process.exit(0);
 }
 
-const report = { tool: 'score.mjs', music: rel(musicPath), cues: sheet ? rel(cuesPath) : null, out: rel(OUT), window: win, target: { lufs: LUFS, tp: TP, preset: tgt }, info: { ...info, hits: undefined, chords: undefined, motif: undefined, harmony: undefined }, harmony: info.harmony, checks: [] };
+const report = { tool: 'score.mjs', music: rel(musicPath), cues: sheet ? rel(cuesPath) : null, out: rel(OUT), window: win, target: { lufs: LUFS, tp: TP, preset: tgt }, info: { ...info, hits: undefined, chords: undefined, motif: undefined, harmony: undefined, kick: undefined }, harmony: info.harmony, kick: info.kick, checks: [] };
 const check = (id, status, msg, data = {}) => { report.checks.push({ id, status, msg, ...data }); const tag = status === 'PASS' ? 'ok' : status === 'INFO' ? '' : status; (status === 'WARN' || status === 'FAIL' ? console.warn : log)(`  ${tag.padEnd(4)} ${id.padEnd(9)} ${msg}`); };
 
 // ------------------------------------------------------------------ stem-only path (cue sounds under an external track)
@@ -444,6 +461,11 @@ if (mastered.limiterDb > 6) {
     for (const c of h.clashes.worst) say(`clash: ${c.msg}`);
     say('fix every line (the skill\'s Harmony rules, music-direction.md §8), run again (--harmony is quick); qc/score-report.json harmony has the full lists');
   }
+}
+{ // ReelMakeEasy: the kick check (audio/kick.mjs). The owner rejected the elastic kick twice; it passed every other check.
+  const k = info.kick;
+  check('kick', k.status, k.summary, { counts: k.counts });
+  for (const r of k.issues) console.warn(`  ${''.padEnd(4)} ${''.padEnd(9)} ${r.kind}: ${r.msg}`);
 }
 check('loudness', Math.abs(fin.I - LUFS) <= 0.5 ? 'PASS' : 'WARN', `integrated ${fin.I} LUFS (target ${LUFS}), LRA ${fin.LRA} LU`, { I: fin.I, LRA: fin.LRA });
 check('truepeak', fin.TP <= TP + 0.05 ? 'PASS' : 'FAIL', `true peak ${fin.TP} dBTP (ceiling ${TP})`, { TP: fin.TP });
@@ -649,12 +671,15 @@ function phoneByVoice(probe, w) {
   return { estimate: db(eK, eP), rows };
 }
 function phoneFix(r, info) {
-  const g = r.voice, through = 'play the low hit through a voice that has harmonics (voices: { low: { inst: \'e808\', bus: \'sfx\', harmonics: -8 } }, then api.play(\'low\', {...}) in the cue function)';
+  const g = r.voice, through = 'play the low hit through a steady voice that has harmonics (voices: { low: { inst: \'e808\', bus: \'sfx\', decay: 0.4, harmonics: -8 } }, then api.play(\'low\', {...}) in the cue function, with no from / slide: a sliding 808 hit fails the kick check)';
   if (g === 'cues') return `the cue sounds (the default boom, lock and final are sub drops): ${through}, or give them a mid body`;
   if (g.startsWith('inst:')) return `the ${g.slice(5)} sounds from step() or section fx: ${through}`;
   const v = info.voices?.[g], poly = v && ['pad', 'drone', 'supersaw', 'stab', 'choir', 'organ'].includes(v.inst);
   const trim = r.full >= 50 ? `; it holds ${r.full} % of the full band, so take 2 dB off it too (gain ${+((v?.gain ?? 1) * 0.8).toFixed(2)})` : '';
   if (poly) return `a chord voice: lift its register or high-pass it (fx: [{ type: 'hp', f: 120 }]); harmonics are for single-note lines${trim}`;
+  // ReelMakeEasy: never harmonics on a kick or a gliding voice (the kick check fails it: the elastic kick)
+  if (v && (v.inst === 'kick' || KICK_NAME.test(g))) return `a kick takes no harmonics layer (the kick check fails it): use the approved kick (click 0.65 and drive 1.3 put its attack above 200 Hz), take 2 dB of gain off it (gain ${+((v.gain ?? 1) * 0.8).toFixed(2)}), and let the bass's harmonics carry the low end on phones`;
+  if (v && info.kick?.gliding?.includes(g)) return `its pitch glides, so it takes no harmonics layer (the kick check fails it): take 2 dB of gain off it (gain ${+((v.gain ?? 1) * 0.8).toFixed(2)}) or give the steady bass line the harmonics`;
   // the music-synthesis.md §10 recipe, in the order it was measured: -8 first, then -6, then gain instead of more
   if (v?.harmonics == null) return `harmonics: -8 on it (-6 if the WARN stays)${trim}`;
   if (v.harmonics < -5) return `its harmonics are at ${v.harmonics} dB: try ${v.harmonics + 2}${trim}`;

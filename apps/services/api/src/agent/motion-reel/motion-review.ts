@@ -14,6 +14,7 @@ import {
   measureMotion,
   type PaceFindings,
   paceFindings,
+  pulsingLine,
   shotsLine,
   STALL_SEC,
   stallsLine,
@@ -129,7 +130,7 @@ export function reviewBlocker(projectDir: string): null | string {
 
 /**
  * The pace report's lines: the shots (each with its start, length, and whether it runs long or
- * too long), every stall, and a one-line verdict.
+ * too long), every stall, every stretch of repeated pulsing/flashing, and a one-line verdict.
  */
 export function paceReport(pace: PaceFindings): string[] {
   const shotLines = pace.shots.map((s) => {
@@ -146,18 +147,22 @@ export function paceReport(pace: PaceFindings): string[] {
   const problems = [
     tooLong ? `${tooLong} shot${tooLong === 1 ? '' : 's'} over ${MAX_SHOT_SEC} s` : '',
     pace.stalls.length ? `${pace.stalls.length} stall${pace.stalls.length === 1 ? '' : 's'}` : '',
+    pace.pulsing.length
+      ? `${pace.pulsing.length} stretch${pace.pulsing.length === 1 ? '' : 'es'} of repeated pulsing/flashing`
+      : '',
   ].filter(Boolean)
   const info = long
     ? ` (${long} shot${long === 1 ? '' : 's'} over ${LONG_SHOT_SEC} s to consider splitting)`
     : ''
   const verdict = problems.length
     ? `Pace: ${problems.join(' and ')} to fix${info}.`
-    : `Pace: no stalls and no shot over ${MAX_SHOT_SEC} s${info}.`
+    : `Pace: no stalls, no shot over ${MAX_SHOT_SEC} s and no repeated pulsing/flashing${info}.`
   return [
     `Shots (from the cuts and big changes; one idea is at most ${LONG_SHOT_SEC} s, a shot over ${MAX_SHOT_SEC} s fails):`,
     ...shotLines,
     shotsLine(pace.shots).line,
     stallsLine(pace.stalls, pace.endHoldFrom, Infinity, pace.hold),
+    pulsingLine(pace.pulsing, Infinity),
     verdict,
   ]
 }
@@ -218,13 +223,13 @@ export async function reviewReel(projectDir: string, raw: unknown): Promise<Revi
       `- ${REEL_DIR}/${path.relative(projectDir, sheets[i] as string)}: rows start at ${sheet.rows.map((r) => at(r.start)).join(', ')}`,
   )
   const text = [
-    `Made ${sheets.length} contact sheet${sheets.length === 1 ? '' : 's'} of the render (the user sees them too): a frame every ${range.every} s from ${range.from} s to ${range.to} s, ${REVIEW_PER_ROW} to a row (${REVIEW_PER_ROW * range.every} s), left to right. Open every sheet and look for stalls, scenes over ${LONG_SHOT_SEC} s, flat or 2D-only transitions, empty or crowded frames, clipped text and moments off the music:`,
+    `Made ${sheets.length} contact sheet${sheets.length === 1 ? '' : 's'} of the render (the user sees them too): a frame every ${range.every} s from ${range.from} s to ${range.to} s, ${REVIEW_PER_ROW} to a row (${REVIEW_PER_ROW * range.every} s), left to right. Open every sheet and look for stalls, scenes over ${LONG_SHOT_SEC} s, transitions that land on an empty frame, depth used everywhere, repeated pulsing/flashing (the same element bumping or flashing on every beat, kick or note), empty or crowded frames, clipped text and moments off the music:`,
     ...legend,
     '',
     'Pace report (the whole reel):',
     ...paceReport(pace),
     '',
-    `Write what you find in ${REEL_DIR}/review.md by time, each with the change of strategy that fixes it (more motion, more things, split the scene, a joining move in depth), fix it, render and review again (up to 3 rounds). A stall is ${STALL_SEC} s in which nothing visibly moves.`,
+    `Write what you find in ${REEL_DIR}/review.md by time, each with the change of strategy that fixes it (more motion, new things arriving instead of a repeated pulse, split the scene, a better join), fix it, render and review again (up to 3 rounds). A stall is ${STALL_SEC} s in which nothing visibly moves.`,
   ].join('\n')
   return { pace, sheets, text }
 }

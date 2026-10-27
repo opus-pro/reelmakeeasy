@@ -613,9 +613,18 @@ describe('the harmony check on real scores (score.mjs --harmony)', () => {
     )
 
     // The skill's recipe A: Amaj7 (IIImaj7) for the borrowed Dmaj7, the keys' motif on the tonic and IIImaj7 bars of
-    // the build (its A sat over G#m7), the break's bell motif from the Amaj7 bar (its G# sat over B9's A).
+    // the build (its A sat over G#m7), the break's bell motif from the Amaj7 bar (its G# sat over B9's A), and the
+    // approved kick for its elastic one (`--harmony` runs the kick check too).
     const fixed = scoreHarmony('garage-reel', (music) =>
       music
+        .replace(
+          "kick: { inst: 'kick', f0: 140, f1: 46, decay: 0.28, click: 0.35, gain: 0.95, harmonics: -8 }",
+          "kick: { inst: 'kick', f0: 200, f1: 55, pitchTau: 0.008, decay: 0.1, click: 0.65, drive: 1.3, gain: 0.55 }",
+        )
+        .replace(
+          "kick: { grid: 'x...............', f0: 110, decay: 0.4 }",
+          "kick: { grid: 'x...............', gain: 0.8 }",
+        )
         .replaceAll("'Dmaj7'", "'Amaj7'")
         .replace("motif: { voice: 'keys', every: 2, bar: 1 }", "motif: { voice: 'keys', every: 2 }")
         .replace(

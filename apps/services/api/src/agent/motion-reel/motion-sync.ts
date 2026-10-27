@@ -9,10 +9,11 @@ import { run } from './motion-runtime'
 /**
  * The sync check: after a render, how the picture moves with the music. Each frame's visual change
  * (the mean grey-level difference from the frame before, on a small grey copy of the reel) is set
- * against the reel's music events: do the section starts get a cut or a big change, do the accented
- * melody notes make something happen, does it ever stall (half a second in which the picture goes
- * nowhere) and does any shot run too long. Whether the picture pulses on the kick is reported but
- * never required. Pure functions over the change lists; only `measureMotion` (and
+ * against the reel's music events: do the section starts get a cut or a big change, does it ever
+ * stall (half a second in which the picture goes nowhere) and does any shot run too long. How many
+ * accented melody notes get a visual event, and whether the picture pulses on the kick, are
+ * reported for information but never required: to pass a melody check the agent bumped and
+ * flashed the same card on every note (~25 in 15 s), which the owner rejected. Pure functions over the change lists; only `measureMotion` (and
  * `measureChanges`, which calls it) runs FFmpeg.
  */
 
@@ -27,8 +28,10 @@ export const SYNC_FRAME_HEIGHT = 54
  * 25% and 24% (0% and 21% when the same notes are moved half a beat: the chance level), kick pulse
  * 1.42x and 1.45x (1.8 and 0.56 grey levels over the change between kicks), every section start
  * where the energy changes marked, and no stills. Reels that only drift fail. A reel that moves
- * with its music like the films do passes. The kick pulse marks only label the report's
- * information line (a pulse on every kick in every reel reads as repetitive, so it isn't required).
+ * with its music like the films do passes. The kick pulse mark only labels the report's information
+ * line, and the melody line gives its numbers with no verdict: a pulse on every kick, or a bump and
+ * flash on every note, reads as repetitive, so neither is required (the picture answers the music
+ * with new things: an arrival, a reveal, a cut).
  */
 export const SYNC_THRESHOLDS = {
   /** Shot changes (cuts, or a big change on a section start) needed: one per this many bars. */
@@ -39,9 +42,6 @@ export const SYNC_THRESHOLDS = {
   kickPulse: 1.15,
   /** ...and at least this many grey levels (0-255) more, so a pulse nobody can see doesn't count. */
   kickPulseLevels: 0.4,
-  /** Share of the accented melody notes (in the energetic sections) that get a visual event; it
-   *  must also beat the share the same notes get half a beat off (what any busy picture scores). */
-  melodyHit: 0.2,
 }
 
 /** An event lands on a note, cut or section start within this many frames either side. */
@@ -99,7 +99,7 @@ const MOVE_STILL = 2
 export const PAYOFF_HOLD_SEC = 1.5
 /** Starts of shots closer than this (seconds) are one transition (a cut and its flash). */
 const SHOT_MERGE_SEC = 0.25
-/** Melody notes at least this strong are the accented ones the picture must answer. */
+/** Melody notes at least this strong are the accented ones the melody line counts. */
 const ACCENT = 0.8
 /** At most this many missed beats are listed per check. */
 const LIST_MAX = 8
@@ -144,9 +144,31 @@ export type Stall = { from: number; fromBeat: number; to: number; toBeat: number
 export type PaceFindings = {
   endHoldFrom: number
   hold: null | Stall
+  /** Stretches where the picture bumps or flashes at the beat or note rate (`pulsingRuns`). */
+  pulsing: PulseRun[]
   shots: Shot[]
   stalls: Stall[]
 }
+
+/** A stretch of repeated pulsing or flashing: `count` alike peaks of change, one about every
+ *  `every` seconds, from `from` to `to`. */
+export type PulseRun = Stall & { count: number; every: number }
+
+/** Repeated pulsing over more than this long (seconds) is flagged by the review. */
+export const PULSE_RUN_SEC = 2
+/** ...with at least this many peaks... */
+const PULSE_MIN_PEAKS = 5
+/** ...each at most this share below the run's typical peak (the same bump or flash again, not new
+ *  elements arriving, whose changes differ)... */
+const PULSE_ALIKE = 0.5
+/** ...or at most this share above it (the bump while another element moves on the same frame).
+ *  Peaks of other sizes between two bumps (an arrival, a slide) don't end the run. */
+const PULSE_ALIKE_ABOVE = 1
+/** ...the typical peak being the median of the run's last this many (it follows a slow drift). */
+const PULSE_TRACK = 3
+/** ...at most this many beats apart (the beat or note rate), and at least this many frames. */
+const PULSE_MAX_GAP_BEATS = 1.05
+const PULSE_MIN_GAP_FRAMES = 4
 
 /** The reel facts the pace checks read. */
 export type PaceReel = Pick<ReelJson, 'beats' | 'beatsPerBar' | 'bpm' | 'fps' | 'lengthSec'>
@@ -630,9 +652,80 @@ export function paceFindings(
   return {
     endHoldFrom: holdFrom,
     hold: payoff ? stall(payoff) : null,
+    pulsing: pulsingRuns(reel, changes, cuts),
     shots,
     stalls: runs.filter((r) => r !== payoff).map(stall),
   }
+}
+
+/**
+ * Repeated pulsing or flashing: runs of alike peaks of change (the same element scaling, bumping
+ * or flashing again) at most about a beat apart, away from the cuts, for more than PULSE_RUN_SEC.
+ * An agent passed an old melody check by scaling and lime-flashing the main card on every note
+ * (~25 bumps in 15 s); the owner rejected it. New elements arriving give peaks of other sizes.
+ */
+export function pulsingRuns(reel: PaceReel, changes: number[], cuts: number[]): PulseRun[] {
+  const fps = reel.fps
+  const maxGap = (PULSE_MAX_GAP_BEATS * 60 * fps) / reel.bpm + TOLERANCE_FRAMES
+  const cutFrames = cuts.map((t) => Math.round(t * fps))
+  const peaks = visualEvents(changes, fps).filter(
+    (f) => !cutFrames.some((c) => Math.abs(c - f) <= TOLERANCE_FRAMES + 1),
+  )
+  const runs: PulseRun[] = []
+  const close = (run: number[]) => {
+    const [first, last] = [run[0] as number, run.at(-1) as number]
+    if (run.length < PULSE_MIN_PEAKS || (last - first) / fps <= PULSE_RUN_SEC) return
+    const gaps = run.slice(1).map((f, i) => f - (run[i] as number))
+    runs.push({
+      count: run.length,
+      every: round2(medianOf(gaps) / fps),
+      from: round2(first / fps),
+      fromBeat: beatAt(reel, first / fps),
+      to: round2(last / fps),
+      toBeat: beatAt(reel, last / fps),
+    })
+  }
+  let run: number[] = []
+  let seen = -Infinity // the last peak of any size
+  for (const f of peaks) {
+    const prev = run.at(-1)
+    if (prev !== undefined && f - prev < PULSE_MIN_GAP_FRAMES) continue
+    // A cut's own peak is left out, so the pulse goes on across it (the next shot pulsing too).
+    const across = prev !== undefined && cutFrames.some((c) => c > seen && c < f)
+    const gap = across ? 2 * maxGap : maxGap
+    // The run goes on while peaks keep coming at the note rate, and its own within two gaps (a
+    // bump hidden under another element's bigger change once in a while).
+    const goesOn = prev !== undefined && f - seen <= gap && f - prev <= 2 * gap
+    seen = f
+    if (!goesOn) {
+      close(run)
+      run = [f]
+      continue
+    }
+    // The bump's size now: its last few peaks (a bump grows or shrinks as its element does).
+    const typical = medianOf(run.slice(-PULSE_TRACK).map((g) => changes[g] as number))
+    const change = changes[f] as number
+    if (change >= (1 - PULSE_ALIKE) * typical && change <= (1 + PULSE_ALIKE_ABOVE) * typical)
+      run.push(f)
+    // Else another element's change between two bumps (an arrival, a slide): the run goes on.
+  }
+  close(run)
+  return runs
+}
+
+/** One line on the repeated pulsing/flashing, each stretch by time and beat (the first `max`). */
+export function pulsingLine(runs: PulseRun[], max: number): string {
+  if (!runs.length)
+    return `Repeated pulsing/flashing: none (no element bumps or flashes at the beat or note rate for over ${PULSE_RUN_SEC} s).`
+  const list = runs
+    .slice(0, max)
+    .map(
+      (r) =>
+        `${r.from}-${r.to} s (beats ${r.fromBeat}-${r.toBeat}, ${r.count} times, every ${r.every} s)`,
+    )
+    .join(', ')
+  const more = runs.length > max ? ` and ${runs.length - max} more` : ''
+  return `Repeated pulsing/flashing: ${runs.length} stretch${runs.length === 1 ? '' : 'es'} where the picture bumps or flashes alike at the beat or note rate for over ${PULSE_RUN_SEC} s: ${list}${more}. Check the sheets: if it is the same element scaling, shaking or flashing on every beat, kick or note, take that out and answer the music with new things (an element arriving, a reveal, a cut, a counter step); keep a pulse or flash for a few accents a reel (the drop, the payoff).`
 }
 
 /** One line on the shots: how many, and those that run long (over 4 s) or too long (over 8 s). */
@@ -746,12 +839,6 @@ function pulseRatio(
   return { levels, ratio: medianOf(on) / between }
 }
 
-/** Beat numbers for a report line: the first few, then how many more. */
-function listed(beats: number[]): string {
-  const more = beats.length - LIST_MAX
-  return beats.slice(0, LIST_MAX).join(', ') + (more > 0 ? ` and ${more} more` : '')
-}
-
 /** What `describe` reads. */
 type Findings = Omit<SyncReport, 'lines' | 'passes' | 'shots' | 'stalls'> & {
   cuts: number[]
@@ -762,7 +849,7 @@ type Findings = Omit<SyncReport, 'lines' | 'passes' | 'shots' | 'stalls'> & {
 /** The report's lines and verdict from its numbers. */
 function describe(o: Findings): SyncReport {
   const fixes: string[] = []
-  const lines = [cutsLine(o, fixes), sectionLine(o, fixes), melodyLine(o, fixes), pulseLine(o)]
+  const lines = [cutsLine(o, fixes), sectionLine(o, fixes), melodyLine(o), pulseLine(o)]
   const scenes = shotsLine(o.pace.shots)
   lines.push(scenes.line)
   if (scenes.fails) fixes.push('scenes over 8 s')
@@ -799,18 +886,20 @@ function sectionLine(o: Findings, fixes: string[]): string {
   return `Section starts: ${o.sectionMisses.length} without a cut or a big change (${list(o.sectionMisses)}).${soft}`
 }
 
-/** The melody line: the share of accents answered against the chance level (misses listed only
- *  when it fails). */
-function melodyLine(o: Findings, fixes: string[]): string {
-  const { chance, hit, missedBeats, total } = o.melody
-  if (!total) return 'Melody: no accented notes in the energetic sections to check.'
+/**
+ * The melody line, for information only: it never fails the check. To pass it the agent bumped
+ * and flashed the same element on every note, which the owner rejected: the picture answers the
+ * music with new things (an element arriving, a reveal, a cut, a counter step), and a pulse or
+ * flash is a rare accent.
+ */
+function melodyLine(o: Findings): string {
+  const { chance, hit, total } = o.melody
+  if (!total)
+    return 'Melody (information only): no accented notes in the energetic sections to check.'
   const share = hit / total
   const percent = (v: number) => `${Math.round(v * 100)}%`
-  const head = `Melody: ${hit} of ${total} accented notes get a visual event (${percent(share)}; ${percent(chance)} half a beat off them, by chance)`
-  if (share >= SYNC_THRESHOLDS.melodyHit && share > chance) return `${head}.`
-  fixes.push('melody notes')
-  const misses = missedBeats.length ? `; pop something on beats ${listed(missedBeats)}` : ''
-  return `${head}: the picture doesn't answer the melody${misses}.`
+  // Numbers only, no verdict: a low share is no shortcoming (chasing it gave the per-note bump).
+  return `Melody (information only): ${hit} of ${total} accented notes get a visual event (${percent(share)}; ${percent(chance)} half a beat off them, by chance). A low share is fine: never answer the notes by bumping or flashing the same element on each; bring in something new on the few that matter.`
 }
 
 /**
