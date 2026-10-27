@@ -57,7 +57,7 @@ function setupPhase({ calls, mode, setup }: AnimationTaskInput): Phase {
   return { result: mode === 'animation' ? 'Waiting for the setup card' : null, state: 'waiting' }
 }
 
-/** A Talking head's avatar: a saved one is done at once; a new one runs while Claude draws and
+/** An Avatar video's avatar: a saved one is done at once; a new one runs while Claude draws and
  *  checks it (avatar_check), and is done once avatar_save keeps it. */
 function avatarPhase({ calls, setup }: AnimationTaskInput): Phase {
   const avatar = setup?.avatar

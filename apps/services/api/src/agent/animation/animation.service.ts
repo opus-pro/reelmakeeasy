@@ -233,7 +233,7 @@ export class AnimationService {
     try {
       if (tool === 'avatar_check' || tool === 'avatar_save') {
         if (session.animation.lookId !== 'avatar' || !session.animation.avatar)
-          return { success: false, text: 'Only a Talking head has an avatar.' }
+          return { success: false, text: 'Only an Avatar video has an avatar.' }
         const errors = await typeCheck(projectDir)
         if (errors)
           return {
@@ -456,11 +456,11 @@ export class AnimationService {
       ),
       ...(options.avatars.length
         ? [
-            'Saved avatars for a Talking head (avatarId: name, style):',
+            'Saved avatars for an Avatar video (avatarId: name, style):',
             ...options.avatars.map((a) => `- ${a.id}: ${a.name}, ${a.style.toUpperCase()}`),
           ]
         : [
-            'No saved avatars yet: a Talking head needs a new one (avatarName, avatarStyle 2d or 3d, and avatarPhoto: a photo the user attaches with the paperclip).',
+            'No saved avatars yet: an Avatar video needs a new one (avatarName, avatarStyle 2d or 3d, and avatarPhoto: a photo the user attaches with the paperclip).',
           ]),
       `Length (lengthSec): any whole number of seconds from ${options.minLengthSec} to ${options.maxLengthSec} (${ANIMATION_LENGTHS.slice(0, -1).join(', ')} or ${ANIMATION_LENGTHS.at(-1)} suggested; default ${ANIMATION_DEFAULT_SEC}).`,
       'Library tracks (music "library", musicId):',
@@ -499,7 +499,7 @@ export class AnimationService {
   ): Promise<ToolCallResult> {
     const a = (args && typeof args === 'object' ? args : {}) as Record<string, unknown>
     const chosen = setup.avatar
-    if (!chosen) return { success: false, text: 'Only a Talking head has an avatar.' }
+    if (!chosen) return { success: false, text: 'Only an Avatar video has an avatar.' }
     const before = 'id' in chosen ? readAvatar(chosen.id) : null
     const name =
       (typeof a['name'] === 'string' && a['name'].trim()) ||
@@ -560,7 +560,7 @@ export class AnimationService {
     this.sessions.emitImage(id, preview)
     return {
       success: true,
-      text: `Saved the avatar "${name}" (${style.toUpperCase()}) to the user's avatars: every later Talking head can use it.${voiceSample ? ' Its voice sample is made: record its lines with voices "Host: avatar" and they are cloned from it, the same voice every time.' : ' Record its lines with voices "Host: avatar".'}${voiceNote} Save again after changing it.`,
+      text: `Saved the avatar "${name}" (${style.toUpperCase()}) to the user's avatars: every later Avatar video can use it.${voiceSample ? ' Its voice sample is made: record its lines with voices "Host: avatar" and they are cloned from it, the same voice every time.' : ' Record its lines with voices "Host: avatar".'}${voiceNote} Save again after changing it.`,
     }
   }
 
@@ -733,7 +733,7 @@ export class AnimationService {
     return { file: found.path, title: found.name }
   }
 
-  /** The Talking head's avatar as a project gets it: a saved one's rig, or a new one's photo (an
+  /** The Avatar video's avatar as a project gets it: a saved one's rig, or a new one's photo (an
    *  image the user attached). Undefined for the other looks. */
   protected avatarFor(id: string, setup: AgentAnimationSetup): ProjectAvatar | undefined {
     const choice = setup.avatar

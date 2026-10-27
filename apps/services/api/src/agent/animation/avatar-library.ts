@@ -9,7 +9,7 @@ import type { AgentAvatar, AvatarStyle } from '@shared/types/api/agent'
 
 /**
  * Saved avatars: the digital avatars Claude drew from the user's photos, kept for every later
- * Talking head. Each is a folder of stored files, `avatars/<id>/`:
+ * Avatar video. Each is a folder of stored files, `avatars/<id>/`:
  * - `avatar.json`: its name, style, voice description and dates;
  * - `avatar.ts`: the rig, Claude's code (the project's `src/avatar/avatar.ts`);
  * - `preview.png`: its picture for the card;

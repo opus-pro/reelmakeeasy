@@ -129,10 +129,10 @@ describe('animationTasks', () => {
 describe('the Avatar row', () => {
   const head = (avatar: AgentAnimationSetupView['avatar'], over = {}) =>
     animationTasks(
-      input({ setup: { ...SETUP, avatar, lookId: 'avatar', lookLabel: 'Talking head', ...over } }),
+      input({ setup: { ...SETUP, avatar, lookId: 'avatar', lookLabel: 'Avatar', ...over } }),
     )
 
-  it('shows only for a Talking head, after Set up', () => {
+  it('shows only for an Avatar video, after Set up', () => {
     expect(animationTasks(input()).some((t) => t.id === 'avatar')).toBe(false)
     expect(
       head({ id: 'av-0123456789' })

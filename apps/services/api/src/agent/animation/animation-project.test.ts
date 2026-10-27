@@ -177,7 +177,7 @@ describe('prepareAnimationProject', () => {
     expect(fs.existsSync(path.join(projectDir, 'src/stage/index.ts'))).toBe(true)
   })
 
-  describe('a Talking head', () => {
+  describe('an Avatar video', () => {
     const head: AgentAnimationSetup = {
       ...setup2d,
       avatar: { name: 'Sam', photo: 'me.jpg', style: '3d' },

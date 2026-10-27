@@ -33,7 +33,7 @@ function checkedMusic(music: unknown): AgentAnimationSetup['music'] {
   }
 }
 
-/** The Talking head's avatar, checked: a saved one by its id, or a new one (a name, the photo's
+/** The Avatar video's avatar, checked: a saved one by its id, or a new one (a name, the photo's
  *  attachment name, 2D or 3D). Whether it exists is the service's to check. */
 function parseAvatar(raw: unknown): AgentAnimationAvatar {
   if (!isRecord(raw))

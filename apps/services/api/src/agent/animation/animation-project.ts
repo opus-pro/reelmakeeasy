@@ -41,7 +41,7 @@ export function composerSettings(setup: AgentAnimationSetup): {
   }
 }
 
-/** A Talking head's avatar as the project gets it: a saved one (`id`, its rig file in the
+/** An Avatar video's avatar as the project gets it: a saved one (`id`, its rig file in the
  *  library) or a new one (`id` null, the photo to draw it from). */
 export type ProjectAvatar = {
   id: null | string
@@ -59,7 +59,7 @@ const AVATAR_FROM = path.join('src', 'avatar', '.from')
 
 /** `public/animation.json`: what the project's clock reads. */
 export type AnimationJson = {
-  /** The Talking head's avatar (null id: a new one, not saved yet). */
+  /** The Avatar video's avatar (null id: a new one, not saved yet). */
   avatar?: { id: null | string; name: string; style: AvatarStyle }
   fps: number
   height: number
@@ -90,7 +90,7 @@ const CLAUDES_FILES = new Set([path.join('src', 'Animation.tsx')])
  * the music changed (Claude made a track), so the links and look are left as they are.
  */
 export async function prepareAnimationProject(o: {
-  /** The Talking head's avatar (the look `avatar` only). */
+  /** The Avatar video's avatar (the look `avatar` only). */
   avatar?: ProjectAvatar
   music: null | ReelMusicSource
   musicOnly?: boolean
@@ -102,7 +102,7 @@ export async function prepareAnimationProject(o: {
   if (!look) throw new Error(`Unknown look: ${o.setup.lookId}`)
 
   copyTree(presetPath('animation/template'), projectDir)
-  // A Talking head draws its avatar in 2D or 3D: both libraries, then its own host kit.
+  // An Avatar video draws its avatar in 2D or 3D: both libraries, then its own host kit.
   for (const lib of look.id === 'avatar' ? ['2d', '3d', 'avatar'] : [look.id])
     copyTree(presetPath(`animation/${lib}`), projectDir)
   if (!o.musicOnly) linkRuntime(projectDir)

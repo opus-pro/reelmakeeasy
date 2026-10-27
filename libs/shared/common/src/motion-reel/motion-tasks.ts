@@ -15,7 +15,7 @@ export const MOTION_TASKS: readonly { id: AgentMotionTaskId; label: string }[] =
 /** A Claude Animation's phases (it shows in the same Tasks panel), in order, with their names. */
 export const ANIMATION_TASKS: readonly { id: AgentMotionTaskId; label: string }[] = [
   { id: 'setup', label: 'Set up' },
-  // Only a Talking head has this row: Claude draws the avatar from a photo, or uses a saved one.
+  // Only an Avatar video has this row: Claude draws the avatar from a photo, or uses a saved one.
   { id: 'avatar', label: 'Avatar' },
   { id: 'plan', label: 'Plan' },
   { id: 'voice', label: 'Voices' },
@@ -26,7 +26,7 @@ export const ANIMATION_TASKS: readonly { id: AgentMotionTaskId; label: string }[
   { id: 'review', label: 'Review' },
 ]
 
-/** An animation's rows: the Avatar row only for a Talking head. */
+/** An animation's rows: the Avatar row only for an Avatar video. */
 export function animationTaskRows(
   talkingHead: boolean,
 ): readonly { id: AgentMotionTaskId; label: string }[] {

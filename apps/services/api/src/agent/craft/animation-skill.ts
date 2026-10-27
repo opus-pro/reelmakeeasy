@@ -23,7 +23,7 @@ const DESCRIPTION: Record<AnimationLookId, string> = {
   '8bit':
     'How to write and build a ReelMakeEasy Claude Animation in the 8-bit look (a narrated pixel-art explainer like an old video game, drawn in code with three.js in Remotion). Use in every 8-bit Claude Animation chat, before writing the script, recording the voice, building scenes, rendering or changing it.',
   avatar:
-    "How to make a ReelMakeEasy Talking head (draw the user's digital avatar from their photo (2D or 3D, a rig of moving parts), save it, and build a video where it talks to the camera, waist up, with gestures and pictures). Use in every Talking head Claude Animation chat, before drawing or changing the avatar, writing the script, recording, building, rendering or changing it.",
+    "How to make a ReelMakeEasy Avatar video (draw the user's digital avatar from their photo (2D or 3D, a rig of moving parts), save it, and build a video where it talks to the camera, waist up, with gestures and pictures). Use in every Avatar video Claude Animation chat, before drawing or changing the avatar, writing the script, recording, building, rendering or changing it.",
 }
 
 /** What each look's script and scenes are, and how its library is used. */
@@ -129,7 +129,7 @@ const LOOK_SECTION: Record<AnimationLookId, string[]> = {
     '- Build the hero from boxes, cylinders and extrusions with real detail (floors, windows as `windowTexture`, a crown, the inside parts on the x-ray layer). Keep low-poly elsewhere.',
   ],
   avatar: [
-    '## The Talking head: your avatar talks to the camera',
+    '## The Avatar video: your avatar talks to the camera',
     '',
     "A host, the user's own digital avatar, stands waist up in a simple set, looks into the camera and explains one thing, with gestures on its key words and pictures popping up beside or above it on the words they show. It is drawn in code like everything else: no AI picture or video model.",
     '',

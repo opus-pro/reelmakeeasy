@@ -50,7 +50,7 @@ describe('renderAnimationSkill', () => {
     expect(renderAnimationSkill('3d')).toContain('src/stage')
     expect(renderAnimationSkill('8bit')).toContain('src/pixel')
     expect(renderAnimationSkill('8bit')).toMatch(/narrator/)
-    // A Talking head draws the avatar from the photo first, then checks and saves it.
+    // An Avatar video draws the avatar from the photo first, then checks and saves it.
     const avatar = renderAnimationSkill('avatar')
     expect(avatar).toContain('src/host')
     expect(avatar).toMatch(/Study the photo/)

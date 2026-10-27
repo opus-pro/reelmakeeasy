@@ -565,7 +565,7 @@ export class AgentController {
     return this.animation.options()
   }
 
-  /** The saved avatars (a Talking head's), newest first. */
+  /** The saved avatars (an Avatar video's), newest first. */
   @Get('avatars')
   avatars(): AgentAvatar[] {
     return listAvatars()

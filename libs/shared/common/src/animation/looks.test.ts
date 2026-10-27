@@ -39,7 +39,7 @@ describe('animation looks', () => {
       ['2d', '2D'],
       ['3d', '3D'],
       ['8bit', '8-bit'],
-      ['avatar', 'Talking head'],
+      ['avatar', 'Avatar'],
     ])
   })
 

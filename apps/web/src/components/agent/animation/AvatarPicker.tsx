@@ -11,7 +11,7 @@ import { apiOriginAtom } from '@/atom/apiOrigin'
 import { attachmentName, uploadAttachment } from '../attachments/attachments'
 import { ChipRow, LABEL_CLASS } from '../motion/setup-parts'
 
-/** The avatar a Talking head card is set to: a saved one, or a new one drawn from a photo. */
+/** The avatar an Avatar video card is set to: a saved one, or a new one drawn from a photo. */
 export type AvatarPick =
   | { id: string; kind: 'saved' }
   | {
@@ -44,7 +44,7 @@ const TILE =
   'flex w-24 shrink-0 flex-col overflow-hidden rounded-lg border text-left transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-white/50'
 
 /**
- * The Talking head's avatar: the user's saved avatars as picture tiles, and "New avatar" (a photo,
+ * The Avatar video's avatar: the user's saved avatars as picture tiles, and "New avatar" (a photo,
  * a name, 2D or 3D), which Claude draws from the photo before the video.
  */
 export function AvatarPicker({

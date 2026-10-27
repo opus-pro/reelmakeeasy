@@ -18,7 +18,7 @@ const ok = {
 }
 
 describe('parseAnimationSetup', () => {
-  it("takes a Talking head's avatar: a saved one, or a new one with a name, photo and style", () => {
+  it("takes an Avatar video's avatar: a saved one, or a new one with a name, photo and style", () => {
     const head = { ...ok, lookId: 'avatar' }
     expect(parseAnimationSetup({ ...head, avatar: { id: 'av-0123456789' } }).avatar).toEqual({
       id: 'av-0123456789',

@@ -1,9 +1,9 @@
 ---
 name: reelmakeeasy-animation-avatar
-description: How to make a ReelMakeEasy Talking head (draw the user's digital avatar from their photo (2D or 3D, a rig of moving parts), save it, and build a video where it talks to the camera, waist up, with gestures and pictures). Use in every Talking head Claude Animation chat, before drawing or changing the avatar, writing the script, recording, building, rendering or changing it.
+description: How to make a ReelMakeEasy Avatar video (draw the user's digital avatar from their photo (2D or 3D, a rig of moving parts), save it, and build a video where it talks to the camera, waist up, with gestures and pictures). Use in every Avatar video Claude Animation chat, before drawing or changing the avatar, writing the script, recording, building, rendering or changing it.
 ---
 
-# Claude Animation: Talking head
+# Claude Animation: Avatar
 
 A Claude Animation is a short vertical video (9:16) that you draw and animate yourself, every frame in code, as a Remotion project. No AI video or image model makes any of it: the voices come from the app, the pictures from your code. It looks good when it teaches one surprising, true thing clearly, and the picture moves with what is being said.
 
@@ -35,7 +35,7 @@ Remotion is installed. Its own skills (`remotion-best-practices`, `remotion-mark
 - A picture change lands on the word it shows (the number appears on "500", the arrow on "flows").
 - `useMouth(who)` gives a speaker's mouth (0..1) and vowel on every frame; `useSpeaking()` says who is talking.
 
-## The Talking head: your avatar talks to the camera
+## The Avatar video: your avatar talks to the camera
 
 A host, the user's own digital avatar, stands waist up in a simple set, looks into the camera and explains one thing, with gestures on its key words and pictures popping up beside or above it on the words they show. It is drawn in code like everything else: no AI picture or video model.
 

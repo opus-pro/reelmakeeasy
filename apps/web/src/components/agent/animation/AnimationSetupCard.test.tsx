@@ -58,7 +58,7 @@ const OPTIONS: AgentAnimationOptions = {
       defaultTrackId: 'data-pulse',
       description: 'Your own avatar talks to the camera, waist up, with gestures.',
       id: 'avatar',
-      label: 'Talking head',
+      label: 'Avatar',
       lengths: [15, 30, 45, 60, 90],
       previewUrl: null,
     },
@@ -206,7 +206,7 @@ describe('AnimationSetupCard', () => {
     expect(screen.getByText('No music')).toBeTruthy()
   })
 
-  describe('a Talking head', () => {
+  describe('an Avatar video', () => {
     const subject = () =>
       fireEvent.change(screen.getByRole('textbox', { name: "What's it about?" }), {
         target: { value: 'Why we yawn' },
@@ -225,7 +225,7 @@ describe('AnimationSetupCard', () => {
           },
         ],
       })
-      fireEvent.click(look(/Talking head/))
+      fireEvent.click(look(/^Avatar$/))
       expect(screen.getByRole('radio', { name: 'Sam (2D)' }).getAttribute('aria-checked')).toBe(
         'true',
       )
@@ -240,7 +240,7 @@ describe('AnimationSetupCard', () => {
       global.URL.createObjectURL = jest.fn(() => 'blob:photo')
       global.URL.revokeObjectURL = jest.fn()
       const onSubmit = renderCard()
-      fireEvent.click(look(/Talking head/))
+      fireEvent.click(look(/^Avatar$/))
       subject()
       expect((screen.getByRole('button', { name: 'Build it' }) as HTMLButtonElement).disabled).toBe(
         true,

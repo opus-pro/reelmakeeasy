@@ -197,25 +197,25 @@ export const AGENT_TOOLS: Record<AgentToolName, DynamicToolSpec> = {
           type: 'integer',
         },
         avatarId: {
-          description: 'Talking head with a saved avatar: its id (from the options).',
+          description: 'Avatar video with a saved avatar: its id (from the options).',
           type: 'string',
         },
         avatarName: {
-          description: "Talking head with a new avatar: its name (the person's first name, say).",
+          description: "Avatar video with a new avatar: its name (the person's first name, say).",
           type: 'string',
         },
         avatarPhoto: {
           description:
-            'Talking head with a new avatar: the photo to draw it from, an image the user attached (its path, e.g. attachments/me.jpg).',
+            'Avatar video with a new avatar: the photo to draw it from, an image the user attached (its path, e.g. attachments/me.jpg).',
           type: 'string',
         },
         avatarStyle: {
-          description: 'Talking head with a new avatar: drawn in 2D or 3D.',
+          description: 'Avatar video with a new avatar: drawn in 2D or 3D.',
           enum: ['2d', '3d'],
           type: 'string',
         },
         lookId: {
-          description: "The look ('avatar': a Talking head, with avatarId or a new avatar).",
+          description: "The look ('avatar': an Avatar video, with avatarId or a new avatar).",
           enum: ['2d', '3d', '8bit', 'avatar'],
           type: 'string',
         },
@@ -284,7 +284,7 @@ export const AGENT_TOOLS: Record<AgentToolName, DynamicToolSpec> = {
         },
         voices: {
           description:
-            'Each speaker\'s voice, one per row: "Who: a vivid description" (age, energy, pace, attitude: "Bee: a cheerful young bee, quick and bright"), or a preset id starting kokoro-. A Talking head\'s host is "Host: avatar": the saved avatar\'s own voice.',
+            'Each speaker\'s voice, one per row: "Who: a vivid description" (age, energy, pace, attitude: "Bee: a cheerful young bee, quick and bright"), or a preset id starting kokoro-. An Avatar video\'s host is "Host: avatar": the saved avatar\'s own voice.',
           type: 'string',
         },
       },
@@ -295,13 +295,13 @@ export const AGENT_TOOLS: Record<AgentToolName, DynamicToolSpec> = {
   },
   avatar_check: {
     description:
-      "Render the Talking head's avatar check sheet (free, a few seconds): src/avatar/avatar.ts in 16 poses (neutral, smile, the mouth shapes, a blink, surprise, a head turn and every gesture), each named, shown to you and the user. Compare it with the photo in animation/public/avatar/ and fix the rig until it looks like the person and every pose reads.",
+      "Render the Avatar video's avatar check sheet (free, a few seconds): src/avatar/avatar.ts in 16 poses (neutral, smile, the mouth shapes, a blink, surprise, a head turn and every gesture), each named, shown to you and the user. Compare it with the photo in animation/public/avatar/ and fix the rig until it looks like the person and every pose reads.",
     inputSchema: { additionalProperties: false, properties: {}, type: 'object' },
     name: 'avatar_check',
   },
   avatar_save: {
     description:
-      'Save the Talking head\'s avatar to the user\'s avatars (free on this computer; its voice sample says so first when it would run on fal, paid): its rig, its picture, the photo and a voice sample made from `voice`, so every later Talking head uses the same avatar and voice. Call it once the user keeps the avatar, and again after changing it. Then record its lines with voices "Host: avatar".',
+      'Save the Avatar video\'s avatar to the user\'s avatars (free on this computer; its voice sample says so first when it would run on fal, paid): its rig, its picture, the photo and a voice sample made from `voice`, so every later Avatar video uses the same avatar and voice. Call it once the user keeps the avatar, and again after changing it. Then record its lines with voices "Host: avatar".',
     inputSchema: {
       additionalProperties: false,
       properties: {
@@ -813,7 +813,7 @@ const ANIMATION_TOOLS: AgentToolName[] = [
   'animation_still',
   'animation_render',
   'animation_review',
-  // A Talking head's avatar (the others refuse them).
+  // An Avatar video's avatar (the others refuse them).
   'avatar_check',
   'avatar_save',
 ]

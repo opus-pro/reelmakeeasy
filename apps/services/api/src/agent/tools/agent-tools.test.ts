@@ -302,7 +302,7 @@ describe('a Claude Animation chat', () => {
 })
 
 describe('the tools of a Claude Animation chat', () => {
-  it("gives an Easy chat its tools (a Talking head's avatar ones too) and Advanced the setup too", () => {
+  it("gives an Easy chat its tools (an Avatar video's avatar ones too) and Advanced the setup too", () => {
     expect(toolsForSession({ mode: 'animation' }, 'claude').map((t) => t.name)).toEqual([
       'animation_voice',
       'animation_music',

@@ -1,5 +1,5 @@
 /**
- * The Talking head look's library: a host (your avatar) talking to the camera. ReelMakeEasy owns
+ * The Avatar video look's library: a host (your avatar) talking to the camera. ReelMakeEasy owns
  * it and refreshes it on every setup: use it, never edit it. The avatar is `src/avatar/avatar.ts`;
  * your scenes go in `src/scenes/`.
  *

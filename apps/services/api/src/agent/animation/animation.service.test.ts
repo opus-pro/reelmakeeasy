@@ -139,7 +139,7 @@ describe('AnimationService, the setup card', () => {
       ['2d', '2D', lengths, null],
       ['3d', '3D', lengths, null],
       ['8bit', '8-bit', lengths, null],
-      ['avatar', 'Talking head', lengths, null],
+      ['avatar', 'Avatar', lengths, null],
     ])
     expect([options.minLengthSec, options.maxLengthSec]).toEqual([10, 90])
     expect(options.looks[0]?.defaultTrackId).toBe('data-pulse')
@@ -229,7 +229,7 @@ describe('AnimationService, animation_voice', () => {
     return { ...made, voice }
   }
 
-  it("speaks a Talking head's host with its saved avatar's voice, once the avatar is saved", async () => {
+  it("speaks an Avatar video's host with its saved avatar's voice, once the avatar is saved", async () => {
     const data = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'animation-avatars-')))
     const before = process.env['DATA_DIR']
     process.env['DATA_DIR'] = data

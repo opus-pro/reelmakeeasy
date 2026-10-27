@@ -36,7 +36,7 @@ export type AgentAvatar = {
   style: AvatarStyle
 }
 
-/** The Talking head's avatar: a saved one, or a new one Claude draws from a photo (an attachment
+/** The Avatar video's avatar: a saved one, or a new one Claude draws from a photo (an attachment
  *  of the chat, by its name). */
 export type AgentAnimationAvatar =
   | { id: string }
@@ -44,7 +44,7 @@ export type AgentAnimationAvatar =
 
 /** What the Claude Animation setup card sends (`POST /api/agent/sessions/:id/animation`). */
 export type AgentAnimationSetup = {
-  /** The Talking head look's avatar (only with lookId `avatar`). */
+  /** The Avatar video look's avatar (only with lookId `avatar`). */
   avatar?: AgentAnimationAvatar
   /** About this long, in seconds: a whole number from 10 to 90. */
   lengthSec: number
@@ -57,7 +57,7 @@ export type AgentAnimationSetup = {
 
 /** `GET /api/agent/animation/options`: what the Claude Animation setup card offers. */
 export type AgentAnimationOptions = {
-  /** The saved avatars, newest first (the Talking head look). */
+  /** The saved avatars, newest first (the Avatar video look). */
   avatars: AgentAvatar[]
   composers: AgentMotionOptions['composers']
   /** Any whole number of seconds in this range can be typed in. */
@@ -81,7 +81,7 @@ export type AgentAnimationOptions = {
 
 /** The setup a Claude Animation chat settled on, as its card shows it once chosen. */
 export type AgentAnimationSetupView = AgentAnimationSetup & {
-  /** The Talking head's avatar's name. */
+  /** The Avatar video's avatar's name. */
   avatarName?: string
   lookLabel: string
   musicTitle: null | string
