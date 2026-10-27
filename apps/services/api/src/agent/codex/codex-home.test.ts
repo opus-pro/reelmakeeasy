@@ -2,6 +2,7 @@ import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
 
+import { renderAnimationSkill } from '../craft/animation-skill'
 import { BEAT_LOOP_SKILL_NAME, renderBeatLoopSkill } from '../craft/beat-loop-skill'
 import { CAMERA_SKILL_NAME, renderCameraSkill } from '../craft/camera-skill'
 import { MOTION_REEL_SKILL_NAME, renderMotionReelSkill } from '../craft/motion-reel-skill'
@@ -106,8 +107,13 @@ describe('ensureAgentCodexHome', () => {
       BEAT_LOOP_SKILL_NAME,
       RANKING_SKILL_NAME,
       MOTION_REEL_SKILL_NAME,
+      'reelmakeeasy-animation-2d',
+      'reelmakeeasy-animation-3d',
+      'reelmakeeasy-animation-8bit',
       MUSIC_COMPOSER_SKILL_NAME,
     ])
+    const animation = path.join(home, 'skills', 'reelmakeeasy-animation-8bit', 'SKILL.md')
+    expect(fs.readFileSync(animation, 'utf8')).toBe(renderAnimationSkill('8bit'))
   })
 
   it('copies the music composer skill whole, its references too', () => {

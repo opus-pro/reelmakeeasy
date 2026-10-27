@@ -35,6 +35,7 @@ import { RankingService } from '../ranking/ranking.service'
 import { SoundLibraryModule } from '../sound-library/sound-library.module'
 import { SoundLibraryService } from '../sound-library/sound-library.service'
 
+import { AnimationService } from './animation/animation.service'
 import { MotionReelService } from './motion-reel/motion-reel.service'
 import { MotionTaskTracker } from './motion-reel/motion-tasks'
 import { AgentController } from './agent.controller'
@@ -43,12 +44,25 @@ import { ChatModelService } from './chat-model.service'
 
 @Module({
   controllers: [AgentController],
-  imports: [LongTakeModule, ProjectsModule, MusicModule, SetupModule, RankingModule, SoundLibraryModule],
+  imports: [
+    LongTakeModule,
+    ProjectsModule,
+    MusicModule,
+    SetupModule,
+    RankingModule,
+    SoundLibraryModule,
+  ],
   providers: [
     // The models agent chats can run on (asked of each harness, kept for a while).
     { provide: ChatModelService, useFactory: () => new ChatModelService() },
     {
-      inject: [ModuleRef, ChatModelService, RankingService, SoundLibraryService, RankingTemplateService],
+      inject: [
+        ModuleRef,
+        ChatModelService,
+        RankingService,
+        SoundLibraryService,
+        RankingTemplateService,
+      ],
       provide: AgentSessionService,
       // The autonomous flow needs the session service and the session service starts the flow:
       // resolve the flow lazily, when a session first picks that mode.
@@ -62,6 +76,7 @@ import { ChatModelService } from './chat-model.service'
         const flow = () => refs.get(AutonomousService, { strict: true })
         const edit = () => refs.get(AgentEditService, { strict: true })
         const motion = () => refs.get(MotionReelService, { strict: true })
+        const animation = () => refs.get(AnimationService, { strict: true })
         // The Ranking Builder's tools; the session service gives the chat's working folder.
         let session: AgentSessionService | undefined
         // A Motion Reel's phases (its Tasks panel), sent as its tools run and its turns end.
@@ -90,14 +105,16 @@ import { ChatModelService } from './chat-model.service'
             motionChoiceFor: (harness, chat) => chatModels.motionChoiceFor(harness, chat),
           },
           // Codex's ReelMakeEasy tools, answered by the edit service, a Motion Reel's by the
-          // Motion Reel service (both resolved lazily, like the flow); the Ranking Builder's by
-          // its own tools.
+          // Motion Reel service, a Claude Animation's by the animation service (all resolved
+          // lazily, like the flow); the Ranking Builder's by its own tools.
           onToolCall: (id, tool, args) =>
             tool.startsWith('ranking_')
               ? rankingTools.call(id, tool, args)
               : tool.startsWith('motion_')
                 ? motionTasks.track(id, tool, () => motion().callTool(id, tool, args))
-                : edit().callTool(id, tool, args),
+                : tool.startsWith('animation_')
+                  ? motionTasks.track(id, tool, () => animation().callTool(id, tool, args))
+                  : edit().callTool(id, tool, args),
           onQuestion: (id) => session && motionTasks.questionAsked(id),
           // Both can come while the session service is still being made (its restart pass).
           onTurnEnd: (id) => session && motionTasks.turnEnded(id),
@@ -138,6 +155,11 @@ import { ChatModelService } from './chat-model.service'
       inject: [AgentSessionService],
       provide: MotionReelService,
       useFactory: (sessions: AgentSessionService) => new MotionReelService(sessions),
+    },
+    {
+      inject: [AgentSessionService],
+      provide: AnimationService,
+      useFactory: (sessions: AgentSessionService) => new AnimationService(sessions),
     },
     CodexLlmService,
     ClaudeLlmService,

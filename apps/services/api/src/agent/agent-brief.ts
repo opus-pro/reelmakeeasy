@@ -9,6 +9,8 @@ import {
 } from '@reelmakeeasy/common/motion-reel/reel-config'
 import { type GenerationProvider, modelRegistry } from '@reelmakeeasy/llm/registry'
 import type {
+  AgentAnimationSetup,
+  AgentAnimationSetupView,
   AgentHarnessName,
   AgentMode,
   AgentQuestion,
@@ -120,6 +122,26 @@ export const MOTION_REEL_FREE_BRIEF = [
   'Then call motion_setup with all of it: it readies `reel/` (the first time it also installs Remotion, a few minutes) and says what to read next. From there, work as the skill says: write `reel/plan.md`, write the plan in your reply, then ask whether to build it. Call motion_setup again only when the user changes the type, length, frame, music or reference: the scenes and plan you wrote are kept, so re-check them against the new grid.',
 ].join('\n')
 
+/** Developer instructions for a Claude Animation chat: the look's skill carries the method. */
+export const ANIMATION_BRIEF = [
+  'You make a Claude Animation with the user in ReelMakeEasy: a short narrated animation (2D, 3D or 8-bit) that you draw and animate yourself, every frame in code, as a Remotion project in `animation/`. No AI video model is used. Before anything else, read `animation/look.md` and the skill it names (`reelmakeeasy-animation-2d`, `-3d` or `-8bit`) and follow it; Remotion\'s own skills have its API. Keep replies short and use markdown. Write in English. When a decision has clear options, offer them with {ASK} (2-4 options, the best first with " (Recommended)").',
+  "Work only inside `animation/`. Don't browse, don't install packages and don't render with the shell: animation_voice records the voices, animation_still and animation_render render for you, and the chat shows what they make.",
+  'Never one-shot an animation: render, call animation_review and open every sheet, write `animation/review.md` (each problem by time with its fix), fix, render and review again, up to 3 rounds; never say it is done after one render.',
+  SHOW_THE_USER_RULE,
+].join('\n')
+
+/**
+ * Developer instructions for an Advanced (free chat) Claude Animation: there is no setup card,
+ * so Claude talks it through with the user and sets it up itself with animation_setup.
+ */
+export const ANIMATION_FREE_BRIEF = [
+  ANIMATION_BRIEF,
+  '',
+  '## Advanced: you set the animation up',
+  'The user picked Advanced: there is no setup card, and `animation/` doesn\'t exist until you call animation_setup. Call it with no arguments first: it answers the looks, their lengths and the music. Then settle with the user, one question at a time, as a card with {ASK} wherever there are options (the best first, with " (Recommended)"): what it is about (or a fun fact you pick), the look (2D, 3D or 8-bit), the length (10 to 90 s; 15, 30, 45, 60 or 90 suggested), and the music: a library track that suits the look, their own file through the paperclip, none, or music you make: "Composed by you (Recommended)" (free: you write it with the `reelmakeeasy-music-composer` skill), "ElevenLabs Music" ($0.60 a minute) or "ACE-Step" (about $0.01). Don\'t ask what they already told you, and suggest the rest.',
+  'Then call animation_setup with all of it: it readies `animation/` (the first time it also installs Remotion, a few minutes) and says what to read next. Call it again only when the user changes the look, length or music: the scenes you wrote are kept.',
+].join('\n')
+
 /** The tool names the briefs use, per harness: Codex asks with request_user_input and has its
  *  own image tool; Claude asks with AskUserQuestion and makes images with generate_image. */
 export const BRIEF_TOOL_NAMES: Record<AgentHarnessName, { ask: string; image: string }> = {
@@ -226,6 +248,8 @@ export function rankingTopicQuestion(count = 4, random: () => number = Math.rand
 export const RANKING_EASY_BRIEF = [RANKING_BRIEF, '', RANKING_EASY_STEPS].join('\n')
 
 const BRIEF_BY_MODE: Record<AgentMode, string> = {
+  animation: ANIMATION_BRIEF,
+  animation_free: ANIMATION_FREE_BRIEF,
   autonomous: AUTONOMOUS_BRIEF,
   free: FREE_CHAT_BRIEF,
   motion: MOTION_REEL_BRIEF,
@@ -329,6 +353,38 @@ function makeMusicStep(engine: MotionMusicEngine): string {
     return 'The user asked you to compose the music: before planning, read the `reelmakeeasy-music-composer` skill, sketch the reel in bars, write `reel/music/music.mjs` and set its bpm in `reel/music/reel.config.mjs` (the sections add up to the reel\'s whole bars at that tempo), run the composer (`cd reel/music && node tools/score.mjs --no-cues`), fix every FAIL and every WARN the skill does not let you keep, then call motion_music with engine "composer" (no prompt). Then read `reel/music-map.md` again: its grid and events are your score\'s.'
   return `The user asked for music from ${MOTION_MUSIC_ENGINE_INFO[engine].label}: before planning, compose it with motion_music (engine "${engine}": one description written for this reel, its type and subject, with a tempo), then read \`reel/music-map.md\` again: the grid and events are the new track's.`
 }
+
+/** The hidden first turn of an Easy Claude Animation chat, once its card is in and
+ *  `animation/` is ready. */
+export function animationKickoff(setup: AgentAnimationSetupView): string {
+  return `[ReelMakeEasy] The user filled in the Claude Animation card and \`animation/\` is ready. ${animationNextSteps(setup, true)}`
+}
+
+/** What Claude does once `animation/` is ready: read, make the music when asked, write the
+ *  script, plan, ask. `readSkill`: read the look's skill first (a chat's first turn). */
+export function animationNextSteps(
+  setup: AgentAnimationSetup,
+  readSkill = false,
+  /** Claude makes the music first (the user picked it, and none was made yet). */
+  makeMusic = setup.music.source === 'agent',
+): string {
+  const skill = `reelmakeeasy-animation-${setup.lookId}`
+  return [
+    `${readSkill ? `Read the \`${skill}\` skill, then` : `Follow the \`${skill}\` skill:`} read \`animation/brief.md\` and \`animation/look.md\`.`,
+    ...(makeMusic && setup.music.source === 'agent'
+      ? [
+          setup.music.engine === 'composer'
+            ? 'The user asked you to compose the music yourself: once the script is approved and the voices are recorded, read the `reelmakeeasy-music-composer` skill, write `animation/music/music.mjs` (calm and light enough to talk over: no busy lead, the energy under the narration, a lift for the ending) and set its bpm in `animation/music/reel.config.mjs`, run the composer (`cd animation/music && node tools/score.mjs --no-cues`), fix every FAIL, then call animation_music with engine "composer" (no prompt).'
+            : `The user asked for music from ${MOTION_MUSIC_ENGINE_INFO[setup.music.engine].label}: make it with animation_music (engine "${setup.music.engine}") before you build.`,
+        ]
+      : []),
+    'Then write the script the skill asks for and a plan of one short line per scene into `animation/plan.md` (the Tasks panel beside the chat shows it): a "## Script" section, one "Who: words" row per line, and a "## Plan" section, one "Scene N: …" line per scene. Then write the same script and plan in your reply text too (the user sees neither your thinking nor the file in the chat), the script as "Who: words" rows, and only then ask with {ASK} whether to build it, with the options "Build it (Recommended)" and "Change something". Never ask without the script and plan above the question in the same reply, and write plan.md again each time it changes.',
+  ].join(' ')
+}
+
+/** The hidden first turn of an Advanced Claude Animation chat (it has no setup card). */
+export const ANIMATION_FREE_KICKOFF =
+  "[ReelMakeEasy] The user chose Claude Animation, Advanced (free chat). Call animation_setup with no arguments to see the looks and music. Then, in one or two short sentences, ask what the animation should be about (or offer to pick a fun fact yourself) and which look they'd like: 2D, 3D or 8-bit. Nothing else yet."
 
 /** The hidden first turn of an Advanced Motion Reel chat (it has no setup card). */
 export function motionReelFreeKickoff(harness: AgentHarnessName): string {

@@ -66,6 +66,8 @@ describe('chat titles', () => {
 
   it('labels the modes: a tool and, for its Easy one, "(Easy)"', () => {
     expect(AGENT_MODE_LABEL).toEqual({
+      animation: 'Claude Animation (Easy)',
+      animation_free: 'Claude Animation',
       autonomous: 'Easy',
       free: 'Advanced',
       motion: 'Motion Reel (Easy)',
@@ -83,6 +85,11 @@ describe('agentModeFromStored', () => {
     expect(agentModeFromStored('ranking')).toBe('ranking')
     expect(agentModeFromStored('motion')).toBe('motion')
     expect(agentModeFromStored('motion_free')).toBe('motion_free')
+  })
+
+  it('keeps Claude Animation', () => {
+    expect(agentModeFromStored('animation')).toBe('animation')
+    expect(agentModeFromStored('animation_free')).toBe('animation_free')
   })
 
   it('reads a chat saved in the removed Guided mode as Free chat', () => {

@@ -10,12 +10,24 @@ import {
   type AgentMotionTask,
   type AgentMotionTaskId,
   type AgentSession,
-  isMotionMode,
+  isAnimationMode,
+  isCodeVideoMode,
 } from '@shared/types/api/agent'
 
+import { ANIMATION_DIR } from '../animation/animation-project'
+import { animationTasks } from '../animation/animation-tasks'
 import type { ToolCallResult } from '../tools/agent-tools'
 
 import { REEL_DIR } from './motion-project'
+import {
+  callsOf,
+  detailLines,
+  failedPhase,
+  firstLine,
+  MAX_DETAILS,
+  type Phase,
+  toolCalls,
+} from './task-phases'
 
 const logger = new Logger('MotionTasks')
 
@@ -29,7 +41,6 @@ const MAX_TEXT = 4000
 const MAX_PLAN_BYTES = 256 * 1024
 /** The most of a plan the Tasks panel shows (its start, when the file is longer). */
 export const MAX_PLAN_TEXT_BYTES = 8 * 1024
-const MAX_DETAILS = 20
 /** How often a running turn's phases are read again: the agent's own shell work (writing scenes,
  *  running the composer) moves them between Motion Reel tool calls. */
 const LIVE_MS = 2500
@@ -70,11 +81,9 @@ export interface ReelFacts {
   scenes: { lastChange: number; names: string[] }
 }
 
-type Phase = Omit<AgentMotionTask, 'id' | 'label'>
-
 /** A Motion Reel's phases, from the facts: the setup, the reel's folder and the tool calls. */
 export function motionTasks(input: MotionTaskInput): AgentMotionTask[] {
-  const phases: Record<AgentMotionTaskId, Phase> = {
+  const phases: Partial<Record<AgentMotionTaskId, Phase>> = {
     build: buildPhase(input),
     look: lookPhase(input.calls),
     music: musicPhase(input),
@@ -84,7 +93,7 @@ export function motionTasks(input: MotionTaskInput): AgentMotionTask[] {
     setup: setupPhase(input),
     sync: syncPhase(input.calls),
   }
-  return MOTION_TASKS.map(({ id, label }) => ({ id, label, ...phases[id] }))
+  return MOTION_TASKS.map(({ id, label }) => ({ id, label, ...(phases[id] as Phase) }))
 }
 
 /** Reads what the reel's folder (`projectDir`) shows; anything missing reads as not there. */
@@ -205,7 +214,7 @@ export class MotionTaskTracker {
   /** The agent's turn started: its phases are read again every few seconds until it ends. */
   turnStarted(id: string): void {
     try {
-      if (this.live.has(id) || !isMotionMode(this.sessions.getSession(id).mode)) return
+      if (this.live.has(id) || !isCodeVideoMode(this.sessions.getSession(id).mode)) return
     } catch {
       return
     }
@@ -235,7 +244,13 @@ export class MotionTaskTracker {
   }
 
   private historyFile(id: string): string {
-    return path.join(this.sessions.workingDir(id), REEL_DIR, HISTORY_FILE)
+    return path.join(this.projectDir(id), HISTORY_FILE)
+  }
+
+  /** The chat's project folder: a Motion Reel's `reel/`, a Claude Animation's `animation/`. */
+  private projectDir(id: string): string {
+    const animation = isAnimationMode(this.sessions.getSession(id).mode)
+    return path.join(this.sessions.workingDir(id), animation ? ANIMATION_DIR : REEL_DIR)
   }
 
   private save(id: string, calls: MotionToolCall[]): void {
@@ -251,15 +266,17 @@ export class MotionTaskTracker {
   private send(id: string): void {
     try {
       const session = this.sessions.getSession(id)
-      if (!isMotionMode(session.mode)) return
-      const reel = path.join(this.sessions.workingDir(id), REEL_DIR)
-      const tasks = motionTasks({
+      if (!isCodeVideoMode(session.mode)) return
+      const reel = this.projectDir(id)
+      const input = {
         calls: this.history(id),
         facts: readReelFacts(reel),
         mode: session.mode,
-        setup: session.motionReel,
         working: session.status === 'running',
-      })
+      }
+      const tasks = isAnimationMode(session.mode)
+        ? animationTasks({ ...input, setup: session.animation })
+        : motionTasks({ ...input, setup: session.motionReel })
       const plan = readPlanText(reel)
       const now = {
         plan: plan && `${plan.changedAt}\n${plan.text}`,
@@ -296,37 +313,6 @@ function buildPhase({ calls, facts, working }: MotionTaskInput): Phase {
   // Scenes changed since the last render, while the agent works: it is building them now.
   const state = working && lastChange > lastRender ? 'running' : 'done'
   return { details, result, state }
-}
-
-/** A tool's calls that ran (one refused because the scenes don't type-check is Build's). */
-function callsOf(calls: MotionToolCall[], tool: string): MotionToolCall[] {
-  return toolCalls(calls).filter((c) => c.tool === tool)
-}
-
-/** A failed answer's lines after its first, for the row's details. */
-function detailLines(text: string | undefined): string[] {
-  return (text ?? '')
-    .split('\n')
-    .slice(1)
-    .map((l) => l.trim())
-    .filter(Boolean)
-    .slice(0, MAX_DETAILS)
-    .map((l) => (l.length > 200 ? `${l.slice(0, 199)}…` : l))
-}
-
-/** A failed call as a row: its reason on one line (a first line that ends in ":" takes the next
- *  one too, so "The render failed:" says why), the rest as details. */
-function failedPhase(text: string | undefined): Phase {
-  const details = detailLines(text)
-  const head = firstLine(text)
-  const result = head.endsWith(':') && details[0] ? firstLine(`${head} ${details[0]}`) : head
-  return { ...(details.length ? { details } : {}), result, state: 'failed' }
-}
-
-/** The first line of a tool's answer, short. */
-function firstLine(text: string | undefined): string {
-  const line = (text ?? '').split('\n')[0]?.trim() ?? ''
-  return line.length > 140 ? `${line.slice(0, 139)}…` : line
 }
 
 function loadCalls(file: string): MotionToolCall[] {
@@ -556,11 +542,6 @@ function syncPhase(calls: MotionToolCall[]): Phase {
   if (verdict.startsWith('Sync: passes')) return { details, result: 'Sync: passes', state: 'done' }
   // "Sync: 3 to fix: section starts, kick pulse." reads as "3 to fix: section starts, kick pulse"
   return { details, result: verdict.replace(/^Sync:\s*/, '').replace(/\.$/, ''), state: 'failed' }
-}
-
-/** The calls that ran: one refused because the scenes don't type-check is not the tool's. */
-function toolCalls(calls: MotionToolCall[]): MotionToolCall[] {
-  return calls.filter((c) => c.refused === undefined)
 }
 
 /** The music's title with the reel's tempo, unless the title says it already. */

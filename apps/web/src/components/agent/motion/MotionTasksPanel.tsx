@@ -1,7 +1,10 @@
 'use client'
 
 import type { Transcript } from '@reelmakeeasy/common/codex-agent/agent-transcript'
-import { waitingMotionTasks } from '@reelmakeeasy/common/motion-reel/motion-tasks'
+import {
+  waitingAnimationTasks,
+  waitingMotionTasks,
+} from '@reelmakeeasy/common/motion-reel/motion-tasks'
 import type { AgentMotionPlan, AgentMotionTask } from '@shared/types/api/agent'
 import { cn } from '@shared/ui'
 import { useState } from 'react'
@@ -14,16 +17,19 @@ import { Spinner } from '../Spinner'
  *  the card is chosen). A list saved before a phase existed (the Review after the Sync check)
  *  shows that phase as waiting, in its place. */
 export function shownMotionTasks(transcript: Transcript): AgentMotionTask[] {
+  // A Claude Animation shows its own phases in the same panel.
+  const animation = transcript.entries.some((e) => e.kind === 'animation_setup')
+  const waiting = animation ? waitingAnimationTasks : waitingMotionTasks
   const sent = transcript.motionTasks
   if (sent?.length) {
     const byId = new Map(sent.map((t) => [t.id, t]))
-    const known = waitingMotionTasks().map((t) => byId.get(t.id) ?? t)
+    const known = waiting().map((t) => byId.get(t.id) ?? t)
     return [...known, ...sent.filter((t) => !known.includes(t))]
   }
-  const chosen = transcript.entries.some((e) => e.kind === 'motion_setup' && e.state === 'chosen')
-  return waitingMotionTasks().map((t) =>
-    t.id === 'setup' && chosen ? { ...t, state: 'done' as const } : t,
+  const chosen = transcript.entries.some(
+    (e) => (e.kind === 'motion_setup' || e.kind === 'animation_setup') && e.state === 'chosen',
   )
+  return waiting().map((t) => (t.id === 'setup' && chosen ? { ...t, state: 'done' as const } : t))
 }
 
 /** What the agent is doing now, while its turn runs: the chat's working-indicator label. */

@@ -56,6 +56,7 @@ describe('buildAgentSessionList', () => {
         stage: 'FINISHED',
         thumbnail: 'http://x/thumb.jpg',
       },
+      posterUrl: null,
       rankingCoverUrl: null,
       status: 'idle',
       title: 'Comet tonight',
@@ -79,6 +80,20 @@ describe('buildAgentSessionList', () => {
       a: 'store://ranking/r1/covers/k.jpg',
       b: null,
       c: null,
+    })
+  })
+
+  it("shows a code video's latest poster", () => {
+    const list = buildAgentSessionList(
+      [
+        session({ id: 'a', videoPoster: 'store://agent-animation/a/animation-1.jpg' }),
+        session({ id: 'b' }),
+      ],
+      [],
+    )
+    expect(Object.fromEntries(list.map((i) => [i.id, i.posterUrl]))).toEqual({
+      a: 'store://agent-animation/a/animation-1.jpg',
+      b: null,
     })
   })
 

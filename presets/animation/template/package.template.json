@@ -1,0 +1,10 @@
+{
+  "name": "claude-animation",
+  "private": true,
+  "version": "1.0.0",
+  "description": "A ReelMakeEasy Claude Animation: a Remotion project. node_modules links to ReelMakeEasy's shared Remotion runtime.",
+  "scripts": {
+    "still": "remotion still src/index.ts Animation",
+    "render": "remotion render src/index.ts Animation out/animation.mp4"
+  }
+}

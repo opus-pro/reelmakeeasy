@@ -33,6 +33,7 @@ import {
   type AgentAnswers,
   type AgentAttachment,
   type AgentHarnessName,
+  type AgentAnimationOptions,
   type AgentMode,
   type AgentMotionOptions,
   type AgentSession,
@@ -40,7 +41,8 @@ import {
   type AgentStatusResponse,
   type ChatModelChoice,
   type ChatModelState,
-  isMotionMode,
+  isAnimationMode,
+  isCodeVideoMode,
 } from '@shared/types/api/agent'
 import type { Request, Response } from 'express'
 import { Observable } from 'rxjs'
@@ -57,6 +59,8 @@ import { defaultHarness } from './claude/claude-config'
 import { getClaudeStatus } from './claude/claude-locator'
 import { getCodexStatus } from './codex/codex-locator'
 import { AgentEditService, EditNotReadyError } from './edit/agent-edit.service'
+import { AnimationSetupError } from './animation/animation-setup'
+import { AnimationService, AnimationSetupTakenError } from './animation/animation.service'
 import { MotionReelService, MotionSetupTakenError } from './motion-reel/motion-reel.service'
 import { MotionSetupError } from './motion-reel/motion-setup'
 import {
@@ -75,6 +79,7 @@ import {
   ModeAlreadyChosenError,
   ModeNotChattableError,
   MotionSetupPendingError,
+  AnimationSetupPendingError,
   NotResumableError,
   PickTopicFirstError,
   QuestionNotOpenError,
@@ -83,13 +88,15 @@ import {
 } from './agent-session.service'
 import { isAgentSessionId } from './agent-session.store'
 import { buildAgentSessionList } from './agent-session-list'
-import { ChatModelService } from './chat-model.service'
+import { ANIMATION_CLAUDE_ONLY, ChatModelService } from './chat-model.service'
 import { parseChoice } from './chat-models'
 import { LoopbackOnlyGuard } from './loopback-only.guard'
 
 /** A Codex item id, or a stringified JSON-RPC request id. */
 const QUESTION_ID = /^[\w.:-]{1,200}$/
 const AGENT_MODES: AgentMode[] = [
+  'animation',
+  'animation_free',
   'autonomous',
   'free',
   'motion',
@@ -127,6 +134,7 @@ export class AgentController {
     private readonly chatModels: ChatModelService,
     private readonly rankings: RankingService,
     private readonly motion: MotionReelService,
+    private readonly animation: AnimationService,
   ) {}
 
   @Post('sessions/:id/questions/:questionId/answer')
@@ -225,7 +233,7 @@ export class AgentController {
   @Get('sessions/:id/model')
   chatModel(@Param('id') id: string, @Query('refresh') refresh?: string): Promise<ChatModelState> {
     const session = this.sessions.getSession(checkSessionId(id))
-    if (isMotionMode(session.mode))
+    if (isCodeVideoMode(session.mode))
       return this.chatModels.motionState(session.harness ?? 'codex', session.chatModel)
     return this.chatModels.state(session.harness ?? 'codex', session.chatModel, {
       refresh: refresh === '1' || refresh === 'true',
@@ -244,12 +252,12 @@ export class AgentController {
     const harness = body?.harness
     if (harness !== undefined && !AGENT_HARNESSES.includes(harness as AgentHarnessName))
       throw new BadRequestException('harness must be "codex" or "claude"')
-    if (isMotionMode(mode as AgentMode)) {
-      // A Motion Reel runs only on Opus (Claude Code) or Astra (Codex): refused before the mode
-      // is taken, so the user can pick another agent or mode.
+    if (isCodeVideoMode(mode as AgentMode)) {
+      // A Motion Reel runs only on Opus (Claude Code) or Astra (Codex), a Claude Animation only
+      // on Opus: refused before the mode is taken, so the user can pick another agent or mode.
       const session = this.sessions.getSession(id)
       const which = (harness as AgentHarnessName | undefined) ?? session.harness ?? defaultHarness()
-      const gate = await this.chatModels.motionGate(which)
+      const gate = await this.codeVideoGate(mode as AgentMode, which)
       if (gate) throw new ConflictException(gate)
     }
     try {
@@ -319,10 +327,15 @@ export class AgentController {
     const request = typeof body?.request === 'string' ? body.request.trim() : ''
     if (request.length > MAX_REQUEST_CHARS)
       throw new BadRequestException(`request must be at most ${MAX_REQUEST_CHARS} characters`)
+    // A Claude Animation runs on Claude Code whatever the default agent is; asked on Codex, it's
+    // refused before a chat is made.
+    const animation = isAnimationMode(mode as AgentMode | undefined)
+    if (animation && harness !== undefined && harness !== 'claude')
+      return Promise.reject(new ConflictException(ANIMATION_CLAUDE_ONLY))
     const opts =
-      harness === undefined
+      harness === undefined && !animation
         ? { title: body?.title }
-        : { harness: harness as AgentHarnessName, title: body?.title }
+        : { harness: animation ? 'claude' : (harness as AgentHarnessName), title: body?.title }
     return this.sessions
       .createSession(rankingId ? { ...opts, rankingId } : opts)
       .then(async (session) => {
@@ -333,8 +346,11 @@ export class AgentController {
         // A Motion Reel on another model: the chat opens on its welcome card, which says why
         // when the mode is picked there (`chooseMode`).
         if (
-          isMotionMode(chosen) &&
-          (await this.chatModels.motionGate(session.harness ?? defaultHarness()))
+          isCodeVideoMode(chosen) &&
+          (await this.codeVideoGate(
+            chosen,
+            session.harness ?? (animation ? 'claude' : defaultHarness()),
+          ))
         )
           return session
         try {
@@ -493,7 +509,8 @@ export class AgentController {
       if (error instanceof FlowActiveError) throw new ConflictException(error.message)
       // A finished autonomous session: its message says to start a new session.
       if (error instanceof ModeNotChattableError) throw new ConflictException(error.message)
-      if (error instanceof MotionSetupPendingError) throw new ConflictException(error.message)
+      if (error instanceof MotionSetupPendingError || error instanceof AnimationSetupPendingError)
+        throw new ConflictException(error.message)
       throw error
     }
     return { ok: true }
@@ -506,9 +523,13 @@ export class AgentController {
     const session = this.sessions.getSession(checkSessionId(id))
     const harness = session.harness ?? 'codex'
     const choice = await this.choiceFrom(harness, body)
-    if (isMotionMode(session.mode)) {
+    if (isCodeVideoMode(session.mode)) {
       if (choice && !(await this.chatModels.motionOffers(harness, choice)))
-        throw new BadRequestException('A Motion Reel runs only on Claude Opus or GPT Astra.')
+        throw new BadRequestException(
+          isAnimationMode(session.mode)
+            ? 'A Claude Animation runs only on Claude Opus.'
+            : 'A Motion Reel runs only on Claude Opus or GPT Astra.',
+        )
       return this.chatModels.motionState(harness, this.sessions.setChatModel(id, choice).chatModel)
     }
     const updated = this.sessions.setChatModel(id, choice)
@@ -527,6 +548,35 @@ export class AgentController {
     const harness = session.harness ?? 'codex'
     this.chatModels.setDefault(harness, await this.choiceFrom(harness, body))
     return this.chatModels.state(harness, session.chatModel)
+  }
+
+  /** Why `mode` can't run on `harness` for this account (a Motion Reel or a Claude Animation
+   *  needs the strongest model; a Claude Animation needs Claude Code), or null. */
+  private codeVideoGate(mode: AgentMode, harness: AgentHarnessName): Promise<null | string> {
+    return isAnimationMode(mode)
+      ? this.chatModels.animationGate(harness)
+      : this.chatModels.motionGate(harness)
+  }
+
+  @Get('animation/options')
+  animationOptions(): Promise<AgentAnimationOptions> {
+    return this.animation.options()
+  }
+
+  /** A Claude Animation chat's setup card. Answers once it is checked; the project is readied in
+   *  the background and the chat opens with an `animation_setup` event (or the card comes back
+   *  with a notice saying what went wrong). */
+  @Post('sessions/:id/animation')
+  setupAnimation(@Param('id') id: string, @Body() body: unknown): { ok: true } {
+    checkSessionId(id)
+    try {
+      this.animation.setup(id, body)
+    } catch (error) {
+      if (error instanceof AnimationSetupError) throw new BadRequestException(error.message)
+      if (error instanceof AnimationSetupTakenError) throw new ConflictException(error.message)
+      throw error
+    }
+    return { ok: true }
   }
 
   /** A Motion Reel chat's setup card. Answers once it is checked; the project is readied in the

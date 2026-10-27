@@ -3,6 +3,12 @@ import { type AgentHarnessName, type AgentMode, isRankingMode } from '@shared/ty
 import { MAKE_LOOP_LABEL } from '../craft/beat-loop-skill'
 
 export type AgentToolName =
+  | 'animation_music'
+  | 'animation_render'
+  | 'animation_review'
+  | 'animation_setup'
+  | 'animation_still'
+  | 'animation_voice'
   | 'generate_image'
   | 'make_beat_loop'
   | 'make_video'
@@ -120,6 +126,148 @@ export const AGENT_TOOLS: Record<AgentToolName, DynamicToolSpec> = {
       type: 'object',
     },
     name: 'make_video',
+  },
+  animation_music: {
+    description:
+      'Put the animation\'s music under the voice, made the way the user picked: engine "composer" (free) takes the score you composed in animation/music/ (the reelmakeeasy-music-composer skill; run the composer first, no prompt needed), "eleven-music" (ElevenLabs Music, $0.60 a minute) or "ace-step" (about $0.01) make a track from your prompt. ReelMakeEasy fits it to the length (public/music.wav; the kit lowers it while anyone speaks). Use it only when the user chose to have you make the music, or asks for different music: a music model is a paid generation each time.',
+    inputSchema: {
+      additionalProperties: false,
+      properties: {
+        engine: {
+          description: 'The music model (default: the one the user picked).',
+          enum: ['composer', 'eleven-music', 'ace-step'],
+          type: 'string',
+        },
+        prompt: {
+          description:
+            'With a music model: the music as it reads it (genre, mood, instruments and energy for the look and story: "gentle ukulele and glockenspiel, warm and curious, light"). Instrumental, and calm enough to talk over. Not for the composer.',
+          type: 'string',
+        },
+      },
+      required: [],
+      type: 'object',
+    },
+    name: 'animation_music',
+  },
+  animation_render: {
+    description:
+      'Render the animation in animation/ to a video (free, a few minutes): type-checks it, renders it with its voice and music, evens out the loudness and shows it to the user in the chat. Call it when the stills look right, and again after each change the user asks for.',
+    inputSchema: { additionalProperties: false, properties: {}, type: 'object' },
+    name: 'animation_render',
+  },
+  animation_review: {
+    description:
+      'Review the last render of the animation (free, a few seconds; render with animation_render first): lays it out as contact sheets, a frame every 0.5 s (or 1 s), 8 to a row, and shows them to you and the user, with where nothing moves for 0.5 s or more and the scenes held over 10 s. Call it after every render, open every sheet, write what is wrong by time in animation/review.md with its fix, fix it, render and review again (up to 3 rounds).',
+    inputSchema: {
+      additionalProperties: false,
+      properties: {
+        every: {
+          description: 'Seconds between frames: 0.5 (default) or 1.',
+          enum: [0.5, 1],
+          type: 'number',
+        },
+        from: {
+          description: 'Optional: start here (seconds; default 0).',
+          minimum: 0,
+          type: 'number',
+        },
+        to: {
+          description: 'Optional: stop here (seconds; default the end).',
+          minimum: 0,
+          type: 'number',
+        },
+      },
+      type: 'object',
+    },
+    name: 'animation_review',
+  },
+  animation_setup: {
+    description:
+      "Set up an Advanced Claude Animation (free, quick; the first time it also installs Remotion, a few minutes): readies animation/ with the look card, the brief, the look's library and the music, exactly as the setup card does in Easy. Call it with no arguments to get the looks, their lengths and the library tracks. Call it with everything once the user has settled it, and again only when they change the look, length or music (scenes and voices are kept). The reply says what to read next.",
+    inputSchema: {
+      additionalProperties: false,
+      properties: {
+        lengthSec: {
+          description:
+            'About how long, in seconds: any whole number from 10 to 90 (15, 30, 45, 60 or 90 suggested).',
+          maximum: 90,
+          minimum: 10,
+          type: 'integer',
+        },
+        lookId: { description: 'The look.', enum: ['2d', '3d', '8bit'], type: 'string' },
+        music: {
+          description:
+            "library: a library track (musicId: its id); upload: the user's own file (musicId: its path, e.g. attachments/song.mp3); agent: you make it with animation_music right after (musicEngine); none: the voice alone.",
+          enum: ['library', 'upload', 'agent', 'none'],
+          type: 'string',
+        },
+        musicEngine: {
+          description:
+            'With music "agent": how, as the user picked: composer (you compose it yourself, free; recommended), eleven-music (ElevenLabs Music, $0.60 a minute) or ace-step (about $0.01).',
+          enum: ['composer', 'eleven-music', 'ace-step'],
+          type: 'string',
+        },
+        musicId: {
+          description: "The library track's id, or the user's file's path.",
+          type: 'string',
+        },
+        subject: {
+          description:
+            'What it is about (up to 600 characters). Leave it out to pick a true fun fact yourself.',
+          type: 'string',
+        },
+      },
+      type: 'object',
+    },
+    name: 'animation_setup',
+  },
+  animation_still: {
+    description:
+      'Render single frames of the animation in animation/ (free, a few seconds) and get them back as pictures to look at. Pass the moments in seconds from the start (e.g. "0, 4.5, 12"; lineStart(i) / 30 is line i\'s start). Look at each one and fix what is cut off, too small, crowded, off-palette or off-look before rendering. The user sees them too.',
+    inputSchema: {
+      additionalProperties: false,
+      properties: {
+        seconds: {
+          description: 'Comma-separated seconds (fractions allowed), at most 6.',
+          type: 'string',
+        },
+      },
+      required: ['seconds'],
+      type: 'object',
+    },
+    name: 'animation_still',
+  },
+  animation_voice: {
+    description:
+      "Record the animation's voices (free on this computer; when the voices aren't installed it says so first, as they would run on fal, paid). Each line gets up to 3 takes; the kept one says the script's words and matches its speaker's pitch. The reply gives the total length and any line to listen to; public/voice.wav and public/voice/lines.json (each line's start, end, words and loudness) are rewritten, so scenes timed with lineStart() and wordAt() follow. Record again only when the script changes.",
+    inputSchema: {
+      additionalProperties: false,
+      properties: {
+        confirmPaid: {
+          description: 'true only after you told the user the voices run on fal, paid.',
+          type: 'boolean',
+        },
+        lines: {
+          description:
+            'Every line, in order, one per row: "Who: the words, as said" (numbers as digits: "3000 years"; no stage directions). A narrator is "Narrator: …".',
+          type: 'string',
+        },
+        pauseMs: {
+          description: 'Silence between lines, in ms (default 250).',
+          maximum: 2000,
+          minimum: 0,
+          type: 'integer',
+        },
+        voices: {
+          description:
+            'Each speaker\'s voice, one per row: "Who: a vivid description" (age, energy, pace, attitude: "Bee: a cheerful young bee, quick and bright"), or a preset id starting kokoro-.',
+          type: 'string',
+        },
+      },
+      required: ['lines', 'voices'],
+      type: 'object',
+    },
+    name: 'animation_voice',
   },
   motion_music: {
     description:
@@ -270,7 +418,7 @@ export const AGENT_TOOLS: Record<AgentToolName, DynamicToolSpec> = {
   },
   ranking_add_sound: {
     description:
-      "Add a sound file the user dropped into the chat (or one in your working folder) to their sound library: mp3, wav, m4a, ogg, flac or aac, under 10 minutes. Answers its soundId, ready to use as the reveal sound, the music bed or an action sound.",
+      'Add a sound file the user dropped into the chat (or one in your working folder) to their sound library: mp3, wav, m4a, ogg, flac or aac, under 10 minutes. Answers its soundId, ready to use as the reveal sound, the music bed or an action sound.',
     inputSchema: {
       additionalProperties: false,
       properties: {
@@ -400,7 +548,12 @@ export const AGENT_TOOLS: Record<AgentToolName, DynamicToolSpec> = {
           description: 'A name for the user’s list, e.g. Funniest cat fails.',
           type: 'string',
         },
-        ranks: { description: 'How many ranks (2-10, default 5).', maximum: 10, minimum: 2, type: 'integer' },
+        ranks: {
+          description: 'How many ranks (2-10, default 5).',
+          maximum: 10,
+          minimum: 2,
+          type: 'integer',
+        },
       },
       required: ['name'],
       type: 'object',
@@ -599,6 +752,15 @@ const RANKING_TOOLS: AgentToolName[] = [
   'ranking_apply_style',
 ]
 
+/** A Claude Animation chat's tools (an Advanced one also has animation_setup). */
+const ANIMATION_TOOLS: AgentToolName[] = [
+  'animation_voice',
+  'animation_music',
+  'animation_still',
+  'animation_render',
+  'animation_review',
+]
+
 const EDIT_TOOLS: AgentToolName[] = [
   'regenerate_clip',
   'render_video',
@@ -634,6 +796,9 @@ export function toolsForSession(
       AGENT_TOOLS.motion_render,
       AGENT_TOOLS.motion_review,
     ]
+  if (session.mode === 'animation') return ANIMATION_TOOLS.map((n) => AGENT_TOOLS[n])
+  if (session.mode === 'animation_free')
+    return ['animation_setup' as const, ...ANIMATION_TOOLS].map((n) => AGENT_TOOLS[n])
   if (isRankingMode(session.mode)) return RANKING_TOOLS.map((n) => AGENT_TOOLS[n])
   if (session.mode !== 'free') return []
   return withImage(['make_video', 'make_beat_loop', ...EDIT_TOOLS, ...RANKING_TOOLS])
@@ -641,6 +806,11 @@ export function toolsForSession(
 
 /** The chat pill's text for calls whose text doesn't depend on their arguments. */
 const FIXED_SUMMARIES: Record<string, string> = {
+  animation_music: 'Making the music',
+  animation_render: 'Rendering the animation',
+  animation_review: 'Reviewing the render (contact sheets)',
+  animation_still: 'Looking at frames of the animation',
+  animation_voice: 'Recording the voices',
   generate_image: 'Making a preview image',
   motion_music: 'Composing the music',
   motion_render: 'Rendering the reel',
@@ -677,6 +847,10 @@ export function toolSummary(tool: string, args: unknown): string {
     return typeof a.type === 'string' && a.type.trim()
       ? 'Setting up the reel'
       : 'Looking at the reel types and music'
+  if (tool === 'animation_setup')
+    return typeof a.lookId === 'string' && a.lookId.trim()
+      ? 'Setting up the animation'
+      : 'Looking at the looks and music'
   if (tool === 'ranking_create') return `Starting a ranking: ${String(a.name ?? '')}`.trim()
   if (tool === 'ranking_add_clip') return `Adding a clip to rank ${String(a.rank ?? '')}`.trim()
   if (tool === 'make_video')

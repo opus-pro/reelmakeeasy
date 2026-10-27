@@ -6,6 +6,7 @@ import {
   type Transcript,
 } from '@reelmakeeasy/common/codex-agent/agent-transcript'
 import type {
+  AgentAnimationSetup,
   AgentAnswers,
   AgentHarnessName,
   AgentMode,
@@ -22,7 +23,8 @@ import { useRefCallback } from '@/hooks/use-ref-callback'
 import { type CreateSSEConnection, useApi } from '@/hooks/useApi'
 import { ApiError } from '@/lib/api-error'
 
-import { HARNESS_LABEL, HARNESS_SHORT } from './agent-harness'
+import { HARNESS_SHORT } from './agent-harness'
+import { modeConflictNotice } from './mode-conflict'
 import { noteVideoRenderedAtom } from './renderedVersions'
 import { resumeRefusedNotice } from './resume-chat'
 
@@ -393,12 +395,11 @@ export function useAgentSession(sessionId: string | undefined) {
           return false
         }
         const message = error instanceof Error ? error.message : ''
-        const conflict = /not ready/.test(message)
-          ? `${HARNESS_LABEL[harness ?? 'codex']} isn't ready. Check it is installed and signed in, then try again.`
-          : message.startsWith('Motion Reel needs')
-            ? message
-            : 'A mode was already chosen.'
-        addLocalNotice(status === 409 ? conflict : 'Could not start that mode. Try again.')
+        addLocalNotice(
+          status === 409
+            ? modeConflictNotice(message, harness)
+            : 'Could not start that mode. Try again.',
+        )
         return false
       }
     },
@@ -454,6 +455,34 @@ export function useAgentSession(sessionId: string | undefined) {
           : status === 409
             ? 'This Motion Reel is already set up.'
             : 'Could not start the reel. Try again.',
+      )
+      return false
+    }
+  })
+
+  /** Sends the Claude Animation setup card; resolves false (after a notice saying why) on failure. */
+  const setupAnimation = useRefCallback(async (setup: AgentAnimationSetup): Promise<boolean> => {
+    if (!sessionId) return false
+    try {
+      await fetchApiDomain('/api/agent/sessions/{id}/animation', {
+        data: setup,
+        method: 'POST',
+        pathParams: { id: sessionId },
+      })
+      return true
+    } catch (error) {
+      const status = error instanceof ApiError ? error.status : undefined
+      if (status === 404) {
+        markNotFound()
+        return false
+      }
+      const message = error instanceof Error ? error.message : ''
+      addLocalNotice(
+        status === 400 && message
+          ? message
+          : status === 409
+            ? 'This animation is already set up.'
+            : 'Could not start the animation. Try again.',
       )
       return false
     }
@@ -524,6 +553,7 @@ export function useAgentSession(sessionId: string | undefined) {
     resume,
     send,
     sending,
+    setupAnimation,
     setupMotionReel,
     startEditing,
     /** The server's `session.flowActive`; undefined while it may be stale or is unknown. */

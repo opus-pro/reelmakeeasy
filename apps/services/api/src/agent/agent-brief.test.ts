@@ -445,3 +445,56 @@ describe('an Advanced Motion Reel', () => {
     }
   })
 })
+
+describe('Claude Animation chats', () => {
+  const view = {
+    lengthSec: 30,
+    lookId: '2d' as const,
+    lookLabel: '2D',
+    music: { engine: 'ace-step' as const, source: 'agent' as const },
+    musicTitle: null,
+    subject: 'Why honey never spoils',
+  }
+
+  it("starts with the look's skill, the music to make, the script and the plan", () => {
+    const kickoff = briefs.animationKickoff(view)
+    expect(kickoff).toMatch(/^\[ReelMakeEasy\] The user filled in the Claude Animation card/)
+    expect(kickoff).toContain('`reelmakeeasy-animation-2d`')
+    expect(kickoff).toMatch(/animation_music \(engine "ace-step"\)/)
+    // The script and plan go in animation/plan.md (the Tasks panel shows it) and in the reply,
+    // then a clickable card asks to build it.
+    expect(kickoff).toContain('`animation/plan.md`')
+    expect(kickoff).toMatch(
+      /plan\.md.*reply text.*"Who: words".*\{ASK\}.*"Build it \(Recommended\)".*"Change something"/,
+    )
+  })
+
+  it('composes the music itself, in animation/music, when the user picked that', () => {
+    const kickoff = briefs.animationKickoff({
+      ...view,
+      music: { engine: 'composer', source: 'agent' },
+    })
+    expect(kickoff).toContain('`reelmakeeasy-music-composer`')
+    expect(kickoff).toContain('`cd animation/music && node tools/score.mjs --no-cues`')
+    expect(kickoff).toMatch(/animation_music with engine "composer"/)
+  })
+
+  it('makes no music when the user picked some', () => {
+    expect(briefs.animationKickoff({ ...view, music: { source: 'none' } })).not.toContain(
+      'animation_music',
+    )
+  })
+
+  it('briefs both modes to work only in animation/ and to read the look skill', () => {
+    for (const mode of ['animation', 'animation_free'] as const) {
+      const brief = briefs.briefFor({ mode }, 'claude')
+      expect(brief).toContain('Work only inside `animation/`')
+      expect(brief).toContain('reelmakeeasy-animation-2d')
+    }
+    expect(briefs.briefFor({ mode: 'animation_free' }, 'claude')).toMatch(/call animation_setup/)
+    expect(briefs.briefFor({ mode: 'animation' }, 'claude')).toMatch(
+      /Never one-shot an animation: render, call animation_review.*up to 3 rounds/,
+    )
+    expect(briefs.ANIMATION_FREE_KICKOFF).toMatch(/animation_setup with no arguments/)
+  })
+})

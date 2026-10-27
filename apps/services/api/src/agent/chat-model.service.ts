@@ -54,6 +54,9 @@ interface CodexModel {
   supportedReasoningEfforts?: { reasoningEffort: string }[]
 }
 
+/** Why a Claude Animation can't run on another agent. */
+export const ANIMATION_CLAUDE_ONLY = 'Claude Animation runs only on Claude Code.'
+
 /**
  * The models agent chats can run on: each harness's list (asked once and kept for a while),
  * the default saved for it, and the recommended one (see chat-models.ts).
@@ -123,6 +126,14 @@ export class ChatModelService {
   async motionGate(harness: AgentHarnessName): Promise<null | string> {
     const models = (await this.catalog(harness))?.models ?? []
     return models.length ? motionModelGate(harness, models) : null
+  }
+
+  /** Why this account can't run a Claude Animation on `harness`, or null when it can: Claude Code
+   *  only, on the model a Motion Reel needs (Opus). */
+  async animationGate(harness: AgentHarnessName): Promise<null | string> {
+    if (harness !== 'claude') return ANIMATION_CLAUDE_ONLY
+    const gate = await this.motionGate(harness)
+    return gate && gate.replace(/^Motion Reel/, 'Claude Animation')
   }
 
   /** Whether `choice` may run a Motion Reel chat on `harness` (true while the list is unknown). */

@@ -24,23 +24,24 @@ export function readReelJson(projectDir: string): ReelJson {
 }
 
 /**
- * Renders stills of a reel with one bundle: `node motion-still.mjs <projectDir> <outDir> <frame>...`.
- * Written into the runtime folder, so it resolves Remotion from there.
+ * Renders stills of a project with one bundle:
+ * `node motion-still.mjs <projectDir> <outDir> <composition> <frame>...`. Written into the
+ * runtime folder, so it resolves Remotion from there.
  */
 export function stillScript(): string {
-  return `// Written by ReelMakeEasy: renders stills of a Motion Reel from one bundle.
+  return `// Written by ReelMakeEasy: renders stills of a Motion Reel or an animation from one bundle.
 import path from 'node:path'
 import { bundle } from '@remotion/bundler'
 import { renderStill, selectComposition } from '@remotion/renderer'
 
-const [projectDir, outDir, ...frames] = process.argv.slice(2)
+const [projectDir, outDir, id, ...frames] = process.argv.slice(2)
 const browserExecutable = process.env.REMOTION_BROWSER || null
 const serveUrl = await bundle({
   entryPoint: path.join(projectDir, 'src', 'index.ts'),
   publicDir: path.join(projectDir, 'public'),
   rootDir: projectDir,
 })
-const composition = await selectComposition({ browserExecutable, id: 'Reel', serveUrl })
+const composition = await selectComposition({ browserExecutable, id, serveUrl })
 for (const frame of frames) {
   await renderStill({
     browserExecutable,
@@ -118,10 +119,11 @@ export type ReelRender = {
   /** The delivered video (loudness evened out). */
   file: string
   poster: string
-  /** One line: how the cuts sit on the grid. */
-  report: string
-  /** How the picture moves with the music: section starts, melody, kick pulse, stills. */
-  sync: SyncReport
+  /** One line: how the cuts sit on the grid (a Motion Reel only). */
+  report?: string
+  /** How the picture moves with the music: section starts, melody, kick pulse, stills (a Motion
+   *  Reel only). */
+  sync?: SyncReport
 }
 
 /** Renders the stills of `frames` into `outDir` (made fresh); returns their files in order. */
@@ -129,6 +131,7 @@ export async function renderStills(
   projectDir: string,
   frames: number[],
   outDir: string,
+  composition = 'Reel',
 ): Promise<string[]> {
   fs.rmSync(outDir, { force: true, recursive: true })
   fs.mkdirSync(outDir, { recursive: true })
@@ -137,7 +140,7 @@ export async function renderStills(
   const browser = remotionBrowserPath()
   await run(
     process.execPath,
-    [script, projectDir, outDir, ...frames.map(String)],
+    [script, projectDir, outDir, composition, ...frames.map(String)],
     projectDir,
     5 * 60_000,
     20_000,
@@ -146,12 +149,19 @@ export async function renderStills(
   return frames.map((frame) => path.join(outDir, `frame-${frame}.png`))
 }
 
-/** Renders the whole reel, evens out its loudness, takes a poster and checks its cuts and sync. */
-export async function renderReel(projectDir: string): Promise<ReelRender> {
+/**
+ * Renders the whole video, evens out its loudness and takes a poster. A Motion Reel (the default)
+ * is also checked for its cuts and sync; an animation (`sync: false`, its own `composition` and
+ * file `name`) isn't timed to a beat, so its poster is a second before the end.
+ */
+export async function renderReel(
+  projectDir: string,
+  o: { composition?: string; name?: string; sync?: boolean } = {},
+): Promise<ReelRender> {
   const out = path.join(projectDir, 'out')
   fs.mkdirSync(out, { recursive: true })
   const raw = path.join(out, 'raw.mp4')
-  const file = path.join(out, 'reel.mp4')
+  const file = path.join(out, `${o.name ?? 'reel'}.mp4`)
   const poster = path.join(out, 'poster.jpg')
   const browser = remotionBrowserPath()
   await run(
@@ -159,7 +169,7 @@ export async function renderReel(projectDir: string): Promise<ReelRender> {
     [
       'render',
       'src/index.ts',
-      'Reel',
+      o.composition ?? 'Reel',
       raw,
       ...(browser ? [`--browser-executable=${browser}`] : []),
     ],
@@ -210,29 +220,32 @@ export async function renderReel(projectDir: string): Promise<ReelRender> {
     out,
   )
   fs.rmSync(raw, { force: true })
+  if (o.sync === false) {
+    const seconds = Number(
+      await run(
+        'ffprobe',
+        ['-v', 'error', '-show_entries', 'format=duration', '-of', 'csv=p=0', file],
+        out,
+      ),
+    )
+    await takePoster(file, poster, Math.max(0, seconds - 1), out)
+    return { file, poster }
+  }
   const reel = readReelJson(projectDir)
   // The poster is the end card: the last bar's middle.
   const lastBar = reel.downbeats[reel.downbeats.length - 1] ?? 0
   const posterAt = Math.min(reel.lengthSec - 0.1, lastBar + (reel.lengthSec - lastBar) / 2)
-  await run(
-    'ffmpeg',
-    [
-      '-v',
-      'error',
-      '-y',
-      '-ss',
-      String(posterAt),
-      '-i',
-      file,
-      '-frames:v',
-      '1',
-      '-q:v',
-      '3',
-      poster,
-    ],
-    out,
-  )
+  await takePoster(file, poster, posterAt, out)
   const cuts = await detectCuts(file, out)
   const changes = await measureChanges(file, out, reel.fps)
   return { file, poster, report: gridReport(reel, cuts), sync: syncReport(reel, changes, cuts) }
+}
+
+/** A JPEG of `file` at `at` seconds. */
+async function takePoster(file: string, poster: string, at: number, cwd: string): Promise<void> {
+  await run(
+    'ffmpeg',
+    ['-v', 'error', '-y', '-ss', String(at), '-i', file, '-frames:v', '1', '-q:v', '3', poster],
+    cwd,
+  )
 }

@@ -1,4 +1,5 @@
 import type {
+  AgentAnimationSetupView,
   AgentAnswers,
   AgentAttachment,
   AgentLoopLine,
@@ -66,6 +67,13 @@ export type TranscriptEntry =
   /** `attachments`: the files sent with the message, shown under it. */
   | { attachments?: AgentAttachment[]; id: string; kind: 'user'; text: string }
   | { id: string; kind: 'video'; projectId: string }
+  /** A Claude Animation's setup card: open until it is sent, then showing what was chosen. */
+  | {
+      id: string
+      kind: 'animation_setup'
+      setup?: AgentAnimationSetupView
+      state: 'chosen' | 'open'
+    }
   /** A Motion Reel's setup card: open until it is sent, then showing what was chosen. */
   | { id: string; kind: 'motion_setup'; setup?: AgentMotionSetupView; state: 'chosen' | 'open' }
   /** A rendered Motion Reel, played in the chat. */
@@ -517,42 +525,48 @@ const handleVideoStarted = (
   ],
 })
 
-const handleMotionSetupRequest = (
-  state: Transcript,
-  next: Transcript,
-  event: EventOf<'motion_setup_request'>,
-): Transcript => {
-  const id = `motion-setup-${event.id ?? state.entries.length}`
-  // A setup that failed asks again: the open card stays the one card, under a new id so it
-  // starts over (unlocked, as a fresh card).
-  const openIndex = state.entries.findLastIndex(
-    (e) => e.kind === 'motion_setup' && e.state === 'open',
-  )
-  if (openIndex !== -1)
-    return { ...next, entries: state.entries.map((e, i) => (i === openIndex ? { ...e, id } : e)) }
-  return { ...next, entries: [...state.entries, { id, kind: 'motion_setup', state: 'open' }] }
+/** The two setup cards (Motion Reel's and Claude Animation's), by their entry kind and id prefix. */
+type SetupCardKind = 'animation_setup' | 'motion_setup'
+const SETUP_ID_PREFIX: Record<SetupCardKind, string> = {
+  animation_setup: 'animation-setup',
+  motion_setup: 'motion-setup',
 }
 
-const handleMotionSetup = (
+const handleSetupRequest = (
   state: Transcript,
   next: Transcript,
-  event: EventOf<'motion_setup'>,
+  event: { id?: number },
+  kind: SetupCardKind,
 ): Transcript => {
+  const id = `${SETUP_ID_PREFIX[kind]}-${event.id ?? state.entries.length}`
+  // A setup that failed asks again: the open card stays the one card, under a new id so it
+  // starts over (unlocked, as a fresh card).
+  const openIndex = state.entries.findLastIndex((e) => e.kind === kind && e.state === 'open')
+  if (openIndex !== -1)
+    return { ...next, entries: state.entries.map((e, i) => (i === openIndex ? { ...e, id } : e)) }
+  return { ...next, entries: [...state.entries, { id, kind, state: 'open' }] }
+}
+
+const handleSetup = (
+  state: Transcript,
+  next: Transcript,
+  event: EventOf<'animation_setup'> | EventOf<'motion_setup'>,
+): Transcript => {
+  const kind = event.type
   // The open card turns into the chosen one; a later setup (the agent composed the music)
   // updates the chosen card in place.
-  const open = state.entries.findLastIndex((e) => e.kind === 'motion_setup' && e.state === 'open')
-  const openIndex =
-    open === -1 ? state.entries.findLastIndex((e) => e.kind === 'motion_setup') : open
-  const chosen: TranscriptEntry = {
-    id:
-      openIndex === -1
-        ? `motion-setup-${event.id ?? state.entries.length}`
-        : state.entries[openIndex].id,
-    kind: 'motion_setup',
-    // A setup saved when reels had styles shows its type.
-    setup: motionSetupViewFromStored(event.setup),
-    state: 'chosen',
-  }
+  const open = state.entries.findLastIndex((e) => e.kind === kind && e.state === 'open')
+  const openIndex = open === -1 ? state.entries.findLastIndex((e) => e.kind === kind) : open
+  const id =
+    openIndex === -1
+      ? `${SETUP_ID_PREFIX[kind]}-${event.id ?? state.entries.length}`
+      : state.entries[openIndex].id
+  const chosen = (
+    event.type === 'animation_setup'
+      ? { id, kind: 'animation_setup', setup: event.setup, state: 'chosen' }
+      : // A setup saved when reels had styles shows its type.
+        { id, kind: 'motion_setup', setup: motionSetupViewFromStored(event.setup), state: 'chosen' }
+  ) as TranscriptEntry
   return {
     ...next,
     entries:
@@ -623,11 +637,15 @@ export function reduceTranscript(state: Transcript, event: TranscriptAction): Tr
     case 'mode': {
       return handleMode(state, next, event)
     }
+    case 'animation_setup':
     case 'motion_setup': {
-      return handleMotionSetup(state, next, event)
+      return handleSetup(state, next, event)
+    }
+    case 'animation_setup_request': {
+      return handleSetupRequest(state, next, event, 'animation_setup')
     }
     case 'motion_setup_request': {
-      return handleMotionSetupRequest(state, next, event)
+      return handleSetupRequest(state, next, event, 'motion_setup')
     }
     case 'motion_tasks': {
       // No `plan`: unchanged since the last list (or a chat from before the plan was sent).
@@ -653,7 +671,10 @@ export function reduceTranscript(state: Transcript, event: TranscriptAction): Tr
       return handleQuestionExpired(state, next, event)
     }
     case 'ranking': {
-      return { ...next, ranking: { id: event.rankingId, version: (state.ranking?.version ?? 0) + 1 } }
+      return {
+        ...next,
+        ranking: { id: event.rankingId, version: (state.ranking?.version ?? 0) + 1 },
+      }
     }
     case 'session': {
       return handleSession(state, next, event)

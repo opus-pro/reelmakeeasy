@@ -18,6 +18,7 @@ import type {
   AgentAttachment,
   AgentHarnessName,
   AgentMode,
+  AgentAnimationSetupView,
   AgentMotionSetupView,
   AgentQuestion,
   AgentResumeAction,
@@ -27,6 +28,8 @@ import type {
   HarnessStatus,
 } from '@shared/types/api/agent'
 import {
+  isAnimationMode,
+  isCodeVideoMode,
   isMotionMode,
   isRankingMode,
   isRankingTopicQuestion,
@@ -53,6 +56,7 @@ import {
   briefFor,
   EDIT_INTRO,
   kickoffFor,
+  ANIMATION_FREE_KICKOFF,
   motionReelFreeKickoff,
   RANKING_TOPIC_ID,
   rankingKickoff,
@@ -256,6 +260,14 @@ export class ModeNotChattableError extends Error {
   }
 }
 
+/** Thrown by `sendMessage` for a Claude Animation chat whose setup card hasn't been sent yet. */
+export class AnimationSetupPendingError extends Error {
+  constructor(readonly sessionId: string) {
+    super('Fill in the Claude Animation card above first.')
+    this.name = 'AnimationSetupPendingError'
+  }
+}
+
 /** Thrown by `sendMessage` for a Motion Reel chat whose setup card hasn't been sent yet. */
 export class MotionSetupPendingError extends Error {
   constructor(readonly sessionId: string) {
@@ -413,6 +425,7 @@ export class AgentSessionService implements OnModuleDestroy {
     // session was idle waiting on one of its cards.
     // An Easy flow cut off that way can pick up where it left off (`resumeFlow`).
     for (const session of this.store.list()) {
+      this.keepEarlierPoster(session)
       if (session.status !== 'running' && !session.flowActive) {
         this.markEarlierCutOff(session)
         this.reopenServerCards(session)
@@ -553,13 +566,23 @@ export class AgentSessionService implements OnModuleDestroy {
       this.emit(id, { type: 'motion_setup_request' })
       return
     }
+    // A Claude Animation too (`startAnimation`).
+    if (mode === 'animation') {
+      this.emit(id, { type: 'animation_setup_request' })
+      return
+    }
     // Easy ranking with nothing to go on yet: ReelMakeEasy asks what it's about with its own
     // card (topic ideas, or their own words), and the agent starts once it is answered.
     if (mode === 'ranking_easy' && !request?.trim() && !session.rankingId) {
       void this.askRankingTopic(id, harness)
       return
     }
-    if (mode === 'free' || mode === 'motion_free' || isRankingMode(mode)) {
+    if (
+      mode === 'free' ||
+      mode === 'motion_free' ||
+      mode === 'animation_free' ||
+      isRankingMode(mode)
+    ) {
       const asked = isRankingMode(mode) ? request?.trim() : undefined
       if (asked) {
         if (isUnsetChatTitle(session.title))
@@ -635,6 +658,7 @@ export class AgentSessionService implements OnModuleDestroy {
       AgentUiEvent,
       {
         type:
+          | 'animation_setup_request'
           | 'brief'
           | 'flow_cancelled'
           | 'motion_setup_request'
@@ -647,6 +671,9 @@ export class AgentSessionService implements OnModuleDestroy {
       }
     >,
   ): void {
+    // A code video's newest poster is the chat's thumbnail in the list.
+    if (event.type === 'motion_video' && event.posterUrl)
+      this.store.update(id, { videoPoster: event.posterUrl }, { touch: false })
     this.emit(id, event)
   }
 
@@ -682,6 +709,16 @@ export class AgentSessionService implements OnModuleDestroy {
     this.cancelledFlows.delete(id)
     if (this.serverQuestions.get(id)?.size === 0) this.serverQuestions.delete(id)
     if (this.store.get(id)?.flowActive) this.store.update(id, { flowActive: false })
+  }
+
+  /** A code video chat that rendered before posters were kept: its newest render's poster. */
+  private keepEarlierPoster(session: AgentSession): void {
+    if (session.videoPoster || !isCodeVideoMode(session.mode)) return
+    const poster = this.store
+      .eventsAfter(session.id, 0)
+      .findLast((e) => e.type === 'motion_video' && e.posterUrl)
+    if (poster?.type === 'motion_video' && poster.posterUrl)
+      this.store.update(session.id, { videoPoster: poster.posterUrl }, { touch: false })
   }
 
   /** Every event of the session's chat, in order (an interrupted flow reads its answers here). */
@@ -741,7 +778,7 @@ export class AgentSessionService implements OnModuleDestroy {
     }
     // Editing, or a Free chat (whose tools may be waiting on a clip or a render): the
     // waiting tool sees the flag and cancels its workflow.
-    if (editing || mode === 'free' || isMotionMode(mode) || isRankingMode(mode))
+    if (editing || mode === 'free' || isCodeVideoMode(mode) || isRankingMode(mode))
       this.cancelledFlows.add(id)
     this.expireServerQuestions(id)
     if (!live?.currentTurnId || !threadId) return
@@ -786,7 +823,7 @@ export class AgentSessionService implements OnModuleDestroy {
     if (!session || this.destroyed || !text.trim()) return
     const chat =
       session.mode === 'free' ||
-      isMotionMode(session.mode) ||
+      isCodeVideoMode(session.mode) ||
       isRankingMode(session.mode) ||
       !!session.editing
     if (!chat) return
@@ -924,6 +961,7 @@ export class AgentSessionService implements OnModuleDestroy {
     if (session.mode === 'autonomous' && !session.editing)
       throw session.flowActive ? new FlowActiveError(id) : new ModeNotChattableError(id)
     if (session.mode === 'motion' && !session.motionReel) throw new MotionSetupPendingError(id)
+    if (session.mode === 'animation' && !session.animation) throw new AnimationSetupPendingError(id)
     if (session.status === 'running') throw new AgentSessionBusyError(id)
     // An Easy ranking's topic card still open: a message answers it instead; files alone can't
     // say what it's about (the card stays, and the user is asked to pick first).
@@ -1000,6 +1038,40 @@ export class AgentSessionService implements OnModuleDestroy {
     this.store.update(id, { status })
     this.emit(id, { status, type: 'session' })
     if (!working) this.sendNotesSoon(id)
+  }
+
+  /**
+   * A Claude Animation's setup is in and its project is ready: the card shows what was chosen,
+   * and Claude's first (hidden) turn starts with `prompt`. Refused when the setup was sent
+   * already (`ModeAlreadyChosenError`: the card is answered once).
+   */
+  startAnimation(id: string, setup: AgentAnimationSetupView, prompt: string): void {
+    const session = this.getSession(id)
+    if (session.mode !== 'animation' || session.animation) throw new ModeAlreadyChosenError(id)
+    this.store.update(id, {
+      animation: setup,
+      ...(isUnsetChatTitle(session.title) ? { title: animationTitle(setup) } : {}),
+    })
+    this.emit(id, { setup, type: 'animation_setup' })
+    void this.startKickoff(id, prompt).catch((error: unknown) =>
+      this.logger.warn(`Claude Animation kickoff for ${id} failed: ${ensureError(error).message}`),
+    )
+  }
+
+  /** A Claude Animation's setup changed after it started (Claude made its music, or set an
+   *  Advanced one up, or up again): saved, and the chat's setup card shows it. */
+  updateAnimation(id: string, setup: AgentAnimationSetupView): void {
+    const session = this.getSession(id)
+    if (!isAnimationMode(session.mode)) return
+    this.store.update(
+      id,
+      {
+        animation: setup,
+        ...(isUnsetChatTitle(session.title) ? { title: animationTitle(setup) } : {}),
+      },
+      { touch: false },
+    )
+    this.emit(id, { setup, type: 'animation_setup' })
   }
 
   /**
@@ -1596,7 +1668,7 @@ export class AgentSessionService implements OnModuleDestroy {
     const session = this.getSession(id)
     const harness = session.harness ?? 'codex'
     const choice =
-      isMotionMode(session.mode) && this.deps.chatModels.motionChoiceFor
+      isCodeVideoMode(session.mode) && this.deps.chatModels.motionChoiceFor
         ? this.deps.chatModels.motionChoiceFor(harness, session.chatModel)
         : this.deps.chatModels.choiceFor(harness, session.chatModel)
     if (!choice) return {}
@@ -1631,7 +1703,13 @@ function firstTurnPrompt(
   asked: string | undefined,
 ): string {
   if (isRankingMode(mode)) return rankingKickoff(harness, rankingId, mode === 'ranking_easy', asked)
+  if (mode === 'animation_free') return ANIMATION_FREE_KICKOFF
   return mode === 'motion_free' ? motionReelFreeKickoff(harness) : kickoffFor(harness)
+}
+
+/** A Claude Animation chat's name: what it is about, or its look for a Surprise me. */
+function animationTitle(setup: AgentAnimationSetupView): string {
+  return chatTitleFrom(setup.subject ?? `${setup.lookLabel} animation`)
 }
 
 /** The questions of a card the chat shows, from its `question` event. */

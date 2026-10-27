@@ -76,6 +76,9 @@ function Row({
         // A Ranking chat: its ranking's cover, cut to its middle (the clip shows best there; the
         // title band is too small to read at this size).
         <img alt="" className="size-full object-cover" src={item.rankingCoverUrl} />
+      ) : item.posterUrl ? (
+        // A Motion Reel or Claude Animation chat: its newest render's poster.
+        <img alt="" className="size-full object-cover" src={item.posterUrl} />
       ) : (
         <Chat aria-hidden className="size-4.5 text-secondary" />
       )}

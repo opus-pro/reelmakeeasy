@@ -9,16 +9,17 @@ import { MotionTasksPanel } from './MotionTasksPanel'
 type MotionVideo = Extract<TranscriptEntry, { kind: 'motion_video' }>
 
 /**
- * A Motion Reel chat's side panel: the agent's Tasks (what it is doing, the reel's phases, its
- * to-do list), then the latest render, large, with its beat check. Before the first render,
- * what the chat is set up to make.
+ * A Motion Reel or Claude Animation chat's side panel: its Tasks (what the agent is doing, the
+ * phases, the plan, its to-do list), then the latest render, large, with its beat check (a Motion
+ * Reel's). Before the first render, what the chat is set up to make.
  */
 export function MotionReelPanel({ transcript }: { transcript: Transcript }) {
   const videos = transcript.entries.filter((e): e is MotionVideo => e.kind === 'motion_video')
   const latest = videos.at(-1)
   const setup = transcript.entries.findLast(
-    (e) => e.kind === 'motion_setup' && e.state === 'chosen',
+    (e) => (e.kind === 'motion_setup' || e.kind === 'animation_setup') && e.state === 'chosen',
   )
+  const animation = transcript.entries.some((e) => e.kind === 'animation_setup')
   return (
     <div className="flex size-full flex-col gap-3 overflow-y-auto p-4">
       <MotionTasksPanel transcript={transcript} />
@@ -48,7 +49,11 @@ export function MotionReelPanel({ transcript }: { transcript: Transcript }) {
         <div className="flex flex-1 items-center justify-center p-6 text-center text-sm text-secondary">
           {setup?.kind === 'motion_setup' && setup.setup
             ? `${setup.setup.typeLabel}: your reel will play here once it's rendered.`
-            : 'Set up your Motion Reel in the chat; it will play here once it is rendered.'}
+            : setup?.kind === 'animation_setup' && setup.setup
+              ? `Your ${setup.setup.lookLabel} animation will play here once it's rendered.`
+              : animation
+                ? 'Set up your animation in the chat; it will play here once it is rendered.'
+                : 'Set up your Motion Reel in the chat; it will play here once it is rendered.'}
         </div>
       )}
     </div>

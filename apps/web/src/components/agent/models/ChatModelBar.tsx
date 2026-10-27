@@ -90,7 +90,7 @@ export function modelMenuItems(model: ChatModel, harnessName: string): MenuProps
  * account, and "Set as default".
  */
 export function ChatModelBar({ session }: { session: AgentSession | null | undefined }) {
-  const model = useChatModel(session?.id, !!session)
+  const model = useChatModel(session?.id, !!session, `${session?.harness}:${session?.mode}`)
   if (!session) return null
   const harnessName = HARNESS_NAME[session.harness ?? 'codex']
   const state = model.state

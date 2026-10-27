@@ -3,6 +3,7 @@ import path from 'node:path'
 
 import { dataDir } from '@reelmakeeasy/common/storage/file-store'
 
+import { animationSkillName, renderAnimationSkill } from '../craft/animation-skill'
 import { BEAT_LOOP_SKILL_NAME, renderBeatLoopSkill } from '../craft/beat-loop-skill'
 import { CAMERA_SKILL_NAME, renderCameraSkill } from '../craft/camera-skill'
 import { MOTION_REEL_SKILL_NAME, renderMotionReelSkill } from '../craft/motion-reel-skill'
@@ -27,6 +28,9 @@ const AGENT_SKILLS: Record<string, () => string> = {
   [BEAT_LOOP_SKILL_NAME]: renderBeatLoopSkill,
   [RANKING_SKILL_NAME]: renderRankingSkill,
   [MOTION_REEL_SKILL_NAME]: renderMotionReelSkill,
+  [animationSkillName('2d')]: () => renderAnimationSkill('2d'),
+  [animationSkillName('3d')]: () => renderAnimationSkill('3d'),
+  [animationSkillName('8bit')]: () => renderAnimationSkill('8bit'),
 }
 
 /** Skills ReelMakeEasy ships as checked-in folders (a SKILL.md with its references), copied whole:

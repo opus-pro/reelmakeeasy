@@ -1,0 +1,188 @@
+import { ANIMATION_LOOKS, animationLook } from '@reelmakeeasy/common/animation/looks'
+import type { AnimationLookId } from '@shared/types/api/agent'
+
+/** The tools a Claude Animation chat has (agent-tools.ts implements them). */
+export const ANIMATION_VOICE_TOOL = 'animation_voice'
+export const ANIMATION_MUSIC_TOOL = 'animation_music'
+export const ANIMATION_STILL_TOOL = 'animation_still'
+export const ANIMATION_RENDER_TOOL = 'animation_render'
+export const ANIMATION_SETUP_TOOL = 'animation_setup'
+export const ANIMATION_REVIEW_TOOL = 'animation_review'
+
+export const animationSkillName = (look: AnimationLookId) => `reelmakeeasy-animation-${look}`
+export const ANIMATION_SKILL_NAMES: readonly string[] = ANIMATION_LOOKS.map((l) =>
+  animationSkillName(l.id),
+)
+
+const DESCRIPTION: Record<AnimationLookId, string> = {
+  '2d': 'How to write and build a ReelMakeEasy Claude Animation in the 2D look (two cartoon characters with faces chatting, lip-synced, drawn in code in Remotion). Use in every 2D Claude Animation chat, before writing the script, recording voices, building scenes, rendering or changing it.',
+  '3d': 'How to write and build a ReelMakeEasy Claude Animation in the 3D look (a narrated explainer around one detailed 3D object, drawn in code with three.js in Remotion). Use in every 3D Claude Animation chat, before writing the script, recording the voice, building scenes, rendering or changing it.',
+  '8bit':
+    'How to write and build a ReelMakeEasy Claude Animation in the 8-bit look (a narrated pixel-art explainer like an old video game, drawn in code with three.js in Remotion). Use in every 8-bit Claude Animation chat, before writing the script, recording the voice, building scenes, rendering or changing it.',
+}
+
+/** What each look's script and scenes are, and how its library is used. */
+const LOOK_SECTION: Record<AnimationLookId, string[]> = {
+  '2d': [
+    '## The 2D look: two characters talk',
+    '',
+    'Two cartoon characters with faces (objects, food, animals, people, the Moon) chat about one fun fact. One is curious, one knows; they take turns.',
+    '',
+    '- **Script:** six lines, about 60-70 words in all for 30 s, two characters taking turns. Line 1 is the hook: "Did you know…" with the surprising fact in everyday words. The last line closes the loop and ties the fact to daily life. The end card restates the fact in a few words.',
+    '- **New characters and a new setting every time.** Never reuse a pair unless the user asks. Pick characters that belong to the fact (honey and a bee, the Moon and a kid, a heart and a red blood cell).',
+    `- **Voices:** each character gets a vivid voice description in \`${ANIMATION_VOICE_TOOL}\`'s voices (age, energy, pace, attitude: "Moon: a slow, kind, very old voice, warm and amused"). Make the two clearly different.`,
+    '- **Shots:** `wide` (both characters), a close-up on whoever speaks, one `diagram` shot that shows the fact (an arrow, a scale, a timeline), and the `end` card last. Cut on line starts.',
+    "- **Acting:** the speaker's mouth follows its voice (the library does it from `lines.json`); both characters blink, look at each other, and gesture on their key words. The listener reacts (a nod, a surprised look) on the speaker's key word.",
+    "- **Layout:** the speech bubble sits in the top third; keep faces and diagram content below it. Place pointers and circles from the drawing's coordinates, never by guess, and check them in a still.",
+    '',
+    '### The 2D library (`src/toon/`)',
+    '',
+    "Pictures are SVG markup strings for a 1080×1920 world, drawn fresh every frame by `<ToonStage>`, which also draws the speech bubble (the speaker's name and their words lighting up as they are said) and the fun-fact card after the last line. `Animation.tsx` holds `<Voice />`, `<Music />` and `<ToonStage card shots cast defs scene diagram />`; leave `<Captions />` out (the bubble is the captions).",
+    '',
+    "- `shots`: one shot name per recorded line, in order: `wide`, a character's close-up (name it after them), one `diagram`, and `end` last.",
+    "- `cast`: `{ bee: { name: 'Bee', bubble: { bg: '#fff', tag: '#F3B33D', tagfg: '#3A2410', now: '#E2574C' } } }`, keyed by the `who` you recorded with.",
+    '- `scene(t, i)` returns the world for line i at time t (seconds); `diagram(t, i)` the full-screen diagram. `defs` holds SVG gradients and patterns they use.',
+    "- **Timing:** `L` (the recorded lines), `S[i]` (line i's shot starts; `S[L.length]` is the end), `word(i, 'prefix')` (line i's word: `.start`, `.end`; throws if it isn't there), `ss(a, b, t)` (an eased 0→1 between times a and b), `back(x)` (overshoot, for pops), `lerp`, `clamp`, `blink(t, period, offset)`, `speaking(who, t)`, `makeRnd(seed)` (never `Math.random()`).",
+    "- **Faces:** `mouthAt(who, t)` follows the voice; draw it with `mouth({ m, w, closed, lip })` (`closed` is the shut mouth's SVG path; pass your own `m` for a silent jaw drop). `eye({ x, y, rx, ry, gaze, iris, r, lid, lidColor, line })`: `lid` 0 open .. 1 shut, `lidColor` must match the skin behind the eye.",
+    '- **Bodies:** `arm([sx, sy], { x, y, pose, rot }, color, side)` (a stick arm with a white glove; pose `open`, `point`, `fist` or `thumb`), `legs([x1, x2], top, color, shoe)`, `sparkle(x, y, r, opacity)`, `chip(x, y, text, { size, bg, fg, k })` (a pill label; k scales it in), `INK` (the outline colour).',
+    '- **Camera:** `camera(t, i, shots[i], FRAMES)` with `FRAMES = { wide: [x, y, z0, z1], bee: [x, y, z0, z1, punch?], end: [[x, y, z], [x, y, z]] }`; wrap layers in `layer(cam, p, svg)`, p < 1 for far layers (parallax). At zoom z a shot shows 1080/z world pixels across: with the characters about 510 px apart (x ≈ 290 and 800) use z ≈ 1.05-1.1 for wide and ≈ 1.9 for a close-up.',
+    "- **Coordinates:** characters stand on a ground line (y ≈ 1520) at x ≈ 290 and 800. A character's own origin is its feet; y goes negative upward.",
+    '',
+    "**Puppet pattern.** Per character, one `xState(t, i)` (defaults, then changes per line keyed by `i` and word times) and one `x(s)` that draws it as an SVG string: body, cheeks, eyes, brows, `mouth` at the face, then arms last (shoulders on the body's edge) so gloves can cross the face. Listeners look at the speaker; add `bob += mouth.open * 4` while speaking; pop gestures in with `back(ss(w.start - 0.2, w.start + 0.2, t))`.",
+    '',
+    '**Diagram pattern.** Its own background; reveal each element on the word that names it; a small copy of the speaker in a corner (the same draw function, scaled, arms off); a takeaway chip near the bottom; content between y 560 and 1850.',
+    '',
+    'A minimal start for `src/scenes/story.ts`:',
+    '',
+    '```ts',
+    "import { arm, back, blink, camera, eye, INK, L, layer, legs, mouth, mouthAt, ss, word, type Frames } from '../toon'",
+    '',
+    "export const shots = ['wide', 'bee', 'jar', 'diagram', 'bee', 'end']",
+    'const FRAMES: Frames = { wide: [545, 1180, 1.05, 1.1], bee: [290, 1250, 1.85, 1.95, 0.08], jar: [800, 1250, 1.85, 1.95, 0.08], end: [[545, 1180, 1.1], [545, 1100, 1.0]] }',
+    '',
+    'function bee(t: number, i: number) {',
+    "  const m = mouthAt('bee', t)",
+    "  const gaze: [number, number] = L[i]?.who === 'jar' ? [10, -2] : [2, 2]",
+    "  return `<g transform=\"translate(290,1520)\">${legs([-40, 40], -60, '#3A2E1F', '#2B2433')}<ellipse cy=\"-200\" rx=\"130\" ry=\"150\" fill=\"#FFC93C\" stroke=\"${INK}\" stroke-width=\"8\"/>${eye({ x: -45, y: -240, rx: 28, ry: 32, gaze, iris: '#3A2620', r: 15, lid: blink(t, 3.1, 0.2), lidColor: '#FFC93C', line: INK })}${eye({ x: 45, y: -240, rx: 28, ry: 32, gaze, iris: '#3A2620', r: 15, lid: blink(t, 3.1, 0.2), lidColor: '#FFC93C', line: INK })}<g transform=\"translate(0,-170)\">${mouth({ m, w: 46, lip: '#7A3A1A', closed: 'M -20,-2 Q 0,12 20,-2' })}</g>${arm([-125, -190], { x: -170, y: -90 }, '#3A2E1F', -1)}${arm([125, -190], { x: 170, y: -90 }, '#3A2E1F', 1)}</g>`",
+    '}',
+    '',
+    'export function scene(t: number, i: number) {',
+    "  const cam = camera(t, i, shots[i] ?? 'wide', FRAMES)",
+    '  return layer(cam, 0.6, `<rect x="-400" y="-200" width="1900" height="1800" fill="#BDE7FF"/>`) + layer(cam, 1, `<rect x="-400" y="1520" width="1900" height="600" fill="#8BC34A"/>${bee(t, i)}`)',
+    '}',
+    '',
+    'export function diagram(t: number, i: number) {',
+    "  const w = word(i, 'water')",
+    '  return `<rect width="1080" height="1920" fill="#FFF4E0"/><circle cx="540" cy="1000" r="${200 * back(ss(w.start - 0.2, w.start + 0.2, t))}" fill="#4CC9F0"/>`',
+    '}',
+    '```',
+  ],
+  '3d': [
+    '## The 3D look: a narrated 3D explainer',
+    '',
+    'One detailed 3D hero (an object, a machine, an organ, a planet) explains how something works, with a narrator.',
+    '',
+    '- **Script:** about 2.3 words per second of length (70 words for 30 s), one narrator. A hook first ("Did you know…" with the surprising fact in everyday words), one idea per scene, and an ending that closes the loop and ties it to daily life.',
+    `- **Voice:** one narrator in \`${ANIMATION_VOICE_TOOL}\` ("Narrator: a warm, clear, curious voice, unhurried").`,
+    '- **The hero has real detail** and stands out; everything else is simpler and muted. Build it from three.js shapes (no downloaded models).',
+    '- **One idea per scene,** each with a visual change on its key word: a part lights up, the hero opens, a cutaway shows the inside, an arrow shows the flow.',
+    '- **Labels** on the parts being explained, with leader lines, at least 3% of the frame height.',
+    '- **The camera never parks:** orbit, crane, push in, spiral, slowly and eased.',
+    '',
+    '### The 3D library (`src/stage/`)',
+    '',
+    '`Animation.tsx` holds `<Voice />`, `<Music />`, `<Stage3D build={build} />` (optionally `background="#0E1116"`) and `<Captions accent="…" />` after it. `build(E, font)` in `src/scenes/episode.ts` makes the whole scene once and returns `{ update(t) }`, which sets everything from t (seconds) alone: no state carried between frames.',
+    '',
+    "- **Engine `E`:** `scene` (studio light, a dark ground at y 0 fading into fog are already there), `camera` (35° PerspectiveCamera), `renderer` (shadows on: set `castShadow` on the hero's meshes), `labels` (the label layer, cleared every frame), `toScreen(vec3)` → `[x, y, inFront]`, `sync()`.",
+    '- **Order inside `update(t)`:** move and scale parts, set the camera, `camera.updateProjectionMatrix()`, `sync()`, then the labels.',
+    '- **Camera:** `cam.orbit(E.camera, t, { target, radius, height, from, speed })` circles the hero; `cam.move(E.camera, t, a, b, from, to, target)` pushes in, cranes or pulls back between times a and b. Chain them per scene with `t` ranges from `lineStart(i) / 30`.',
+    "- **Labels:** `label(E.labels, 'LEFT VENTRICLE', E.toScreen(point), [ox, oy], { k, color, fontFamily: font })` draws a dot, a leader line and the text (58 px, kept inside the margin); grow it in with `k = ss(start, start + 0.5, t)` on its word.",
+    '- **Helpers:** `THREE`, `mat(color, { roughness, metalness })`, `emissive(color, k)` (a part that lights up), `ss`, `back`, `lerp`, `clamp`, `rng(seed)` (never `Math.random()`).',
+    '- Build the hero from three.js shapes (spheres, cylinders, tori, `LatheGeometry`, `ExtrudeGeometry`, `TubeGeometry` along a curve) with enough parts to look real, and animate what it does (a beat, a turn, a flow along a tube with small instanced spheres). A cutaway: hide the outer shell with `ss` and show the inside.',
+  ],
+  '8bit': [
+    '## The 8-bit look: a narrated pixel-art explainer',
+    '',
+    'A low-resolution 3D scene drawn blocky and dithered like an old video game, with crisp pixel-font captions and labels on top, and a narrator.',
+    '',
+    '- **Script:** about 2.3 words per second of length, one narrator. The hook comes first: a big number plus the question ("184 METRES TALL. WHY DOESN\'T THE SPACE NEEDLE TIP OVER?"), in everyday words. Then one idea per caption, a new caption every 1.5-2.5 s, and an ending that closes the loop and ties it to daily life. The last shot returns to the first, so the video loops.',
+    `- **Voice:** one narrator in \`${ANIMATION_VOICE_TOOL}\` ("Narrator: an upbeat, clear voice with a smile, like a game show host").`,
+    '- **A busy screen:** at least 3 layers move at any moment (the hero, life around it, weather or flows, the HUD).',
+    '- **The hero has real detail** and stands out; everything else is smaller, muted and sparser.',
+    '- **Teach with pictures:** an animated diagram for each idea, an x-ray cutaway for the insides with labels on the inside parts, and a stamp ("RESONANCE!") with a flash on the big moments.',
+    '- **The camera never parks:** orbit, crane and spiral in 3D, with a shake on the big hits.',
+    '',
+    '### The 8-bit library (`src/pixel/`)',
+    '',
+    '`Animation.tsx` holds `<Voice />`, `<Music />` and `<PixelStage build={build} />` (add `res={360}` for a detailed hero); leave `<Captions />` out (call `narration(H, t)` instead). `build(E)` in `src/scenes/episode.ts` makes the whole scene once and returns `{ update(t) }`, which sets everything from t (seconds) alone: no state carried between frames, frames are drawn in any order.',
+    '',
+    '- **Engine `E`:** `scene`, `camera` (a PerspectiveCamera), `post` (`bloom` ≈1, `threshold` 0.75, `levels` 18-28 posterize steps, `flash` 0-1 with `flashColor`, `vignette`, `scanline`), `lens` (the x-ray: `on`, `x`, `y` 0-1 of the screen, `r` a fraction of the width, `insideBg`; objects passed to `inside(obj)` only show inside it), `toScreen(vec3)` → `[x, y, inFront]` in HUD pixels, `sync()`, `hud` (H).',
+    '- **Order inside `update(t)`:** move objects, set the camera, `camera.updateProjectionMatrix()`, `sync()`, then the lens and the HUD (they need fresh matrices). End with `narration(H, t)`.',
+    '- **Helpers (px.ts):** `THREE`, `ss(a, b, t)`, `pulse(t, at, len)` (1→0), `back(x)`, `lerp`, `clamp`, `smooth`, `easeOut`, `rng(seed)` (never `Math.random()`), `flat(color, opts)` (flat-shaded material), `glow(color, strength)` (unlit and over-bright: it blooms), `flow(curve, n, { size, color, speed })` (particles along a curve; call `.update(t)`), `windowTexture(cols, rows, { lit })` (lit windows, pixel-crisp).',
+    '- **HUD (H, 1080×1920, pixel font, uppercase):** `H.C` palette (`ink yellow cyan red green orange dim`); `text(s, x, y, { u, color, align })`, `panel`, `hook([{ text, color }], t, t0, { y, out })` (types in), `stamp(s, t, t0, t1, { y, color, u })` (slams in), `caption`, `counter(label, value, x, y, w)`, `bar`, `gauge`, `scope`, `trace`, `tag(s, [px, py], [ox, oy], { color, k })` (a label on a dotted leader from a screen point), `ring(cx, cy, r)` (around the lens), `poly`, and `fmt(n)`. The font has A-Z, 0-9 and `.,!?:-+/%°$×▲▼@&#`; anything else draws `?`.',
+    '- **Layout:** counters at y 80-236, the hook at 330, the lens mid-screen, a diagram panel at y 1150-1480, narration at 1712. Colour over 1.0 (`new THREE.Color(c).multiplyScalar(2)`) is what blooms.',
+    '- Build the hero from boxes, cylinders and extrusions with real detail (floors, windows as `windowTexture`, a crown, the inside parts on the x-ray layer). Keep low-poly elsewhere.',
+  ],
+}
+
+/**
+ * A `reelmakeeasy-animation-<look>` skill: how a Claude Animation in that look is written and
+ * built in Remotion. ReelMakeEasy writes them into the agent's skills at every session start;
+ * `skills/reelmakeeasy-animation-<look>/SKILL.md` are the checked-in copies.
+ */
+export function renderAnimationSkill(lookId: AnimationLookId): string {
+  const look = animationLook(lookId)
+  return [
+    '---',
+    `name: ${animationSkillName(lookId)}`,
+    `description: ${DESCRIPTION[lookId]}`,
+    '---',
+    '',
+    `# Claude Animation: ${look?.label ?? lookId}`,
+    '',
+    'A Claude Animation is a short vertical video (9:16) that you draw and animate yourself, every frame in code, as a Remotion project. No AI video or image model makes any of it: the voices come from the app, the pictures from your code. It looks good when it teaches one surprising, true thing clearly, and the picture moves with what is being said.',
+    '',
+    '## The project',
+    '',
+    `ReelMakeEasy sets the project up in \`animation/\`: before your first turn when the user filled in the setup card, or when you call \`${ANIMATION_SETUP_TOOL}\` in an Advanced chat. You get:`,
+    '- `animation/brief.md`: what the user asked for (what it is about, the look, the length, the music).',
+    "- `animation/look.md`: the look's card (what it looks like, its palette, its voices). Stay inside its palette.",
+    "- `animation/src/clock.ts` (the size, length and the voice lines' timing), `animation/src/kit.tsx` (`<Voice />`, `<Music />`, `<Captions />`, the mouth and easing hooks), the look's library, and `animation/src/Animation.tsx` (a starter you replace). ReelMakeEasy owns all but `Animation.tsx` and refreshes them: use them, never edit them; put your own components in `src/scenes/`.",
+    '- `animation/public/voice/lines.json` and `public/voice.wav` once you record the voices; `public/music.wav` when there is music.',
+    '',
+    'Remotion is installed. Its own skills (`remotion-best-practices`, `remotion-markup`, `remotion-multimedia`) have its API in detail; where they differ, follow this skill (here ReelMakeEasy sets the project up, records the voices and renders).',
+    '',
+    '## How to work',
+    '',
+    "1. **Read** `brief.md`, `look.md` and the look's library (`index.ts`).",
+    '2. **Write the script** the look asks for (below), and a plan of one short line per scene (what is said, what is on screen), into `animation/plan.md` ("## Script" with "Who: words" rows, "## Plan" with "Scene N: …" lines): the Tasks panel beside the chat shows it. Write both in your reply too (the user sees neither your thinking nor the file in the chat), then ask with a card whether to build it ("Build it (Recommended)" or "Change something"), unless they already said to go ahead.',
+    `3. **Record the voices** with \`${ANIMATION_VOICE_TOOL}\`: \`lines\` one "Who: words" per row, in order, and \`voices\` one "Who: description" per speaker. It keeps takes that say your words and match each speaker; listen to the lines it warns about (ask the user). When the total is much longer than the length asked for, shorten the script and record again.`,
+    `4. **Make the music** only when the brief says you make it: composed by you (write \`animation/music/music.mjs\` with the \`reelmakeeasy-music-composer\` skill, run \`cd animation/music && node tools/score.mjs --no-cues\`, then \`${ANIMATION_MUSIC_TOOL}\` with engine "composer"), or a music model through \`${ANIMATION_MUSIC_TOOL}\` with a prompt. Keep it calm under the voice.`,
+    "5. **Build.** One component per scene in `src/scenes/`, placed in `Animation.tsx` with `<Sequence from={lineStart(i)}>` so every scene starts on its line. Keep `<Voice />`, `<Music />` and `<Captions />` in `Animation.tsx` (captions in the look's palette and font).",
+    `6. **Look.** Call \`${ANIMATION_STILL_TOOL}\` on the important moments (each scene's start and its key word) and look at the images. Fix what is cut off, too small, crowded, off-palette or off-look before rendering.`,
+    `7. **Render** with \`${ANIMATION_RENDER_TOOL}\`: it shows the video to the user. You can't hear it: say so and ask the user to listen to the voices.`,
+    `8. **Review.** Nothing is one-shot: after every render, call \`${ANIMATION_REVIEW_TOOL}\` (contact sheets of the render, with where nothing moves and the scenes held too long), open every sheet, and write \`animation/review.md\`: every problem by time (a mouth that doesn't move, something under the bubble or captions, cut-off or tiny text, a label off its part, a picture that misses its word, a stall, an empty or crowded frame) with its fix. Fix them, render again and check that render: up to 3 rounds, then say what is still off.`,
+    '9. **Change it** when the user asks: edit the scene (record again only when the words change), look at a still, render, check. Say what you changed in one line.',
+    '',
+    '## Timing rules',
+    '',
+    "- Time everything to the voice with `clock.ts`: `lineStart(i)`, `lineEnd(i)`, `wordAt(i, w)` (line i's word w), `sec(s)` for durations. Never type a frame number for a moment in the story: then the picture still fits when a line is recorded again.",
+    '- A picture change lands on the word it shows (the number appears on "500", the arrow on "flows").',
+    "- `useMouth(who)` gives a speaker's mouth (0..1) and vowel on every frame; `useSpeaking()` says who is talking.",
+    '',
+    ...LOOK_SECTION[lookId],
+    '',
+    '## Craft rules',
+    '',
+    '- **Hook first, in everyday words.** The first line is the surprising fact ("Did you know…"), not an introduction.',
+    '- **True facts.** You have no web here: state only what you are sure of, hedge where the science hedges ("about", "could"), and write numbers as digits ("3000 years") so the voice check matches.',
+    '- **Never still.** Something moves on every frame: a drift, a breath, a blink, a camera move.',
+    '- Keep text and key shapes inside a 6% safe margin; the smallest text is at least 3% of the frame height. Measure long text with `measureText`/`fitText` from `@remotion/layout-utils`.',
+    '- Ease every move (`ease.snap`, `ease.glide`, `usePopAt`); nothing moves linearly except constant drifts. Keep it deterministic: no `Math.random()` (use `random(seed)` from Remotion), no CSS transitions.',
+    '- Fonts come from `@remotion/google-fonts`. Images only from `animation/public/`.',
+    '- English only.',
+    '- Type-check with `npx tsc --noEmit` inside `animation/` when you change several files.',
+    `- Never run \`remotion render\`, \`remotion still\` or \`npm install\` yourself: \`${ANIMATION_STILL_TOOL}\` and \`${ANIMATION_RENDER_TOOL}\` render for you, \`${ANIMATION_VOICE_TOOL}\` records, and everything you need is installed.`,
+    '',
+  ].join('\n')
+}

@@ -16,7 +16,13 @@ import { isRankingTopicQuestion } from '@shared/types/api/agent'
 import type { AgentAppServer } from './claude/agent-app-server'
 import { buildAppServerArgs } from './codex/codex-config'
 import { CodexRpcClient } from './codex/codex-rpc'
-import { briefFor, kickoffFor, motionReelFreeKickoff, rankingKickoff } from './agent-brief'
+import {
+  ANIMATION_FREE_KICKOFF,
+  briefFor,
+  kickoffFor,
+  motionReelFreeKickoff,
+  rankingKickoff,
+} from './agent-brief'
 
 const AUTONOMOUS_BRIEF = briefFor({ mode: 'autonomous' }, 'codex')
 const FREE_CHAT_BRIEF = briefFor({ mode: 'free' }, 'codex')
@@ -24,6 +30,7 @@ const FREE_CHAT_KICKOFF = kickoffFor('codex')
 import {
   AgentFlowCancelledError,
   AgentSessionBusyError,
+  AnimationSetupPendingError,
   AgentSessionService,
   appServerArgsForMode,
   FlowActiveError,
@@ -742,6 +749,21 @@ describe('AgentSessionService', () => {
       expect(turnModel(session.id, {})).toEqual({ effort: 'high', model: 'claude-haiku-5-5' })
     })
 
+    it('runs a Claude Animation on the Motion Reel model (Opus at medium or more)', () => {
+      const motionChoiceFor = jest.fn(() => ({ effort: 'medium', model: 'claude-opus-5-5' }))
+      const choiceFor = jest.fn(() => ({ model: 'claude-haiku-5-5' }))
+      const svc = new AgentSessionService({ chatModels: { choiceFor, motionChoiceFor }, root })
+      services.push(svc)
+      const turnModel = (
+        svc as never as { turnModel: (id: string, p: object) => object }
+      ).turnModel.bind(svc)
+      return svc.createSession().then((session) => {
+        svc['store'].update(session.id, { harness: 'claude', mode: 'animation' })
+        expect(turnModel(session.id, {})).toEqual({ effort: 'medium', model: 'claude-opus-5-5' })
+        expect(choiceFor).not.toHaveBeenCalled()
+      })
+    })
+
     it('spawn args by mode: autonomous searches the web with no shell; free chat never searches', () => {
       expect(appServerArgsForMode('autonomous')).toEqual(
         buildAppServerArgs({ shell: false, webSearch: true }),
@@ -783,6 +805,116 @@ describe('AgentSessionService', () => {
       expect(events.find((e) => e.type === 'motion_setup')).toMatchObject({ setup })
       expect(() => svc.startMotionReel(session.id, setup, 'again')).toThrow(ModeAlreadyChosenError)
       expect(spawnOpts.at(-1)?.mode).toBe('motion')
+    })
+
+    it('animation: emits mode and its setup card, refuses messages until the setup is in, then starts Claude', async () => {
+      const svc = makeService(root)
+      const session = await svc.createSession()
+      const events: AgentUiEvent[] = []
+      svc.subscribe(session.id, 0, (e) => events.push(e))
+
+      await svc.chooseMode(session.id, 'animation')
+      expect(events.map((e) => e.type)).toEqual(['mode', 'animation_setup_request'])
+      expect(svc.isRunning(session.id)).toBe(false)
+      await expect(svc.sendMessage(session.id, 'hi')).rejects.toBeInstanceOf(
+        AnimationSetupPendingError,
+      )
+
+      const setup = {
+        lengthSec: 30,
+        lookId: '2d' as const,
+        lookLabel: '2D',
+        music: { source: 'none' as const },
+        musicTitle: null,
+        subject: 'Why honey never spoils',
+      }
+      svc.startAnimation(session.id, setup, '[ReelMakeEasy] go')
+      expect(svc.getSession(session.id).animation).toEqual(setup)
+      expect(svc.getSession(session.id).title).toBe('Why honey never spoils')
+      await waitFor(() => svc.getSession(session.id).status === 'idle')
+      expect(events.find((e) => e.type === 'animation_setup')).toMatchObject({ setup })
+      expect(() => svc.startAnimation(session.id, setup, 'again')).toThrow(ModeAlreadyChosenError)
+    })
+
+    it('animation: a Surprise me chat is named after its look until the agent names it', async () => {
+      const svc = makeService(root)
+      const session = await svc.createSession()
+      await svc.chooseMode(session.id, 'animation')
+      svc.startAnimation(
+        session.id,
+        {
+          lengthSec: 45,
+          lookId: '8bit',
+          lookLabel: '8-bit',
+          music: { source: 'none' },
+          musicTitle: null,
+          subject: null,
+        },
+        '[ReelMakeEasy] go',
+      )
+      expect(svc.getSession(session.id).title).toBe('8-bit animation')
+      await waitFor(() => svc.getSession(session.id).status === 'idle')
+    })
+
+    it('animation_free: starts Claude at once with its own kickoff, and shows the setup it makes', async () => {
+      const log = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'agent-svc-afree-')), 'log.jsonl')
+      const svc = makeService(root, [], { FAKE_LOG: log })
+      const session = await svc.createSession()
+      const events: AgentUiEvent[] = []
+      svc.subscribe(session.id, 0, (e) => events.push(e))
+
+      await svc.chooseMode(session.id, 'animation_free')
+      await waitFor(() => svc.getSession(session.id).status === 'idle')
+      expect(events.some((e) => e.type === 'animation_setup_request')).toBe(false)
+      const start = readLog(log).find((e) => e.method === 'turn/start')
+      expect(start?.params?.['input']).toEqual([{ text: ANIMATION_FREE_KICKOFF, type: 'text' }])
+
+      const setup = {
+        lengthSec: 30,
+        lookId: '3d' as const,
+        lookLabel: '3D',
+        music: { source: 'none' as const },
+        musicTitle: null,
+        subject: 'How a heart pumps',
+      }
+      svc.updateAnimation(session.id, setup)
+      expect(svc.getSession(session.id)).toMatchObject({
+        animation: setup,
+        title: 'How a heart pumps',
+      })
+      expect(events.find((e) => e.type === 'animation_setup')).toMatchObject({ setup })
+    })
+
+    it("keeps a code video's latest poster for the chat list", async () => {
+      const svc = makeService(root, [])
+      const session = await svc.createSession()
+      expect(svc.getSession(session.id).videoPoster).toBeUndefined()
+      for (const n of [1, 2])
+        svc.emitAutonomousEvent(session.id, {
+          itemId: `animation-${n}`,
+          posterUrl: `store://agent-animation/${session.id}/animation-${n}.jpg`,
+          type: 'motion_video',
+          videoUrl: `store://agent-animation/${session.id}/animation-${n}.mp4`,
+        })
+      expect(svc.getSession(session.id).videoPoster).toBe(
+        `store://agent-animation/${session.id}/animation-2.jpg`,
+      )
+    })
+
+    it('finds the poster of a code video chat that rendered before posters were kept', async () => {
+      const svc = makeService(root, [])
+      const { id } = await svc.createSession()
+      await svc.chooseMode(id, 'animation_free')
+      await waitFor(() => svc.getSession(id).status === 'idle')
+      svc.emitAutonomousEvent(id, {
+        itemId: 'animation-1',
+        posterUrl: `store://agent-animation/${id}/animation-1.jpg`,
+        type: 'motion_video',
+        videoUrl: `store://agent-animation/${id}/animation-1.mp4`,
+      })
+      new AgentSessionStore(root).update(id, { videoPoster: undefined }, { touch: false })
+      const again = makeService(root, [])
+      expect(again.getSession(id).videoPoster).toBe(`store://agent-animation/${id}/animation-1.jpg`)
     })
 
     it('motion_free: starts the agent at once with its own kickoff, takes messages, and names itself after the setup', async () => {
