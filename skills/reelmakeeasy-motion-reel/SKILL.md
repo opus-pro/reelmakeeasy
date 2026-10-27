@@ -92,4 +92,7 @@ Place them with `<Sfx name="…" at={beat(n)} />` (volume 0.4 to 0.8 under the m
 - Fonts only through `@remotion/google-fonts`.
 - Keep text and key shapes inside a 6% safe margin; measure long lines with `measureText`/`fitText` from `@remotion/layout-utils`, so nothing runs off the frame.
 - Every word on screen comes from the brief's subject (or the subject's own website); never copy a video reference's text, logo or footage.
+- The brief's tone and style words ("calm", "playful", "high design", "colour that changes with the music") are directions for you, not copy: show them, never write them on screen. On-screen words are the product's own: its name, its tagline, its UI and a few short lines of your own.
+- No HUD chrome: no corner labels, counters, section numbers or technical captions ("REEL 01/04", "GRID 4x6", "PARTICLES 320") unless the subject itself is an interface that shows them.
+- A vertical (9:16) reel is watched on a phone in TikTok, Reels or Shorts: compose every scene for the whole frame (big type and UI, the lower half used, never a cluster in the top third), and keep text out of the bottom 15% and the right 12% of the width, where those apps put their captions and buttons.
 - Type-check with `npx tsc --noEmit` inside `reel/` when you change several files.

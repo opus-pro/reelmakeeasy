@@ -81,6 +81,15 @@ describe('renderMotionReelSkill', () => {
     )
   })
 
+  it('keeps brief words, HUD chrome and cramped vertical layouts off the screen', () => {
+    expect(skill).toMatch(/are directions for you, not copy: show them, never write them on screen/)
+    expect(skill).toMatch(
+      /No HUD chrome: no corner labels, counters, section numbers or technical captions/,
+    )
+    expect(skill).toMatch(/compose every scene for the whole frame/)
+    expect(skill).toMatch(/keep text out of the bottom 15% and the right 12% of the width/)
+  })
+
   it('treats depth as one tool: mostly flat scenes, transitions that join them', () => {
     expect(skill).toMatch(/## Transitions and depth/)
     expect(skill).toMatch(/Most scenes are flat and clean/)
