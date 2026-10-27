@@ -44,12 +44,25 @@ import { ChatModelService } from './chat-model.service'
 
 @Module({
   controllers: [AgentController],
-  imports: [LongTakeModule, ProjectsModule, MusicModule, SetupModule, RankingModule, SoundLibraryModule],
+  imports: [
+    LongTakeModule,
+    ProjectsModule,
+    MusicModule,
+    SetupModule,
+    RankingModule,
+    SoundLibraryModule,
+  ],
   providers: [
     // The models agent chats can run on (asked of each harness, kept for a while).
     { provide: ChatModelService, useFactory: () => new ChatModelService() },
     {
-      inject: [ModuleRef, ChatModelService, RankingService, SoundLibraryService, RankingTemplateService],
+      inject: [
+        ModuleRef,
+        ChatModelService,
+        RankingService,
+        SoundLibraryService,
+        RankingTemplateService,
+      ],
       provide: AgentSessionService,
       // The autonomous flow needs the session service and the session service starts the flow:
       // resolve the flow lazily, when a session first picks that mode.

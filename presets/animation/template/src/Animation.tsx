@@ -12,7 +12,9 @@ export function Animation() {
   const drift = (useCurrentFrame() / spec.fps) * 0.4
   const pop = usePopAt(0)
   return (
-    <AbsoluteFill style={{ alignItems: 'center', backgroundColor: '#14121c', justifyContent: 'center' }}>
+    <AbsoluteFill
+      style={{ alignItems: 'center', backgroundColor: '#14121c', justifyContent: 'center' }}
+    >
       <Voice />
       <Music />
       <AbsoluteFill

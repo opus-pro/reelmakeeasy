@@ -32,7 +32,11 @@ describe('rendering an animation', () => {
   afterEach(() => fs.rmSync(dir, { force: true, recursive: true }))
 
   it('renders its own composition, with no beat check, posted from near the end', async () => {
-    const result = await renderReel(dir, { composition: 'Animation', name: 'animation', sync: false })
+    const result = await renderReel(dir, {
+      composition: 'Animation',
+      name: 'animation',
+      sync: false,
+    })
     const calls = jest.mocked(run).mock.calls
     expect(calls[0]?.[1].slice(0, 4)).toEqual([
       'render',

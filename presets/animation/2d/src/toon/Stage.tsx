@@ -71,7 +71,15 @@ export function ToonStage({ card, cast, defs = '', diagram, scene, shots }: Toon
           width: 920,
         }}
       >
-        <b style={{ color: '#6A4FD8', display: 'block', fontSize: 40, letterSpacing: '.08em', marginBottom: 10 }}>
+        <b
+          style={{
+            color: '#6A4FD8',
+            display: 'block',
+            fontSize: 40,
+            letterSpacing: '.08em',
+            marginBottom: 10,
+          }}
+        >
           FUN FACT
         </b>
         {card}
@@ -125,7 +133,9 @@ function Bubble({ cast, t }: { cast: Cast; t: number }) {
       >
         {who.name}
       </div>
-      <div style={{ color: '#B9B2C8', fontSize: long ? 56 : 66, fontWeight: 600, lineHeight: 1.18 }}>
+      <div
+        style={{ color: '#B9B2C8', fontSize: long ? 56 : 66, fontWeight: 600, lineHeight: 1.18 }}
+      >
         {line.words.map((w, j) => (
           <span
             key={`${w.start}-${j}`}

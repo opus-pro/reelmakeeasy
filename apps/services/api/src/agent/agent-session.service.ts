@@ -576,7 +576,12 @@ export class AgentSessionService implements OnModuleDestroy {
       void this.askRankingTopic(id, harness)
       return
     }
-    if (mode === 'free' || mode === 'motion_free' || mode === 'animation_free' || isRankingMode(mode)) {
+    if (
+      mode === 'free' ||
+      mode === 'motion_free' ||
+      mode === 'animation_free' ||
+      isRankingMode(mode)
+    ) {
       const asked = isRankingMode(mode) ? request?.trim() : undefined
       if (asked) {
         if (isUnsetChatTitle(session.title))
@@ -942,8 +947,7 @@ export class AgentSessionService implements OnModuleDestroy {
     if (session.mode === 'autonomous' && !session.editing)
       throw session.flowActive ? new FlowActiveError(id) : new ModeNotChattableError(id)
     if (session.mode === 'motion' && !session.motionReel) throw new MotionSetupPendingError(id)
-    if (session.mode === 'animation' && !session.animation)
-      throw new AnimationSetupPendingError(id)
+    if (session.mode === 'animation' && !session.animation) throw new AnimationSetupPendingError(id)
     if (session.status === 'running') throw new AgentSessionBusyError(id)
     // An Easy ranking's topic card still open: a message answers it instead; files alone can't
     // say what it's about (the card stays, and the user is asked to pick first).

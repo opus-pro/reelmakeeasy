@@ -96,10 +96,19 @@ export const rng = (seed: number) => () => {
 }
 /** A studio material: soft, a little glossy. */
 export const mat = (color: string, o: { metalness?: number; roughness?: number } = {}) =>
-  new THREE.MeshStandardMaterial({ color, metalness: o.metalness ?? 0.1, roughness: o.roughness ?? 0.45 })
+  new THREE.MeshStandardMaterial({
+    color,
+    metalness: o.metalness ?? 0.1,
+    roughness: o.roughness ?? 0.45,
+  })
 /** A glowing material (unlit): for a part that lights up. `k` 0..1 fades it in. */
 export const emissive = (color: string, k = 1) =>
-  new THREE.MeshStandardMaterial({ color, emissive: color, emissiveIntensity: 1.5 * k, roughness: 0.4 })
+  new THREE.MeshStandardMaterial({
+    color,
+    emissive: color,
+    emissiveIntensity: 1.5 * k,
+    roughness: 0.4,
+  })
 
 /** Camera moves: each sets the camera from t and returns it (always moving; ease with `ss`). */
 export const cam = {
@@ -110,7 +119,11 @@ export const cam = {
     { from = 0, height = 3, radius = 12, speed = 0.15, target = new THREE.Vector3() } = {},
   ) {
     const a = from + t * speed
-    c.position.set(target.x + Math.cos(a) * radius, target.y + height, target.z + Math.sin(a) * radius)
+    c.position.set(
+      target.x + Math.cos(a) * radius,
+      target.y + height,
+      target.z + Math.sin(a) * radius,
+    )
     c.lookAt(target)
     return c
   },

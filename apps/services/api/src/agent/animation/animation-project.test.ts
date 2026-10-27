@@ -56,8 +56,9 @@ describe('prepareAnimationProject', () => {
       expect(fs.existsSync(path.join(projectDir, file))).toBe(true)
     // Only the chosen look's library.
     expect(fs.existsSync(path.join(projectDir, 'src/pixel'))).toBe(false)
-    expect(JSON.parse(fs.readFileSync(path.join(projectDir, 'public/voice/lines.json'), 'utf8')))
-      .toEqual([])
+    expect(
+      JSON.parse(fs.readFileSync(path.join(projectDir, 'public/voice/lines.json'), 'utf8')),
+    ).toEqual([])
     expect(fs.readFileSync(path.join(projectDir, 'look.md'), 'utf8')).toContain(
       'reelmakeeasy-animation-2d',
     )
@@ -77,7 +78,9 @@ describe('prepareAnimationProject', () => {
     })
     expect(fs.readFileSync(path.join(projectDir, 'src/scenes/Hook.tsx'), 'utf8')).toContain('Hook')
     expect(fs.readFileSync(path.join(projectDir, 'src/Animation.tsx'), 'utf8')).toBe('// mine\n')
-    expect(fs.readFileSync(path.join(projectDir, 'public/voice/lines.json'), 'utf8')).toContain('Bee')
+    expect(fs.readFileSync(path.join(projectDir, 'public/voice/lines.json'), 'utf8')).toContain(
+      'Bee',
+    )
     expect(again.spec.voiceFile).toBe('voice.wav')
   })
 
@@ -92,10 +95,15 @@ describe('prepareAnimationProject', () => {
     )
   })
 
-  it("names the music Claude still has to make in the brief", async () => {
+  it('names the music Claude still has to make in the brief', async () => {
     const { projectDir, spec } = await prepareAnimationProject({
       music: null,
-      setup: { ...setup2d, lengthSec: 45, lookId: '3d', music: { engine: 'ace-step', source: 'agent' } },
+      setup: {
+        ...setup2d,
+        lengthSec: 45,
+        lookId: '3d',
+        music: { engine: 'ace-step', source: 'agent' },
+      },
       workspace,
     })
     expect(spec.musicFile).toBeNull()

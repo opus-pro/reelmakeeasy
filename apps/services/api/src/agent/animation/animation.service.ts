@@ -5,11 +5,8 @@ import { ANIMATION_LOOKS, animationLook } from '@reelmakeeasy/common/animation/l
 import { Logger } from '@reelmakeeasy/common/logger'
 import { motionReelTrack, motionReelTracks } from '@reelmakeeasy/common/motion-reel/music'
 import {
-  isMotionMusicEngine,
   MOTION_MUSIC_ENGINE_INFO,
-  MOTION_MUSIC_ENGINES,
   type MotionMusicEngine,
-  motionMusicEngineOf,
 } from '@reelmakeeasy/common/motion-reel/reel-config'
 import { storeUri } from '@reelmakeeasy/common/storage/address'
 import { uploadToStore } from '@reelmakeeasy/common/storage/stored-files'
@@ -48,6 +45,7 @@ import {
   writeAnimationJson,
 } from './animation-project'
 import {
+  ANIMATION_MUSIC_ENGINES,
   animationSetupFromTool,
   AnimationSetupError,
   parseAnimationSetup,
@@ -165,13 +163,17 @@ export class AnimationService {
     const projectDir = path.join(this.sessions.workingDir(id), ANIMATION_DIR)
     this.busy.add(id)
     try {
-      if (tool === 'animation_voice') return await this.recordVoice(session.animation, projectDir, args)
+      if (tool === 'animation_voice')
+        return await this.recordVoice(session.animation, projectDir, args)
       if (tool === 'animation_music') return await this.compose(id, session.animation, args)
       if (tool !== 'animation_still' && tool !== 'animation_render')
         return { success: false, text: `Unknown tool ${tool}.` }
       const errors = await typeCheck(projectDir)
       if (errors)
-        return { success: false, text: `The animation doesn't type-check; fix these first:\n${errors}` }
+        return {
+          success: false,
+          text: `The animation doesn't type-check; fix these first:\n${errors}`,
+        }
       return tool === 'animation_still'
         ? await this.stills(id, projectDir, args)
         : await this.render(id, projectDir)
@@ -192,10 +194,12 @@ export class AnimationService {
     args: unknown,
   ): Promise<ToolCallResult> {
     const asked = (args as null | Record<string, unknown>)?.['engine']
-    if (asked !== undefined && !isMotionMusicEngine(asked))
-      return { success: false, text: `engine is ${MOTION_MUSIC_ENGINES.join(' or ')}.` }
-    const engine: MotionMusicEngine =
-      asked ?? motionMusicEngineOf(setup.music.source === 'agent' ? setup.music.engine : undefined)
+    if (asked !== undefined && !(ANIMATION_MUSIC_ENGINES as readonly unknown[]).includes(asked))
+      return { success: false, text: `engine is ${ANIMATION_MUSIC_ENGINES.join(' or ')}.` }
+    const engine = (asked ??
+      (setup.music.source === 'agent'
+        ? setup.music.engine
+        : ANIMATION_MUSIC_ENGINES[0])) as MotionMusicEngine
     const request = parseComposeRequest(args)
     if (typeof request === 'string') return { success: false, text: request }
     const workspace = this.sessions.workingDir(id)
@@ -292,10 +296,16 @@ export class AnimationService {
         text: [
           `\`${ANIMATION_DIR}/\` is ${again ? 'set up again' : 'ready'}: ${view.lookLabel}, about ${view.lengthSec} s, ${musicNote}. The user sees the setup in the chat.`,
           ...(kept
-            ? ['The music you made is kept: make it again only if the user asks for different music.']
+            ? [
+                'The music you made is kept: make it again only if the user asks for different music.',
+              ]
             : []),
           animationNextSteps(setup, !again, setup.music.source === 'agent' && !kept),
-          ...(again ? ['Your scenes were kept, and so were the voices: record again only if the script changed.'] : []),
+          ...(again
+            ? [
+                'Your scenes were kept, and so were the voices: record again only if the script changed.',
+              ]
+            : []),
         ].join(' '),
       }
     } catch (error) {
@@ -321,7 +331,7 @@ export class AnimationService {
       'Library tracks (music "library", musicId):',
       ...options.tracks.map((t) => `- ${t.id}: ${t.title}`),
       'Or music "upload" (the user\'s own file through the paperclip; musicId: its path), "none", or "agent": you make it with animation_music right after the setup, with the music model the user picks (musicEngine):',
-      ...MOTION_MUSIC_ENGINES.map(
+      ...ANIMATION_MUSIC_ENGINES.map(
         (e) =>
           `- ${e}: ${MOTION_MUSIC_ENGINE_INFO[e].label} (${MOTION_MUSIC_ENGINE_INFO[e].cost}). ${MOTION_MUSIC_ENGINE_INFO[e].description}`,
       ),
@@ -413,7 +423,7 @@ export class AnimationService {
   async options(): Promise<AgentAnimationOptions> {
     const voices = await voiceReadiness()
     return {
-      composers: MOTION_MUSIC_ENGINES.map((id) => ({ id, ...MOTION_MUSIC_ENGINE_INFO[id] })),
+      composers: ANIMATION_MUSIC_ENGINES.map((id) => ({ id, ...MOTION_MUSIC_ENGINE_INFO[id] })),
       looks: ANIMATION_LOOKS.map((look) => ({
         defaultLengthSec: look.lengths[0] as number,
         defaultTrackId: look.defaultTrackId,
@@ -428,7 +438,6 @@ export class AnimationService {
         bpm: track.bpm,
         id: track.id,
         previewUrl: presetUrl(track.file),
-        styles: track.styles,
         title: track.title,
       })),
     }
@@ -521,7 +530,9 @@ function newestComposed(dir: string): null | string {
 /** The seconds an animation_still call asks for: up to 6 distinct, non-negative numbers. */
 export function parseStillSeconds(raw: unknown): number[] {
   const text =
-    raw && typeof raw === 'object' && typeof (raw as Record<string, unknown>)['seconds'] === 'string'
+    raw &&
+    typeof raw === 'object' &&
+    typeof (raw as Record<string, unknown>)['seconds'] === 'string'
       ? ((raw as Record<string, unknown>)['seconds'] as string)
       : ''
   const seconds = [

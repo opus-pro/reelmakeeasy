@@ -37,7 +37,10 @@ export function lineAt(t: number): number {
  *  the line has no such word, so a recorded-again line can't silently lose its gesture. */
 export function word(i: number, prefix: string): { end: number; start: number; text: string } {
   const w = L[i]?.words.find((x) =>
-    x.text.toLowerCase().replace(/[^a-z0-9]/g, '').startsWith(prefix),
+    x.text
+      .toLowerCase()
+      .replace(/[^a-z0-9]/g, '')
+      .startsWith(prefix),
   )
   if (!w) throw new Error(`No word "${prefix}" in line ${i}`)
   return w

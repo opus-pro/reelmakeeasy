@@ -6,7 +6,12 @@ import { textWidth } from './font'
 type Hud = {
   C: Record<string, string>
   panel: (x: number, y: number, w: number, h: number) => void
-  text: (s: string, x: number, y: number, o?: { align?: string; color?: string; u?: number }) => number
+  text: (
+    s: string,
+    x: number,
+    y: number,
+    o?: { align?: string; color?: string; u?: number },
+  ) => number
 }
 
 /** The cell size and the most text one caption row may take (inside a 6% margin). */

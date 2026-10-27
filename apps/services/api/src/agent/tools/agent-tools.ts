@@ -156,7 +156,7 @@ export const AGENT_TOOLS: Record<AgentToolName, DynamicToolSpec> = {
   },
   animation_setup: {
     description:
-      'Set up an Advanced Claude Animation (free, quick; the first time it also installs Remotion, a few minutes): readies animation/ with the look card, the brief, the look\'s library and the music, exactly as the setup card does in Easy. Call it with no arguments to get the looks, their lengths and the library tracks. Call it with everything once the user has settled it, and again only when they change the look, length or music (scenes and voices are kept). The reply says what to read next.',
+      "Set up an Advanced Claude Animation (free, quick; the first time it also installs Remotion, a few minutes): readies animation/ with the look card, the brief, the look's library and the music, exactly as the setup card does in Easy. Call it with no arguments to get the looks, their lengths and the library tracks. Call it with everything once the user has settled it, and again only when they change the look, length or music (scenes and voices are kept). The reply says what to read next.",
     inputSchema: {
       additionalProperties: false,
       properties: {
@@ -389,7 +389,7 @@ export const AGENT_TOOLS: Record<AgentToolName, DynamicToolSpec> = {
   },
   ranking_add_sound: {
     description:
-      "Add a sound file the user dropped into the chat (or one in your working folder) to their sound library: mp3, wav, m4a, ogg, flac or aac, under 10 minutes. Answers its soundId, ready to use as the reveal sound, the music bed or an action sound.",
+      'Add a sound file the user dropped into the chat (or one in your working folder) to their sound library: mp3, wav, m4a, ogg, flac or aac, under 10 minutes. Answers its soundId, ready to use as the reveal sound, the music bed or an action sound.',
     inputSchema: {
       additionalProperties: false,
       properties: {
@@ -519,7 +519,12 @@ export const AGENT_TOOLS: Record<AgentToolName, DynamicToolSpec> = {
           description: 'A name for the user’s list, e.g. Funniest cat fails.',
           type: 'string',
         },
-        ranks: { description: 'How many ranks (2-10, default 5).', maximum: 10, minimum: 2, type: 'integer' },
+        ranks: {
+          description: 'How many ranks (2-10, default 5).',
+          maximum: 10,
+          minimum: 2,
+          type: 'integer',
+        },
       },
       required: ['name'],
       type: 'object',

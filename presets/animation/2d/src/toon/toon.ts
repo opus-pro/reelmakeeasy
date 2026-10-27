@@ -10,7 +10,14 @@ export type Pose = 'fist' | 'open' | 'point' | 'thumb'
 export type Hand = { pose?: Pose; rot?: number; x: number; y: number }
 
 /** A white cartoon glove; fingers point up at rot 0. */
-export function glove(x: number, y: number, rot = 0, pose: Pose = 'open', flip = 1, scale = 1): string {
+export function glove(
+  x: number,
+  y: number,
+  rot = 0,
+  pose: Pose = 'open',
+  flip = 1,
+  scale = 1,
+): string {
   const cap = (cx: number, cy: number, len: number, ang: number, r = 8) =>
     `<rect x="${cx - r}" y="${cy - len}" width="${2 * r}" height="${len + r}" rx="${r}" transform="rotate(${ang} ${cx} ${cy})"/>`
   let f = ''
@@ -28,7 +35,13 @@ export function glove(x: number, y: number, rot = 0, pose: Pose = 'open', flip =
 }
 
 /** An arm from shoulder [sx, sy] to hand h; the glove turns to follow the arm. side: -1 left, 1 right. */
-export function arm([sx, sy]: [number, number], h: Hand, color: string, side: -1 | 1, width = 13): string {
+export function arm(
+  [sx, sy]: [number, number],
+  h: Hand,
+  color: string,
+  side: -1 | 1,
+  width = 13,
+): string {
   const dx = h.x - sx
   const dy = h.y - sy
   const len = Math.hypot(dx, dy) || 1
@@ -45,7 +58,9 @@ export function arm([sx, sy]: [number, number], h: Hand, color: string, side: -1
 export const legs = (xs: number[], top: number, color: string, shoe: string): string =>
   xs
     .map(
-      (x) => `<path d="M ${x},${top} L ${x},-8" stroke="${INK}" stroke-width="19" stroke-linecap="round"/>
+      (
+        x,
+      ) => `<path d="M ${x},${top} L ${x},-8" stroke="${INK}" stroke-width="19" stroke-linecap="round"/>
     <path d="M ${x},${top} L ${x},-8" stroke="${color}" stroke-width="12" stroke-linecap="round"/>
     <ellipse cx="${x + Math.sign(x) * 12}" cy="-6" rx="28" ry="13" fill="${shoe}" stroke="${INK}" stroke-width="5"/>`,
     )
@@ -58,7 +73,9 @@ export const sparkle = (x: number, y: number, r: number, op = 1): string =>
  *  a quick zoom kick on the cut), `end: [[x, y, z], [x, y, z]]` (a 1.8 s move). z0 → z1 over the
  *  shot; a shot without a key uses `wide`. */
 export type Frames = {
-  [shot: string]: [number, number, number, number, number?] | [[number, number, number], [number, number, number]]
+  [shot: string]:
+    | [number, number, number, number, number?]
+    | [[number, number, number], [number, number, number]]
 }
 
 export type Cam = { x: number; y: number; z: number }

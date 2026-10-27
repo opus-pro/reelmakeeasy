@@ -671,7 +671,10 @@ export function reduceTranscript(state: Transcript, event: TranscriptAction): Tr
       return handleQuestionExpired(state, next, event)
     }
     case 'ranking': {
-      return { ...next, ranking: { id: event.rankingId, version: (state.ranking?.version ?? 0) + 1 } }
+      return {
+        ...next,
+        ranking: { id: event.rankingId, version: (state.ranking?.version ?? 0) + 1 },
+      }
     }
     case 'session': {
       return handleSession(state, next, event)

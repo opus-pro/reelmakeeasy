@@ -307,7 +307,7 @@ describe('AgentController', () => {
       NO_MODELS,
       NO_RANKINGS,
       NO_MOTION,
-        NO_ANIMATION,
+      NO_ANIMATION,
     )
     const body = await controller.status('1')
     expect(body).toMatchObject({
@@ -566,7 +566,9 @@ describe('AgentController', () => {
       animation.setup.mockImplementation(() => {
         throw new AnimationSetupError('Pick a look.')
       })
-      expect(() => controller.setupAnimation(S1, {})).toThrow(new BadRequestException('Pick a look.'))
+      expect(() => controller.setupAnimation(S1, {})).toThrow(
+        new BadRequestException('Pick a look.'),
+      )
       animation.setup.mockImplementation(() => {
         throw new AnimationSetupTakenError()
       })
@@ -1479,7 +1481,7 @@ describe('AgentController', () => {
           NO_MODELS,
           NO_RANKINGS,
           NO_MOTION,
-        NO_ANIMATION,
+          NO_ANIMATION,
         ).answerQuestion(S1, 'q-1', {
           answers: {},
         }),
@@ -1499,7 +1501,7 @@ describe('AgentController', () => {
           NO_MODELS,
           NO_RANKINGS,
           NO_MOTION,
-        NO_ANIMATION,
+          NO_ANIMATION,
         ).answerQuestion(S1, 'q-1', {
           answers: {},
         }),
@@ -1859,7 +1861,7 @@ describe('AgentController', () => {
           NO_MODELS,
           NO_RANKINGS,
           NO_MOTION,
-        NO_ANIMATION,
+          NO_ANIMATION,
         )
         await expect(controller.deleteSession(S1)).rejects.toBeInstanceOf(ConflictException)
       }

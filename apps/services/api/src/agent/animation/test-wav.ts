@@ -3,7 +3,10 @@ export function sineWav(hz: number, seconds: number, rate = 24000, amplitude = 0
   const samples = Math.round(seconds * rate)
   const data = Buffer.alloc(samples * 2)
   for (let i = 0; i < samples; i++)
-    data.writeInt16LE(Math.round(Math.sin((2 * Math.PI * hz * i) / rate) * amplitude * 32767), i * 2)
+    data.writeInt16LE(
+      Math.round(Math.sin((2 * Math.PI * hz * i) / rate) * amplitude * 32767),
+      i * 2,
+    )
   const header = Buffer.alloc(44)
   header.write('RIFF', 0)
   header.writeUInt32LE(36 + data.length, 4)

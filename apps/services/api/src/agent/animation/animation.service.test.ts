@@ -12,7 +12,11 @@ import { renderReel, renderStills } from '../motion-reel/motion-render'
 import { voiceReadiness } from './animation-setup'
 import type { VoiceDeps } from './animation-voice'
 import { sineWav } from './test-wav'
-import { AnimationService, type AnimationSessions, AnimationSetupTakenError } from './animation.service'
+import {
+  AnimationService,
+  type AnimationSessions,
+  AnimationSetupTakenError,
+} from './animation.service'
 
 // Setting up installs Remotion: a stand-in here. The project itself is laid out for real.
 jest.mock('../motion-reel/motion-runtime', () => ({
@@ -127,6 +131,7 @@ describe('AnimationService, the setup card', () => {
     // Every look has a preview clip in the presets.
     for (const look of options.looks) expect(look.previewUrl).toMatch(/animation\/looks\/.+\.mp4$/)
     expect(options.tracks.length).toBeGreaterThan(0)
+    // Music models only (the code composer is Motion Reel's).
     expect(options.composers.map((c) => c.id)).toEqual(['eleven-music', 'ace-step'])
   })
 
@@ -358,7 +363,13 @@ describe('AnimationService, an Advanced chat', () => {
 
   it('keeps the music it made when set up again the same way (no second paid track)', async () => {
     const { service, updated, workspace } = makeAnimation('animation_free')
-    const ARGS = { lengthSec: 45, lookId: '3d', music: 'agent', musicEngine: 'ace-step', subject: 'Volcanoes' }
+    const ARGS = {
+      lengthSec: 45,
+      lookId: '3d',
+      music: 'agent',
+      musicEngine: 'ace-step',
+      subject: 'Volcanoes',
+    }
     await service.callTool('s1', 'animation_setup', ARGS)
     await service.callTool('s1', 'animation_music', { prompt: 'deep drums' })
     const made = updated.at(-1)?.musicTitle

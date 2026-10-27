@@ -129,7 +129,10 @@ export function writeAnimationJson(projectDir: string, spec: AnimationJson): voi
 }
 
 /** The brief Claude reads first: what the user chose, in plain words. */
-export function renderAnimationBrief(setup: AgentAnimationSetup, musicTitle: null | string): string {
+export function renderAnimationBrief(
+  setup: AgentAnimationSetup,
+  musicTitle: null | string,
+): string {
   const look = animationLook(setup.lookId)
   const music =
     setup.music.source === 'none'

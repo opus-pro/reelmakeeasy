@@ -42,9 +42,9 @@ const OPTIONS: AgentAnimationOptions = {
     },
   ],
   tracks: [
-    { bpm: 90, id: 'data-pulse', previewUrl: '/a.mp3', styles: [], title: 'Data Pulse' },
-    { bpm: 96, id: 'dark-precision', previewUrl: '/b.mp3', styles: [], title: 'Dark Precision' },
-    { bpm: 120, id: 'neon-drive', previewUrl: '/c.mp3', styles: [], title: 'Neon Drive' },
+    { bpm: 90, id: 'data-pulse', previewUrl: '/a.mp3', title: 'Data Pulse' },
+    { bpm: 96, id: 'dark-precision', previewUrl: '/b.mp3', title: 'Dark Precision' },
+    { bpm: 120, id: 'neon-drive', previewUrl: '/c.mp3', title: 'Neon Drive' },
   ],
 }
 
@@ -106,7 +106,9 @@ describe('AnimationSetupCard', () => {
     const onSubmit = renderCard({
       ...OPTIONS,
       looks: OPTIONS.looks.map((l) =>
-        l.id === '2d' ? { ...l, disabledReason: 'Needs Qwen3 voices on this computer or a fal key.' } : l,
+        l.id === '2d'
+          ? { ...l, disabledReason: 'Needs Qwen3 voices on this computer or a fal key.' }
+          : l,
       ),
     })
     expect(look(/2D/).disabled).toBe(true)
@@ -117,7 +119,9 @@ describe('AnimationSetupCard', () => {
   })
 
   it('shows what was chosen once it is sent', () => {
-    jest.mocked(useAnimationOptions).mockReturnValue({ error: false, options: OPTIONS, retry: jest.fn() })
+    jest
+      .mocked(useAnimationOptions)
+      .mockReturnValue({ error: false, options: OPTIONS, retry: jest.fn() })
     render(
       <AnimationSetupCard
         entry={{

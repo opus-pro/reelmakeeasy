@@ -189,7 +189,8 @@ export function WelcomeCard({
   const locked = mode !== null || pending !== null
   // Claude Animation runs on Claude Code whatever agent is picked; unusable until it is ready.
   const claudeOnly = !!tool.claudeOnly
-  const claudeMissing = claudeOnly && mode === null ? harnessNotReady(status ?? null, 'claude') : undefined
+  const claudeMissing =
+    claudeOnly && mode === null ? harnessNotReady(status ?? null, 'claude') : undefined
 
   const choose = async (next: AgentMode) => {
     if (locked || claudeMissing || inFlightRef.current) return

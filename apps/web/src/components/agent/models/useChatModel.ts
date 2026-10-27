@@ -12,11 +12,7 @@ export type ChatModel = ReturnType<typeof useChatModel>
 
 /** `key` changes when the chat's agent or mode does (a Claude Animation moves a Codex chat to
  *  Claude Code; a Motion Reel pins its model): the model is asked again then. */
-export function useChatModel(
-  sessionId: null | string | undefined,
-  enabled: boolean,
-  key = '',
-) {
+export function useChatModel(sessionId: null | string | undefined, enabled: boolean, key = '') {
   const { fetchApiDomain } = useApi()
   const [state, setState] = useState<ChatModelState | null>(null)
   const [error, setError] = useState<null | string>(null)

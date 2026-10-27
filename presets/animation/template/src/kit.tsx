@@ -163,7 +163,10 @@ export function Captions({
       }}
     >
       {shown.map((w, i) => (
-        <span key={`${now.index}-${first + i}`} style={{ color: first + i === at ? accent : color }}>
+        <span
+          key={`${now.index}-${first + i}`}
+          style={{ color: first + i === at ? accent : color }}
+        >
           {w.text}{' '}
         </span>
       ))}

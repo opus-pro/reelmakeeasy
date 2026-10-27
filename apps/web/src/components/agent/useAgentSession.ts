@@ -396,7 +396,9 @@ export function useAgentSession(sessionId: string | undefined) {
         }
         const message = error instanceof Error ? error.message : ''
         addLocalNotice(
-          status === 409 ? modeConflictNotice(message, harness) : 'Could not start that mode. Try again.',
+          status === 409
+            ? modeConflictNotice(message, harness)
+            : 'Could not start that mode. Try again.',
         )
         return false
       }

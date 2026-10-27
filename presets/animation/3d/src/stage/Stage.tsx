@@ -38,8 +38,18 @@ export function Stage3D({
   }, [background, build, fps, frame])
   return (
     <AbsoluteFill>
-      <canvas height={1920} ref={gl} style={{ left: 0, position: 'absolute', top: 0 }} width={1080} />
-      <canvas height={1920} ref={overlay} style={{ left: 0, position: 'absolute', top: 0 }} width={1080} />
+      <canvas
+        height={1920}
+        ref={gl}
+        style={{ left: 0, position: 'absolute', top: 0 }}
+        width={1080}
+      />
+      <canvas
+        height={1920}
+        ref={overlay}
+        style={{ left: 0, position: 'absolute', top: 0 }}
+        width={1080}
+      />
     </AbsoluteFill>
   )
 }

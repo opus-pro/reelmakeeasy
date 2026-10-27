@@ -125,7 +125,9 @@ describe('WelcomeCard', () => {
       const modes = within(screen.getByRole('tabpanel'))
         .getAllByRole('button')
         .map((b) => b.textContent ?? '')
-      expect(modes[0]).toMatch(/Easy \(Guided\).*Recommended.*every frame in code: 2D, 3D or 8-bit.*No AI video model/)
+      expect(modes[0]).toMatch(
+        /Easy \(Guided\).*Recommended.*every frame in code: 2D, 3D or 8-bit.*No AI video model/,
+      )
       expect(modes[1]).toMatch(/Advanced \(Free chat\).*the story, the look, the music/)
       // No agent switch: it runs on Claude Code.
       expect(screen.queryByRole('radiogroup')).toBeNull()
@@ -161,7 +163,9 @@ describe('WelcomeCard', () => {
       )
       expect(option(/Easy \(Guided\)/).disabled).toBe(true)
       expect(option(/Advanced \(Free chat\)/).disabled).toBe(true)
-      expect(screen.getByText('Sign in to Claude Code: run claude login in a terminal')).toBeTruthy()
+      expect(
+        screen.getByText('Sign in to Claude Code: run claude login in a terminal'),
+      ).toBeTruthy()
     })
 
     it('is disabled when Claude Code is not installed', () => {

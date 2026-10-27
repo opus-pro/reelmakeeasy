@@ -878,7 +878,10 @@ describe('AgentSessionService', () => {
         subject: 'How a heart pumps',
       }
       svc.updateAnimation(session.id, setup)
-      expect(svc.getSession(session.id)).toMatchObject({ animation: setup, title: 'How a heart pumps' })
+      expect(svc.getSession(session.id)).toMatchObject({
+        animation: setup,
+        title: 'How a heart pumps',
+      })
       expect(events.find((e) => e.type === 'animation_setup')).toMatchObject({ setup })
     })
 

@@ -37,9 +37,9 @@ describe('wordsMatch', () => {
   it('forgives one slip in a long line, never in a short one', () => {
     const line = 'The ball hangs from 8 thick cables so it lags just behind the tower'
     expect(wordsMatch(line, line.replace('thick', 'think').split(' '))).toBe(true)
-    expect(wordsMatch(line, line.replace('thick', 'think').replace('lags', 'legs').split(' '))).toBe(
-      false,
-    )
+    expect(
+      wordsMatch(line, line.replace('thick', 'think').replace('lags', 'legs').split(' ')),
+    ).toBe(false)
   })
 })
 
@@ -89,7 +89,10 @@ describe('recordVoices', () => {
 
   // Like the real ones: the aligner times the script's own words; only a transcript says what
   // the take really said.
-  const deps = (hz: number[] = [200], heard?: (text: string, take: number) => string): VoiceDeps => {
+  const deps = (
+    hz: number[] = [200],
+    heard?: (text: string, take: number) => string,
+  ): VoiceDeps => {
     let take = 0
     let last = ''
     return {

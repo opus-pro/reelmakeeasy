@@ -39,9 +39,7 @@ export const voiceLines = lines as VoiceLine[]
 export const sec = (seconds: number): number => Math.round(seconds * spec.fps)
 
 /** The whole video: its length, or the voice plus a second to land, whichever is longer. */
-export const durationInFrames = sec(
-  Math.max(spec.lengthSec, (voiceLines.at(-1)?.end ?? 0) + 1),
-)
+export const durationInFrames = sec(Math.max(spec.lengthSec, (voiceLines.at(-1)?.end ?? 0) + 1))
 
 /** The frame line `i` starts on (0 before any voice exists). */
 export const lineStart = (i: number): number => sec(voiceLines[i]?.start ?? 0)

@@ -1,6 +1,5 @@
 import { composerPlaceholder } from './composer-placeholder'
 
-
 const base = {
   cardOrMessage: false,
   cardQuestions: 0,

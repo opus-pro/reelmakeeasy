@@ -82,7 +82,9 @@ export function parseVoiceArgs(args: unknown): {
       )
     const voice = voices.get(who)
     if (!voice)
-      throw new VoiceArgsError(`Give ${who} a voice in voices ("${who}: a description of the voice").`)
+      throw new VoiceArgsError(
+        `Give ${who} a voice in voices ("${who}: a description of the voice").`,
+      )
     return { text: body, voice, who }
   })
   if (!lines.length) throw new VoiceArgsError('Pass the lines to record.')
@@ -305,7 +307,8 @@ function toWav(chunks: Float32Array[], rate: number): Buffer {
   const data = Buffer.alloc(count * 2)
   let i = 0
   for (const chunk of chunks)
-    for (const v of chunk) data.writeInt16LE(Math.max(-32768, Math.min(32767, Math.round(v * 32767))), 2 * i++)
+    for (const v of chunk)
+      data.writeInt16LE(Math.max(-32768, Math.min(32767, Math.round(v * 32767))), 2 * i++)
   const header = Buffer.alloc(44)
   header.write('RIFF', 0)
   header.writeUInt32LE(36 + data.length, 4)

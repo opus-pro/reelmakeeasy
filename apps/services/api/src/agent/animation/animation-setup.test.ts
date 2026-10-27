@@ -42,6 +42,15 @@ describe('parseAnimationSetup', () => {
     })
   })
 
+  it('makes its music with a music model: the code composer is a Motion Reel thing', () => {
+    expect(
+      parseAnimationSetup({ ...ok, music: { engine: 'composer', source: 'agent' } }).music,
+    ).toEqual({ engine: 'eleven-music', source: 'agent' })
+    expect(
+      parseAnimationSetup({ ...ok, music: { engine: 'ace-step', source: 'agent' } }).music,
+    ).toEqual({ engine: 'ace-step', source: 'agent' })
+  })
+
   it.each([
     [{ ...ok, lookId: 'vox' }, 'Pick a look.'],
     [{ ...ok, lengthSec: 60 }, 'The length must be one of 30 seconds.'],

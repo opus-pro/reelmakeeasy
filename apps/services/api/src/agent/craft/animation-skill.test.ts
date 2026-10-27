@@ -16,7 +16,12 @@ describe('renderAnimationSkill', () => {
     expect(skill.startsWith(`---\nname: reelmakeeasy-animation-${look}\ndescription: `)).toBe(true)
     const description = skill.split('\n')[2] ?? ''
     expect(description.slice('description: '.length)).not.toMatch(/: | #/)
-    for (const tool of ['animation_voice', 'animation_still', 'animation_render', 'animation_music'])
+    for (const tool of [
+      'animation_voice',
+      'animation_still',
+      'animation_render',
+      'animation_music',
+    ])
       expect(skill).toContain(tool)
   })
 
