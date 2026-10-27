@@ -869,11 +869,15 @@ function setupFrom(view: AgentAnimationSetupView): AgentAnimationSetup {
   }
 }
 
-/** A look's preview clip in the presets, when there is one. */
+/** A look's preview clip in the presets, when there is one. The link carries the file's version
+ *  (its change time): the server lets browsers keep a preset for an hour, so a re-rendered clip
+ *  needs a new link or the card keeps playing the old one. */
 function previewUrl(lookId: string): null | string {
   const key = `animation/looks/${lookId}.mp4`
   try {
-    return fs.existsSync(presetPath(key)) ? presetUrl(key) : null
+    const file = presetPath(key)
+    if (!fs.existsSync(file)) return null
+    return `${presetUrl(key)}?v=${Math.round(fs.statSync(file).mtimeMs)}`
   } catch {
     return null
   }

@@ -143,8 +143,10 @@ describe('AnimationService, the setup card', () => {
     ])
     expect([options.minLengthSec, options.maxLengthSec]).toEqual([10, 90])
     expect(options.looks[0]?.defaultTrackId).toBe('data-pulse')
-    // Every look has a preview clip in the presets.
-    for (const look of options.looks) expect(look.previewUrl).toMatch(/animation\/looks\/.+\.mp4$/)
+    // Every look has a preview clip in the presets, its link carrying the file's version (so a
+    // re-rendered clip is never played from the browser's old copy).
+    for (const look of options.looks)
+      expect(look.previewUrl).toMatch(/animation\/looks\/.+\.mp4\?v=\d+$/)
     expect(options.tracks.length).toBeGreaterThan(0)
     // Claude composing the music itself first (free), then the music models.
     expect(options.composers.map((c) => c.id)).toEqual(['composer', 'eleven-music', 'ace-step'])
