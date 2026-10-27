@@ -209,7 +209,7 @@ function SetupForm({
               or
               <input
                 aria-label="Custom length in seconds"
-                className="w-16 rounded-md border border-white/10 bg-black/30 px-2 py-1 text-xs text-primary placeholder:text-tertiary focus:border-white/30 focus:outline-none"
+                className="w-20 rounded-md border border-white/10 bg-black/30 px-2 py-1 text-xs text-primary placeholder:text-tertiary focus:border-white/30 focus:outline-none"
                 max={options.maxLengthSec}
                 min={options.minLengthSec}
                 onChange={(e) => setCustom(e.target.value)}
