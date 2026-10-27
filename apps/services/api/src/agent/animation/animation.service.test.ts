@@ -122,11 +122,13 @@ describe('AnimationService, the setup card', () => {
   it('lists the three looks with their lengths and tracks', async () => {
     const { service } = makeAnimation('animation')
     const options = await service.options()
+    const lengths = [15, 30, 45, 60, 90]
     expect(options.looks.map((l) => [l.id, l.label, l.lengths, l.disabledReason ?? null])).toEqual([
-      ['2d', '2D', [30], null],
-      ['3d', '3D', [30, 45, 60], null],
-      ['8bit', '8-bit', [30, 45, 60], null],
+      ['2d', '2D', lengths, null],
+      ['3d', '3D', lengths, null],
+      ['8bit', '8-bit', lengths, null],
     ])
+    expect([options.minLengthSec, options.maxLengthSec]).toEqual([10, 90])
     expect(options.looks[0]?.defaultTrackId).toBe('data-pulse')
     // Every look has a preview clip in the presets.
     for (const look of options.looks) expect(look.previewUrl).toMatch(/animation\/looks\/.+\.mp4$/)
@@ -333,8 +335,8 @@ describe('AnimationService, an Advanced chat', () => {
     const { service, updated } = makeAnimation('animation_free')
     const result = await service.callTool('s1', 'animation_setup', {})
     expect(result.success).toBe(true)
-    expect(result.text).toMatch(/- 2d: 2D \(lengths 30\)\. Cartoon characters/)
-    expect(result.text).toMatch(/- 8bit: 8-bit \(lengths 30, 45, 60\)/)
+    expect(result.text).toMatch(/- 2d: 2D\. Cartoon characters/)
+    expect(result.text).toMatch(/Length \(lengthSec\): any whole number of seconds from 10 to 90 \(15, 30, 45, 60 or 90 suggested; default 30\)/)
     expect(result.text).toMatch(/- data-pulse: /)
     expect(updated).toEqual([])
   })
@@ -387,8 +389,8 @@ describe('AnimationService, an Advanced chat', () => {
   it('refuses a bad setup plainly', async () => {
     const { service } = makeAnimation('animation_free')
     await expect(
-      service.callTool('s1', 'animation_setup', { lengthSec: 60, lookId: '2d' }),
-    ).resolves.toEqual({ success: false, text: 'The length must be one of 30 seconds.' })
+      service.callTool('s1', 'animation_setup', { lengthSec: 120, lookId: '2d' }),
+    ).resolves.toEqual({ success: false, text: 'The length must be 10 to 90 seconds.' })
   })
 
   it("won't set up an Easy chat from the tool", async () => {

@@ -123,10 +123,15 @@ function SetupForm({
   const [pending, setPending] = useState(false)
   const inFlightRef = useRef(false)
 
+  // A length of the user's own (seconds, as typed); empty: one of the suggested lengths.
+  const [custom, setCustom] = useState('')
+  const typed = Number(custom)
+  const customOk =
+    Number.isInteger(typed) && typed >= options.minLengthSec && typed <= options.maxLengthSec
+  const length = custom.trim() ? typed : lengthSec
+
   const pickLook = (next: Look) => {
     setLookId(next.id)
-    // A length the new look doesn't offer goes back to its own default.
-    if (!next.lengths.includes(lengthSec)) setLengthSec(next.defaultLengthSec)
     // The look's own track follows it, until the user picks the music themselves.
     if (!musicTouched) setMusic(defaultMusic(options, next))
   }
@@ -135,13 +140,14 @@ function SetupForm({
     setMusic(next)
   }
 
-  const ready = !!look && !look.disabledReason && (surprise || !!subject.trim())
+  const lengthOk = !custom.trim() || customOk
+  const ready = !!look && !look.disabledReason && (surprise || !!subject.trim()) && lengthOk
   const submit = async () => {
     if (!ready || !look || inFlightRef.current) return
     inFlightRef.current = true
     setPending(true)
     const ok = await onSubmit({
-      lengthSec,
+      lengthSec: length,
       lookId: look.id,
       music: musicChoice(music),
       subject: surprise ? null : subject.trim(),
@@ -182,12 +188,31 @@ function SetupForm({
           </label>
         </div>
         {look && (
-          <ChipRow
-            label="Length"
-            onPick={setLengthSec}
-            options={look.lengths.map((value) => ({ label: `${value} s`, value }))}
-            selected={lengthSec}
-          />
+          <div className="flex flex-wrap items-end gap-3">
+            <ChipRow
+              label="Length"
+              onPick={(value) => {
+                setLengthSec(value)
+                setCustom('')
+              }}
+              options={look.lengths.map((value) => ({ label: `${value} s`, value }))}
+              selected={custom.trim() ? -1 : lengthSec}
+            />
+            <label className="flex items-center gap-1.5 text-xs text-secondary">
+              or
+              <input
+                aria-label="Custom length in seconds"
+                className="w-16 rounded-md border border-white/10 bg-black/30 px-2 py-1 text-xs text-primary placeholder:text-tertiary focus:border-white/30 focus:outline-none"
+                max={options.maxLengthSec}
+                min={options.minLengthSec}
+                onChange={(e) => setCustom(e.target.value)}
+                placeholder="Custom"
+                type="number"
+                value={custom}
+              />
+              s
+            </label>
+          </div>
         )}
         <MusicPicker
           agentName="Claude"
@@ -205,7 +230,9 @@ function SetupForm({
         {pending && <Spinner className="text-secondary" />}
         {!ready && !pending && !look?.disabledReason && (
           <span className="text-xs text-secondary">
-            Say what it&apos;s about, or pick Surprise me.
+            {lengthOk
+              ? "Say what it's about, or pick Surprise me."
+              : `Pick a length from ${options.minLengthSec} to ${options.maxLengthSec} seconds.`}
           </span>
         )}
       </div>

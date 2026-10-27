@@ -7,7 +7,14 @@ import {
 
 import { motionReelTrack } from '../motion-reel/music'
 
-import { ANIMATION_LOOKS, animationLook, renderLookCard } from './looks'
+import {
+  ANIMATION_DEFAULT_SEC,
+  ANIMATION_LOOKS,
+  ANIMATION_MAX_SEC,
+  ANIMATION_MIN_SEC,
+  animationLook,
+  renderLookCard,
+} from './looks'
 
 describe('animation modes', () => {
   it('puts both animation modes under the animation tool', () => {
@@ -35,10 +42,9 @@ describe('animation looks', () => {
     ])
   })
 
-  it('offers 30 s only for 2D and 30/45/60 for the others', () => {
-    expect(animationLook('2d')?.lengths).toEqual([30])
-    expect(animationLook('3d')?.lengths).toEqual([30, 45, 60])
-    expect(animationLook('8bit')?.lengths).toEqual([30, 45, 60])
+  it('offers 15 to 90 s for every look, any whole number from 10 to 90 typed in', () => {
+    for (const look of ANIMATION_LOOKS) expect(look.lengths).toEqual([15, 30, 45, 60, 90])
+    expect([ANIMATION_MIN_SEC, ANIMATION_MAX_SEC, ANIMATION_DEFAULT_SEC]).toEqual([10, 90, 30])
   })
 
   it('casts two characters in 2D and a narrator in 3D and 8-bit', () => {

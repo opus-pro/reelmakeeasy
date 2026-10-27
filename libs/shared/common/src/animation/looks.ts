@@ -14,7 +14,7 @@ export type AnimationLook = {
   description: string
   id: AnimationLookId
   label: string
-  /** The lengths it offers, in seconds; the first is the default. */
+  /** The lengths the card suggests, in seconds. */
   lengths: number[]
   /** What it looks like, for look.md. */
   look: string
@@ -27,6 +27,12 @@ export const ANIMATION_FPS = 30
 /** 9:16 only for now. */
 export const ANIMATION_SIZE = { height: 1920, width: 1080 } as const
 export const ANIMATION_SUBJECT_MAX = 600
+/** The lengths the card suggests (seconds); any whole number from ANIMATION_MIN_SEC to
+ *  ANIMATION_MAX_SEC can be typed in. A Short stays within 90 s. */
+export const ANIMATION_LENGTHS = [15, 30, 45, 60, 90] as const
+export const ANIMATION_MIN_SEC = 10
+export const ANIMATION_MAX_SEC = 90
+export const ANIMATION_DEFAULT_SEC = 30
 
 export const ANIMATION_LOOKS: readonly AnimationLook[] = [
   {
@@ -35,7 +41,7 @@ export const ANIMATION_LOOKS: readonly AnimationLook[] = [
     description: 'Cartoon characters talk you through it, with voices and lip sync.',
     id: '2d',
     label: '2D',
-    lengths: [30],
+    lengths: [...ANIMATION_LENGTHS],
     look: 'Flat, bright cartoon: two characters with faces (objects, food, animals, people, the Moon) in a simple setting, thick soft outlines, big eyes, a speech bubble for who is talking.',
     palette: ['#FFF4E0', '#2B2140', '#FF7A59', '#4CC9F0', '#FFD166'],
     skill: 'reelmakeeasy-animation-2d',
@@ -46,7 +52,7 @@ export const ANIMATION_LOOKS: readonly AnimationLook[] = [
     description: 'A 3D scene shows how something works, with a narrator.',
     id: '3d',
     label: '3D',
-    lengths: [30, 45, 60],
+    lengths: [...ANIMATION_LENGTHS],
     look: 'Clean 3D: one detailed hero object or machine under soft studio light, a dark ground with fog, labels with leader lines on the parts being explained, a camera that is always moving.',
     palette: ['#0E1116', '#F5F7FA', '#5EEAD4', '#F59E0B', '#A78BFA'],
     skill: 'reelmakeeasy-animation-3d',
@@ -57,7 +63,7 @@ export const ANIMATION_LOOKS: readonly AnimationLook[] = [
     description: 'Pixel art, like an old video game, with a narrator.',
     id: '8bit',
     label: '8-bit',
-    lengths: [30, 45, 60],
+    lengths: [...ANIMATION_LENGTHS],
     look: 'Pixel art like an old video game: a low-resolution 3D scene drawn blocky and dithered, x-ray cutaways, crisp pixel-font captions and labels, a busy screen with at least three things moving.',
     palette: ['#10101A', '#F8F8F8', '#FF004D', '#29ADFF', '#FFEC27', '#00E436'],
     skill: 'reelmakeeasy-animation-8bit',

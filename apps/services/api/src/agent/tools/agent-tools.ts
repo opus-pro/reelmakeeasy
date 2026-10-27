@@ -161,8 +161,10 @@ export const AGENT_TOOLS: Record<AgentToolName, DynamicToolSpec> = {
       additionalProperties: false,
       properties: {
         lengthSec: {
-          description: "About how long, in seconds: one of the look's lengths.",
-          enum: [30, 45, 60],
+          description:
+            'About how long, in seconds: any whole number from 10 to 90 (15, 30, 45, 60 or 90 suggested).',
+          maximum: 90,
+          minimum: 10,
           type: 'integer',
         },
         lookId: { description: 'The look.', enum: ['2d', '3d', '8bit'], type: 'string' },

@@ -12,6 +12,8 @@ const OPTIONS: AgentAnimationOptions = {
     { cost: '$0.60 a minute', description: 'Rich', id: 'eleven-music', label: 'ElevenLabs Music' },
     { cost: 'about $0.01', description: 'Quick', id: 'ace-step', label: 'ACE-Step' },
   ],
+  maxLengthSec: 90,
+  minLengthSec: 10,
   looks: [
     {
       defaultLengthSec: 30,
@@ -19,7 +21,7 @@ const OPTIONS: AgentAnimationOptions = {
       description: 'Cartoon characters talk you through it, with voices and lip sync.',
       id: '2d',
       label: '2D',
-      lengths: [30],
+      lengths: [15, 30, 45, 60, 90],
       previewUrl: null,
     },
     {
@@ -28,7 +30,7 @@ const OPTIONS: AgentAnimationOptions = {
       description: 'A 3D scene shows how something works, with a narrator.',
       id: '3d',
       label: '3D',
-      lengths: [30, 45, 60],
+      lengths: [15, 30, 45, 60, 90],
       previewUrl: '/api/presets/animation/looks/3d.mp4',
     },
     {
@@ -37,7 +39,7 @@ const OPTIONS: AgentAnimationOptions = {
       description: 'Pixel art, like an old video game, with a narrator.',
       id: '8bit',
       label: '8-bit',
-      lengths: [30, 45, 60],
+      lengths: [15, 30, 45, 60, 90],
       previewUrl: null,
     },
   ],
@@ -64,7 +66,7 @@ describe('AnimationSetupCard', () => {
     const onSubmit = renderCard()
     fireEvent.click(look(/3D/))
     fireEvent.click(screen.getByRole('radio', { name: '45 s' }))
-    fireEvent.change(screen.getByRole('textbox'), { target: { value: '  black holes  ' } })
+    fireEvent.change(screen.getByRole('textbox', { name: "What's it about?" }), { target: { value: '  black holes  ' } })
     fireEvent.click(screen.getByRole('button', { name: 'Animate it' }))
     expect(onSubmit).toHaveBeenCalledWith({
       lengthSec: 45,
@@ -90,11 +92,37 @@ describe('AnimationSetupCard', () => {
     expect(screen.getByText(/Say what it's about, or pick Surprise me/)).toBeTruthy()
   })
 
-  it('offers only 30 s for 2D', () => {
-    renderCard()
+  it('offers 15 to 90 s for every look, and a length of your own', () => {
+    const onSubmit = renderCard()
     expect(screen.getAllByRole('radio', { name: /^\d+ s$/ }).map((r) => r.textContent)).toEqual([
+      '15 s',
       '30 s',
+      '45 s',
+      '60 s',
+      '90 s',
     ])
+    fireEvent.change(screen.getByRole('textbox', { name: "What's it about?" }), {
+      target: { value: 'rain' },
+    })
+    fireEvent.change(screen.getByRole('spinbutton', { name: 'Custom length in seconds' }), {
+      target: { value: '75' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Animate it' }))
+    expect(onSubmit).toHaveBeenCalledWith(expect.objectContaining({ lengthSec: 75 }))
+  })
+
+  it('refuses a custom length outside 10 to 90 s', () => {
+    renderCard()
+    fireEvent.change(screen.getByRole('textbox', { name: "What's it about?" }), {
+      target: { value: 'rain' },
+    })
+    fireEvent.change(screen.getByRole('spinbutton', { name: 'Custom length in seconds' }), {
+      target: { value: '120' },
+    })
+    expect((screen.getByRole('button', { name: 'Animate it' }) as HTMLButtonElement).disabled).toBe(
+      true,
+    )
+    expect(screen.getByText('Pick a length from 10 to 90 seconds.')).toBeTruthy()
   })
 
   it('plays a look preview when there is one', () => {

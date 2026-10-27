@@ -1,4 +1,9 @@
-import { ANIMATION_SUBJECT_MAX, animationLook } from '@reelmakeeasy/common/animation/looks'
+import {
+  ANIMATION_MAX_SEC,
+  ANIMATION_MIN_SEC,
+  ANIMATION_SUBJECT_MAX,
+  animationLook,
+} from '@reelmakeeasy/common/animation/looks'
 import { localTtsSupports } from '@reelmakeeasy/common/tts/local-tts'
 import { ensureError } from '@reelmakeeasy/common/utils/error-handler'
 import type { AgentAnimationSetup } from '@shared/types/api/agent'
@@ -38,8 +43,15 @@ export function parseAnimationSetup(body: unknown): AgentAnimationSetup {
   const look = typeof body['lookId'] === 'string' ? animationLook(body['lookId']) : undefined
   if (!look) throw new AnimationSetupError('Pick a look.')
   const lengthSec = body['lengthSec']
-  if (typeof lengthSec !== 'number' || !look.lengths.includes(lengthSec))
-    throw new AnimationSetupError(`The length must be one of ${look.lengths.join(', ')} seconds.`)
+  if (
+    typeof lengthSec !== 'number' ||
+    !Number.isInteger(lengthSec) ||
+    lengthSec < ANIMATION_MIN_SEC ||
+    lengthSec > ANIMATION_MAX_SEC
+  )
+    throw new AnimationSetupError(
+      `The length must be ${ANIMATION_MIN_SEC} to ${ANIMATION_MAX_SEC} seconds.`,
+    )
   const subject = typeof body['subject'] === 'string' ? body['subject'].trim() : ''
   if (subject.length > ANIMATION_SUBJECT_MAX)
     throw new AnimationSetupError(

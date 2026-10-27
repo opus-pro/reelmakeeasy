@@ -24,7 +24,7 @@ export type AnimationLookId = '2d' | '3d' | '8bit'
 
 /** What the Claude Animation setup card sends (`POST /api/agent/sessions/:id/animation`). */
 export type AgentAnimationSetup = {
-  /** About this long, in seconds (one of the look's lengths). */
+  /** About this long, in seconds: a whole number from 10 to 90. */
   lengthSec: number
   lookId: AnimationLookId
   /** Motion Reel's music choices. */
@@ -36,6 +36,9 @@ export type AgentAnimationSetup = {
 /** `GET /api/agent/animation/options`: what the Claude Animation setup card offers. */
 export type AgentAnimationOptions = {
   composers: AgentMotionOptions['composers']
+  /** Any whole number of seconds in this range can be typed in. */
+  maxLengthSec: number
+  minLengthSec: number
   looks: {
     defaultLengthSec: number
     /** The track the card picks with this look. */

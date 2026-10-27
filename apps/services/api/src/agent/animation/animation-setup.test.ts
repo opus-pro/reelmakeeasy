@@ -27,6 +27,12 @@ describe('parseAnimationSetup', () => {
     })
   })
 
+  it('takes any whole number of seconds from 10 to 90, for every look', () => {
+    expect(parseAnimationSetup({ ...ok, lengthSec: 90 }).lengthSec).toBe(90)
+    expect(parseAnimationSetup({ ...ok, lengthSec: 22, lookId: '3d' }).lengthSec).toBe(22)
+    expect(parseAnimationSetup({ ...ok, lengthSec: 10, lookId: '8bit' }).lengthSec).toBe(10)
+  })
+
   it('reads an empty subject as Surprise me', () => {
     expect(parseAnimationSetup({ ...ok, subject: '  ' }).subject).toBeNull()
     expect(parseAnimationSetup({ ...ok, subject: null }).subject).toBeNull()
@@ -53,8 +59,9 @@ describe('parseAnimationSetup', () => {
 
   it.each([
     [{ ...ok, lookId: 'vox' }, 'Pick a look.'],
-    [{ ...ok, lengthSec: 60 }, 'The length must be one of 30 seconds.'],
-    [{ ...ok, lengthSec: 15, lookId: '3d' }, 'The length must be one of 30, 45, 60 seconds.'],
+    [{ ...ok, lengthSec: 95 }, 'The length must be 10 to 90 seconds.'],
+    [{ ...ok, lengthSec: 5 }, 'The length must be 10 to 90 seconds.'],
+    [{ ...ok, lengthSec: 22.5 }, 'The length must be 10 to 90 seconds.'],
     [{ ...ok, subject: 'x'.repeat(601) }, 'Keep what it is about under 600 characters.'],
     [{ ...ok, music: { id: 'nope', source: 'library' } }, "That music isn't available."],
     ['nothing', 'The setup is missing.'],

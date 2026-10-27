@@ -1,7 +1,14 @@
 import fs from 'node:fs'
 import path from 'node:path'
 
-import { ANIMATION_LOOKS, animationLook } from '@reelmakeeasy/common/animation/looks'
+import {
+  ANIMATION_DEFAULT_SEC,
+  ANIMATION_LENGTHS,
+  ANIMATION_LOOKS,
+  ANIMATION_MAX_SEC,
+  ANIMATION_MIN_SEC,
+  animationLook,
+} from '@reelmakeeasy/common/animation/looks'
 import { Logger } from '@reelmakeeasy/common/logger'
 import { motionReelTrack, motionReelTracks } from '@reelmakeeasy/common/motion-reel/music'
 import {
@@ -323,11 +330,12 @@ export class AnimationService {
   private async optionsText(): Promise<string> {
     const options = await this.options()
     return [
-      'Looks (lookId: label, its lengths in seconds, then what it is):',
+      'Looks (lookId: label, then what it is):',
       ...options.looks.map(
         (l) =>
-          `- ${l.id}: ${l.label} (lengths ${l.lengths.join(', ')}). ${l.description}${l.disabledReason ? ` Not available here: ${l.disabledReason}` : ''}`,
+          `- ${l.id}: ${l.label}. ${l.description}${l.disabledReason ? ` Not available here: ${l.disabledReason}` : ''}`,
       ),
+      `Length (lengthSec): any whole number of seconds from ${options.minLengthSec} to ${options.maxLengthSec} (${ANIMATION_LENGTHS.slice(0, -1).join(', ')} or ${ANIMATION_LENGTHS.at(-1)} suggested; default ${ANIMATION_DEFAULT_SEC}).`,
       'Library tracks (music "library", musicId):',
       ...options.tracks.map((t) => `- ${t.id}: ${t.title}`),
       'Or music "upload" (the user\'s own file through the paperclip; musicId: its path), "none", or "agent": you make it with animation_music right after the setup, with the music model the user picks (musicEngine):',
@@ -425,7 +433,7 @@ export class AnimationService {
     return {
       composers: ANIMATION_MUSIC_ENGINES.map((id) => ({ id, ...MOTION_MUSIC_ENGINE_INFO[id] })),
       looks: ANIMATION_LOOKS.map((look) => ({
-        defaultLengthSec: look.lengths[0] as number,
+        defaultLengthSec: ANIMATION_DEFAULT_SEC,
         defaultTrackId: look.defaultTrackId,
         description: look.description,
         ...(look.cast === 'duo' && !voices.designed ? { disabledReason: NO_DESIGNED_VOICES } : {}),
@@ -434,6 +442,8 @@ export class AnimationService {
         lengths: [...look.lengths],
         previewUrl: previewUrl(look.id),
       })),
+      maxLengthSec: ANIMATION_MAX_SEC,
+      minLengthSec: ANIMATION_MIN_SEC,
       tracks: motionReelTracks().map((track) => ({
         bpm: track.bpm,
         id: track.id,
