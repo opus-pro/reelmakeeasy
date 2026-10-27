@@ -377,7 +377,7 @@ export function animationNextSteps(
             : `The user asked for music from ${MOTION_MUSIC_ENGINE_INFO[setup.music.engine].label}: make it with animation_music (engine "${setup.music.engine}") before you build.`,
         ]
       : []),
-    'Then write the script the skill asks for and a plan of one short line per scene. End this turn with your reply, written for the user to read in the chat (your thinking and files are hidden from them): the script, one "Who: words" row per line, then the plan, one line per scene, then one last line: "Shall I build it, or change something?". Use no {ASK} card for this: the user answers in the chat.',
+    'Then write the script the skill asks for and a plan of one short line per scene into `animation/plan.md` (the Tasks panel beside the chat shows it): a "## Script" section, one "Who: words" row per line, and a "## Plan" section, one "Scene N: …" line per scene. Then write the same script and plan in your reply text too (the user sees neither your thinking nor the file in the chat), the script as "Who: words" rows, and only then ask with {ASK} whether to build it, with the options "Build it (Recommended)" and "Change something". Never ask without the script and plan above the question in the same reply, and write plan.md again each time it changes.',
   ].join(' ')
 }
 

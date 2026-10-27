@@ -9,9 +9,9 @@ import { MotionTasksPanel } from './MotionTasksPanel'
 type MotionVideo = Extract<TranscriptEntry, { kind: 'motion_video' }>
 
 /**
- * A Motion Reel or Claude Animation chat's side panel: a Motion Reel's Tasks (what the agent is
- * doing, the reel's phases, its to-do list), then the latest render, large, with its beat check
- * (a Motion Reel's). Before the first render, what the chat is set up to make.
+ * A Motion Reel or Claude Animation chat's side panel: its Tasks (what the agent is doing, the
+ * phases, the plan, its to-do list), then the latest render, large, with its beat check (a Motion
+ * Reel's). Before the first render, what the chat is set up to make.
  */
 export function MotionReelPanel({ transcript }: { transcript: Transcript }) {
   const videos = transcript.entries.filter((e): e is MotionVideo => e.kind === 'motion_video')
@@ -22,12 +22,8 @@ export function MotionReelPanel({ transcript }: { transcript: Transcript }) {
   const animation = transcript.entries.some((e) => e.kind === 'animation_setup')
   return (
     <div className="flex size-full flex-col gap-3 overflow-y-auto p-4">
-      {!animation && (
-        <>
-          <MotionTasksPanel transcript={transcript} />
-          <div className="border-t border-white/10" />
-        </>
-      )}
+      <MotionTasksPanel transcript={transcript} />
+      <div className="border-t border-white/10" />
       {latest ? (
         <>
           <div className="flex items-center justify-between text-xs text-secondary">

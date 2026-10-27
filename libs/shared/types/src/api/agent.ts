@@ -137,6 +137,7 @@ export interface AgentMotionPlan {
 
 export type AgentMotionTaskId =
   | 'build'
+  | 'voice'
   | 'look'
   | 'music'
   | 'plan'

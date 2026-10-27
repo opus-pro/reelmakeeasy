@@ -461,10 +461,12 @@ describe('Claude Animation chats', () => {
     expect(kickoff).toMatch(/^\[ReelMakeEasy\] The user filled in the Claude Animation card/)
     expect(kickoff).toContain('`reelmakeeasy-animation-2d`')
     expect(kickoff).toMatch(/animation_music \(engine "ace-step"\)/)
-    // The user approves what they can read: Claude ends its turn with the script and plan as its
-    // reply (a card would skip it: Claude keeps the script in its thinking before a card).
-    expect(kickoff).toMatch(/End this turn with your reply.*"Who: words".*plan.*Shall I build it/)
-    expect(kickoff).toMatch(/no \{ASK\} card for this/i)
+    // The script and plan go in animation/plan.md (the Tasks panel shows it) and in the reply,
+    // then a clickable card asks to build it.
+    expect(kickoff).toContain('`animation/plan.md`')
+    expect(kickoff).toMatch(
+      /plan\.md.*reply text.*"Who: words".*\{ASK\}.*"Build it \(Recommended\)".*"Change something"/,
+    )
   })
 
   it('composes the music itself, in animation/music, when the user picked that', () => {
