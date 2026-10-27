@@ -124,6 +124,12 @@ const waitFor = async (check: () => boolean) => {
   }
 }
 
+/** Puts DATA_DIR back as it was (unset stays unset: assigning undefined would set "undefined"). */
+function restoreDataDir(value: string | undefined): void {
+  if (value === undefined) delete process.env['DATA_DIR']
+  else process.env['DATA_DIR'] = value
+}
+
 describe('AnimationService, the setup card', () => {
   it('lists the four looks with their lengths and tracks', async () => {
     const { service } = makeAnimation('animation')
@@ -272,7 +278,7 @@ describe('AnimationService, animation_voice', () => {
         text: expect.stringMatching(/save it with avatar_save/),
       })
     } finally {
-      process.env['DATA_DIR'] = before
+      restoreDataDir(before)
       fs.rmSync(data, { force: true, recursive: true })
     }
   })
@@ -434,7 +440,21 @@ describe('AnimationService, music Claude composes', () => {
     fs.copyFileSync(presetPath('motion-reel/music/data-pulse-60s.mp3'), score)
     jest.mocked(readComposedMusic).mockReturnValueOnce({
       file: score,
-      grid: {} as never,
+      grid: {
+        beats: [0, 0.625, 1.25, 1.875],
+        beatsPerBar: 4,
+        bpm: 96,
+        downbeats: [0],
+        durationSec: 30,
+        events: {
+          chords: [],
+          kicks: [0],
+          melody: [],
+          sections: [{ endSec: 30, energy: 1, name: 'A', startSec: 0 }],
+          snares: [1.25],
+        },
+        strongHits: [0],
+      },
       key: 'C major',
       qc: ['QC: passes.'],
       title: 'Composed: C major, 96 BPM',
@@ -444,6 +464,10 @@ describe('AnimationService, music Claude composes', () => {
     expect(result.text).toMatch(/^Composed: C major, 96 BPM\. Put under the voice/)
     expect(updated.at(-1)?.musicTitle).toBe('Composed: C major, 96 BPM')
     expect(fs.existsSync(path.join(workspace, 'animation/public/music.wav'))).toBe(true)
+    // The score's own grid, exactly: the picture can move on its beats.
+    expect(
+      JSON.parse(fs.readFileSync(path.join(workspace, 'animation/public/music.json'), 'utf8')),
+    ).toMatchObject({ beats: [0, 0.625, 1.25, 1.875], bpm: 96, kicks: [0], snares: [1.25] })
   })
 })
 

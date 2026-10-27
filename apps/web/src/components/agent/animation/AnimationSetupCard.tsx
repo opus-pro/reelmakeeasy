@@ -106,6 +106,9 @@ function OpenSetup({ onSubmit, sessionId }: Omit<AnimationSetupCardProps, 'entry
 }
 
 function defaultMusic(options: AgentAnimationOptions, look: Look | undefined): MusicPick {
+  // A look without a track of its own (a Talking head): Claude composes it.
+  if (look && look.defaultTrackId === null && options.composers.some((c) => c.id === 'composer'))
+    return { engine: 'composer', kind: 'agent' }
   const trackId = look?.defaultTrackId ?? options.tracks[0]?.id
   return trackId ? { kind: 'library', trackId } : { kind: 'none' }
 }

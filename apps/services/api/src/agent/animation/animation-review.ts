@@ -11,6 +11,8 @@ import {
 import { run } from '../motion-reel/motion-runtime'
 import { measureMotion, shotStarts, STALL_SEC, stallRuns } from '../motion-reel/motion-sync'
 
+import { ANIMATION_SFX_NAMES } from '@reelmakeeasy/common/animation/sfx'
+
 import { ANIMATION_DIR } from './animation-project'
 
 /**
@@ -27,6 +29,36 @@ export const LONG_SCENE_SEC = 10
 /** The last seconds may hold still (the end card). */
 const END_HOLD_SEC = 2
 const FPS = 30
+/** Fewer sound effects than one per this many seconds reads as a silent picture. */
+const SECONDS_PER_SOUND = 4
+/** ReelMakeEasy's own folders in `src/` (the kit and the look libraries), not Claude's code. */
+const KIT_DIRS = new Set(['host', 'pixel', 'stage', 'toon'])
+const KIT_FILES = new Set(['beat.ts', 'clock.ts', 'index.ts', 'kit.tsx', 'Root.tsx'])
+
+/** How many sound effects Claude's code places: `<Sfx … />` and sound cues (`name: 'pop'`). A
+ *  count from the source, not the audio: enough to notice a video with none. */
+export function soundEffectsPlaced(projectDir: string): number {
+  const names = ANIMATION_SFX_NAMES.join('|')
+  const cue = new RegExp(`<Sfx\\b|\\bname:\\s*['"](?:${names})['"]`, 'g')
+  let count = 0
+  const visit = (dir: string, top: boolean) => {
+    let entries: fs.Dirent[]
+    try {
+      entries = fs.readdirSync(dir, { withFileTypes: true })
+    } catch {
+      return
+    }
+    for (const e of entries) {
+      const full = path.join(dir, e.name)
+      if (e.isDirectory()) {
+        if (!(top && KIT_DIRS.has(e.name))) visit(full, false)
+      } else if (/\.tsx?$/.test(e.name) && !(top && KIT_FILES.has(e.name)))
+        count += (fs.readFileSync(full, 'utf8').match(cue) ?? []).length
+    }
+  }
+  visit(path.join(projectDir, 'src'), true)
+  return count
+}
 
 /** Why the animation can't be reviewed yet (null: it can): no render, or scenes or the voices
  *  changed after it. `projectDir` is the animation's folder. */
@@ -116,10 +148,18 @@ export async function reviewAnimation(projectDir: string, raw: unknown): Promise
     long.length
       ? `Scenes held over ${LONG_SCENE_SEC} s: ${long.map((s) => `${s.from} s (${s.length} s)`).join(', ')}. Cut to another shot or move the camera on a line start.`
       : `Scenes held over ${LONG_SCENE_SEC} s: none.`,
+    soundLine(soundEffectsPlaced(projectDir), lengthSec),
     '',
     `Write what you find in ${ANIMATION_DIR}/review.md by time, each with its fix, fix it, render again with animation_render and review that render (up to 3 rounds). Say what is still off if anything is after the third.`,
   ].join('\n')
   return { sheets, stalls, text }
+}
+
+function soundLine(placed: number, lengthSec: number): string {
+  const wanted = Math.floor(lengthSec / SECONDS_PER_SOUND)
+  return placed < wanted
+    ? `Sound effects: ${placed} placed in your code for ${Math.round(lengthSec)} s (at least ${wanted} wanted): give every entrance its sound (the skill's "Sound and music").`
+    : `Sound effects: ${placed} placed in your code (about one every ${Math.round((lengthSec / Math.max(1, placed)) * 10) / 10} s). Check none lands within 0.15 s of another and that they vary.`
 }
 
 function mtimeOf(file: string): number {

@@ -13,14 +13,78 @@ const setup2d: AgentAnimationSetup = {
   subject: 'Why honey never spoils',
 }
 
+/** A drum-like click every 0.6 s (100 BPM) for `seconds`, as a 44.1 kHz mono WAV. */
+function clickTrack(file: string, seconds: number): void {
+  const rate = 44100
+  const n = Math.round(seconds * rate)
+  const data = Buffer.alloc(n * 2)
+  for (let i = 0; i < n; i++) {
+    const t = (i / rate) % 0.6
+    const v = t < 0.08 ? Math.sin(2 * Math.PI * 90 * t) * Math.exp(-t / 0.03) : 0
+    data.writeInt16LE(Math.round(v * 0.8 * 32767), i * 2)
+  }
+  const header = Buffer.alloc(44)
+  header.write('RIFF', 0)
+  header.writeUInt32LE(36 + data.length, 4)
+  header.write('WAVEfmt ', 8)
+  header.writeUInt32LE(16, 16)
+  header.writeUInt16LE(1, 20)
+  header.writeUInt16LE(1, 22)
+  header.writeUInt32LE(rate, 24)
+  header.writeUInt32LE(rate * 2, 28)
+  header.writeUInt16LE(2, 32)
+  header.writeUInt16LE(16, 34)
+  header.write('data', 36)
+  header.writeUInt32LE(data.length, 40)
+  fs.writeFileSync(file, Buffer.concat([header, data]))
+}
+
+/** Puts DATA_DIR back as it was (unset stays unset: assigning undefined would set "undefined"). */
+function restoreDataDir(value: string | undefined): void {
+  if (value === undefined) delete process.env['DATA_DIR']
+  else process.env['DATA_DIR'] = value
+}
+
 describe('prepareAnimationProject', () => {
   let workspace: string
+  let data: string
+  const dataBefore = process.env['DATA_DIR']
 
   beforeEach(() => {
     workspace = fs.mkdtempSync(path.join(os.tmpdir(), 'animation-project-'))
+    // The sound effects are made once into the data folder.
+    data = fs.mkdtempSync(path.join(os.tmpdir(), 'animation-project-data-'))
+    process.env['DATA_DIR'] = data
   })
 
-  afterEach(() => fs.rmSync(workspace, { force: true, recursive: true }))
+  afterEach(() => {
+    restoreDataDir(dataBefore)
+    fs.rmSync(workspace, { force: true, recursive: true })
+    fs.rmSync(data, { force: true, recursive: true })
+  })
+
+  it("gives every project the sound effects and the music's beats", async () => {
+    const song = path.join(workspace, 'song.wav')
+    clickTrack(song, 12)
+    const { projectDir } = await prepareAnimationProject({
+      music: { file: song, title: 'Clicks' },
+      setup: { ...setup2d, lengthSec: 10, music: { id: 'x', source: 'library' } },
+      workspace,
+    })
+    for (const name of ['boing', 'ding', 'pop', 'whoosh', 'tada'])
+      expect(fs.existsSync(path.join(projectDir, 'public', 'sfx', `${name}.wav`))).toBe(true)
+    const music = JSON.parse(
+      fs.readFileSync(path.join(projectDir, 'public', 'music.json'), 'utf8'),
+    ) as { beats: number[]; bpm: number }
+    expect(Math.abs(music.bpm - 100)).toBeLessThan(3)
+    expect(music.beats.length).toBeGreaterThan(10)
+
+    // No music: an empty grid the kit reads as "no beats".
+    await prepareAnimationProject({ music: null, setup: setup2d, workspace })
+    expect(
+      JSON.parse(fs.readFileSync(path.join(projectDir, 'public', 'music.json'), 'utf8')),
+    ).toMatchObject({ beats: [], bpm: null })
+  })
 
   it("lays out a 2D project with the shared kit and the 2D look's library", async () => {
     const { projectDir, spec } = await prepareAnimationProject({

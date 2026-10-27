@@ -57,6 +57,40 @@ A low-resolution 3D scene drawn blocky and dithered like an old video game, with
 - **Layout:** counters at y 80-236, the hook at 330, the lens mid-screen, a diagram panel at y 1150-1480, narration at 1712. Colour over 1.0 (`new THREE.Color(c).multiplyScalar(2)`) is what blooms.
 - Build the hero from boxes, cylinders and extrusions with real detail (floors, windows as `windowTexture`, a crown, the inside parts on the x-ray layer). Keep low-poly elsewhere.
 
+## Sound and music
+
+A video with only a voice feels flat. Sound effects and a picture that moves with the music are what make it feel alive.
+
+**Sound effects.** `<Sfx name="pop" at={word(2, 'three').start} />` from `src/kit.tsx` plays one at a moment in seconds (or list them as `SoundCue`s and put `<Sounds cues={SOUNDS} />` in `Animation.tsx`). `volume` 0..1: about 0.3 while someone speaks, 0.5-0.7 between lines; the voice always stays on top.
+- Every entrance gets its sound on its frame: an icon or picture popping in (`pop`, `bubble`), a panel or text sliding in (`swish`, `whoosh` for big moves), a headline typing in (`typing`), a counter or number (`tick` per step, `coin` when it lands), a photo (`shutter`), a fact landing or a right answer (`ding`, `chime`), something growing or flying up (`slide-up`), dropping or shrinking (`slide-down`), a bounce or surprise (`boing`), magic or stars (`twinkle`, `shimmer`), the big reveal or the end card (`tada`, `riser` leading into it).
+- About one every 1-2 seconds, none within 0.15 s of another, and varied: the same sound on every entrance becomes noise.
+- The pack (`public/sfx/`):
+  - `whoosh`: an air whoosh (transitions, big moves across the frame)
+  - `swish`: a fast light swish (small moves, text sliding in)
+  - `riser`: a 2-second build that ends on its frame (place it to end on the drop; the file starts 2 s earlier)
+  - `tick`: a crisp tick (counters, timecode, precise cuts)
+  - `click`: a dry UI click (buttons, toggles, a cursor press)
+  - `pop`: a bubbly pitch-drop pop (shapes, icons or cards appearing)
+  - `hit`: a punchy low impact with a crack (big title slams, the drop)
+  - `sub-drop`: a deep falling boom (scene drops, dark reveals)
+  - `glitch`: a short digital stutter (glitch cuts, data, tech reveals)
+  - `shimmer`: a bright sparkle tail (logo reveals, end cards)
+  - `boing`: a springy cartoon boing (a bounce, a surprise, a shrug, something landing)
+  - `boop`: a soft round boop (a wave, a tap, a small friendly accent)
+  - `bubble`: a quick rising blip (a bubble, an icon popping up from below)
+  - `chime`: a two-note chime (a new section, a notification, "here is the answer")
+  - `coin`: a bright two-note coin (a number, a reward, money, a score going up)
+  - `ding`: a clear little bell (a thumbs up, a right answer, a fact landing)
+  - `shutter`: a camera shutter (a photo or a picture appearing)
+  - `slide-down`: a slide whistle falling (something dropping, getting smaller, a fail)
+  - `slide-up`: a slide whistle rising (something growing, flying up, a reveal)
+  - `tada`: a bright four-note arpeggio (the big reveal, the end card)
+  - `twinkle`: a sparkle of rising bell notes (magic, stars, something appearing with a glow)
+  - `typing`: a short burst of key taps (text typing in, a headline being written)
+  - `zip`: a fast zip (a pointer, an arrow, a line drawing across)
+
+**Move with the music.** `src/beat.ts` has the music's grid (`music.bpm`, `beats`, `downbeats`, `kicks`, `snares`, `accents`, `sections`, in seconds; empty with no music). `beatPulse(t, 'beats')` is 1 on each beat easing to 0: give what is already on screen a small life on the beat (a background shape breathing 2-4%, a glow, a bounce of an icon, the ticker's dot). Land entrances that aren't tied to a word on the music with `onBeat(t)`, the bigger changes (a new panel, a scene's set) on a downbeat (`nextBeat(t, 'downbeats')`) or a section start (`sectionAt(t)`). Keep it light: one or two things pulse, never the whole frame on every beat.
+
 ## Craft rules
 
 - **Hook first, in everyday words.** The first line is the surprising fact ("Did you know…"), not an introduction.

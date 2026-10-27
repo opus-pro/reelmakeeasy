@@ -9,7 +9,8 @@ import type { AnimationLookId } from '@shared/types/api/agent'
 export type AnimationLook = {
   /** Who speaks: two characters taking turns (2D), one narrator, or the avatar (a host). */
   cast: 'duo' | 'host' | 'narrator'
-  /** The library track the setup card picks with it (Motion Reel's library). */
+  /** The library track the setup card picks with it (Motion Reel's library); null: Claude
+   *  composes the music by default. */
   defaultTrackId: null | string
   description: string
   id: AnimationLookId
@@ -70,7 +71,8 @@ export const ANIMATION_LOOKS: readonly AnimationLook[] = [
   },
   {
     cast: 'host',
-    defaultTrackId: 'data-pulse',
+    // Claude composes it: light and cute, made to talk over.
+    defaultTrackId: null,
     description: 'Your own avatar talks to the camera, waist up, with gestures.',
     id: 'avatar',
     label: 'Talking head',

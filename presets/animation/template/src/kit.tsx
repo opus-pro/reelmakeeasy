@@ -3,6 +3,7 @@ import {
   Audio,
   Easing,
   interpolate,
+  Sequence,
   spring,
   staticFile,
   useCurrentFrame,
@@ -60,6 +61,59 @@ export function Music({ volume = 1 }: { volume?: number }) {
       src={staticFile(spec.musicFile)}
       volume={(f) => musicLevel(f, durationInFrames, volume)}
     />
+  )
+}
+
+/** The sound effects in `public/sfx/` (ReelMakeEasy puts them there). */
+export const SFX = [
+  'whoosh',
+  'swish',
+  'riser',
+  'tick',
+  'click',
+  'pop',
+  'hit',
+  'sub-drop',
+  'glitch',
+  'shimmer',
+  'boing',
+  'boop',
+  'bubble',
+  'chime',
+  'coin',
+  'ding',
+  'shutter',
+  'slide-down',
+  'slide-up',
+  'tada',
+  'twinkle',
+  'typing',
+  'zip',
+] as const
+export type SfxName = (typeof SFX)[number]
+
+/** A sound effect at `at` seconds (put it on the word or entrance it belongs to). `volume` 0..1:
+ *  0.3-0.6 sits under the voice. A riser builds for 2 s and peaks on `at`. */
+export function Sfx({ at, name, volume = 0.45 }: { at: number; name: SfxName; volume?: number }) {
+  const from = name === 'riser' ? at - 2 : at
+  return (
+    <Sequence from={Math.max(0, sec(from))} layout="none" name={`sfx ${name}`}>
+      <Audio src={staticFile(`sfx/${name}.wav`)} volume={volume} />
+    </Sequence>
+  )
+}
+
+/** A sound cue: what plays when. */
+export type SoundCue = { at: number; name: SfxName; volume?: number }
+
+/** Every sound cue of a list (`<Sounds cues={SOUNDS} />` in `Animation.tsx`). */
+export function Sounds({ cues }: { cues: SoundCue[] }) {
+  return (
+    <>
+      {cues.map((c, i) => (
+        <Sfx at={c.at} key={`${c.name}-${c.at}-${i}`} name={c.name} volume={c.volume} />
+      ))}
+    </>
   )
 }
 

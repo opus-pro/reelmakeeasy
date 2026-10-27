@@ -6,6 +6,7 @@ import { createEngine3D, type Engine3D, THREE } from '../stage'
 import type { Avatar3D } from './avatar-types'
 import { type Area, BOARD, type Shot, shotIndex, shotProgress } from './framing'
 import { type Cue, hostPose, type Pose } from './pose'
+import { type GestureSounds, GestureSoundTrack } from './sounds'
 
 /** How high the avatar's waist stands (metres): the frame cuts it there. */
 export const WAIST_Y = 1
@@ -45,6 +46,7 @@ export function TalkingHead3D({
   cues = [],
   set,
   shots,
+  sounds,
 }: {
   avatar: Avatar3D
   background?: string
@@ -54,6 +56,9 @@ export function TalkingHead3D({
   /** Builds the set once (walls, props, lights) in E.scene; the avatar stands at the origin. */
   set: (E: Engine3D) => Set3D
   shots: Shot[]
+  /** The gestures' sounds: on by default (a boop on a wave, a ding on a thumbs up…); false for
+   *  none, or your own per gesture. */
+  sounds?: false | GestureSounds
 }) {
   const frame = useCurrentFrame()
   const { durationInFrames, fps } = useVideoConfig()
@@ -85,6 +90,7 @@ export function TalkingHead3D({
   }, [avatar, background, cues, durationInFrames, fps, i, set, shot, t])
   return (
     <AbsoluteFill>
+      {sounds !== false && <GestureSoundTrack cues={cues} sounds={sounds} />}
       <canvas
         height={1920}
         ref={gl}

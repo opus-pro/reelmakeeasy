@@ -46,7 +46,11 @@ import { AVATAR_NAME_MAX } from '@reelmakeeasy/common/animation/looks'
 
 import { resolveAttachment } from '../agent-attachments'
 import { animationKickoff, animationNextSteps } from '../agent-brief'
-import { ensureComposer, readComposedMusic } from '../motion-reel/motion-composer'
+import {
+  ensureComposer,
+  keptComposerScore,
+  readComposedMusic,
+} from '../motion-reel/motion-composer'
 import { MotionSetupError } from '../motion-reel/motion-setup'
 import { composeMusic, parseComposeRequest } from '../motion-reel/motion-music'
 import { MAX_STILLS, renderReel, renderStills, typeCheck } from '../motion-reel/motion-render'
@@ -323,7 +327,7 @@ export class AnimationService {
         ),
       }
     await prepareAnimationProject({
-      music: { file: score.file, title: score.title },
+      music: { file: score.file, grid: score.grid, title: score.title },
       musicOnly: true,
       setup: setupFrom(setup),
       workspace,
@@ -398,7 +402,11 @@ export class AnimationService {
     const made = sameWay
       ? newestComposed(path.join(this.sessions.workingDir(id), ANIMATION_DIR, 'music'))
       : null
-    const kept = made && before?.musicTitle ? { file: made, title: before.musicTitle } : null
+    const keptGrid = made ? keptComposerScore(made)?.grid : undefined
+    const kept =
+      made && before?.musicTitle
+        ? { file: made, title: before.musicTitle, ...(keptGrid ? { grid: keptGrid } : {}) }
+        : null
     if (kept) music = kept
     this.preparing.add(id)
     try {

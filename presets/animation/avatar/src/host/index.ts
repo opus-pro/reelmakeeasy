@@ -11,6 +11,7 @@
  * - hands2d.ts: `drawArm(side, armPose, shoulder, { skin, sleeve, cuff })`, `armFor`, `hand`.
  * - arms3d.ts: `makeArm3D(THREE, { side, skin, sleeve })` → `{ root, pose(armPose) }`.
  * - framing.ts: `Shot`, `BOARD` (each shot's free area), `shotIndex(t)`.
+ * - sounds.tsx: the gestures' sounds (`DEFAULT_GESTURE_SOUNDS`, the stages' `sounds` prop).
  */
 export * from './arms3d'
 export * from './avatar-types'
@@ -19,3 +20,4 @@ export * from './hands2d'
 export * from './Host2D'
 export * from './Host3D'
 export * from './pose'
+export * from './sounds'

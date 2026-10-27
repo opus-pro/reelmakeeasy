@@ -12,6 +12,12 @@ import {
   saveAvatar,
 } from './avatar-library'
 
+/** Puts DATA_DIR back as it was (unset stays unset: assigning undefined would set "undefined"). */
+function restoreDataDir(value: string | undefined): void {
+  if (value === undefined) delete process.env['DATA_DIR']
+  else process.env['DATA_DIR'] = value
+}
+
 describe('the avatar library', () => {
   let data: string
   let work: string
@@ -29,7 +35,7 @@ describe('the avatar library', () => {
       fs.writeFileSync(path.join(work, name), body)
   })
   afterEach(() => {
-    process.env['DATA_DIR'] = before
+    restoreDataDir(before)
     fs.rmSync(data, { force: true, recursive: true })
     fs.rmSync(work, { force: true, recursive: true })
   })

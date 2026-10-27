@@ -360,6 +360,9 @@ export function animationKickoff(setup: AgentAnimationSetupView): string {
   return `[ReelMakeEasy] The user filled in the Claude Animation card and \`animation/\` is ready. ${animationNextSteps(setup, true)}`
 }
 
+/** Looks whose music is cute and bouncy (characters and hosts), not cinematic. */
+const CUTE_LOOKS: ReadonlySet<string> = new Set(['2d', 'avatar'])
+
 /** What Claude does once `animation/` is ready: read, make the music when asked, write the
  *  script, plan, ask. `readSkill`: read the look's skill first (a chat's first turn). */
 export function animationNextSteps(
@@ -380,7 +383,11 @@ export function animationNextSteps(
     ...(makeMusic && setup.music.source === 'agent'
       ? [
           setup.music.engine === 'composer'
-            ? 'The user asked you to compose the music yourself: once the script is approved and the voices are recorded, read the `reelmakeeasy-music-composer` skill, write `animation/music/music.mjs` (calm and light enough to talk over: no busy lead, the energy under the narration, a lift for the ending) and set its bpm in `animation/music/reel.config.mjs`, run the composer (`cd animation/music && node tools/score.mjs --no-cues`), fix every FAIL, then call animation_music with engine "composer" (no prompt).'
+            ? 'The user asked you to compose the music yourself: once the script is approved and the voices are recorded, read the `reelmakeeasy-music-composer` skill, write `animation/music/music.mjs` (' +
+              (CUTE_LOOKS.has(setup.lookId)
+                ? 'light, cute and bouncy, made to talk over: a major key at 100-118 BPM, a marimba (`bar` tuned) or plucks with a little bell (glockenspiel) melody, soft claps or shakers, no heavy kick, no dark pads; a friendly hook phrase between lines, a lift for the ending'
+                : 'calm and light enough to talk over: no busy lead, the energy under the narration, a lift for the ending') +
+              ') and set its bpm in `animation/music/reel.config.mjs`, run the composer (`cd animation/music && node tools/score.mjs --no-cues`), fix every FAIL, then call animation_music with engine "composer" (no prompt).'
             : `The user asked for music from ${MOTION_MUSIC_ENGINE_INFO[setup.music.engine].label}: make it with animation_music (engine "${setup.music.engine}") before you build.`,
         ]
       : []),

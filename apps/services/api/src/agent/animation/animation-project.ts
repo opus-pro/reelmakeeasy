@@ -15,6 +15,8 @@ import { composerTitle, installComposer } from '../motion-reel/motion-composer'
 import type { ReelMusicSource } from '../motion-reel/motion-project'
 import { run, runtimeDir } from '../motion-reel/motion-runtime'
 
+import { musicGrid, musicJsonOf, NO_MUSIC, placeSfx, writeMusicJson } from './animation-music'
+
 /** The animation's Remotion project, inside the chat's working folder. */
 export const ANIMATION_DIR = 'animation'
 
@@ -141,6 +143,13 @@ export async function prepareAnimationProject(o: {
   } else if (!o.musicOnly) {
     fs.rmSync(musicFile, { force: true })
   }
+  // The music's beats (so the picture can move with it), and the sound effects.
+  if (o.music) {
+    const grid = await musicGrid(musicFile, o.music.grid)
+    writeMusicJson(projectDir, musicJsonOf(grid, o.setup.lengthSec + 30))
+  } else if (!o.musicOnly || !fs.existsSync(path.join(projectDir, 'public', 'music.json')))
+    writeMusicJson(projectDir, NO_MUSIC)
+  placeSfx(projectDir)
 
   const before = fs.existsSync(path.join(projectDir, 'public', 'animation.json'))
     ? readAnimationJson(projectDir)

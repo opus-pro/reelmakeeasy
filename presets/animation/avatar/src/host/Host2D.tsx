@@ -1,8 +1,11 @@
 import { AbsoluteFill, useCurrentFrame, useVideoConfig } from 'remotion'
 
+import { beatPulse } from '../beat'
+
 import type { Avatar2D } from './avatar-types'
 import { type Area, BOARD, type Shot, shotIndex, shotProgress } from './framing'
 import { type Cue, hostPose, type Pose } from './pose'
+import { type GestureSounds, GestureSoundTrack } from './sounds'
 
 /** Where the avatar's box sits in each shot: its waist at (x, y) on screen, scaled. */
 const PLACE: Record<Shot, { s: number; x: number; y: number }> = {
@@ -35,6 +38,7 @@ export function TalkingHead2D({
   defs = '',
   set,
   shots,
+  sounds,
 }: {
   avatar: Avatar2D
   /** Pictures for line i at t, as SVG for the 1080×1920 screen, inside `area` (the free space). */
@@ -45,6 +49,9 @@ export function TalkingHead2D({
   set: (t: number, i: number, shot: Shot) => string
   /** One shot per voice line, in order. */
   shots: Shot[]
+  /** The gestures' sounds: on by default (a boop on a wave, a ding on a thumbs up…); false for
+   *  none, or your own per gesture. */
+  sounds?: false | GestureSounds
 }) {
   const frame = useCurrentFrame()
   const { durationInFrames, fps } = useVideoConfig()
@@ -54,13 +61,16 @@ export function TalkingHead2D({
   const place = PLACE[shot]
   // A slow push-in through the shot, and a little kick on the cut.
   const k = shotProgress(t, durationInFrames / fps)
-  const push = 1 + 0.045 * k + 0.02 * Math.max(0, 1 - k * 8)
+  // …and a breath of a pulse on each bar of the music.
+  const push =
+    1 + 0.045 * k + 0.02 * Math.max(0, 1 - k * 8) + 0.006 * beatPulse(t, 'downbeats', 0.4)
   const p = hostPose(t, cues)
   // Pushed in about the face (900 up the box), so the face stays where the shot put it.
   const at = { s: place.s * push, x: place.x, y: place.y + 900 * place.s * (push - 1) }
   const svg = `<defs>${defs}</defs>${set(t, i, shot)}${placeAvatar2D(avatar, p, at)}${board(t, i, BOARD[shot])}`
   return (
     <AbsoluteFill style={{ backgroundColor: '#000' }}>
+      {sounds !== false && <GestureSoundTrack cues={cues} sounds={sounds} />}
       <svg
         dangerouslySetInnerHTML={{ __html: svg }}
         height="100%"

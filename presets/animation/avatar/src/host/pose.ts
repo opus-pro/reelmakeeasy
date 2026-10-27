@@ -1,3 +1,4 @@
+import { beatPulse, music } from '../beat'
 import { spec, type VoiceLine, voiceLines } from '../clock'
 import { type Vowel, vowelOf } from '../kit'
 
@@ -230,6 +231,7 @@ export function hostPose(t: number, cues: Cue[] = []): Pose {
   }
   const leanCue = last(cues, 'lean', t)
   const lean = leanCue ? (leanCue.lean ?? 0) * ss(leanCue.at - 0.3, leanCue.at + 0.3, t) : 0
+  const groove = grooveAt(t, talking)
   const left = armAt(cues, 'left', t)
   const right = armAt(cues, 'right', t)
   const shrug = Math.max(
@@ -242,11 +244,12 @@ export function hostPose(t: number, cues: Cue[] = []): Pose {
     brows,
     gaze,
     head: {
-      nod: nod + open * 2.5 * talking,
+      // A small nod on each beat of the music, softer while talking.
+      nod: nod + open * 2.5 * talking + groove.nod,
       tilt: Math.sin(t * 0.7) * 2.2 + (look === 'left' ? -3 : look === 'right' ? 3 : 0) * lookK,
       turn: Math.sin(t * 0.43 + 1) * 3 + target[0] * 10 * lookK,
     },
-    lean: lean + Math.sin(t * 0.5) * 0.8,
+    lean: lean + (music.bpm ? groove.sway : Math.sin(t * 0.5) * 0.8),
     left,
     mouth: open,
     right,
@@ -254,6 +257,17 @@ export function hostPose(t: number, cues: Cue[] = []): Pose {
     smile,
     t,
     vowel: open > 0.06 ? vowelAt(t) : 'M',
+  }
+}
+
+/** Moving with the music: a nod on each beat, a sway once per two bars. Nothing without music. */
+function grooveAt(t: number, talking: number): { nod: number; sway: number } {
+  if (!music.bpm) return { nod: 0, sway: 0 }
+  const bar = (60 / music.bpm) * music.beatsPerBar
+  const first = music.downbeats[0] ?? 0
+  return {
+    nod: beatPulse(t, 'beats', 0.22) * (talking ? 1.2 : 2.4),
+    sway: Math.sin((Math.PI * (t - first)) / bar) * 1.4,
   }
 }
 
