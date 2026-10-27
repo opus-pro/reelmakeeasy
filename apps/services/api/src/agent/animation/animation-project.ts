@@ -11,6 +11,7 @@ import { MOTION_MUSIC_ENGINE_INFO } from '@reelmakeeasy/common/motion-reel/reel-
 import { presetPath } from '@reelmakeeasy/common/storage/presets'
 import type { AgentAnimationSetup, AnimationLookId } from '@shared/types/api/agent'
 
+import { composerTitle, installComposer } from '../motion-reel/motion-composer'
 import type { ReelMusicSource } from '../motion-reel/motion-project'
 import { run, runtimeDir } from '../motion-reel/motion-runtime'
 
@@ -19,6 +20,24 @@ export const ANIMATION_DIR = 'animation'
 
 /** Seconds the music fades out over at the end (the kit fades it too, on the video's own end). */
 const MUSIC_FADE_SEC = 2
+
+/** The tempo the composer starts from (Claude sets its own in reel.config.mjs): calm enough for a
+ *  voice to sit on. */
+const COMPOSER_BPM = 96
+
+/** The composer's settings for an animation: its length, a starting tempo, and a title. */
+export function composerSettings(setup: AgentAnimationSetup): {
+  bpm: number
+  lengthSec: number
+  title: string
+} {
+  const look = animationLook(setup.lookId)
+  return {
+    bpm: COMPOSER_BPM,
+    lengthSec: setup.lengthSec,
+    title: composerTitle(setup.subject ?? `${look?.label ?? setup.lookId} animation`),
+  }
+}
 
 /** `public/animation.json`: what the project's clock reads. */
 export type AnimationJson = {
@@ -63,6 +82,10 @@ export async function prepareAnimationProject(o: {
   copyTree(presetPath('animation/template'), projectDir)
   copyTree(presetPath(`animation/${look.id}`), projectDir)
   if (!o.musicOnly) linkRuntime(projectDir)
+
+  // Claude composes the music itself: the composer goes in `animation/music/`.
+  if (o.setup.music.source === 'agent' && o.setup.music.engine === 'composer' && !o.musicOnly)
+    installComposer(projectDir, composerSettings(o.setup))
 
   const voiceDir = path.join(projectDir, 'public', 'voice')
   fs.mkdirSync(voiceDir, { recursive: true })

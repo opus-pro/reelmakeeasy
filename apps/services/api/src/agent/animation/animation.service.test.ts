@@ -6,6 +6,7 @@ import type { AgentAnimationSetupView, AgentSession } from '@shared/types/api/ag
 
 import { presetPath } from '@reelmakeeasy/common/storage/presets'
 
+import { readComposedMusic } from '../motion-reel/motion-composer'
 import { composeMusic } from '../motion-reel/motion-music'
 import { renderReel, renderStills } from '../motion-reel/motion-render'
 
@@ -52,6 +53,10 @@ jest.mock('../motion-reel/motion-music', () => ({
     fs.copyFileSync(presetPath('motion-reel/music/data-pulse-60s.mp3'), file)
     return { file, model: key ?? 'role' }
   }),
+}))
+jest.mock('../motion-reel/motion-composer', () => ({
+  ...jest.requireActual('../motion-reel/motion-composer'),
+  readComposedMusic: jest.fn(() => 'There is no reel/music/music.mjs: write it.'),
 }))
 jest.mock('@reelmakeeasy/common/storage/stored-files', () => ({
   uploadToStore: jest.fn(async () => undefined),
@@ -133,8 +138,9 @@ describe('AnimationService, the setup card', () => {
     // Every look has a preview clip in the presets.
     for (const look of options.looks) expect(look.previewUrl).toMatch(/animation\/looks\/.+\.mp4$/)
     expect(options.tracks.length).toBeGreaterThan(0)
-    // Music models only (the code composer is Motion Reel's).
-    expect(options.composers.map((c) => c.id)).toEqual(['eleven-music', 'ace-step'])
+    // Claude composing the music itself first (free), then the music models.
+    expect(options.composers.map((c) => c.id)).toEqual(['composer', 'eleven-music', 'ace-step'])
+    expect(options.composers[0]).toMatchObject({ cost: 'free', label: 'Composed by Claude' })
   })
 
   it('disables 2D when no designed voices can be made here', async () => {
@@ -327,6 +333,50 @@ describe('AnimationService, look, music and render', () => {
     ) as { musicFile: string }
     expect(spec.musicFile).toBe('music.wav')
     expect(updated.at(-1)?.musicTitle).toMatch(/^ACE-Step: gentle ukulele/)
+  })
+})
+
+describe('AnimationService, music Claude composes', () => {
+  async function composerReady() {
+    const made = makeAnimation('animation')
+    made.service.setup('s1', { ...CARD, music: { engine: 'composer', source: 'agent' } })
+    await waitFor(() => made.started.length === 1)
+    return made
+  }
+
+  it('installs the composer in animation/music when the user picked it', async () => {
+    const { workspace } = await composerReady()
+    expect(fs.existsSync(path.join(workspace, 'animation/music/tools/score.mjs'))).toBe(true)
+    expect(fs.readFileSync(path.join(workspace, 'animation/music/reel.config.mjs'), 'utf8')).toMatch(
+      /bpm: \d+/,
+    )
+  })
+
+  it("says what to fix, with the animation's own paths, when there is no score yet", async () => {
+    const { service } = await composerReady()
+    const result = await service.callTool('s1', 'animation_music', { engine: 'composer' })
+    expect(result).toEqual({
+      success: false,
+      text: 'There is no animation/music/music.mjs: write it.',
+    })
+  })
+
+  it('puts the composed score under the voice', async () => {
+    const { service, updated, workspace } = await composerReady()
+    const score = path.join(workspace, 'animation/music/composer-1.wav')
+    fs.copyFileSync(presetPath('motion-reel/music/data-pulse-60s.mp3'), score)
+    jest.mocked(readComposedMusic).mockReturnValueOnce({
+      file: score,
+      grid: {} as never,
+      key: 'C major',
+      qc: ['QC: passes.'],
+      title: 'Composed: C major, 96 BPM',
+    })
+    const result = await service.callTool('s1', 'animation_music', {})
+    expect(result.success).toBe(true)
+    expect(result.text).toMatch(/^Composed: C major, 96 BPM\. Put under the voice/)
+    expect(updated.at(-1)?.musicTitle).toBe('Composed: C major, 96 BPM')
+    expect(fs.existsSync(path.join(workspace, 'animation/public/music.wav'))).toBe(true)
   })
 })
 

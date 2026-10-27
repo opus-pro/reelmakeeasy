@@ -12,8 +12,11 @@ import {
 import { Logger } from '@reelmakeeasy/common/logger'
 import { motionReelTrack, motionReelTracks } from '@reelmakeeasy/common/motion-reel/music'
 import {
+  isMotionMusicEngine,
   MOTION_MUSIC_ENGINE_INFO,
+  MOTION_MUSIC_ENGINES,
   type MotionMusicEngine,
+  motionMusicEngineOf,
 } from '@reelmakeeasy/common/motion-reel/reel-config'
 import { storeUri } from '@reelmakeeasy/common/storage/address'
 import { uploadToStore } from '@reelmakeeasy/common/storage/stored-files'
@@ -39,6 +42,7 @@ import {
 
 import { resolveAttachment } from '../agent-attachments'
 import { animationKickoff, animationNextSteps } from '../agent-brief'
+import { ensureComposer, readComposedMusic } from '../motion-reel/motion-composer'
 import { composeMusic, parseComposeRequest } from '../motion-reel/motion-music'
 import { MAX_STILLS, renderReel, renderStills, typeCheck } from '../motion-reel/motion-render'
 import type { ReelMusicSource } from '../motion-reel/motion-project'
@@ -47,12 +51,12 @@ import type { ToolCallResult } from '../tools/agent-tools'
 
 import {
   ANIMATION_DIR,
+  composerSettings,
   prepareAnimationProject,
   readAnimationJson,
   writeAnimationJson,
 } from './animation-project'
 import {
-  ANIMATION_MUSIC_ENGINES,
   animationSetupFromTool,
   AnimationSetupError,
   parseAnimationSetup,
@@ -64,6 +68,13 @@ const logger = new Logger('AnimationService')
 
 /** Why the 2D look can't be picked: its characters need designed voices. */
 export const NO_DESIGNED_VOICES = 'Needs Qwen3 voices on this computer or a fal key.'
+
+/** How the card names music Claude writes itself (Motion Reel's says "the agent"). */
+const COMPOSED_BY_CLAUDE = {
+  description:
+    'Written note by note by Claude with its composer skill: its own tune for this story, calm under the voice.',
+  label: 'Composed by Claude',
+}
 
 /** Where rendered animations are stored (served at /api/files/agent-animation/...). */
 const STORE_FOLDER = 'agent-animation'
@@ -201,15 +212,14 @@ export class AnimationService {
     args: unknown,
   ): Promise<ToolCallResult> {
     const asked = (args as null | Record<string, unknown>)?.['engine']
-    if (asked !== undefined && !(ANIMATION_MUSIC_ENGINES as readonly unknown[]).includes(asked))
-      return { success: false, text: `engine is ${ANIMATION_MUSIC_ENGINES.join(' or ')}.` }
-    const engine = (asked ??
-      (setup.music.source === 'agent'
-        ? setup.music.engine
-        : ANIMATION_MUSIC_ENGINES[0])) as MotionMusicEngine
+    if (asked !== undefined && !isMotionMusicEngine(asked))
+      return { success: false, text: `engine is ${MOTION_MUSIC_ENGINES.join(' or ')}.` }
+    const engine: MotionMusicEngine =
+      asked ?? motionMusicEngineOf(setup.music.source === 'agent' ? setup.music.engine : undefined)
+    const workspace = this.sessions.workingDir(id)
+    if (engine === 'composer') return this.composed(id, setup, workspace)
     const request = parseComposeRequest(args)
     if (typeof request === 'string') return { success: false, text: request }
-    const workspace = this.sessions.workingDir(id)
     const composed = await composeMusic(
       request,
       setup.lengthSec,
@@ -227,6 +237,45 @@ export class AnimationService {
     return {
       success: true,
       text: `Made the music (${composed.model}) and put it under the voice: public/music.wav, ${setup.lengthSec} s, fading out at the end (the kit ducks it while anyone speaks). Make it again only if the user wants different music: each one is a paid generation.`,
+    }
+  }
+
+  /** The music Claude composed in its own shell (`animation/music/`, the composer): read as data,
+   *  never run, and put under the voice. */
+  private async composed(
+    id: string,
+    setup: AgentAnimationSetupView,
+    workspace: string,
+  ): Promise<ToolCallResult> {
+    const projectDir = path.join(workspace, ANIMATION_DIR)
+    // Set up with other music, or before the composer: install it now.
+    const installed = ensureComposer(projectDir, composerSettings(setup))
+    const score = readComposedMusic(projectDir, setup.lengthSec)
+    // The composer names its paths for a Motion Reel's folder.
+    const ours = (text: string) => text.replaceAll('reel/', `${ANIMATION_DIR}/`)
+    if (typeof score === 'string')
+      return {
+        success: false,
+        text: ours(
+          installed
+            ? `The composer was not here yet: it is now in reel/music/tools/ with reel/music/reel.config.mjs (set its bpm). ${score}`
+            : score,
+        ),
+      }
+    await prepareAnimationProject({
+      music: { file: score.file, title: score.title },
+      musicOnly: true,
+      setup: setupFrom(setup),
+      workspace,
+    })
+    this.sessions.updateAnimation(id, { ...setup, musicTitle: score.title })
+    return {
+      success: true,
+      text: [
+        `${score.title}. Put under the voice: public/music.wav, ${setup.lengthSec} s, fading out at the end (the kit lowers it while anyone speaks).`,
+        ...score.qc.map(ours),
+        'Checked by measurement only: tell the user what the QC measured, never how it sounds; they hear it in the next render. Compose again freely (it is free) when the user asks.',
+      ].join(' '),
     }
   }
 
@@ -339,7 +388,7 @@ export class AnimationService {
       'Library tracks (music "library", musicId):',
       ...options.tracks.map((t) => `- ${t.id}: ${t.title}`),
       'Or music "upload" (the user\'s own file through the paperclip; musicId: its path), "none", or "agent": you make it with animation_music right after the setup, with the music model the user picks (musicEngine):',
-      ...ANIMATION_MUSIC_ENGINES.map(
+      ...MOTION_MUSIC_ENGINES.map(
         (e) =>
           `- ${e}: ${MOTION_MUSIC_ENGINE_INFO[e].label} (${MOTION_MUSIC_ENGINE_INFO[e].cost}). ${MOTION_MUSIC_ENGINE_INFO[e].description}`,
       ),
@@ -431,7 +480,11 @@ export class AnimationService {
   async options(): Promise<AgentAnimationOptions> {
     const voices = await voiceReadiness()
     return {
-      composers: ANIMATION_MUSIC_ENGINES.map((id) => ({ id, ...MOTION_MUSIC_ENGINE_INFO[id] })),
+      composers: MOTION_MUSIC_ENGINES.map((id) => ({
+        id,
+        ...MOTION_MUSIC_ENGINE_INFO[id],
+        ...(id === 'composer' ? COMPOSED_BY_CLAUDE : {}),
+      })),
       looks: ANIMATION_LOOKS.map((look) => ({
         defaultLengthSec: ANIMATION_DEFAULT_SEC,
         defaultTrackId: look.defaultTrackId,
@@ -521,7 +574,8 @@ export class AnimationService {
   }
 }
 
-/** The newest track Claude made (`animation_music` writes `composed-<time>.mp3`), if any. */
+/** The newest track Claude made (`composed-<time>.mp3` from a music model, `composer-<time>.wav`
+ *  from the composer), if any. */
 function newestComposed(dir: string): null | string {
   let names: string[]
   try {
@@ -530,7 +584,10 @@ function newestComposed(dir: string): null | string {
     return null
   }
   const newest = names
-    .map((name) => ({ name, time: Number(/^composed-(\d+)\.mp3$/.exec(name)?.[1]) }))
+    .map((name) => {
+      const m = /^(?:composed-(\d+)\.mp3|composer-(\d+)\.wav)$/.exec(name)
+      return { name, time: Number(m?.[1] ?? m?.[2]) }
+    })
     .filter((m) => Number.isFinite(m.time))
     .sort((a, b) => a.time - b.time)
     .at(-1)

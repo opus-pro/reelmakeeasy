@@ -9,6 +9,7 @@ jest.mock('jotai', () => ({ ...jest.requireActual('jotai'), useAtomValue: () => 
 
 const OPTIONS: AgentAnimationOptions = {
   composers: [
+    { cost: 'Free', description: 'Claude writes it', id: 'composer', label: 'Composed by Claude' },
     { cost: '$0.60 a minute', description: 'Rich', id: 'eleven-music', label: 'ElevenLabs Music' },
     { cost: 'about $0.01', description: 'Quick', id: 'ace-step', label: 'ACE-Step' },
   ],
@@ -67,7 +68,7 @@ describe('AnimationSetupCard', () => {
     fireEvent.click(look(/3D/))
     fireEvent.click(screen.getByRole('radio', { name: '45 s' }))
     fireEvent.change(screen.getByRole('textbox', { name: "What's it about?" }), { target: { value: '  black holes  ' } })
-    fireEvent.click(screen.getByRole('button', { name: 'Animate it' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Build it' }))
     expect(onSubmit).toHaveBeenCalledWith({
       lengthSec: 45,
       lookId: '3d',
@@ -76,17 +77,26 @@ describe('AnimationSetupCard', () => {
     })
   })
 
+  it('shows Surprise me as a toggle chip, on and off', () => {
+    renderCard()
+    const surprise = screen.getByRole('checkbox', { name: /Surprise me/ })
+    expect(surprise.tagName).toBe('BUTTON')
+    expect(surprise.getAttribute('aria-checked')).toBe('false')
+    fireEvent.click(surprise)
+    expect(surprise.getAttribute('aria-checked')).toBe('true')
+  })
+
   it('sends no subject for Surprise me', () => {
     const onSubmit = renderCard()
     fireEvent.click(screen.getByRole('checkbox', { name: /Surprise me/ }))
     expect((screen.getByRole('textbox') as HTMLTextAreaElement).disabled).toBe(true)
-    fireEvent.click(screen.getByRole('button', { name: 'Animate it' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Build it' }))
     expect(onSubmit).toHaveBeenCalledWith(expect.objectContaining({ lookId: '2d', subject: null }))
   })
 
   it('waits for what it is about', () => {
     renderCard()
-    expect((screen.getByRole('button', { name: 'Animate it' }) as HTMLButtonElement).disabled).toBe(
+    expect((screen.getByRole('button', { name: 'Build it' }) as HTMLButtonElement).disabled).toBe(
       true,
     )
     expect(screen.getByText(/Say what it's about, or pick Surprise me/)).toBeTruthy()
@@ -107,7 +117,7 @@ describe('AnimationSetupCard', () => {
     fireEvent.change(screen.getByRole('spinbutton', { name: 'Custom length in seconds' }), {
       target: { value: '75' },
     })
-    fireEvent.click(screen.getByRole('button', { name: 'Animate it' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Build it' }))
     expect(onSubmit).toHaveBeenCalledWith(expect.objectContaining({ lengthSec: 75 }))
   })
 
@@ -119,7 +129,7 @@ describe('AnimationSetupCard', () => {
     fireEvent.change(screen.getByRole('spinbutton', { name: 'Custom length in seconds' }), {
       target: { value: '120' },
     })
-    expect((screen.getByRole('button', { name: 'Animate it' }) as HTMLButtonElement).disabled).toBe(
+    expect((screen.getByRole('button', { name: 'Build it' }) as HTMLButtonElement).disabled).toBe(
       true,
     )
     expect(screen.getByText('Pick a length from 10 to 90 seconds.')).toBeTruthy()
@@ -142,7 +152,7 @@ describe('AnimationSetupCard', () => {
     expect(look(/2D/).disabled).toBe(true)
     expect(screen.getByText('Needs Qwen3 voices on this computer or a fal key.')).toBeTruthy()
     fireEvent.change(screen.getByRole('textbox'), { target: { value: 'volcanoes' } })
-    fireEvent.click(screen.getByRole('button', { name: 'Animate it' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Build it' }))
     expect(onSubmit).toHaveBeenCalledWith(expect.objectContaining({ lookId: '3d' }))
   })
 

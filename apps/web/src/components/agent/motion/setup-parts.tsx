@@ -17,6 +17,7 @@ export const CARD_CLASS =
 export const LABEL_CLASS = 'text-xs font-medium tracking-wide text-secondary uppercase'
 /** How a chosen setup names music the agent is still to make. */
 export const COMPOSER_LABEL: Record<string, string> = {
+  composer: 'Composed by Claude, to come',
   'ace-step': 'ACE-Step music, to come',
   'eleven-music': 'ElevenLabs Music, to come',
 }

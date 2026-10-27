@@ -16,21 +16,11 @@ export class AnimationSetupError extends Error {}
 const isRecord = (v: unknown): v is Record<string, unknown> =>
   typeof v === 'object' && v !== null && !Array.isArray(v)
 
-/** The music models Claude can make an animation's music with (`animation_music`); Motion Reel's
- *  code composer isn't one of them. The first is the default. */
-export const ANIMATION_MUSIC_ENGINES = ['eleven-music', 'ace-step'] as const
-
-/** Motion Reel's music check, its refusals as this setup's; music Claude makes is always made
- *  with a music model. */
+/** Motion Reel's music check (Claude composing it itself, "composer", by default), its refusals
+ *  as this setup's. */
 function checkedMusic(music: unknown): AgentAnimationSetup['music'] {
   try {
-    const parsed = parseMusic(music)
-    if (
-      parsed.source === 'agent' &&
-      !(ANIMATION_MUSIC_ENGINES as readonly string[]).includes(parsed.engine)
-    )
-      return { engine: ANIMATION_MUSIC_ENGINES[0], source: 'agent' }
-    return parsed
+    return parseMusic(music)
   } catch (error) {
     if (error instanceof MotionSetupError) throw new AnimationSetupError(error.message)
     throw error

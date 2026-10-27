@@ -40,7 +40,7 @@ describe('parseAnimationSetup', () => {
 
   it('takes music Claude makes, and no music', () => {
     expect(parseAnimationSetup({ ...ok, music: { source: 'agent' } }).music).toEqual({
-      engine: 'eleven-music',
+      engine: 'composer',
       source: 'agent',
     })
     expect(parseAnimationSetup({ ...ok, music: { source: 'none' } }).music).toEqual({
@@ -48,10 +48,10 @@ describe('parseAnimationSetup', () => {
     })
   })
 
-  it('makes its music with a music model: the code composer is a Motion Reel thing', () => {
+  it('lets Claude compose the music itself (the default), or use a music model', () => {
     expect(
       parseAnimationSetup({ ...ok, music: { engine: 'composer', source: 'agent' } }).music,
-    ).toEqual({ engine: 'eleven-music', source: 'agent' })
+    ).toEqual({ engine: 'composer', source: 'agent' })
     expect(
       parseAnimationSetup({ ...ok, music: { engine: 'ace-step', source: 'agent' } }).music,
     ).toEqual({ engine: 'ace-step', source: 'agent' })

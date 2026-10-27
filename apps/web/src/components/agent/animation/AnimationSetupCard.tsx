@@ -8,6 +8,7 @@ import type {
   AnimationLookId,
 } from '@shared/types/api/agent'
 import { Button, cn } from '@shared/ui'
+import { Sparkles } from 'lucide-react'
 import { useRef, useState } from 'react'
 
 import {
@@ -177,15 +178,21 @@ function SetupForm({
             placeholder="e.g. Why honey never goes bad"
             value={subject}
           />
-          <label className="flex w-fit items-center gap-2 text-xs text-secondary">
-            <input
-              checked={surprise}
-              className="accent-white"
-              onChange={(e) => setSurprise(e.target.checked)}
-              type="checkbox"
-            />
+          <button
+            aria-checked={surprise}
+            className={cn(
+              'flex w-fit items-center gap-1.5 rounded-md border px-2.5 py-1 text-xs transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-white/40',
+              surprise
+                ? 'border-white/50 bg-white/15 text-primary'
+                : 'border-white/10 text-secondary hover:text-primary',
+            )}
+            onClick={() => setSurprise((v) => !v)}
+            role="checkbox"
+            type="button"
+          >
+            <Sparkles className="size-3.5" />
             Surprise me: Claude picks a fun fact
-          </label>
+          </button>
         </div>
         {look && (
           <div className="flex flex-wrap items-end gap-3">
@@ -225,7 +232,7 @@ function SetupForm({
       </fieldset>
       <div className="flex items-center gap-3">
         <Button disabled={!ready || pending} onClick={() => void submit()} size="sm">
-          {pending ? 'Getting it ready…' : 'Animate it'}
+          {pending ? 'Getting it ready…' : 'Build it'}
         </Button>
         {pending && <Spinner className="text-secondary" />}
         {!ready && !pending && !look?.disabledReason && (

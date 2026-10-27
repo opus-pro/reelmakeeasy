@@ -137,7 +137,7 @@ export const ANIMATION_FREE_BRIEF = [
   ANIMATION_BRIEF,
   '',
   '## Advanced: you set the animation up',
-  'The user picked Advanced: there is no setup card, and `animation/` doesn\'t exist until you call animation_setup. Call it with no arguments first: it answers the looks, their lengths and the music. Then settle with the user, one question at a time, as a card with {ASK} wherever there are options (the best first, with " (Recommended)"): what it is about (or a fun fact you pick), the look (2D, 3D or 8-bit), the length (one of the look\'s), and the music: a library track that suits the look, their own file through the paperclip, none, or music you make with a music model ("ElevenLabs Music" at $0.60 a minute, or "ACE-Step" at about $0.01). Don\'t ask what they already told you, and suggest the rest.',
+  'The user picked Advanced: there is no setup card, and `animation/` doesn\'t exist until you call animation_setup. Call it with no arguments first: it answers the looks, their lengths and the music. Then settle with the user, one question at a time, as a card with {ASK} wherever there are options (the best first, with " (Recommended)"): what it is about (or a fun fact you pick), the look (2D, 3D or 8-bit), the length (10 to 90 s; 15, 30, 45, 60 or 90 suggested), and the music: a library track that suits the look, their own file through the paperclip, none, or music you make: "Composed by you (Recommended)" (free: you write it with the `reelmakeeasy-music-composer` skill), "ElevenLabs Music" ($0.60 a minute) or "ACE-Step" (about $0.01). Don\'t ask what they already told you, and suggest the rest.',
   'Then call animation_setup with all of it: it readies `animation/` (the first time it also installs Remotion, a few minutes) and says what to read next. Call it again only when the user changes the look, length or music: the scenes you wrote are kept.',
 ].join('\n')
 
@@ -372,7 +372,9 @@ export function animationNextSteps(
     `${readSkill ? `Read the \`${skill}\` skill, then` : `Follow the \`${skill}\` skill:`} read \`animation/brief.md\` and \`animation/look.md\`.`,
     ...(makeMusic && setup.music.source === 'agent'
       ? [
-          `The user asked for music from ${MOTION_MUSIC_ENGINE_INFO[setup.music.engine].label}: make it with animation_music (engine "${setup.music.engine}") before you build.`,
+          setup.music.engine === 'composer'
+            ? 'The user asked you to compose the music yourself: once the script is approved and the voices are recorded, read the `reelmakeeasy-music-composer` skill, write `animation/music/music.mjs` (calm and light enough to talk over: no busy lead, the energy under the narration, a lift for the ending) and set its bpm in `animation/music/reel.config.mjs`, run the composer (`cd animation/music && node tools/score.mjs --no-cues`), fix every FAIL, then call animation_music with engine "composer" (no prompt).'
+            : `The user asked for music from ${MOTION_MUSIC_ENGINE_INFO[setup.music.engine].label}: make it with animation_music (engine "${setup.music.engine}") before you build.`,
         ]
       : []),
     'Then write the script the skill asks for and a plan of one short line per scene. End this turn with your reply, written for the user to read in the chat (your thinking and files are hidden from them): the script, one "Who: words" row per line, then the plan, one line per scene, then one last line: "Shall I build it, or change something?". Use no {ASK} card for this: the user answers in the chat.',

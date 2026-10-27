@@ -128,22 +128,22 @@ export const AGENT_TOOLS: Record<AgentToolName, DynamicToolSpec> = {
   },
   animation_music: {
     description:
-      'Make the animation\'s music with the music model the user picked (engine: "eleven-music", ElevenLabs Music, $0.60 a minute; or "ace-step", about $0.01). ReelMakeEasy fits it to the length and puts it under the voice (public/music.wav; the kit lowers it while anyone speaks). Use it only when the user chose to have you make the music, or asks for different music: each one is a paid generation.',
+      'Put the animation\'s music under the voice, made the way the user picked: engine "composer" (free) takes the score you composed in animation/music/ (the reelmakeeasy-music-composer skill; run the composer first, no prompt needed), "eleven-music" (ElevenLabs Music, $0.60 a minute) or "ace-step" (about $0.01) make a track from your prompt. ReelMakeEasy fits it to the length (public/music.wav; the kit lowers it while anyone speaks). Use it only when the user chose to have you make the music, or asks for different music: a music model is a paid generation each time.',
     inputSchema: {
       additionalProperties: false,
       properties: {
         engine: {
           description: 'The music model (default: the one the user picked).',
-          enum: ['eleven-music', 'ace-step'],
+          enum: ['composer', 'eleven-music', 'ace-step'],
           type: 'string',
         },
         prompt: {
           description:
-            'The music, as the music model reads it: genre, mood, instruments and energy for the look and story ("gentle ukulele and glockenspiel, warm and curious, light"). Instrumental, and calm enough to talk over.',
+            'With a music model: the music as it reads it (genre, mood, instruments and energy for the look and story: "gentle ukulele and glockenspiel, warm and curious, light"). Instrumental, and calm enough to talk over. Not for the composer.',
           type: 'string',
         },
       },
-      required: ['prompt'],
+      required: [],
       type: 'object',
     },
     name: 'animation_music',
@@ -176,8 +176,8 @@ export const AGENT_TOOLS: Record<AgentToolName, DynamicToolSpec> = {
         },
         musicEngine: {
           description:
-            'With music "agent": the music model, as the user picked: eleven-music (ElevenLabs Music, $0.60 a minute) or ace-step (about $0.01).',
-          enum: ['eleven-music', 'ace-step'],
+            'With music "agent": how, as the user picked: composer (you compose it yourself, free; recommended), eleven-music (ElevenLabs Music, $0.60 a minute) or ace-step (about $0.01).',
+          enum: ['composer', 'eleven-music', 'ace-step'],
           type: 'string',
         },
         musicId: {

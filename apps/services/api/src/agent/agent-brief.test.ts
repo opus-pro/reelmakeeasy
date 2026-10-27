@@ -467,6 +467,16 @@ describe('Claude Animation chats', () => {
     expect(kickoff).toMatch(/no \{ASK\} card for this/i)
   })
 
+  it('composes the music itself, in animation/music, when the user picked that', () => {
+    const kickoff = briefs.animationKickoff({
+      ...view,
+      music: { engine: 'composer', source: 'agent' },
+    })
+    expect(kickoff).toContain('`reelmakeeasy-music-composer`')
+    expect(kickoff).toContain('`cd animation/music && node tools/score.mjs --no-cues`')
+    expect(kickoff).toMatch(/animation_music with engine "composer"/)
+  })
+
   it('makes no music when the user picked some', () => {
     expect(briefs.animationKickoff({ ...view, music: { source: 'none' } })).not.toContain(
       'animation_music',
