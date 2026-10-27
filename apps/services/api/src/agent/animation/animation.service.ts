@@ -301,7 +301,7 @@ export class AnimationService {
     })
     return {
       success: true,
-      text: `Rendered the animation and showed it to the user. The file is ${ANIMATION_DIR}/out/animation.mp4. Now call animation_review, open every sheet and write ${ANIMATION_DIR}/review.md; fix what it finds and render again (at most 3 renders, one per check), or tell the user what is still off. Never say it is done after one render. You can't hear it: say so, and ask the user to listen to the voices.`,
+      text: `Rendered the animation and showed it to the user. The file is ${ANIMATION_DIR}/out/animation.mp4. Now call animation_review, open every sheet and write ${ANIMATION_DIR}/review.md; fix what it finds and render again (at most 3 renders, one per review round), or tell the user what is still off. Never say it is done after one render. You can't hear it: say so, and ask the user to listen to the voices.`,
     }
   }
 

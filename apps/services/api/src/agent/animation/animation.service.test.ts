@@ -305,7 +305,7 @@ describe('AnimationService, look, music and render', () => {
     const { service } = await ready()
     await expect(service.callTool('s1', 'animation_review', {})).resolves.toEqual({
       success: false,
-      text: 'Nothing to check yet: render the animation with animation_render first, then call animation_review.',
+      text: 'Nothing to review yet: render the animation with animation_render first, then call animation_review.',
     })
   })
 

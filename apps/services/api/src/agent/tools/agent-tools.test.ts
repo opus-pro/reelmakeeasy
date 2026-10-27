@@ -318,7 +318,7 @@ describe('the tools of a Claude Animation chat', () => {
       'animation_render',
       'animation_review',
     ])
-    expect(toolSummary('animation_review', {})).toBe('Checking the render (contact sheets)')
+    expect(toolSummary('animation_review', {})).toBe('Reviewing the render (contact sheets)')
   })
 
   it('says what each call is doing', () => {

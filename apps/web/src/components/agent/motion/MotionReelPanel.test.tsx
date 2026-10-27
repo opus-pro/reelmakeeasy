@@ -77,7 +77,7 @@ describe('MotionReelPanel', () => {
       'Build',
       'Look (stills)',
       'Render',
-      'Check & fix',
+      'Review',
     ])
       expect(screen.getAllByText(label).length).toBeGreaterThan(0)
     expect(screen.queryByText('Sync check')).toBeNull()

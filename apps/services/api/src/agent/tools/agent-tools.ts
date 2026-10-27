@@ -157,7 +157,7 @@ export const AGENT_TOOLS: Record<AgentToolName, DynamicToolSpec> = {
   },
   animation_review: {
     description:
-      'Check the last render of the animation (free, a few seconds; render with animation_render first): lays it out as contact sheets, a frame every 0.5 s (or 1 s), 8 to a row, and shows them to you and the user, with where nothing moves for 0.5 s or more and the scenes held over 10 s. Call it after every render, open every sheet, write what is wrong by time in animation/review.md with its fix, fix it, render and check again (up to 3 rounds).',
+      'Review the last render of the animation (free, a few seconds; render with animation_render first): lays it out as contact sheets, a frame every 0.5 s (or 1 s), 8 to a row, and shows them to you and the user, with where nothing moves for 0.5 s or more and the scenes held over 10 s. Call it after every render, open every sheet, write what is wrong by time in animation/review.md with its fix, fix it, render and review again (up to 3 rounds).',
     inputSchema: {
       additionalProperties: false,
       properties: {
@@ -808,7 +808,7 @@ export function toolsForSession(
 const FIXED_SUMMARIES: Record<string, string> = {
   animation_music: 'Making the music',
   animation_render: 'Rendering the animation',
-  animation_review: 'Checking the render (contact sheets)',
+  animation_review: 'Reviewing the render (contact sheets)',
   animation_still: 'Looking at frames of the animation',
   animation_voice: 'Recording the voices',
   generate_image: 'Making a preview image',

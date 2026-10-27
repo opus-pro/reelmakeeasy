@@ -25,7 +25,9 @@ describe('renderAnimationSkill', () => {
     ])
       expect(skill).toContain(tool)
     // Never one render and done: check, fix, render again.
-    expect(skill).toMatch(/\*\*Check and fix\.\*\*.*animation_review.*review\.md.*up to 3 rounds/)
+    expect(skill).toMatch(
+      /\*\*Review\.\*\* Nothing is one-shot.*animation_review.*review\.md.*up to 3 rounds/,
+    )
   })
 
   it.each(LOOKS)('the %s skill keeps Claude off the renderer and the network', (look) => {

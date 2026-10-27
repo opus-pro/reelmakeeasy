@@ -37,7 +37,9 @@ describe('reviewing an animation', () => {
   afterEach(() => fs.rmSync(dir, { force: true, recursive: true }))
 
   it('needs a render first, and a render newer than the scenes', () => {
-    expect(animationReviewBlocker(dir)).toMatch(/^Nothing to check yet: render .* animation_render/)
+    expect(animationReviewBlocker(dir)).toMatch(
+      /^Nothing to review yet: render .* animation_render/,
+    )
     fs.mkdirSync(path.join(dir, 'out'))
     fs.writeFileSync(path.join(dir, 'out', 'animation.mp4'), 'mp4')
     expect(animationReviewBlocker(dir)).toBeNull()

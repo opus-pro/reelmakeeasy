@@ -139,8 +139,8 @@ function renderPhase(calls: MotionToolCall[]): Phase {
 }
 
 /**
- * The check after a render (`animation_review`): running while it makes its sheets; done with how
- * many and the round, and what `review.md` says; waiting again once a newer render is unchecked.
+ * The review after a render (`animation_review`): running while it makes its sheets; done with how
+ * many and the round, and what `review.md` says; waiting again once a newer render is not reviewed.
  */
 function reviewPhase({ calls, facts }: AnimationTaskInput): Phase {
   const renders = callsOf(calls, 'animation_render').filter((c) => c.ok)
@@ -148,13 +148,13 @@ function reviewPhase({ calls, facts }: AnimationTaskInput): Phase {
   const last = reviews.at(-1)
   if (!last)
     return renders.length
-      ? { result: `Render ${renders.length} not checked yet`, state: 'waiting' }
+      ? { result: `Render ${renders.length} not reviewed yet`, state: 'waiting' }
       : { result: null, state: 'waiting' }
   if (last.ok === undefined) return { result: 'Making contact sheets…', state: 'running' }
   const newest = renders.at(-1)
   if (!last.ok && !(newest && newest.startedAt > last.startedAt)) return failedPhase(last.text)
   const checked = reviews.findLast((c) => c.ok)
-  if (!checked) return { result: `Render ${renders.length} not checked yet`, state: 'waiting' }
+  if (!checked) return { result: `Render ${renders.length} not reviewed yet`, state: 'waiting' }
   const round = renders.filter((c) => c.startedAt < checked.startedAt).length
   const sheets = Number(/Made (\d+) contact sheet/.exec(checked.text ?? '')?.[1] ?? 0)
   const notes = facts.review
@@ -166,7 +166,7 @@ function reviewPhase({ calls, facts }: AnimationTaskInput): Phase {
     .filter(Boolean)
     .join(' · ')
   if (newest && newest.startedAt > checked.startedAt)
-    return { result: `${result}; render ${renders.length} not checked yet`, state: 'waiting' }
+    return { result: `${result}; render ${renders.length} not reviewed yet`, state: 'waiting' }
   return { result, state: 'done' }
 }
 

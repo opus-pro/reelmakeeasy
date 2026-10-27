@@ -14,7 +14,7 @@ import { measureMotion, shotStarts, STALL_SEC, stallRuns } from '../motion-reel/
 import { ANIMATION_DIR } from './animation-project'
 
 /**
- * `animation_review`, the check after a render: the render laid out as contact sheets (Motion
+ * `animation_review`, the review after a render: the render laid out as contact sheets (Motion
  * Reel's layout) for Claude to look at side by side, and what can be measured in a narrated
  * animation: where nothing moves (stalls) and scenes that hold too long. Claude writes what it
  * finds in `animation/review.md`, fixes it and renders again.
@@ -28,15 +28,15 @@ export const LONG_SCENE_SEC = 10
 const END_HOLD_SEC = 2
 const FPS = 30
 
-/** Why the animation can't be checked yet (null: it can): no render, or scenes or the voices
+/** Why the animation can't be reviewed yet (null: it can): no render, or scenes or the voices
  *  changed after it. `projectDir` is the animation's folder. */
 export function animationReviewBlocker(projectDir: string): null | string {
   const rendered = mtimeOf(path.join(projectDir, VIDEO))
   if (!rendered)
-    return 'Nothing to check yet: render the animation with animation_render first, then call animation_review.'
+    return 'Nothing to review yet: render the animation with animation_render first, then call animation_review.'
   const newer = newestFile([path.join(projectDir, 'src'), path.join(projectDir, 'public', 'voice')])
   if (newer && newer.mtime > rendered)
-    return `${path.relative(projectDir, newer.file)} changed after the last render: render again with animation_render, then check that render.`
+    return `${path.relative(projectDir, newer.file)} changed after the last render: render again with animation_render, then review that render.`
   return null
 }
 
@@ -117,7 +117,7 @@ export async function reviewAnimation(projectDir: string, raw: unknown): Promise
       ? `Scenes held over ${LONG_SCENE_SEC} s: ${long.map((s) => `${s.from} s (${s.length} s)`).join(', ')}. Cut to another shot or move the camera on a line start.`
       : `Scenes held over ${LONG_SCENE_SEC} s: none.`,
     '',
-    `Write what you find in ${ANIMATION_DIR}/review.md by time, each with its fix, fix it, render again with animation_render and check that render (up to 3 rounds). Say what is still off if anything is after the third.`,
+    `Write what you find in ${ANIMATION_DIR}/review.md by time, each with its fix, fix it, render again with animation_render and review that render (up to 3 rounds). Say what is still off if anything is after the third.`,
   ].join('\n')
   return { sheets, stalls, text }
 }

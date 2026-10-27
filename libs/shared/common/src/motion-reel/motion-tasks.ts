@@ -21,7 +21,7 @@ export const ANIMATION_TASKS: readonly { id: AgentMotionTaskId; label: string }[
   { id: 'build', label: 'Build' },
   { id: 'look', label: 'Look (stills)' },
   { id: 'render', label: 'Render' },
-  { id: 'review', label: 'Check & fix' },
+  { id: 'review', label: 'Review' },
 ]
 
 /** Every animation phase still to come. */
