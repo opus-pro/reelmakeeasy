@@ -16,6 +16,9 @@ export type QuestionCardProps = {
    *  a reply). */
   expiredHint?: string
   onAnswer: (answers: AgentAnswers) => Promise<boolean>
+  /** The card expired but can still be answered: the answer goes as a message, and the agent
+   *  carries on (`carryOnCardId`). */
+  onCarryOn?: (answers: AgentAnswers) => Promise<boolean>
   /** This card's answer was already accepted (from the card or the composer) but
    *  `question_answered` hasn't arrived yet: keep it read-only. */
   submitted?: boolean
@@ -114,6 +117,7 @@ export function QuestionCard({
   entry,
   expiredHint = 'This question expired. Reply in the chat instead.',
   onAnswer,
+  onCarryOn,
   submitted = false,
 }: QuestionCardProps) {
   const [selected, setSelected] = useState<Record<string, string>>({})
@@ -129,8 +133,10 @@ export function QuestionCard({
   // Mirrors `pending` synchronously, so two clicks in one render can't both answer.
   const inFlightRef = useRef(false)
 
-  const open = entry.state === 'open'
   const expired = entry.state === 'expired'
+  const carryOn = expired && !!onCarryOn
+  // Takes an answer: an open card, or an expired one the chat can carry on from.
+  const open = entry.state === 'open' || carryOn
   const single = entry.questions.length === 1
   // Once the card is no longer open nothing is in flight, whatever `pending` says.
   const inFlight = open && pending !== null
@@ -150,7 +156,7 @@ export function QuestionCard({
     if (locked || inFlightRef.current) return
     inFlightRef.current = true
     setPending(next)
-    const ok = await onAnswer(answers)
+    const ok = await (carryOn && onCarryOn ? onCarryOn(answers) : onAnswer(answers))
     // On success keep everything disabled until `question_answered` flips the card.
     if (!ok) {
       inFlightRef.current = false
@@ -208,7 +214,7 @@ export function QuestionCard({
     <div
       className={cn(
         'flex w-full max-w-xl flex-col gap-4 rounded-xl border border-white/10 bg-fill-secondary/50 p-3',
-        expired && 'opacity-60',
+        expired && !carryOn && 'opacity-60',
       )}
     >
       {entry.questions.map((q) => {
@@ -370,7 +376,13 @@ export function QuestionCard({
           Submit
         </Button>
       )}
-      {expired && <p className="text-xs text-secondary">{expiredHint}</p>}
+      {expired && (
+        <p className="text-xs text-secondary">
+          {carryOn
+            ? 'This question expired while ReelMakeEasy was away. Answer it here to carry on where you left off.'
+            : expiredHint}
+        </p>
+      )}
     </div>
   )
 }

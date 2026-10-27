@@ -9,6 +9,7 @@ import type {
   AgentAnswers,
   AgentHarnessName,
   AgentMode,
+  AgentMotionSetup,
   AgentSession,
   AgentStatusResponse,
   AgentUiEvent,
@@ -394,7 +395,9 @@ export function useAgentSession(sessionId: string | undefined) {
         const message = error instanceof Error ? error.message : ''
         const conflict = /not ready/.test(message)
           ? `${HARNESS_LABEL[harness ?? 'codex']} isn't ready. Check it is installed and signed in, then try again.`
-          : 'A mode was already chosen.'
+          : message.startsWith('Motion Reel needs')
+            ? message
+            : 'A mode was already chosen.'
         addLocalNotice(status === 409 ? conflict : 'Could not start that mode. Try again.')
         return false
       }
@@ -423,6 +426,34 @@ export function useAgentSession(sessionId: string | undefined) {
           : status === 400
             ? "That style isn't available. Pick another one."
             : 'Could not choose that style. Try again.',
+      )
+      return false
+    }
+  })
+
+  /** Sends the Motion Reel setup card; resolves false (after a notice saying why) on failure. */
+  const setupMotionReel = useRefCallback(async (setup: AgentMotionSetup): Promise<boolean> => {
+    if (!sessionId) return false
+    try {
+      await fetchApiDomain('/api/agent/sessions/{id}/motion-reel', {
+        data: setup,
+        method: 'POST',
+        pathParams: { id: sessionId },
+      })
+      return true
+    } catch (error) {
+      const status = error instanceof ApiError ? error.status : undefined
+      if (status === 404) {
+        markNotFound()
+        return false
+      }
+      const message = error instanceof Error ? error.message : ''
+      addLocalNotice(
+        status === 400 && message
+          ? message
+          : status === 409
+            ? 'This Motion Reel is already set up.'
+            : 'Could not start the reel. Try again.',
       )
       return false
     }
@@ -493,6 +524,7 @@ export function useAgentSession(sessionId: string | undefined) {
     resume,
     send,
     sending,
+    setupMotionReel,
     startEditing,
     /** The server's `session.flowActive`; undefined while it may be stale or is unknown. */
     serverFlowActive: sessionFetching ? undefined : session?.flowActive,

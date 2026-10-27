@@ -219,3 +219,23 @@ describe('an expired card', () => {
     expect(screen.queryByText(/Reply in the chat/)).toBeNull()
   })
 })
+
+describe('an expired card the chat can still answer', () => {
+  it('takes the answer as a message, to carry on where it left off', async () => {
+    const onAnswer = jest.fn(async () => true)
+    const onCarryOn = jest.fn(async () => true)
+    render(
+      <QuestionCard
+        entry={{ id: 'q1', kind: 'question', questions: [MUSIC], state: 'expired' }}
+        onAnswer={onAnswer}
+        onCarryOn={onCarryOn}
+      />,
+    )
+    expect(screen.getByText(/Answer it here to carry on where you left off/)).toBeTruthy()
+    const first = MUSIC.options?.[0]?.label ?? ''
+    fireEvent.click(screen.getByRole('button', { name: new RegExp(first.split(' ')[0] ?? '') }))
+    await screen.findByText(/carry on/)
+    expect(onCarryOn).toHaveBeenCalledWith({ [MUSIC.id]: [first] })
+    expect(onAnswer).not.toHaveBeenCalled()
+  })
+})

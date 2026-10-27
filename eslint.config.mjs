@@ -45,6 +45,10 @@ const ignoresConfig = {
     '**/node_modules/',
     '**/out-tsc/',
     '**/out/',
+    // A Motion Reel's Remotion template: its own project, typed against the runtime it links to.
+    'presets/motion-reel/template/',
+    // The Motion Reel composer, vendored as it was written (tools/motion-composer/README.md).
+    'tools/motion-composer/',
     '**/public/',
     '**/tmp/',
     '**/venv/',

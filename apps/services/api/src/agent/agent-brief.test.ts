@@ -17,6 +17,12 @@ import {
   FREE_CHAT_BRIEF,
   FREE_CHAT_KICKOFF,
   kickoffFor,
+  MOTION_PACE_SPACE_REVIEW_RULE,
+  MOTION_PLAN_IN_REPLY_RULE,
+  MOTION_REEL_FREE_BRIEF,
+  motionReelFreeKickoff,
+  motionReelKickoff,
+  motionReelNextSteps,
   RANKING_TOPIC_ID,
   RANKING_TOPIC_IDEAS,
   RANKING_TOPIC_RECOMMENDED,
@@ -311,5 +317,131 @@ describe('Loop shorts in the chat briefs', () => {
     expect(brief).toContain('## Loop shorts')
     expect(brief).toContain("make_beat_loop's reply has the cost")
     expect(brief).not.toMatch(/\$\d+\.\d\d for 24 s/)
+  })
+})
+
+describe('an Advanced Motion Reel', () => {
+  it('sets the reel up itself: the options first, cards for choices, references only from the user', () => {
+    const brief = briefFor({ mode: 'motion_free' }, 'codex')
+    expect(brief).toContain('reelmakeeasy-motion-reel')
+    expect(brief).toMatch(/Call it with no arguments first/)
+    expect(brief).toMatch(/as a card with request_user_input/)
+    expect(brief).toMatch(/Only a link the user pasted in this chat can be a reference/)
+    expect(brief).toMatch(/Call motion_setup again only when the user changes/)
+    expect(briefFor({ mode: 'motion_free' }, 'claude')).toMatch(/as a card with AskUserQuestion/)
+    // Easy's brief stays as it was: its card sets the reel up.
+    expect(briefFor({ mode: 'motion' }, 'codex')).not.toContain('motion_setup')
+  })
+
+  it('opens by looking at the options and asking what the reel is for, nothing else', () => {
+    const kickoff = motionReelFreeKickoff('codex')
+    expect(kickoff).toMatch(/^\[ReelMakeEasy\] The user chose Motion Reel, Advanced/)
+    expect(kickoff).toMatch(/call motion_setup with no arguments/)
+    expect(kickoff).toMatch(/Nothing else yet\.$/)
+  })
+
+  it('offers the composer first, and has the agent compose before it plans when it was picked', () => {
+    expect(briefFor({ mode: 'motion_free' }, 'codex')).toMatch(
+      /"Composed by you \(Recommended\)".*"ElevenLabs Music".*"ACE-Step"/,
+    )
+    const kickoff = motionReelKickoff('codex', false, 'composer')
+    expect(kickoff).toMatch(/read the `reelmakeeasy-music-composer` skill/)
+    expect(kickoff).toMatch(
+      /write `reel\/music\/music.mjs` and set its bpm in `reel\/music\/reel.config.mjs`/,
+    )
+    expect(kickoff).toMatch(/`cd reel\/music && node tools\/score.mjs --no-cues`/)
+    expect(kickoff).toMatch(/call motion_music with engine "composer" \(no prompt\)/)
+    expect(kickoff.indexOf('motion_music')).toBeLessThan(kickoff.indexOf('reel/plan.md'))
+    expect(motionReelKickoff('codex', false, 'eleven-music')).toMatch(
+      /compose it with motion_music \(engine "eleven-music"/,
+    )
+  })
+
+  it('asks for the type, never a style, and points to the brief for it', () => {
+    const free = briefFor({ mode: 'motion_free' }, 'codex')
+    expect(free).toMatch(/it answers the reel types, lengths, frames and music tracks/)
+    expect(free).toMatch(
+      /the type \("Product launch": make one product memorable by showing it working, or "Motion reel": pure show-off motion that looks super cool\)/,
+    )
+    expect(motionReelFreeKickoff('codex')).toMatch(/a product launch or a motion reel/)
+    for (const text of [
+      free,
+      briefFor({ mode: 'motion' }, 'codex'),
+      motionReelFreeKickoff('codex'),
+      motionReelKickoff('codex', true, 'eleven-music'),
+      motionReelKickoff('codex', false, 'composer'),
+    ])
+      expect(text).not.toMatch(/style card|style\.md|the style|styles|one world per section/)
+  })
+
+  it('opens an Easy reel by reading the brief and the music map, then planning', () => {
+    expect(motionReelKickoff('codex', false)).toBe(
+      '[ReelMakeEasy] The user filled in the Motion Reel card and `reel/` is ready. Read the skill, then `reel/brief.md` (it says the type) and `reel/music-map.md`. Then write `reel/plan.md`, and write the plan in your reply too, not only in your thinking: one short line per scene (its beats or bars and what is on screen), so the user reads it in the chat. Only then, below the plan in the same reply, ask with request_user_input whether to build it (options: build it, or change something); never ask that without the plan above it. ' +
+        MOTION_PACE_SPACE_REVIEW_RULE,
+    )
+  })
+
+  it('states the pace and space rules and the review loop in the briefs and the next steps', () => {
+    expect(MOTION_PACE_SPACE_REVIEW_RULE).toMatch(/one idea gets at most 4 s/)
+    expect(MOTION_PACE_SPACE_REVIEW_RULE).toMatch(/over 8 s only with a reason in the plan/)
+    expect(MOTION_PACE_SPACE_REVIEW_RULE).toMatch(
+      /mostly flat layouts; depth for one or two moments, never everything/,
+    )
+    expect(MOTION_PACE_SPACE_REVIEW_RULE).toMatch(/something visible moves on every frame/)
+    // The music is answered with new things, never a bump or flash on every beat, kick or note.
+    expect(MOTION_PACE_SPACE_REVIEW_RULE).toMatch(
+      /the picture answers the music with new things \(an element arriving, a reveal, a cut, a counter step\), never by bumping, shaking, flashing or pulsing the same element on every beat, kick or note \(a pulse or flash is a rare accent, a few per reel at most/,
+    )
+    // The loop, in order: render, review, review.md, fix, render again.
+    const loop = [
+      'render with motion_render',
+      'call motion_review',
+      'write `reel/review.md`',
+      'fix',
+      'render again',
+    ].map((step) => MOTION_PACE_SPACE_REVIEW_RULE.indexOf(step))
+    expect(loop.every((at) => at >= 0)).toBe(true)
+    expect([...loop].sort((a, b) => a - b)).toEqual(loop)
+    expect(MOTION_PACE_SPACE_REVIEW_RULE).toMatch(/never say it is done after one render/)
+    for (const text of [
+      briefFor({ mode: 'motion' }, 'codex'),
+      briefFor({ mode: 'motion_free' }, 'claude'),
+      motionReelKickoff('claude', false),
+      motionReelKickoff('codex', true, 'composer'),
+      motionReelNextSteps('codex', false),
+    ])
+      expect(text).toContain(MOTION_PACE_SPACE_REVIEW_RULE)
+    expect(briefFor({ mode: 'motion' }, 'codex')).toMatch(/motion_review lays the render out/)
+    // The kickoff plans first; the loop comes after the question.
+    const kickoff = motionReelKickoff('codex', false)
+    expect(kickoff.indexOf('whether to build')).toBeLessThan(kickoff.indexOf('motion_review'))
+  })
+
+  it('has the agent show the plan in its reply, above the question, never only in its thinking', () => {
+    for (const text of [
+      briefFor({ mode: 'motion' }, 'codex'),
+      briefFor({ mode: 'motion_free' }, 'claude'),
+      MOTION_REEL_FREE_BRIEF,
+    ]) {
+      expect(text).toContain(MOTION_PLAN_IN_REPLY_RULE)
+      expect(text).toMatch(/write the plan in your reply text, not only in your thinking/)
+      expect(text).toMatch(/one short line per scene with its beats or bars/)
+      expect(text).toMatch(
+        /Never ask whether to build the plan without the plan above the question/,
+      )
+    }
+    expect(MOTION_REEL_FREE_BRIEF).toMatch(
+      /write `reel\/plan.md`, write the plan in your reply, then ask whether to build it/,
+    )
+    for (const kickoff of [
+      motionReelKickoff('claude', false),
+      motionReelKickoff('codex', true, 'composer'),
+      motionReelNextSteps('codex', false),
+    ]) {
+      expect(kickoff).toMatch(/write the plan in your reply too, not only in your thinking/)
+      expect(kickoff).toMatch(/never ask that without the plan above it/)
+      // The plan comes before the question.
+      expect(kickoff.indexOf('in your reply too')).toBeLessThan(kickoff.indexOf('whether to build'))
+    }
   })
 })

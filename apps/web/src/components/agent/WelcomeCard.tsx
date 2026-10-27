@@ -9,7 +9,15 @@ import {
   toolOfMode,
 } from '@shared/types/api/agent'
 import { cn } from '@shared/ui'
-import { ArrowRight, Check, Film, ListOrdered, MessagesSquare, WandSparkles } from 'lucide-react'
+import {
+  ArrowRight,
+  Check,
+  Clapperboard,
+  Film,
+  ListOrdered,
+  MessagesSquare,
+  WandSparkles,
+} from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 
 import { HARNESS_LABEL, HARNESS_SHORT, harnessChoices, initialHarness } from './agent-harness'
@@ -87,6 +95,27 @@ const TOOLS: ToolOption[] = [
           `Chat freely with ${agent} about your ranking short, and open it in the editor any time.`,
         label: 'Advanced (Free chat)',
         mode: AGENT_TOOL_MODES.ranking.advanced,
+        recommended: false,
+      },
+    ],
+  },
+  {
+    icon: Clapperboard,
+    key: 'motion',
+    label: 'Motion Reel',
+    modes: [
+      {
+        description: (agent) =>
+          `Motion graphics on the beat: a launch, a showreel, a website demo. Pick a style and the music on one card, and ${agent} plans it and builds it in Remotion, on this computer. Needs Claude Opus or GPT Astra.`,
+        label: 'Easy (Guided)',
+        mode: AGENT_TOOL_MODES.motion.easy,
+        recommended: true,
+      },
+      {
+        description: (agent) =>
+          `Talk it through with ${agent}: what it's for, the style, the music, a site or video to borrow the look from. ${agent} sets it up and builds it. Needs Claude Opus or GPT Astra.`,
+        label: 'Advanced (Free chat)',
+        mode: AGENT_TOOL_MODES.motion.advanced,
         recommended: false,
       },
     ],

@@ -3,10 +3,15 @@ import type {
   AgentAttachment,
   AgentLoopLine,
   AgentMode,
+  AgentMotionPlan,
+  AgentMotionSetupView,
+  AgentMotionTask,
   AgentPlanStep,
   AgentQuestion,
   AgentUiEvent,
 } from '@shared/types/api/agent'
+
+import { motionSetupViewFromStored } from './agent-sessions'
 
 export type Transcript = {
   /** What Codex is doing right now, for the live activity line; null when nothing is running. */
@@ -23,6 +28,11 @@ export type Transcript = {
   lastEventId: number
   /** Chosen once, right after the session is created; null until the `mode` event arrives. */
   mode: AgentMode | null
+  /** A Motion Reel's plan (`reel/plan.md`, the last one a `motion_tasks` event sent); null until
+   *  there is one, and in chats from before the plan was sent. */
+  motionPlan: AgentMotionPlan | null
+  /** A Motion Reel's phases (the last `motion_tasks` event); null until ReelMakeEasy sends them. */
+  motionTasks: AgentMotionTask[] | null
   /** The latest `turn/plan/updated` steps; cleared when the user sends a message. */
   plan: AgentPlanStep[] | null
   /** A Ranking chat's ranking (the last `ranking` event) and how many changes it has seen, so
@@ -56,6 +66,10 @@ export type TranscriptEntry =
   /** `attachments`: the files sent with the message, shown under it. */
   | { attachments?: AgentAttachment[]; id: string; kind: 'user'; text: string }
   | { id: string; kind: 'video'; projectId: string }
+  /** A Motion Reel's setup card: open until it is sent, then showing what was chosen. */
+  | { id: string; kind: 'motion_setup'; setup?: AgentMotionSetupView; state: 'chosen' | 'open' }
+  /** A rendered Motion Reel, played in the chat. */
+  | { id: string; kind: 'motion_video'; posterUrl?: string; report?: string; videoUrl: string }
   | {
       id: string
       kind: 'style'
@@ -81,6 +95,8 @@ export const initialTranscript: Transcript = {
   entries: [],
   lastEventId: 0,
   mode: null,
+  motionPlan: null,
+  motionTasks: null,
   plan: null,
   ranking: null,
   working: false,
@@ -309,6 +325,20 @@ const handleQuestionExpired = (
   entries: expireQuestion(state.entries, event.questionId),
 })
 
+/**
+ * A Motion Reel's phases when the agent stops (an exit, a restart): nothing it was doing is
+ * running any more. Scenes being written are as far as they got; a call cut off says so. A call
+ * the server still finishes sends the phases again.
+ */
+const settleMotionTasks = (tasks: AgentMotionTask[] | null): AgentMotionTask[] | null =>
+  tasks?.some((t) => t.state === 'running')
+    ? tasks.map((t): AgentMotionTask => {
+        if (t.state !== 'running') return t
+        if (t.id === 'build') return { ...t, state: 'done' }
+        return { ...t, result: 'Stopped before it finished', state: 'failed' }
+      })
+    : tasks
+
 const handleSession = (
   state: Transcript,
   next: Transcript,
@@ -330,6 +360,7 @@ const handleSession = (
     // The agent's cards go with it; ReelMakeEasy's own stay until it expires them (an agent that
     // exited mid-turn leaves the loop card it waits on answerable).
     entries: stopped ? expireOpenStyle(settleInFlight(entries, true)) : entries,
+    motionTasks: stopped ? settleMotionTasks(state.motionTasks) : state.motionTasks,
     working: stopped || idle ? false : event.status === 'running' ? true : state.working,
   }
 }
@@ -486,6 +517,66 @@ const handleVideoStarted = (
   ],
 })
 
+const handleMotionSetupRequest = (
+  state: Transcript,
+  next: Transcript,
+  event: EventOf<'motion_setup_request'>,
+): Transcript => {
+  const id = `motion-setup-${event.id ?? state.entries.length}`
+  // A setup that failed asks again: the open card stays the one card, under a new id so it
+  // starts over (unlocked, as a fresh card).
+  const openIndex = state.entries.findLastIndex(
+    (e) => e.kind === 'motion_setup' && e.state === 'open',
+  )
+  if (openIndex !== -1)
+    return { ...next, entries: state.entries.map((e, i) => (i === openIndex ? { ...e, id } : e)) }
+  return { ...next, entries: [...state.entries, { id, kind: 'motion_setup', state: 'open' }] }
+}
+
+const handleMotionSetup = (
+  state: Transcript,
+  next: Transcript,
+  event: EventOf<'motion_setup'>,
+): Transcript => {
+  // The open card turns into the chosen one; a later setup (the agent composed the music)
+  // updates the chosen card in place.
+  const open = state.entries.findLastIndex((e) => e.kind === 'motion_setup' && e.state === 'open')
+  const openIndex =
+    open === -1 ? state.entries.findLastIndex((e) => e.kind === 'motion_setup') : open
+  const chosen: TranscriptEntry = {
+    id:
+      openIndex === -1
+        ? `motion-setup-${event.id ?? state.entries.length}`
+        : state.entries[openIndex].id,
+    kind: 'motion_setup',
+    // A setup saved when reels had styles shows its type.
+    setup: motionSetupViewFromStored(event.setup),
+    state: 'chosen',
+  }
+  return {
+    ...next,
+    entries:
+      openIndex === -1
+        ? [...state.entries, chosen]
+        : state.entries.map((e, i) => (i === openIndex ? chosen : e)),
+  }
+}
+
+const handleMotionVideo = (
+  state: Transcript,
+  next: Transcript,
+  event: EventOf<'motion_video'>,
+): Transcript => ({
+  ...next,
+  entries: upsert(state.entries, {
+    id: event.itemId,
+    kind: 'motion_video',
+    ...(event.posterUrl ? { posterUrl: event.posterUrl } : {}),
+    ...(event.report ? { report: event.report } : {}),
+    videoUrl: event.videoUrl,
+  }),
+})
+
 export function reduceTranscript(state: Transcript, event: TranscriptAction): Transcript {
   if (event.type === 'local_notice') {
     return {
@@ -531,6 +622,20 @@ export function reduceTranscript(state: Transcript, event: TranscriptAction): Tr
     }
     case 'mode': {
       return handleMode(state, next, event)
+    }
+    case 'motion_setup': {
+      return handleMotionSetup(state, next, event)
+    }
+    case 'motion_setup_request': {
+      return handleMotionSetupRequest(state, next, event)
+    }
+    case 'motion_tasks': {
+      // No `plan`: unchanged since the last list (or a chat from before the plan was sent).
+      const motionPlan = event.plan === undefined ? state.motionPlan : event.plan
+      return { ...next, motionPlan, motionTasks: event.tasks }
+    }
+    case 'motion_video': {
+      return handleMotionVideo(state, next, event)
     }
     case 'notice': {
       return handleNotice(state, next, event)

@@ -6,6 +6,11 @@ export type AgentToolName =
   | 'generate_image'
   | 'make_beat_loop'
   | 'make_video'
+  | 'motion_music'
+  | 'motion_render'
+  | 'motion_review'
+  | 'motion_setup'
+  | 'motion_still'
   | 'ranking_add_clip'
   | 'ranking_add_sound'
   | 'ranking_add_sticker_image'
@@ -35,6 +40,9 @@ export interface DynamicToolSpec {
 
 /** What a tool call answers: `text` goes back to Codex as the tool's output. */
 export interface ToolCallResult {
+  /** The call was refused before it ran (another call or setup running, a reel that doesn't
+   *  type-check): it says nothing about the tool's own work. */
+  refused?: 'busy' | 'type-check'
   success: boolean
   text: string
 }
@@ -112,6 +120,131 @@ export const AGENT_TOOLS: Record<AgentToolName, DynamicToolSpec> = {
       type: 'object',
     },
     name: 'make_video',
+  },
+  motion_music: {
+    description:
+      'Put the Motion Reel\'s own music under it, made the way the user picked (engine). "composer" (free, recommended): music you composed note by note with the reelmakeeasy-music-composer skill; first write reel/music/music.mjs and set bpm in reel/music/reel.config.mjs, run `cd reel/music && node tools/score.mjs --no-cues` in your shell and fix its QC, then call this with engine "composer" and no prompt: ReelMakeEasy takes audio/score.wav with its exact grid and events from build/music.json. "eleven-music" (ElevenLabs Music, $0.60 a minute) or "ace-step" (about $0.01): a music model composes it from your prompt, about a minute; ReelMakeEasy measures its beat and keeps the most energetic whole bars. Either way reel/public/music.wav and reel/public/reel.json are rewritten, so scenes timed with beat() and bar() follow the new music. Use it when the user asks for different or original music, or chose to have you make it. The reply gives the new length, tempo and strongest hits.',
+    inputSchema: {
+      additionalProperties: false,
+      properties: {
+        bpm: {
+          description:
+            'For a music model, optional: the tempo to ask for (the grid follows what the model actually plays). The composer takes its tempo from your music.mjs.',
+          maximum: 180,
+          minimum: 60,
+          type: 'integer',
+        },
+        engine: {
+          description: 'How the music was made (default: the way the user picked).',
+          enum: ['composer', 'eleven-music', 'ace-step'],
+          type: 'string',
+        },
+        prompt: {
+          description:
+            'For a music model (not the composer): the music as it reads it: genre, mood, instruments, energy, and its shape in bars (e.g. "4-bar intro with a riser, big drop at bar 5, hits on the downbeats"). Instrumental.',
+          type: 'string',
+        },
+      },
+      type: 'object',
+    },
+    name: 'motion_music',
+  },
+  motion_render: {
+    description:
+      'Render the Motion Reel in reel/ to a video (free, about a minute): type-checks it, renders it with its music, evens out the loudness, shows it to the user in the chat and reports how many cuts land on the beat grid. Call it when the stills look right, and again after each change the user asks for.',
+    inputSchema: { additionalProperties: false, properties: {}, type: 'object' },
+    name: 'motion_render',
+  },
+  motion_review: {
+    description:
+      'Review the last render of the Motion Reel (free, a few seconds; render with motion_render first): lays it out as contact sheets, a frame every 0.5 s (or 1 s), 8 frames to a row, a few rows to a sheet, and shows them to you and the user, with a pace report: every shot with its length (one idea is at most 4 s, a shot over 8 s fails) and every stall (0.5 s or more in which nothing visibly moves, the end card aside). Call it after every render, open every sheet, write what is wrong by time in reel/review.md with the change of strategy for each, fix, render and review again.',
+    inputSchema: {
+      additionalProperties: false,
+      properties: {
+        every: {
+          description: 'Seconds between frames: 0.5 (default) or 1.',
+          enum: [0.5, 1],
+          type: 'number',
+        },
+        from: {
+          description: 'Optional: start here (seconds; default 0).',
+          minimum: 0,
+          type: 'number',
+        },
+        to: {
+          description: 'Optional: stop here (seconds; default the end of the reel).',
+          minimum: 0,
+          type: 'number',
+        },
+      },
+      type: 'object',
+    },
+    name: 'motion_review',
+  },
+  motion_setup: {
+    description:
+      'Set up an Advanced Motion Reel (free, quick; the first time it also installs Remotion, a few minutes): readies reel/ with the brief, the music trimmed to whole bars and its beat grid, exactly as the setup card does in Easy. Call it with no arguments to get the reel types, lengths, frames and library tracks. Call it with everything once the user has settled it, and again only when they change the type, length, frame, music or reference (the scenes and plan are kept). The reply says what to read next.',
+    inputSchema: {
+      additionalProperties: false,
+      properties: {
+        lengthSec: {
+          description: 'About how long, in seconds (the reel is whole bars of its music).',
+          enum: [10, 15, 30, 60],
+          type: 'integer',
+        },
+        music: {
+          description:
+            "library: a library track (musicId: its id); upload: the user's own file (musicId: its path, e.g. attachments/song.mp3); agent: you make it with motion_music right after, the way the user picked (musicEngine); none: no music.",
+          enum: ['library', 'upload', 'agent', 'none'],
+          type: 'string',
+        },
+        musicEngine: {
+          description:
+            'With music "agent": how you make it, as the user picked: composer (you compose it note by note with the reelmakeeasy-music-composer skill; free, recommended), eleven-music (ElevenLabs Music, $0.60 a minute) or ace-step (about $0.01).',
+          enum: ['composer', 'eleven-music', 'ace-step'],
+          type: 'string',
+        },
+        musicId: {
+          description: "The library track's id, or the user's file's path.",
+          type: 'string',
+        },
+        ratio: { description: 'The frame.', enum: ['16:9', '9:16', '1:1'], type: 'string' },
+        referenceUrl: {
+          description:
+            'Optional: a YouTube video or a website the user pasted in this chat, to take the look from.',
+          type: 'string',
+        },
+        subject: {
+          description:
+            'What the reel is about: the words, names and facts it may show (up to 600 characters).',
+          type: 'string',
+        },
+        type: {
+          description:
+            'The kind of reel: launch (a product launch: make one product memorable by showing it working) or showreel (a motion reel: pure show-off motion that looks super cool).',
+          enum: ['launch', 'showreel'],
+          type: 'string',
+        },
+      },
+      type: 'object',
+    },
+    name: 'motion_setup',
+  },
+  motion_still: {
+    description:
+      'Render single frames of the Motion Reel in reel/ (free, a few seconds) and get them back as pictures to look at. Pass the moments as beats (e.g. "0, 4, 8.5, 16": beat numbers from the reel\'s first beat, as grid.ts counts them). Look at each one and fix what is cut off, too small or crowded before rendering. The user sees them too.',
+    inputSchema: {
+      additionalProperties: false,
+      properties: {
+        beats: {
+          description: 'Comma-separated beat numbers (fractions allowed), at most 6.',
+          type: 'string',
+        },
+      },
+      required: ['beats'],
+      type: 'object',
+    },
+    name: 'motion_still',
   },
   ranking_add_clip: {
     description:
@@ -474,8 +607,9 @@ const EDIT_TOOLS: AgentToolName[] = [
 ]
 
 /** Easy sessions get the edit tools only once editing; Free chat declares make_video,
- *  make_beat_loop and the edit tools. Claude (which has no image tool of its own) gets
- *  generate_image wherever it chats with the user, editing included: it fixes a keyframe. */
+ *  make_beat_loop and the edit tools; a Motion Reel chat, its music, render and review tools (and an
+ *  Advanced one, motion_setup). Claude (which has no image tool of its own) gets generate_image
+ *  wherever it chats with the user, editing included: it fixes a keyframe. */
 export function toolsForSession(
   session: { editing?: boolean; mode?: AgentMode },
   harness: AgentHarnessName = 'codex',
@@ -485,36 +619,66 @@ export function toolsForSession(
       (n) => AGENT_TOOLS[n],
     )
   if (session.mode === 'autonomous') return session.editing ? withImage(EDIT_TOOLS) : []
+  if (session.mode === 'motion')
+    return [
+      AGENT_TOOLS.motion_music,
+      AGENT_TOOLS.motion_still,
+      AGENT_TOOLS.motion_render,
+      AGENT_TOOLS.motion_review,
+    ]
+  if (session.mode === 'motion_free')
+    return [
+      AGENT_TOOLS.motion_setup,
+      AGENT_TOOLS.motion_music,
+      AGENT_TOOLS.motion_still,
+      AGENT_TOOLS.motion_render,
+      AGENT_TOOLS.motion_review,
+    ]
   if (isRankingMode(session.mode)) return RANKING_TOOLS.map((n) => AGENT_TOOLS[n])
   if (session.mode !== 'free') return []
   return withImage(['make_video', 'make_beat_loop', ...EDIT_TOOLS, ...RANKING_TOOLS])
 }
 
+/** The chat pill's text for calls whose text doesn't depend on their arguments. */
+const FIXED_SUMMARIES: Record<string, string> = {
+  generate_image: 'Making a preview image',
+  motion_music: 'Composing the music',
+  motion_render: 'Rendering the reel',
+  motion_review: 'Reviewing the render (contact sheets)',
+  motion_still: 'Looking at frames of the reel',
+  ranking_add_sticker_image: 'Adding a picture sticker',
+  ranking_analyze_reference: 'Watching the reference video',
+  ranking_apply_style: 'Applying the ranking style',
+  ranking_export: 'Exporting the ranking short',
+  ranking_find_moments: 'Finding the action in a clip',
+  ranking_generate_clips: 'Making the clips with AI',
+  ranking_get: 'Reading the ranking',
+  ranking_list: 'Looking at your rankings and sounds',
+  ranking_style_get: 'Reading ranking styles',
+  ranking_style_list: 'Reading ranking styles',
+  ranking_style_save: 'Saving the ranking style',
+  ranking_update: 'Changing the ranking',
+  render_video: 'Rebuilding the video',
+  set_music: 'Changing the music',
+}
+
 /** The chat pill's text for a call. */
 export function toolSummary(tool: string, args: unknown): string {
   const a = (args ?? {}) as Record<string, unknown>
+  const fixed = Object.hasOwn(FIXED_SUMMARIES, tool) ? FIXED_SUMMARIES[tool] : undefined
+  if (fixed) return fixed
   if (tool === 'regenerate_clip') {
     const clip = `Redoing clip ${String(a.transitionId ?? '')}`.trim()
     return a.redoFollowing === true ? `${clip} and the clips after it` : clip
   }
-  if (tool === 'render_video') return 'Rebuilding the video'
-  if (tool === 'set_music') return 'Changing the music'
   if (tool === 'use_image_as_keyframe')
     return `Putting the new picture in as keyframe ${String(a.keyframe ?? '')}`.trim()
-  if (tool === 'generate_image') return 'Making a preview image'
-  if (tool === 'ranking_list') return 'Looking at your rankings and sounds'
+  if (tool === 'motion_setup')
+    return typeof a.type === 'string' && a.type.trim()
+      ? 'Setting up the reel'
+      : 'Looking at the reel types and music'
   if (tool === 'ranking_create') return `Starting a ranking: ${String(a.name ?? '')}`.trim()
-  if (tool === 'ranking_get') return 'Reading the ranking'
-  if (tool === 'ranking_update') return 'Changing the ranking'
-  if (tool === 'ranking_add_sticker_image') return 'Adding a picture sticker'
-  if (tool === 'ranking_analyze_reference') return 'Watching the reference video'
-  if (tool === 'ranking_find_moments') return 'Finding the action in a clip'
-  if (tool === 'ranking_generate_clips') return 'Making the clips with AI'
-  if (tool === 'ranking_style_save') return 'Saving the ranking style'
-  if (tool === 'ranking_apply_style') return 'Applying the ranking style'
-  if (tool === 'ranking_style_list' || tool === 'ranking_style_get') return 'Reading ranking styles'
   if (tool === 'ranking_add_clip') return `Adding a clip to rank ${String(a.rank ?? '')}`.trim()
-  if (tool === 'ranking_export') return 'Exporting the ranking short'
   if (tool === 'make_video')
     return `Starting the video: ${String(a.title ?? '')}`.trim().replace(/:$/, '')
   if (tool === 'make_beat_loop')

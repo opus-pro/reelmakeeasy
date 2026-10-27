@@ -35,6 +35,8 @@ import { RankingService } from '../ranking/ranking.service'
 import { SoundLibraryModule } from '../sound-library/sound-library.module'
 import { SoundLibraryService } from '../sound-library/sound-library.service'
 
+import { MotionReelService } from './motion-reel/motion-reel.service'
+import { MotionTaskTracker } from './motion-reel/motion-tasks'
 import { AgentController } from './agent.controller'
 import { AgentSessionService } from './agent-session.service'
 import { ChatModelService } from './chat-model.service'
@@ -59,8 +61,15 @@ import { ChatModelService } from './chat-model.service'
       ) => {
         const flow = () => refs.get(AutonomousService, { strict: true })
         const edit = () => refs.get(AgentEditService, { strict: true })
+        const motion = () => refs.get(MotionReelService, { strict: true })
         // The Ranking Builder's tools; the session service gives the chat's working folder.
         let session: AgentSessionService | undefined
+        // A Motion Reel's phases (its Tasks panel), sent as its tools run and its turns end.
+        const motionTasks = new MotionTaskTracker({
+          emitAutonomousEvent: (id, event) => session?.emitAutonomousEvent(id, event),
+          getSession: (id) => (session as AgentSessionService).getSession(id),
+          workingDir: (id) => (session as AgentSessionService).workingDir(id),
+        })
         const rankingTools = new RankingAgentTools({
           onRanking: (id, rankingId) => session?.followRanking(id, rankingId),
           prints: new LibraryPrints(sounds),
@@ -76,11 +85,23 @@ import { ChatModelService } from './chat-model.service'
             resumeAction: (id) => flow().resumeAction(id),
             start: (id) => flow().start(id),
           },
-          chatModels,
-          // Codex's ReelMakeEasy tools, answered by the edit service (resolved lazily, like the
-          // flow); the Ranking Builder's by its own tools.
+          chatModels: {
+            choiceFor: (harness, chat) => chatModels.choiceFor(harness, chat),
+            motionChoiceFor: (harness, chat) => chatModels.motionChoiceFor(harness, chat),
+          },
+          // Codex's ReelMakeEasy tools, answered by the edit service, a Motion Reel's by the
+          // Motion Reel service (both resolved lazily, like the flow); the Ranking Builder's by
+          // its own tools.
           onToolCall: (id, tool, args) =>
-            tool.startsWith('ranking_') ? rankingTools.call(id, tool, args) : edit().callTool(id, tool, args),
+            tool.startsWith('ranking_')
+              ? rankingTools.call(id, tool, args)
+              : tool.startsWith('motion_')
+                ? motionTasks.track(id, tool, () => motion().callTool(id, tool, args))
+                : edit().callTool(id, tool, args),
+          onQuestion: (id) => session && motionTasks.questionAsked(id),
+          // Both can come while the session service is still being made (its restart pass).
+          onTurnEnd: (id) => session && motionTasks.turnEnded(id),
+          onTurnStart: (id) => session && motionTasks.turnStarted(id),
         })
         return session
       },
@@ -112,6 +133,11 @@ import { ChatModelService } from './chat-model.service'
         autonomous: AutonomousService,
         music: MusicService,
       ) => new AgentEditService({ autonomous, longTake, music, projects, sessions }),
+    },
+    {
+      inject: [AgentSessionService],
+      provide: MotionReelService,
+      useFactory: (sessions: AgentSessionService) => new MotionReelService(sessions),
     },
     CodexLlmService,
     ClaudeLlmService,

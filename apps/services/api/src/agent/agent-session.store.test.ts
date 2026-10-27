@@ -185,6 +185,63 @@ describe('AgentSessionStore', () => {
     expect(onDisk[id].mode).toBe('free')
   })
 
+  it('opens a Motion Reel saved when reels had styles with its type, setup and history alike', () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'agent-store-motion-'))
+    const id = randomUUID()
+    const oldSetup = {
+      bars: 8,
+      bpm: 128,
+      lengthSec: 15,
+      music: { source: 'none' },
+      musicTitle: null,
+      ratio: '16:9',
+      reelSec: 15,
+      styleId: 'product-ui-launch',
+      styleLabel: 'Product UI Launch',
+      subject: 'ReelMakeEasy',
+    }
+    const saved = {
+      createdAt: '2026-10-01T00:00:00.000Z',
+      id,
+      mode: 'motion',
+      motionReel: oldSetup,
+      projectId: null,
+      status: 'idle',
+      title: 'ReelMakeEasy',
+      updatedAt: '2026-10-01T00:00:00.000Z',
+    }
+    fs.writeFileSync(path.join(dir, 'sessions.json'), JSON.stringify({ [id]: saved }))
+    fs.mkdirSync(path.join(dir, id))
+    const events = [
+      { id: 1, setup: oldSetup, type: 'motion_setup' },
+      { id: 2, setup: { ...oldSetup, styleId: 'hud-showreel' }, type: 'motion_setup' },
+    ]
+    fs.writeFileSync(
+      path.join(dir, id, 'events.jsonl'),
+      events.map((e) => JSON.stringify(e)).join('\n') + '\n',
+    )
+
+    const store = new AgentSessionStore(dir)
+    const { styleId: _id, styleLabel: _label, ...rest } = oldSetup
+    expect(store.get(id)?.motionReel).toEqual({
+      ...rest,
+      type: 'launch',
+      typeLabel: 'Product launch',
+    })
+    expect(store.eventsAfter(id, 0)).toEqual([
+      {
+        id: 1,
+        setup: { ...rest, type: 'launch', typeLabel: 'Product launch' },
+        type: 'motion_setup',
+      },
+      {
+        id: 2,
+        setup: { ...rest, type: 'showreel', typeLabel: 'Motion reel' },
+        type: 'motion_setup',
+      },
+    ])
+  })
+
   it('deletes a session and its folder; ids are not reused', () => {
     const store = new AgentSessionStore(root)
     const id = randomUUID()

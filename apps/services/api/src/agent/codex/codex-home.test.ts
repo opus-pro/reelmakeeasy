@@ -4,12 +4,16 @@ import path from 'node:path'
 
 import { BEAT_LOOP_SKILL_NAME, renderBeatLoopSkill } from '../craft/beat-loop-skill'
 import { CAMERA_SKILL_NAME, renderCameraSkill } from '../craft/camera-skill'
+import { MOTION_REEL_SKILL_NAME, renderMotionReelSkill } from '../craft/motion-reel-skill'
+import * as musicComposerSkill from '../craft/music-composer-skill'
+import { MUSIC_COMPOSER_SKILL_NAME, musicComposerSkillDir } from '../craft/music-composer-skill'
 import { RANKING_SKILL_NAME } from '../craft/ranking-skill'
 
 import {
   AGENT_CODEX_CONFIG,
   AGENT_SKILL_NAMES,
   agentCodexHome,
+  agentSkillNames,
   ensureAgentCodexHome,
 } from './codex-home'
 
@@ -91,11 +95,54 @@ describe('ensureAgentCodexHome', () => {
     expect(fs.readFileSync(file, 'utf8')).toBe(renderCameraSkill())
   })
 
-  it('writes the reelmakeeasy-beat-loop skill too, and names both skills it ships', () => {
+  it('writes the beat-loop and Motion Reel skills too, and names every skill it ships', () => {
     ensureAgentCodexHome({ home, userHome })
     const file = path.join(home, 'skills', BEAT_LOOP_SKILL_NAME, 'SKILL.md')
     expect(fs.readFileSync(file, 'utf8')).toBe(renderBeatLoopSkill())
-    expect(AGENT_SKILL_NAMES).toEqual([CAMERA_SKILL_NAME, BEAT_LOOP_SKILL_NAME, RANKING_SKILL_NAME])
+    const motion = path.join(home, 'skills', MOTION_REEL_SKILL_NAME, 'SKILL.md')
+    expect(fs.readFileSync(motion, 'utf8')).toBe(renderMotionReelSkill())
+    expect(AGENT_SKILL_NAMES).toEqual([
+      CAMERA_SKILL_NAME,
+      BEAT_LOOP_SKILL_NAME,
+      RANKING_SKILL_NAME,
+      MOTION_REEL_SKILL_NAME,
+      MUSIC_COMPOSER_SKILL_NAME,
+    ])
+  })
+
+  it('copies the music composer skill whole, its references too', () => {
+    ensureAgentCodexHome({ home, userHome })
+    const skill = path.join(home, 'skills', MUSIC_COMPOSER_SKILL_NAME)
+    for (const file of [
+      'SKILL.md',
+      'references/music-direction.md',
+      'references/music-synthesis.md',
+    ])
+      expect(fs.readFileSync(path.join(skill, file), 'utf8')).toBe(
+        fs.readFileSync(path.join(musicComposerSkillDir(), file), 'utf8'),
+      )
+    fs.writeFileSync(path.join(skill, 'SKILL.md'), 'stale')
+    ensureAgentCodexHome({ home, userHome })
+    expect(fs.readFileSync(path.join(skill, 'SKILL.md'), 'utf8')).toMatch(
+      new RegExp(`^---\nname: ${MUSIC_COMPOSER_SKILL_NAME}\n`),
+    )
+  })
+
+  it('skips the music composer skill when this install has no folder for it', () => {
+    const missing = jest
+      .spyOn(musicComposerSkill, 'musicComposerSkillDir')
+      .mockReturnValue(path.join(userHome, 'no-such-skill'))
+    try {
+      expect(() => ensureAgentCodexHome({ home, userHome })).not.toThrow()
+      expect(fs.existsSync(path.join(home, 'skills', MUSIC_COMPOSER_SKILL_NAME))).toBe(false)
+      expect(fs.existsSync(path.join(home, 'skills', MOTION_REEL_SKILL_NAME, 'SKILL.md'))).toBe(
+        true,
+      )
+      expect(agentSkillNames()).not.toContain(MUSIC_COMPOSER_SKILL_NAME)
+    } finally {
+      missing.mockRestore()
+    }
+    expect(agentSkillNames()).toContain(MUSIC_COMPOSER_SKILL_NAME)
   })
 
   it('removes retired reelmakeeasy skills and leaves other skills alone', () => {

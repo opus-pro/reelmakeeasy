@@ -1,5 +1,6 @@
+import type { AgentTool } from '@shared/types/api/agent'
 import { cn } from '@shared/ui'
-import { ListOrdered } from 'lucide-react'
+import { Clapperboard, ListOrdered } from 'lucide-react'
 import { usePathname, useRouter } from 'next/navigation'
 import React, { memo, useMemo, useState } from 'react'
 
@@ -11,6 +12,7 @@ import {
   ThreeLines as Menu,
   VideoCards,
 } from '@/components/icons/core'
+import { useStartAgentSession } from '@/components/agent/useStartAgentSession'
 import { useRefCallback } from '@/hooks/use-ref-callback'
 
 import { LogoWithText } from './NavigateBar'
@@ -27,6 +29,8 @@ interface NavConfigItem {
   path?: string
   section: NavSection
   tag?: string
+  /** A tool made in an agent chat: a click opens a new chat with that tool picked. */
+  tool?: AgentTool
 }
 type NavContext = 'desktop' | 'mobile'
 type NavIcon = React.ComponentType<{ className?: string }>
@@ -85,6 +89,14 @@ const NAV_ITEMS: NavConfigItem[] = [
   },
   {
     contexts: ['desktop', 'mobile'],
+    icon: Clapperboard,
+    key: 'motion',
+    label: 'Motion Reel',
+    section: 'tools',
+    tool: 'motion',
+  },
+  {
+    contexts: ['desktop', 'mobile'],
     icon: Settings,
     isActive: (pathname) => pathname.startsWith('/setup'),
     key: 'setup',
@@ -134,6 +146,9 @@ const SidebarV2: React.FC<SidebarV2Props> = ({ className }) => {
   const handleNavigation = useRefCallback((path: string) => {
     router.push(path)
   })
+  // A full page load: /agent is cross-origin isolated only when its document loads with its
+  // own headers.
+  const agent = useStartAgentSession({ hard: true })
 
   const onNavItemClick = useRefCallback((item: NavConfigItem, context: NavContext) => {
     if (context === 'mobile') {
@@ -142,6 +157,11 @@ const SidebarV2: React.FC<SidebarV2Props> = ({ className }) => {
 
     if (item.path) {
       handleNavigation(item.path)
+      return
+    }
+
+    if (item.tool) {
+      void agent.start(undefined, { tool: item.tool })
       return
     }
 

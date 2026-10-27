@@ -39,7 +39,8 @@ describe('agentChatUrl', () => {
     expect(startModeOf(new URLSearchParams('start=easy'))).toBe('autonomous')
     expect(startModeOf(new URLSearchParams('start=autonomous'))).toBeNull()
     expect(toolOf(new URLSearchParams('tool=ranking'))).toBe('ranking')
-    expect(toolOf(new URLSearchParams('tool=motion'))).toBeNull()
+    expect(toolOf(new URLSearchParams('tool=motion'))).toBe('motion')
+    expect(toolOf(new URLSearchParams('tool=video'))).toBeNull()
   })
 })
 

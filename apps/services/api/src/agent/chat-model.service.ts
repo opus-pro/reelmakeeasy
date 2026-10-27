@@ -19,7 +19,14 @@ import { buildAppServerArgs, scrubCodexEnv } from './codex/codex-config'
 import { ensureAgentCodexHome } from './codex/codex-home'
 import { resolveCodexBinaryOrThrow } from './codex/codex-locator'
 import { CodexRpcClient } from './codex/codex-rpc'
-import { type ChatModelCatalog, chatModelState, usableChoice } from './chat-models'
+import {
+  type ChatModelCatalog,
+  chatModelState,
+  isMotionModel,
+  motionModelChoice,
+  motionModelGate,
+  usableChoice,
+} from './chat-models'
 
 const logger = new Logger('ChatModelService')
 
@@ -101,6 +108,43 @@ export class ChatModelService {
       harness,
       saved: this.saved(harness),
     }).current
+  }
+
+  /** A Motion Reel chat's model (its family's newest; see `motionModelChoice`), from what is
+   *  known now; while the list is unknown, the usual choice (the gate already checked it). */
+  motionChoiceFor(harness: AgentHarnessName, chat?: ChatModelChoice): ChatModelChoice | null {
+    const models = this.cache.get(harness)?.catalog?.models ?? []
+    if (!models.length) return this.choiceFor(harness, chat)
+    return motionModelChoice(harness, models, chat ?? this.saved(harness))
+  }
+
+  /** Why this account can't run a Motion Reel on `harness`, or null when it can (or the
+   *  harness can't list its models: it is then not refused for being slow). */
+  async motionGate(harness: AgentHarnessName): Promise<null | string> {
+    const models = (await this.catalog(harness))?.models ?? []
+    return models.length ? motionModelGate(harness, models) : null
+  }
+
+  /** Whether `choice` may run a Motion Reel chat on `harness` (true while the list is unknown). */
+  async motionOffers(harness: AgentHarnessName, choice: ChatModelChoice): Promise<boolean> {
+    const models = (await this.catalog(harness))?.models ?? []
+    if (!models.length) return true
+    return isMotionModel(harness, models, choice.model) && (await this.offers(harness, choice))
+  }
+
+  /** `GET .../model` for a Motion Reel chat: only the allowed model is offered, at its level. */
+  async motionState(harness: AgentHarnessName, chat?: ChatModelChoice): Promise<ChatModelState> {
+    const state = await this.state(harness, chat)
+    const current = state.models.length
+      ? motionModelChoice(harness, state.models, chat ?? state.default)
+      : state.current
+    return {
+      ...state,
+      current,
+      models: state.models.filter((m) => m.id === current?.model),
+      recommended: current,
+      source: chat ? 'chat' : 'recommended',
+    }
   }
 
   /** Whether `choice` is a model (and thinking level) the harness offers; true while its list

@@ -18,6 +18,7 @@ import type {
   AgentAttachment,
   AgentHarnessName,
   AgentMode,
+  AgentMotionSetupView,
   AgentQuestion,
   AgentResumeAction,
   AgentSession,
@@ -26,6 +27,7 @@ import type {
   HarnessStatus,
 } from '@shared/types/api/agent'
 import {
+  isMotionMode,
   isRankingMode,
   isRankingTopicQuestion,
   RANKING_TOPIC_QUESTION_PREFIX,
@@ -51,6 +53,7 @@ import {
   briefFor,
   EDIT_INTRO,
   kickoffFor,
+  motionReelFreeKickoff,
   RANKING_TOPIC_ID,
   rankingKickoff,
   rankingTopicQuestion,
@@ -87,13 +90,23 @@ export interface SessionDeps {
    *  null leaves the harness's own default. */
   chatModels?: {
     choiceFor(harness: AgentHarnessName, chat?: ChatModelChoice): ChatModelChoice | null
+    /** A Motion Reel chat's model (Opus or Astra, at medium thinking or more). */
+    motionChoiceFor?(harness: AgentHarnessName, chat?: ChatModelChoice): ChatModelChoice | null
   }
   /** Whether a harness can run a chat now (default: the Claude Code probe; Codex is checked
    *  when it starts, as before). */
   harnessStatus?: (harness: AgentHarnessName) => Promise<HarnessStatus | null>
   idleMs?: number
+  /** The agent is about to show the user a question card (a Motion Reel then sends its phases
+   *  and plan first). */
+  onQuestion?: (sessionId: string) => void
   /** Runs a ReelMakeEasy tool the agent called (`item/tool/call`); the text goes back to it. */
   onToolCall?: (sessionId: string, tool: string, args: unknown) => Promise<ToolCallResult>
+  /** The agent's turn in a session ended, or the agent stopped (a Motion Reel then sends its
+   *  phases again). */
+  onTurnEnd?: (sessionId: string) => void
+  /** A turn is starting (a Motion Reel then follows its phases while it runs). */
+  onTurnStart?: (sessionId: string) => void
   root?: string
   /** Starts a session's agent (its Codex app-server, or Claude Code behind the same protocol);
    *  `opts.harness` picks which, `opts.mode` decides its tools. */
@@ -243,6 +256,14 @@ export class ModeNotChattableError extends Error {
   }
 }
 
+/** Thrown by `sendMessage` for a Motion Reel chat whose setup card hasn't been sent yet. */
+export class MotionSetupPendingError extends Error {
+  constructor(readonly sessionId: string) {
+    super('Fill in the Motion Reel card above first.')
+    this.name = 'MotionSetupPendingError'
+  }
+}
+
 /** Thrown by `resumeFlow` for a chat with nothing to pick up; the message says why, plainly. */
 export class NotResumableError extends Error {
   constructor(
@@ -379,6 +400,9 @@ export class AgentSessionService implements OnModuleDestroy {
       idleMs: deps?.idleMs ?? IDLE_MS,
       onToolCall:
         deps?.onToolCall ?? (async () => ({ success: false, text: 'No tools in this chat.' })),
+      onQuestion: deps?.onQuestion ?? (() => undefined),
+      onTurnEnd: deps?.onTurnEnd ?? (() => undefined),
+      onTurnStart: deps?.onTurnStart ?? (() => undefined),
       root: deps?.root ?? path.join(dataDir(), 'agent'),
       spawnCodex: deps?.spawnCodex ?? spawnAgent,
     }
@@ -523,22 +547,26 @@ export class AgentSessionService implements OnModuleDestroy {
       mode === 'autonomous' ? { flowActive: true, harness, mode } : { harness, mode },
     )
     this.emit(id, { mode, type: 'mode' })
+    // A Motion Reel starts with its setup card; the agent's first turn waits for it
+    // (`startMotionReel`).
+    if (mode === 'motion') {
+      this.emit(id, { type: 'motion_setup_request' })
+      return
+    }
     // Easy ranking with nothing to go on yet: ReelMakeEasy asks what it's about with its own
     // card (topic ideas, or their own words), and the agent starts once it is answered.
     if (mode === 'ranking_easy' && !request?.trim() && !session.rankingId) {
       void this.askRankingTopic(id, harness)
       return
     }
-    if (mode === 'free' || isRankingMode(mode)) {
+    if (mode === 'free' || mode === 'motion_free' || isRankingMode(mode)) {
       const asked = isRankingMode(mode) ? request?.trim() : undefined
       if (asked) {
         if (isUnsetChatTitle(session.title))
           this.store.update(id, { title: chatTitleFrom(asked) }, { touch: false })
         this.emit(id, { text: asked, type: 'user_message' })
       }
-      const prompt = isRankingMode(mode)
-        ? rankingKickoff(harness, session.rankingId, mode === 'ranking_easy', asked)
-        : kickoffFor(harness)
+      const prompt = firstTurnPrompt(mode, harness, session.rankingId, asked)
       void this.startKickoff(id, prompt).catch((error: unknown) =>
         this.logger.warn(`Kickoff for ${id} failed: ${ensureError(error).message}`),
       )
@@ -609,6 +637,9 @@ export class AgentSessionService implements OnModuleDestroy {
         type:
           | 'brief'
           | 'flow_cancelled'
+          | 'motion_setup_request'
+          | 'motion_tasks'
+          | 'motion_video'
           | 'style_chosen'
           | 'style_request'
           | 'video_rendered'
@@ -617,6 +648,16 @@ export class AgentSessionService implements OnModuleDestroy {
     >,
   ): void {
     this.emit(id, event)
+  }
+
+  /** Shows a picture ReelMakeEasy made in the chat (a Motion Reel's still); `file` must lie in
+   *  the session's folder, which is where the chat's image route serves from. */
+  emitImage(id: string, file: string): void {
+    this.emit(id, {
+      itemId: `${REELMAKEEASY_MESSAGE_PREFIX}img-${this.store.nextEventId(id)}`,
+      path: file,
+      type: 'image',
+    })
   }
 
   /** Posts a ReelMakeEasy-authored assistant message (not from Codex). Its item id `ly-<n>` is
@@ -700,7 +741,8 @@ export class AgentSessionService implements OnModuleDestroy {
     }
     // Editing, or a Free chat (whose tools may be waiting on a clip or a render): the
     // waiting tool sees the flag and cancels its workflow.
-    if (editing || mode === 'free' || isRankingMode(mode)) this.cancelledFlows.add(id)
+    if (editing || mode === 'free' || isMotionMode(mode) || isRankingMode(mode))
+      this.cancelledFlows.add(id)
     this.expireServerQuestions(id)
     if (!live?.currentTurnId || !threadId) return
     await live.client.request('turn/interrupt', { threadId, turnId: live.currentTurnId })
@@ -742,7 +784,11 @@ export class AgentSessionService implements OnModuleDestroy {
   notifyAgent(id: string, text: string): void {
     const session = this.store.get(id)
     if (!session || this.destroyed || !text.trim()) return
-    const chat = session.mode === 'free' || isRankingMode(session.mode) || !!session.editing
+    const chat =
+      session.mode === 'free' ||
+      isMotionMode(session.mode) ||
+      isRankingMode(session.mode) ||
+      !!session.editing
     if (!chat) return
     this.notes.set(id, [...(this.notes.get(id) ?? []), text.trim()])
     this.sendNotes(id)
@@ -877,6 +923,7 @@ export class AgentSessionService implements OnModuleDestroy {
     // until the user opens the finished video for editing.
     if (session.mode === 'autonomous' && !session.editing)
       throw session.flowActive ? new FlowActiveError(id) : new ModeNotChattableError(id)
+    if (session.mode === 'motion' && !session.motionReel) throw new MotionSetupPendingError(id)
     if (session.status === 'running') throw new AgentSessionBusyError(id)
     // An Easy ranking's topic card still open: a message answers it instead; files alone can't
     // say what it's about (the card stays, and the user is asked to pick first).
@@ -955,6 +1002,24 @@ export class AgentSessionService implements OnModuleDestroy {
     if (!working) this.sendNotesSoon(id)
   }
 
+  /**
+   * A Motion Reel's setup is in and its project is ready: the card shows what was chosen, and
+   * the agent's first (hidden) turn starts with `prompt`. Refused when the setup was sent
+   * already (`ModeAlreadyChosenError`: the card is answered once).
+   */
+  startMotionReel(id: string, setup: AgentMotionSetupView, prompt: string): void {
+    const session = this.getSession(id)
+    if (session.mode !== 'motion' || session.motionReel) throw new ModeAlreadyChosenError(id)
+    this.store.update(id, {
+      motionReel: setup,
+      ...(isUnsetChatTitle(session.title) ? { title: chatTitleFrom(setup.subject) } : {}),
+    })
+    this.emit(id, { setup, type: 'motion_setup' })
+    void this.startKickoff(id, prompt).catch((error: unknown) =>
+      this.logger.warn(`Motion Reel kickoff for ${id} failed: ${ensureError(error).message}`),
+    )
+  }
+
   /** Replays events after `afterId`, then delivers new ones as they happen. `onEnd` is
    *  called if the service ends the subscription itself (on shutdown). */
   subscribe(id: string, afterId: number, fn: (e: Stored) => void, onEnd?: () => void): () => void {
@@ -975,6 +1040,45 @@ export class AgentSessionService implements OnModuleDestroy {
     const trimmed = chatTitleFrom(title)
     if (!trimmed || !isUnsetChatTitle(this.getSession(id).title)) return
     this.store.update(id, { title: trimmed })
+  }
+
+  /** A Motion Reel's setup changed after it started (the agent composed its music, or set an
+   *  Advanced reel up again), or an Advanced reel was set up: saved, and the chat's setup card
+   *  shows it. An unnamed chat is named after what the reel is about. */
+  updateMotionReel(id: string, setup: AgentMotionSetupView): void {
+    const session = this.getSession(id)
+    if (!isMotionMode(session.mode)) return
+    this.store.update(
+      id,
+      {
+        motionReel: setup,
+        ...(isUnsetChatTitle(session.title) ? { title: chatTitleFrom(setup.subject) } : {}),
+      },
+      { touch: false },
+    )
+    this.emit(id, { setup, type: 'motion_setup' })
+  }
+
+  /** What the user typed in a chat, oldest first: their messages, and what they typed into a
+   *  question card (an option they picked is the agent's words, not theirs). */
+  userTexts(id: string): string[] {
+    this.getSession(id)
+    const options = new Map<string, Set<string>>()
+    const texts: string[] = []
+    for (const event of this.store.eventsAfter(id, 0)) {
+      if (event.type === 'user_message') texts.push(event.text)
+      else if (event.type === 'question')
+        options.set(
+          event.questionId,
+          new Set(event.questions.flatMap((q) => (q.options ?? []).map((o) => o.label.trim()))),
+        )
+      else if (event.type === 'question_answered') {
+        const offered = options.get(event.questionId) ?? new Set<string>()
+        for (const answer of Object.values(event.answers).flat())
+          if (!offered.has(answer)) texts.push(answer)
+      }
+    }
+    return texts
   }
 
   /** Where a session's Codex runs: `<sessionDir>/edit` while editing (it holds the `project`
@@ -1059,6 +1163,7 @@ export class AgentSessionService implements OnModuleDestroy {
         secretIds: new Set(questions.filter((q) => q.isSecret).map((q) => q.id)),
       })
       this.armQuestionTimer(id, live)
+      this.deps.onQuestion(id)
       this.emit(id, { questionId, questions, type: 'question' })
     })
   }
@@ -1108,6 +1213,7 @@ export class AgentSessionService implements OnModuleDestroy {
       this.store.update(id, { status: 'idle' })
       live.idleTimer = setTimeout(() => this.stopLive(id), this.deps.idleMs)
       this.settleQuiet(live, quietOutcome(event, live.quiet?.text ?? null))
+      this.deps.onTurnEnd(id)
       this.sendNotesSoon(id)
     })
     live.client.onExit((code, reason) => {
@@ -1172,6 +1278,8 @@ export class AgentSessionService implements OnModuleDestroy {
         this.logger.error(`Subscriber for session ${id} threw: ${ensureError(error).message}`)
       }
     }
+    // Every stop of the agent goes through here (a restart, an exit, a failed turn).
+    if (event.type === 'session' && event.status === 'stopped') this.deps.onTurnEnd(id)
   }
 
   private endSubscriber(sub: Subscriber): void {
@@ -1270,6 +1378,7 @@ export class AgentSessionService implements OnModuleDestroy {
     params: QuietTurnOptions = {},
     quiet?: QuietTurn,
   ): Promise<void> {
+    this.deps.onTurnStart(id)
     let live: Live
     try {
       live = await this.ensureLive(id)
@@ -1485,7 +1594,11 @@ export class AgentSessionService implements OnModuleDestroy {
    */
   private turnModel(id: string, params: QuietTurnOptions): { effort?: string; model?: string } {
     const session = this.getSession(id)
-    const choice = this.deps.chatModels.choiceFor(session.harness ?? 'codex', session.chatModel)
+    const harness = session.harness ?? 'codex'
+    const choice =
+      isMotionMode(session.mode) && this.deps.chatModels.motionChoiceFor
+        ? this.deps.chatModels.motionChoiceFor(harness, session.chatModel)
+        : this.deps.chatModels.choiceFor(harness, session.chatModel)
     if (!choice) return {}
     return {
       ...(choice.effort && !params.effort ? { effort: choice.effort } : {}),
@@ -1507,6 +1620,18 @@ function openServerQuestionIds(events: AgentUiEvent[]): string[] {
       open.delete(event.questionId)
   }
   return [...open]
+}
+
+/** The hidden first turn of a chat whose agent starts at once: a Free chat, a Ranking chat (on
+ *  `rankingId`, with what the user `asked` for), or an Advanced Motion Reel. */
+function firstTurnPrompt(
+  mode: AgentMode,
+  harness: AgentHarnessName,
+  rankingId: string | undefined,
+  asked: string | undefined,
+): string {
+  if (isRankingMode(mode)) return rankingKickoff(harness, rankingId, mode === 'ranking_easy', asked)
+  return mode === 'motion_free' ? motionReelFreeKickoff(harness) : kickoffFor(harness)
 }
 
 /** The questions of a card the chat shows, from its `question` event. */

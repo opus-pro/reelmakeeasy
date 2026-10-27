@@ -9,6 +9,7 @@ import {
   type AgentAnswers,
   type AgentMode,
   type AgentTool,
+  isMotionMode,
   isRankingTopicQuestion,
 } from '@shared/types/api/agent'
 import { Button, cn, Textarea } from '@shared/ui'
@@ -37,13 +38,21 @@ import {
 } from './attachments/ComposerAttachments'
 import { useAttachments } from './attachments/useAttachments'
 import { ChatModelBar } from './models/ChatModelBar'
+import { MotionReelSetupCard } from './motion/MotionReelSetupCard'
+import { MotionReelVideoCard } from './motion/MotionReelVideoCard'
 import { type ActivityEntry, ActivityGroup } from './ActivityGroup'
 import { agentNameOf, chosenHarnessOf, presetHarnessOf } from './agent-harness'
 import { AgentMarkdown } from './AgentMarkdown'
 import { AgentPlan } from './AgentPlan'
 import { composerCard } from './card-answer'
 import { QuestionCard } from './QuestionCard'
-import { canPickUp, type ExpiredHints, expiredHintsFor } from './resume-chat'
+import {
+  canPickUp,
+  carryOnCardId,
+  carryOnMessage,
+  type ExpiredHints,
+  expiredHintsFor,
+} from './resume-chat'
 import { ResumeCard, resumeWords } from './ResumeCard'
 import { Spinner } from './Spinner'
 import { StyleRequestCard } from './StyleRequestCard'
@@ -129,11 +138,14 @@ function ImageEntry({
 
 function QuestionRow({
   answer,
+  carryOn,
   entry,
   expiredHint,
   submitted,
 }: {
   answer: AnswerFn
+  /** Sends a message: set when this expired card can still be answered (`carryOnCardId`). */
+  carryOn?: (text: string) => Promise<boolean>
   entry: QuestionEntry
   expiredHint?: string
   submitted: boolean
@@ -142,11 +154,19 @@ function QuestionRow({
     (answers: AgentAnswers) => answer(entry.id, answers),
     [answer, entry.id],
   )
+  const onCarryOn = useMemo(
+    () =>
+      carryOn
+        ? (answers: AgentAnswers) => carryOn(carryOnMessage(entry.questions, answers))
+        : undefined,
+    [carryOn, entry.questions],
+  )
   return (
     <QuestionCard
       entry={entry}
       expiredHint={expiredHint}
       onAnswer={onAnswer}
+      {...(onCarryOn ? { onCarryOn } : {})}
       submitted={submitted}
     />
   )
@@ -183,6 +203,7 @@ function composerPlaceholder({
   flowActive,
   flowFinished,
   modeChosen,
+  motionSetupPending,
   pickUp,
   singleQuestion,
   who,
@@ -200,6 +221,8 @@ function composerPlaceholder({
   /** An autonomous session whose flow is over: nothing more to type. */
   flowFinished: boolean
   modeChosen: boolean
+  /** A Motion Reel chat whose setup card hasn't been sent yet. */
+  motionSetupPending: boolean
   /** An Easy chat a restart cut off: its button above (named this) carries it on. */
   pickUp: false | string
   /** A one-question card is open that the composer can answer. */
@@ -209,6 +232,7 @@ function composerPlaceholder({
   working: boolean
 }): string {
   if (!modeChosen) return 'Choose how to start above'
+  if (motionSetupPending) return 'Set up your Motion Reel above'
   if (editing) return 'Describe what to change…'
   if (pickUp) return `Press "${pickUp}" above to carry on`
   if (flowFinished) return AUTONOMOUS_FINISHED
@@ -221,6 +245,13 @@ function composerPlaceholder({
   return `Message ${who}…`
 }
 
+/** A Motion Reel chat whose setup card hasn't been sent yet: nothing to type until it is. */
+function isMotionSetupPending(mode: AgentMode | null, entries: TranscriptEntry[]): boolean {
+  return (
+    mode === 'motion' && !entries.some((e) => e.kind === 'motion_setup' && e.state === 'chosen')
+  )
+}
+
 /** Codex tool names are snake_case; the pill shows them as words. */
 function toolLabel(name: string | undefined): string {
   return (name ?? '').replace(/_/g, ' ')
@@ -228,16 +259,20 @@ function toolLabel(name: string | undefined): string {
 
 function TranscriptRow({
   answer,
+  carryOn,
   chooseStyle,
   editing,
   entry,
   expiredHints,
   onEdit,
   sessionId,
+  setupMotionReel,
   startedProjectId,
   submittedIds,
 }: {
   answer: AnswerFn
+  /** Set on the expired card the chat can still answer: sends the answer as a message. */
+  carryOn?: (text: string) => Promise<boolean>
   chooseStyle: ChooseStyleFn
   /** The chat is editing its finished video. */
   editing: boolean
@@ -247,6 +282,8 @@ function TranscriptRow({
   /** Opens the chat for editing (Easy only: Free chats are already open). */
   onEdit?: StartEditingFn
   sessionId: string
+  /** Sends a Motion Reel's setup card. */
+  setupMotionReel: AgentSessionState['setupMotionReel']
   /** Set on ReelMakeEasy's "Your video is being made" message: the video it follows. */
   startedProjectId?: string
   /** Question ids whose answer the server accepted, before `question_answered` arrives. */
@@ -261,6 +298,12 @@ function TranscriptRow({
     case 'image': {
       return <ImageEntry entry={entry} sessionId={sessionId} />
     }
+    case 'motion_setup': {
+      return <MotionReelSetupCard entry={entry} onSubmit={setupMotionReel} sessionId={sessionId} />
+    }
+    case 'motion_video': {
+      return <MotionReelVideoCard entry={entry} />
+    }
     case 'notice': {
       return <div className="text-sm text-amber-400">{entry.text}</div>
     }
@@ -268,6 +311,7 @@ function TranscriptRow({
       return (
         <QuestionRow
           answer={answer}
+          {...(carryOn ? { carryOn } : {})}
           entry={entry}
           expiredHint={expiredHints?.question}
           submitted={submittedIds.has(entry.id)}
@@ -390,6 +434,7 @@ export function AgentChat({
     sending,
     serverFlowActive,
     session,
+    setupMotionReel,
     startEditing,
     stop,
     transcript,
@@ -435,9 +480,15 @@ export function AgentChat({
     transcript,
   })
   const modeChosen = mode !== null
+  const motionSetupPending = isMotionSetupPending(mode, transcript.entries)
   // An Easy chat a restart cut off before its video: "Pick up where you left off" below it.
   const pickUp = canPickUp(session, transcript.entries, flowActive)
   const expiredHints = expiredHintsFor({ editing, flowActive, mode, pickUp })
+  // The agent's last card, expired by a restart: still answerable while the chat takes messages.
+  const carryOnId = carryOnCardId(transcript.entries, {
+    busy: !modeChosen || motionSetupPending || flowFinished || flowActive || transcript.working,
+  })
+  const carryOn = useCallback((message: string) => send(message), [send])
   const lastEntry = transcript.entries[transcript.entries.length - 1]
   // The question wait needs no line of its own: the card is the prompt.
   const waitingOnCard = !!activity && openQuestions.some((q) => q.id === activity.id)
@@ -447,11 +498,13 @@ export function AgentChat({
     lastEntry?.kind === 'assistant' && !lastEntry.id.startsWith(REELMAKEEASY_MESSAGE_PREFIX)
   const showWorkingIndicator =
     transcript.working && (activity !== null || !codexTalking) && !waitingOnCard
-  const showPlan = transcript.working && !!transcript.plan?.length
+  // A Motion Reel's to-do list is in its Tasks panel, beside the chat.
+  const showPlan = transcript.working && !!transcript.plan?.length && !isMotionMode(mode)
 
   // Nothing to type before a mode is chosen, nor during autonomous mode with no card the
   // composer can answer, nor once autonomous mode is over; text left in the box then counts for nothing.
-  const inputDisabled = !modeChosen || flowFinished || (flowActive && !singleQuestion)
+  const inputDisabled =
+    !modeChosen || motionSetupPending || flowFinished || (flowActive && !singleQuestion)
   // An Easy ranking's topic card takes words only (what it's about): files come later.
   const canAttach = takesFiles(
     inputDisabled,
@@ -602,6 +655,7 @@ export function AgentChat({
     flowActive,
     flowFinished,
     modeChosen,
+    motionSetupPending,
     pickUp: pickUp && resumeWords(session?.resume).button,
     singleQuestion: !!singleQuestion,
     who,
@@ -637,6 +691,7 @@ export function AgentChat({
             ) : (
               <TranscriptRow
                 answer={answerQuestion}
+                {...(item.entry.id === carryOnId ? { carryOn } : {})}
                 chooseStyle={chooseStyle}
                 editing={editing}
                 entry={item.entry}
@@ -644,6 +699,7 @@ export function AgentChat({
                 key={item.key}
                 onEdit={mode === 'autonomous' ? startEditing : undefined}
                 sessionId={sessionId}
+                setupMotionReel={setupMotionReel}
                 startedProjectId={startedLines.get(item.entry.id)}
                 submittedIds={submittedIds}
               />

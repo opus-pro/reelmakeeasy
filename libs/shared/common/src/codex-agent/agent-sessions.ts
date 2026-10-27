@@ -1,9 +1,15 @@
-import type { AgentMode, AgentSessionListItem } from '@shared/types/api/agent'
+import type { AgentMode, AgentMotionSetupView, AgentSessionListItem } from '@shared/types/api/agent'
 import {
   isSettledProjectStage,
   isStaleInProgressProject,
   PROJECT_STAGE,
 } from '@shared/types/enums/project'
+
+import {
+  DEFAULT_MOTION_REEL_TYPE,
+  MOTION_REEL_TYPE_INFO,
+  motionReelTypeOf,
+} from '../motion-reel/reel-type'
 
 /** The title a new agent chat starts with, until a rule below names it. */
 export const DEFAULT_CHAT_TITLE = 'New chat'
@@ -15,6 +21,8 @@ export const PROJECT_CREATED_VIA_AGENT = 'agent'
 export const AGENT_MODE_LABEL: Record<AgentMode, string> = {
   autonomous: 'Easy',
   free: 'Advanced',
+  motion: 'Motion Reel (Easy)',
+  motion_free: 'Motion Reel',
   ranking: 'Ranking',
   ranking_easy: 'Ranking (Easy)',
 }
@@ -44,9 +52,30 @@ export type SessionRowStatus =
  *  with it keeps its history and carries on as Free chat. Anything else unknown is no mode. */
 export function agentModeFromStored(mode: unknown): AgentMode | undefined {
   if (mode === 'guided') return 'free'
-  return mode === 'autonomous' || mode === 'free' || mode === 'ranking' || mode === 'ranking_easy'
+  return mode === 'autonomous' ||
+    mode === 'free' ||
+    mode === 'motion' ||
+    mode === 'motion_free' ||
+    mode === 'ranking' ||
+    mode === 'ranking_easy'
     ? mode
     : undefined
+}
+
+/** A saved setup as it reads now: its type and type label (from an old style when it has one),
+ *  without the style fields reels had before. */
+export function motionSetupViewFromStored<T extends AgentMotionSetupView | undefined>(view: T): T {
+  if (!view) return view
+  const {
+    styleId: _styleId,
+    styleLabel: _styleLabel,
+    ...rest
+  } = view as AgentMotionSetupView & {
+    styleId?: unknown
+    styleLabel?: unknown
+  }
+  const type = motionReelTypeOf(view) ?? DEFAULT_MOTION_REEL_TYPE
+  return { ...rest, type, typeLabel: MOTION_REEL_TYPE_INFO[type].label } as T
 }
 
 /** Titles that mean "not named yet": the default, and the one chats got before it. */

@@ -124,6 +124,29 @@ describe('a Ranking chat', () => {
   })
 })
 
+describe('a Motion Reel chat', () => {
+  it('gets its music and render tools; an Advanced one sets itself up with motion_setup', () => {
+    for (const harness of ['codex', 'claude'] as const) {
+      expect(toolsForSession({ mode: 'motion' }, harness).map((t) => t.name)).toEqual([
+        'motion_music',
+        'motion_still',
+        'motion_render',
+        'motion_review',
+      ])
+      expect(toolsForSession({ mode: 'motion_free' }, harness).map((t) => t.name)).toEqual([
+        'motion_setup',
+        'motion_music',
+        'motion_still',
+        'motion_render',
+        'motion_review',
+      ])
+    }
+    expect(toolSummary('motion_review', {})).toBe('Reviewing the render (contact sheets)')
+    expect(toolSummary('motion_setup', {})).toBe('Looking at the reel types and music')
+    expect(toolSummary('motion_setup', { type: 'launch' })).toBe('Setting up the reel')
+  })
+})
+
 describe('toolsForSession by harness', () => {
   const names = (s: Parameters<typeof toolsForSession>[0], h?: 'claude' | 'codex') =>
     toolsForSession(s, h).map((t) => t.name)

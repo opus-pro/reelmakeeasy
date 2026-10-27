@@ -822,3 +822,176 @@ describe('a Ranking chat', () => {
   })
 })
 
+describe('Motion Reel events', () => {
+  const setup = {
+    bars: 8,
+    bpm: 128,
+    lengthSec: 15,
+    music: { id: 'pulse-drive', source: 'library' as const },
+    musicTitle: 'Pulse Drive',
+    ratio: '16:9' as const,
+    reelSec: 15,
+    type: 'showreel' as const,
+    typeLabel: 'Motion reel',
+    subject: 'A launch reel',
+  }
+
+  it('shows a setup saved when reels had styles with its type', () => {
+    const { type: _type, typeLabel: _label, ...rest } = setup
+    const old = { ...rest, styleId: 'product-ui-launch', styleLabel: 'Product UI Launch' }
+    const t = run([{ id: 1, setup: old as unknown as typeof setup, type: 'motion_setup' }])
+    expect(t.entries).toEqual([
+      {
+        id: 'motion-setup-1',
+        kind: 'motion_setup',
+        setup: { ...rest, type: 'launch', typeLabel: 'Product launch' },
+        state: 'chosen',
+      },
+    ])
+  })
+
+  it('opens the setup card, then shows what was chosen in its place', () => {
+    const open = run([{ id: 1, type: 'motion_setup_request' }])
+    expect(open.entries).toEqual([{ id: 'motion-setup-1', kind: 'motion_setup', state: 'open' }])
+    const chosen = run([
+      { id: 1, type: 'motion_setup_request' },
+      { id: 2, setup, type: 'motion_setup' },
+    ])
+    expect(chosen.entries).toEqual([
+      { id: 'motion-setup-1', kind: 'motion_setup', setup, state: 'chosen' },
+    ])
+  })
+
+  it('updates the chosen card when the setup changes later (the agent composed the music)', () => {
+    const later = { ...setup, bpm: 132, musicTitle: 'Composed: launch anthem' }
+    const t = run([
+      { id: 1, type: 'motion_setup_request' },
+      { id: 2, setup, type: 'motion_setup' },
+      { id: 3, setup: later, type: 'motion_setup' },
+    ])
+    expect(t.entries).toEqual([
+      { id: 'motion-setup-1', kind: 'motion_setup', setup: later, state: 'chosen' },
+    ])
+  })
+
+  it('keeps one card when a failed setup asks again, under a new id so it starts over', () => {
+    const t = run([
+      { id: 1, type: 'motion_setup_request' },
+      { id: 2, text: "Couldn't set up the reel: no network", type: 'notice' },
+      { id: 3, type: 'motion_setup_request' },
+    ])
+    expect(t.entries.filter((e) => e.kind === 'motion_setup')).toEqual([
+      { id: 'motion-setup-3', kind: 'motion_setup', state: 'open' },
+    ])
+  })
+
+  it('adds each rendered reel as a video entry', () => {
+    const t = run([
+      {
+        id: 4,
+        itemId: 'motion-1',
+        posterUrl: 'http://x/p.jpg',
+        report: '8 cuts: 8 on a beat, none off the grid.',
+        type: 'motion_video',
+        videoUrl: 'http://x/r.mp4',
+      },
+    ])
+    expect(t.entries).toEqual([
+      {
+        id: 'motion-1',
+        kind: 'motion_video',
+        posterUrl: 'http://x/p.jpg',
+        report: '8 cuts: 8 on a beat, none off the grid.',
+        videoUrl: 'http://x/r.mp4',
+      },
+    ])
+  })
+})
+
+describe('reduceTranscript, a Motion Reel', () => {
+  it('keeps the last motion_tasks list, and a user message leaves it in place', () => {
+    const t = run([
+      {
+        id: 1,
+        tasks: [{ id: 'setup', label: 'Set up', result: null, state: 'running' }],
+        type: 'motion_tasks',
+      },
+      {
+        id: 2,
+        tasks: [
+          { id: 'setup', label: 'Set up', result: 'Motion reel', state: 'done' },
+          {
+            details: ['Sync: passes.'],
+            id: 'sync',
+            label: 'Sync check',
+            result: 'Sync: passes',
+            state: 'done',
+          },
+        ],
+        type: 'motion_tasks',
+      },
+      { id: 3, text: 'more pop', type: 'user_message' },
+    ])
+    expect(t.motionTasks?.map((task) => [task.id, task.state, task.result])).toEqual([
+      ['setup', 'done', 'Motion reel'],
+      ['sync', 'done', 'Sync: passes'],
+    ])
+    expect(t.lastEventId).toBe(3)
+    expect(initialTranscript.motionTasks).toBeNull()
+  })
+
+  it('keeps the plan from the list that sent it until another says otherwise', () => {
+    const tasks = [{ id: 'plan' as const, label: 'Plan', result: null, state: 'waiting' as const }]
+    const plan = { changedAt: 10, text: '- Scene 1 (bars 0-2): logo', truncated: false }
+    const sent = run([
+      { id: 1, tasks, type: 'motion_tasks' },
+      { id: 2, plan, tasks, type: 'motion_tasks' },
+      // No `plan`: unchanged.
+      { id: 3, tasks, type: 'motion_tasks' },
+    ])
+    expect(sent.motionPlan).toEqual(plan)
+    // null: the plan is gone.
+    expect(
+      reduceTranscript(sent, { id: 4, plan: null, tasks, type: 'motion_tasks' }).motionPlan,
+    ).toBeNull()
+    // A chat from before the plan was sent has none.
+    expect(run([{ id: 1, tasks, type: 'motion_tasks' }]).motionPlan).toBeNull()
+    expect(initialTranscript.motionPlan).toBeNull()
+  })
+
+  it('ignores a replayed older list', () => {
+    const first = run([
+      {
+        id: 5,
+        tasks: [{ id: 'render', label: 'Render', result: 'Render 2 of 3', state: 'done' }],
+        type: 'motion_tasks',
+      },
+    ])
+    const t = reduceTranscript(first, {
+      id: 4,
+      tasks: [{ id: 'render', label: 'Render', result: null, state: 'waiting' }],
+      type: 'motion_tasks',
+    })
+    expect(t.motionTasks?.[0]?.result).toBe('Render 2 of 3')
+  })
+
+  it('a stop (a restart, an exit) settles what was running: nothing spins after it', () => {
+    const t = run([
+      {
+        id: 1,
+        tasks: [
+          { id: 'build', label: 'Build', result: '3 scene files', state: 'running' },
+          { id: 'render', label: 'Render', result: 'Rendering 2 of 3…', state: 'running' },
+          { id: 'setup', label: 'Set up', result: 'Motion reel', state: 'done' },
+        ],
+        type: 'motion_tasks',
+      },
+      { id: 2, reason: 'The server restarted', status: 'stopped', type: 'session' },
+    ])
+    expect(t.motionTasks?.map((task) => [task.id, task.state, task.result])).toEqual([
+      ['build', 'done', '3 scene files'],
+      ['render', 'failed', 'Stopped before it finished'],
+      ['setup', 'done', 'Motion reel'],
+    ])
+  })
+})
