@@ -283,7 +283,7 @@ function LookGrid({
   return (
     <div className="flex flex-col gap-1.5">
       <span className={LABEL_CLASS}>Look</span>
-      <div className="grid grid-cols-4 gap-2" role="radiogroup">
+      <div className="grid max-w-md grid-cols-4 gap-2" role="radiogroup">
         {looks.map((look) => (
           <button
             aria-checked={look.id === selected}
@@ -326,7 +326,7 @@ function LookPreview({ look }: { look: Look }) {
     return (
       <video
         autoPlay
-        className="aspect-[9/16] max-h-40 w-full bg-black object-cover"
+        className="aspect-[9/16] w-full bg-black object-cover"
         loop
         muted
         playsInline
@@ -334,7 +334,7 @@ function LookPreview({ look }: { look: Look }) {
       />
     )
   return (
-    <span className="flex aspect-[9/16] max-h-40 w-full items-center justify-center bg-white/[0.04] text-2xl font-semibold text-white/30">
+    <span className="flex aspect-[9/16] w-full items-center justify-center bg-white/[0.04] text-2xl font-semibold text-white/30">
       {look.label}
     </span>
   )
