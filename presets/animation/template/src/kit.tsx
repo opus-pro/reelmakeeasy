@@ -10,6 +10,7 @@ import {
   useVideoConfig,
 } from 'remotion'
 
+import { captionChunks, chunkAt } from './caption-chunks'
 import { sec, spec, type VoiceLine, voiceLines } from './clock'
 
 /**
@@ -176,54 +177,76 @@ export function useMouth(who: string): { mouth: number; vowel: Vowel } {
 }
 
 /**
- * Captions: the line being said, the current word lit in `accent`. Sits in the lower third, inside
- * the safe margin, at least 3% of the frame's height. Up to `maxWords` words around the current one.
+ * Captions: the line being said, a phrase at a time as the app's captions page (1 to `maxWords`
+ * words, a phrase ending after punctuation; see `caption-chunks.ts`), the word being said lit in
+ * `accent`. A phrase stays whole until the next one: never a window sliding a word at a time.
+ * Sits in the lower third by default (`bottom`, a share of the height), inside the safe margin,
+ * at least 3% of the frame's height. `box` puts a soft dark plate behind it (over a busy picture
+ * or a face).
  */
 export function Captions({
   accent = '#FFD166',
+  bottom = 0.16,
+  box = false,
   color = '#FFFFFF',
   fontFamily = 'Inter, Helvetica, Arial, sans-serif',
-  maxWords = 6,
+  maxWords = 3,
   style,
 }: {
   accent?: string
+  bottom?: number
+  box?: boolean
   color?: string
   fontFamily?: string
   maxWords?: number
   style?: CSSProperties
 }) {
   const { height, width } = useVideoConfig()
-  const now = useSpeaking()
-  if (!now) return null
-  const words = now.line.words
-  const at = Math.max(0, now.wordIndex)
-  const first = Math.max(0, Math.min(at - Math.floor(maxWords / 2), words.length - maxWords))
-  const shown = words.slice(first, first + maxWords)
+  const t = useCurrentFrame() / spec.fps
+  const line = voiceLines.find((l) => t >= l.start - 0.1 && t <= l.end + 0.4)
+  const chunk = line ? chunkAt(captionChunks(line.words, maxWords), t) : null
+  if (!chunk) return null
+  const fontSize = Math.max(height * 0.034, 40)
   return (
     <div
       style={{
-        bottom: height * 0.16,
-        color,
-        fontFamily,
-        fontSize: Math.max(height * 0.034, 40),
-        fontWeight: 800,
+        bottom: height * bottom,
+        display: 'flex',
+        justifyContent: 'center',
         left: width * 0.06,
-        lineHeight: 1.15,
         position: 'absolute',
         right: width * 0.06,
-        textAlign: 'center',
-        textShadow: '0 4px 14px rgba(0,0,0,0.55)',
         ...style,
       }}
     >
-      {shown.map((w, i) => (
-        <span
-          key={`${now.index}-${first + i}`}
-          style={{ color: first + i === at ? accent : color }}
-        >
-          {w.text}{' '}
-        </span>
-      ))}
+      <div
+        style={{
+          ...(box
+            ? {
+                background: 'rgba(10,12,20,0.62)',
+                borderRadius: fontSize * 0.4,
+                padding: `${fontSize * 0.18}px ${fontSize * 0.45}px`,
+              }
+            : {}),
+          color,
+          fontFamily,
+          fontSize,
+          fontWeight: 800,
+          lineHeight: 1.15,
+          textAlign: 'center',
+          textShadow: '0 4px 14px rgba(0,0,0,0.55)',
+        }}
+      >
+        {chunk.words.map((w, i) => (
+          <span
+            key={`${chunk.from}-${i}`}
+            style={{ color: t >= w.start && t < w.end + 0.08 ? accent : color }}
+          >
+            {w.text}
+            {i < chunk.words.length - 1 ? ' ' : ''}
+          </span>
+        ))}
+      </div>
     </div>
   )
 }
