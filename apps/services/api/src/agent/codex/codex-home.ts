@@ -6,6 +6,7 @@ import { dataDir } from '@reelmakeeasy/common/storage/file-store'
 import { animationSkillName, renderAnimationSkill } from '../craft/animation-skill'
 import { BEAT_LOOP_SKILL_NAME, renderBeatLoopSkill } from '../craft/beat-loop-skill'
 import { CAMERA_SKILL_NAME, renderCameraSkill } from '../craft/camera-skill'
+import { LAUNCH_FILM_SKILL_NAME, launchFilmSkillDir } from '../craft/launch-film-skill'
 import { MOTION_REEL_SKILL_NAME, renderMotionReelSkill } from '../craft/motion-reel-skill'
 import { MUSIC_COMPOSER_SKILL_NAME, musicComposerSkillDir } from '../craft/music-composer-skill'
 import { RANKING_SKILL_NAME, renderRankingSkill } from '../craft/ranking-skill'
@@ -37,6 +38,7 @@ const AGENT_SKILLS: Record<string, () => string> = {
  *  their folder in the repo, by name. */
 const AGENT_SKILL_FOLDERS: Record<string, () => string> = {
   [MUSIC_COMPOSER_SKILL_NAME]: () => musicComposerSkillDir(),
+  [LAUNCH_FILM_SKILL_NAME]: () => launchFilmSkillDir(),
 }
 
 /** The skills' names, in the order they are written. */

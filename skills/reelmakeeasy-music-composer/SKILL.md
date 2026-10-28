@@ -1,6 +1,6 @@
 ---
 name: reelmakeeasy-music-composer
-description: Compose a Motion Reel's own music note by note with ReelMakeEasy's composer (reel/music/music.mjs, run with node tools/score.mjs), when the user picked music composed by the agent (motion_music engine composer). Stability first: one key in major, minor, dorian or mixolydian, 7th and 9th chords whose tones are in the key, every note a chord tone (no passing tones), harmonic lead sounds, a harmony check that must pass. Covers the harmony rules, four stable recipes to start from (one owner-approved), tempo and bar arithmetic, the music.mjs format, mixing and the measured QC.
+description: Compose a Motion Reel's own music note by note with ReelMakeEasy's composer (reel/music/music.mjs, run with node tools/score.mjs), when the user picked music composed by the agent (motion_music engine composer). Stability first: one key in major, minor, dorian or mixolydian, 7th and 9th chords whose tones are in the key, every note a chord tone (no passing tones), harmonic lead sounds, a harmony check that must pass. Covers the harmony rules, five stable recipes to start from (one owner-approved, one the launch-film arc), tempo and bar arithmetic, the music.mjs format, mixing and the measured QC.
 ---
 
 # Compose a Motion Reel's music
@@ -11,8 +11,8 @@ Use this when the reel's music is yours to compose (`engine: "composer"` in `ree
 
 Depth lives in two references. Read them before you write the first `music.mjs`:
 
-- `references/music-direction.md`: *what* the music is and why. Tempo from the reel, sync, arc and energy, sound worlds, the harmony rules in full, the motif, the four stable recipes, the legal rule.
-- `references/music-synthesis.md`: *how*. The music.mjs format, voices, grid strings, swing and feel, sections and motif, the instruments (which ones are harmonic), mix, endings, the QC checks, and the four recipes as complete `music.mjs` files.
+- `references/music-direction.md`: *what* the music is and why. Tempo from the reel, sync, arc and energy, sound worlds, the harmony rules in full, the motif, the five stable recipes, the legal rule.
+- `references/music-synthesis.md`: *how*. The music.mjs format, voices, grid strings, swing and feel, sections and motif, the instruments (which ones are harmonic), mix, endings, the QC checks, and the five recipes as complete `music.mjs` files.
 
 `node tools/score.mjs --help` and `--list` (from `reel/music/`) are authoritative for the format and the instruments; where a reference disagrees, follow the tool.
 
@@ -31,7 +31,7 @@ The composer's harmony check measures every rule below and FAILs the score on a 
 - **Timbre:** lead, hook and chord voices are harmonic: `epiano`, `pluck`, `supersaw`, `pad`, `stab`, `sine`, `pulse`, saw and square leads, `fm` with an integer `ratio` (1, 2, 3, 4), and the `bell` on any ratio (its partials read as a bell: the owner approved the 1.4 bell twice). Inharmonic sounds (`glass`, `modal`, `bar`, `membrane`, `wood`, `ceramic`, `rattle`, `shing`, plates, `fm` with a non-integer ratio such as 2.32) only as unpitched percussion or very short UI ticks, never holding a pitch (> 0.15 s) against a chord, whatever bus they play on.
 - **No held clash:** two voices a minor 2nd, major 7th or tritone apart for 0.15 s or more, unless both are tones of the chord symbol sounding (a maj7's own 7th, a m9's own 9th, a V7's own tritone). An added 9th, 11th or 6th is not a chord tone here: keep it away from the chord's other notes by a semitone or a tritone.
 
-Start from a recipe (`music-direction.md` §10, the code in `music-synthesis.md` §16): A a garage loop in F# dorian (the owner's liked track), B a minor launch track in A minor, C a bright pop-house track in C major, D liquid drum & bass in F# dorian (the owner-approved launch score). A and D carry the 7th and 9th chords; B and C are triad-based, so give them 7ths and 9ths in the key. Change the tempo, key, sections and sounds to fit the reel; keep the rules.
+Start from a recipe (`music-direction.md` §10, the code in `music-synthesis.md` §16): A a garage loop in F# dorian (the owner's liked track), B a minor launch track in A minor, C a bright pop-house track in C major, D liquid drum & bass in F# dorian (the owner-approved launch score), E the launch film in D major (the arc of the owner's reference film: two stops, a drop, a final hit; use it with the `reelmakeeasy-launch-film` skill). A and D carry the 7th and 9th chords; B and C are triad-based, so give them 7ths and 9ths in the key. Change the tempo, key, sections and sounds to fit the reel; keep the rules.
 
 ## Rules that are never broken
 

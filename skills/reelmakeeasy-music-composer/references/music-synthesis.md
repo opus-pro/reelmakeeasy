@@ -11,7 +11,7 @@ by its authors · signal = vendor or single source · `[n]` = sources at the end
 Contents: 1 Loop · 2 Top-level fields · 3 Voices · 4 Grid strings · 5 Feel: swing, humanize, feel changes · 6 Harmony,
 motif, sections, step · 7 Instruments and materials · 8 An optional cue sheet · 9 Transition and tension recipes ·
 10 Mix · 11 Endings · 12 Measurement QC · 13 Slices and auditions · 14 Score → picture · 15 Arrangement moves that
-keep it stable · 16 Four stable recipes · Sources
+keep it stable · 16 Five stable recipes · Sources
 
 ## 1. Loop and commands
 
@@ -380,12 +380,12 @@ late sections only) · 10 shaped dynamics: crescendos through `o x X`, not flat 
 at the peak · 12 move sounds in stereo with the picture's objects (`pan` functions) · 13 keep the approved kick (§7):
 never tune it into a slide · 14 a designed ending (§11).
 
-## 16. Four stable recipes (complete files to start from)
+## 16. Five stable recipes (complete files to start from)
 
 Each passes the harmony check and the kick check (every one plays the approved kick) and was measured with this
 composer (not heard). Richness comes from 7ths and 9ths,
 swing, off-beat stabs and layering, never from a note outside the chord: A and D show it; B and C are triad-based, so
-voice them with 7ths and 9ths in the key. Start from the one nearest the reel
+voice them with 7ths and 9ths in the key; E carries the launch-film arc (two stops, a drop, a final hit). Start from the one nearest the reel
 (`music-direction.md` §10) and adapt it: `bpm` (then the bars), the key (move every chord with it; the Roman numerals
 of B and C follow the key by themselves), the sections and their lengths, the sounds, the motif (re-check its beats
 with `--harmony`). `reel/music/reel.config.mjs` is ReelMakeEasy's; only `bpm` is yours:
@@ -865,6 +865,73 @@ export default ({ config, T }) => {
 ```
 What the reel gets from each: kicks from `kick`, snares from `snare` and `clap`, the melody from the motif's
 statements and the other notes of its voices, a chord event on every bar, and the sections (energy 4 reads as 3).
+
+### E. Launch film: D major, 120 BPM, 30 s (15 bars), the launch-film arc
+
+The music arc of the owner's reference launch film (`reelmakeeasy-launch-film` §2): the groove at full level from the
+first frame, a 3-beat stop before the drop (the picture's prompt types in silence), the drop on bar 3, a riser into the
+proof, a slam bar, a one-bar stop where the logo assembles, and the final hit on the last bar, ringing on D. Dmaj7 · A ·
+Bm7 · Gmaj7 (Imaj7 V vi7 IVmaj7), four on the floor, off-beat stabs, an epiano motif, a supersaw lead in the drop.
+For 15 s keep the order at 8 bars (problem 1 · question 1/4 + stop 3/4 · drop 2 · build 2 · slam 1/2 + stop 1/2 ·
+end 1); for 60 s grow the drop, build and proof sections and add a breather (energy 2) in the middle. Measured: harmony
+ok (337 pitched notes), kick ok, −13.9 LUFS, −1.1 dBTP, `linear` ok, mono 0.5 LU, phone 5.4 LU, ring ending ok; `map`
+−13.6 | −19 | −31.5 | −14.6 | −13 | −14.5 | −15.3 | −30.8 | −24.4 LUFS (both stops clearly down). One WARN kept: the
+limiter takes up to 6 dB off the riser's peak at 19.5 s. Its `reel.config.mjs`: `bpm: 120, duration: 30`.
+```js
+// RECIPE E: a launch-film score. D major, Dmaj7 A Bm7 Gmaj7 (Imaj7 V vi7 IVmaj7), 120 BPM, four-on-the-floor from 0.00.
+// 30 s = round(30 x 120 / 240) = 15 bars. The launch-film arc (reelmakeeasy-launch-film): the groove at full level from
+// the first frame, a 3-beat stop before the drop (the prompt types in silence), the drop on bar 3, a riser into the
+// proof, a slam bar, a one-bar stop (the logo assembles over a held pad) and the final hit on the last bar, ringing on D.
+export default ({ config }) => ({
+  bpm: config.bpm, meter: config.meter, key: 'D', mode: 'ionian', seed: 120,
+  swing: { hat: 0.54, shaker: 0.54, default: 0.5 },
+  voices: {
+    kick: { inst: 'kick', f0: 200, f1: 55, pitchTau: 0.008, decay: 0.1, click: 0.65, drive: 1.3, gain: 0.4 },   // the approved kick, no harmonics
+    clap: { inst: 'clap', tone: 1600, gain: 0.4, send: 0.25 },
+    hat: { inst: 'hat', mode: 'metal', tone: 8600, gain: 0.24, pan: 0.2, choke: 'hh' },
+    ohat: { inst: 'hat', mode: 'metal', open: true, decay: 0.08, gain: 0.2, pan: 0.25, choke: 'hh' },
+    shaker: { inst: 'shaker', gain: 0.15, pan: -0.3 },
+    bass: { inst: 'sawBass', cut: 800, decay: 0.18, octave: 1, gain: 0.5, harmonics: -8 },
+    keys: { inst: 'epiano', index: 1.2, tine: 0.6, decay: 0.6, trem: 0.15, gain: 0.55, send: 0.35, voicing: 'close', center: 64, size: 4 },
+    pad: { inst: 'pad', cut: 1400, attack: 0.25, release: 0.9, detune: 8, chorus: 0.5, gain: 0.32, send: 0.5, voicing: 'close', center: 60, size: 4 },
+    stab: { inst: 'stab', gain: 0.3, send: 0.3, voicing: 'close', center: 67, size: 4 },
+    lead: { inst: 'supersaw', cut: 5500, hp: 250, attack: 0.008, release: 0.15, spread: 0.8, gain: 0.22, send: 0.3, dsend: 0.2, octave: 5 },
+  },
+  progression: ['Imaj7', 'V', 'vi7', 'IVmaj7'],
+  chordBars: 1,
+  motif: { degrees: [2, 1, 0, 4, 2], rhythm: 'X..x..x.X...x...', voice: 'keys' },
+  grids: {
+    problem: { pad: 'hold', kick: 'X...X...X...X...', hat: '..x...x...x...x.', shaker: 'xoxoxoxoxoxoxoxo',
+      keys: { grid: '..C...C...C...C.', gate: 0.5 }, bass: { grid: 'R.....R.R.....R.', gate: 0.7 } },
+    question: { pad: 'hold', kick: 'X...............', keys: { grid: 'C...............', gate: 0.4 } },
+    stop: { pad: { hold: true, gain: 0.5 } },
+    drop: {
+      pad: 'hold', kick: 'X...X...X...X...', clap: '....X.......X...', hat: '..x...x...x...x.', ohat: '..x...x...x...x.',
+      shaker: 'xoxoxoxoxoxoxoxo', stab: { grid: '..C...C...C..C..', gate: 0.35 }, bass: { grid: '..R.O.R...R.O.R.', gate: 0.7 },
+    },
+    dropfill: { kick: 'X...X...X.......', clap: '....X.......XXXX' },
+    slam: { kick: 'X...X...X...X...', clap: 'X...X...X...X...', stab: { grid: 'C...C...C...C...', gate: 0.3 }, bass: { grid: 'R...R...R...R...', gate: 0.5 }, pad: 'hold' },
+    end: { kick: 'X...............', pad: { hold: true, gain: 1.3 }, keys: { grid: 'C...............', gate: 1 }, bass: { grid: 'R...............', gate: 1 } },
+  },
+  sections: [
+    { name: 'problem', bars: 2, energy: 2, grid: 'problem', motif: { voice: 'keys', every: 2 } },
+    { name: 'question', beats: 1, energy: 1, grid: 'question', prog: ['vi7'] },
+    { name: 'stop', beats: 3, energy: 0, grid: 'stop', prog: ['vi7'] },
+    { name: 'drop', bars: 4, energy: 3, grid: 'drop', fill: { grid: 'dropfill', last: true }, motif: { voice: 'lead', every: 2 } },
+    { name: 'build', bars: 3, energy: 3, grid: 'drop', motif: { voice: 'keys', every: 2 }, fx: ['riser'] },
+    { name: 'proof', bars: 2, energy: 4, grid: 'drop', motif: { voice: 'lead', every: 2 } },
+    { name: 'slam', bars: 1, energy: 4, grid: 'slam', prog: ['IVmaj7'] },
+    { name: 'stop2', bars: 1, energy: 0, grid: 'stop', prog: ['V'] },
+    { name: 'end', bars: 1, energy: 1, grid: 'end', prog: ['I'] },
+  ],
+  ringFade: 0.6,
+  mix: {
+    duck: { by: ['kick'], depth: 0.45, beats: 0.5, targets: ['music'] },
+    reverb: { size: 0.8, damp: 0.35, wet: 0.75 }, delay: { beats: 0.75, fb: 0.3, lp: 3500, wet: 0.7, spread: 1 },
+    monoBelow: 120, width: 1.1,
+  },
+});
+```
 
 ## Sources
 

@@ -8,7 +8,7 @@ Evidence marks: `[n]` = sources at the end · `(practice)` = production conventi
 acoustics or arithmetic · `signal` = vendor, platform-funded or single-source; never quote it as fact.
 
 Contents: 0 Ground rules · 1 When to compose, when not · 2 Concept · 3 Tempo from the reel · 4 Sync · 5 Cut density ·
-6 Arc, energy, openings, endings · 7 Sound worlds · 8 Harmony rules and bass · 9 Motif and sonic logo · 10 Four stable
+6 Arc, energy, openings, endings · 7 Sound worlds · 8 Harmony rules and bass · 9 Motif and sonic logo · 10 Five stable
 recipes · 11 The legal rule · 12 What to write down · Sources
 
 ## 0. Ground rules
@@ -318,7 +318,7 @@ onto new beats, `invert` and `shift:n` change the pitches.
 **Sonic logo** = the motif's final statement, 2-5 notes over ~1-3 s [23] (vendor, signal). Plant it in the first 3 s
 and resolve it on the end card on the tonic or the 3rd. Bespoke cues beat borrowed songs [24] (secondary, signal).
 
-## 10. Four stable recipes
+## 10. Five stable recipes
 
 Proven, fully consonant starting points; each passes the harmony check and is in `music-synthesis.md` §16 as a complete
 `music.mjs` with its measured QC. Pick the one nearest the reel's mood and adapt it: the tempo (then the bar count),
@@ -333,6 +333,7 @@ and the layering (A and D), never from a note outside the chord; B and C are tri
 | B Minor launch | A minor (aeolian) | 128 | Am · F · C · G (i VI III VII) | four-on-the-floor, clap on 2 and 4, offbeat bass, plucked arpeggio, supersaw hook | launches, apps, sport, determined 15-30 s |
 | C Bright pop-house | C major | 124 | C · G · Am · F (I V vi IV), V-I to end | four-on-the-floor, offbeat open hats, offbeat epiano chords, bass root-octave | friendly products, lifestyle, social, 15-30 s |
 | D Liquid DnB (**owner-approved** launch score) | F# dorian | 176 (felt 88) | F#m9 · B9 · Amaj7 · G#m7 (i9 IV9 IIImaj7 ii7), per half bar at the peak, F# 6/9 Picardy to end | liquid two-step break, swung hats, off-beat m9 stabs, epiano comp, saw bass over a sine sub, bell (ratio 1.4) hook doubled by a supersaw | launches, apps, fast 30 s reels |
+| E Launch film (the arc of the owner's reference film) | D major | 120 | Dmaj7 · A · Bm7 · Gmaj7 (Imaj7 V vi7 IVmaj7), I to end | four on the floor from 0.00, off-beat stabs, epiano motif, supersaw lead; a 3-beat stop before the drop, a riser into the proof, a slam bar, a one-bar stop, the final hit on the last bar | launch films and premium launch-style reels, 15-60 s (`reelmakeeasy-launch-film`) |
 
 Other keys work the same way: move the recipe's key and its chords together (B in E minor: Em C G D; C in G major:
 G D Em C).

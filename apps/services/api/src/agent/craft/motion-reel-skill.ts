@@ -1,5 +1,6 @@
 import { SFX_DESCRIPTIONS, SFX_NAMES } from '@reelmakeeasy/common/motion-reel/sfx'
 
+import { LAUNCH_FILM_SKILL_NAME } from './launch-film-skill'
 import { MUSIC_COMPOSER_SKILL_NAME } from './music-composer-skill'
 
 export const MOTION_REEL_SKILL_NAME = 'reelmakeeasy-motion-reel'
@@ -44,7 +45,8 @@ export function renderMotionReelSkill(): string {
     '',
     '## The plan',
     '',
-    'Write `reel/plan.md` before you build, one short block per scene: its seconds and its beats or bars (`bar(2)` to `bar(4)`); the one idea it shows; what is on screen and where; its transition in and out and how each joins the neighbouring scene (and, for the one or two moments that use depth, what waits behind); and what keeps moving. Then write the plan in your reply text too, not only in your thinking (the user sees neither your thinking nor the file): one short line per scene with its beats or bars. Only then ask whether to build it, below the plan in the same reply; never ask "Build this plan?" without the plan above it. When the user changes something, update `plan.md` and show the new plan again.',
+    `Before you write the music or the plan, read the \`${LAUNCH_FILM_SKILL_NAME}\` skill: the owner's quality bar, measured from a launch film they picked. Follow its arc for the reel's length (a problem, a stop of silence before the drop, the reveal on the drop, the one-word-a-beat staccato, the product working, proof in live numbers, a slam, the logo in a second stop, the final hit), its music arc (the composer's recipe E is that arc), its joins and its scene layout. A \`showreel\` keeps its music arc, joins, scene looks and pacing and swaps the story. The rules below still hold. ` +
+      'Write `reel/plan.md` before you build, one short block per scene: its seconds and its beats or bars (`bar(2)` to `bar(4)`); the one idea it shows; what is on screen and where; its transition in and out and how each joins the neighbouring scene (and, for the one or two moments that use depth, what waits behind); and what keeps moving. Then write the plan in your reply text too, not only in your thinking (the user sees neither your thinking nor the file): one short line per scene with its beats or bars. Only then ask whether to build it, below the plan in the same reply; never ask "Build this plan?" without the plan above it. When the user changes something, update `plan.md` and show the new plan again.',
     '',
     'Remotion is installed. Its own skills (`remotion-best-practices`, `remotion-markup`, `remotion-multimedia`) have its API in detail; where they differ, follow this skill (here ReelMakeEasy sets the project up and renders).',
     '',
@@ -107,7 +109,7 @@ export function renderMotionReelSkill(): string {
     '- Keep text and key shapes inside a 6% safe margin; measure long lines with `measureText`/`fitText` from `@remotion/layout-utils`, so nothing runs off the frame.',
     "- Every word on screen comes from the brief's subject (or the subject's own website); never copy a video reference's text, logo or footage.",
     '- The brief\'s tone and style words ("calm", "playful", "high design", "colour that changes with the music") are directions for you, not copy: show them, never write them on screen. On-screen words are the product\'s own: its name, its tagline, its UI and a few short lines of your own.',
-    '- No HUD chrome: no corner labels, counters, section numbers or technical captions ("REEL 01/04", "GRID 4x6", "PARTICLES 320") unless the subject itself is an interface that shows them.',
+    '- No HUD chrome: no corner labels, counters, section numbers or technical captions ("REEL 01/04", "GRID 4x6", "PARTICLES 320") unless the subject itself is an interface that shows them. A big live number that is part of the story (days spent, orders today, stores opened) with a small label naming it is content, not chrome.',
     '- A vertical (9:16) reel is watched on a phone in TikTok, Reels or Shorts: compose every scene for the whole frame (big type and UI, the lower half used, never a cluster in the top third), and keep text out of the bottom 15% and the right 12% of the width, where those apps put their captions and buttons.',
     '- Type-check with `npx tsc --noEmit` inside `reel/` when you change several files.',
     '',

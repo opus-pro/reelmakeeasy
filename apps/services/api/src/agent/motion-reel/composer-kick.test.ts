@@ -361,12 +361,12 @@ function scoreChecks(
   }
 }
 
-/** The four recipes of the skill's section 16, as complete music.mjs files, with the tempo and length their heading gives. */
+/** The five recipes of the skill's section 16, as complete music.mjs files, with the tempo and length their heading gives. */
 function recipes(): { bpm: number; code: string; name: string; seconds: number }[] {
   const md = fs.readFileSync(SYNTHESIS, 'utf8')
   const found = [
     ...md.matchAll(
-      /^### ([A-D])\. [^\n]*?(\d+) BPM, (\d+) s[^\n]*\n[\s\S]*?```js\n([\s\S]*?)```/gm,
+      /^### ([A-E])\. [^\n]*?(\d+) BPM, (\d+) s[^\n]*\n[\s\S]*?```js\n([\s\S]*?)```/gm,
     ),
   ]
   return found.map((m) => ({
@@ -412,7 +412,7 @@ describe('the kick check on real scores (score.mjs --harmony)', () => {
 
   it('passes every recipe in the composer skill: the harmony and the kick checks (each plays the approved kick)', () => {
     const all = recipes()
-    expect(all.map((r) => r.name)).toEqual(['A', 'B', 'C', 'D'])
+    expect(all.map((r) => r.name)).toEqual(['A', 'B', 'C', 'D', 'E'])
     for (const r of all) {
       const { exit, harmony, kick } = scoreChecks(r.code, r.bpm, r.seconds)
       expect({ exit, harmony, kick: kick.status, name: r.name }).toEqual({

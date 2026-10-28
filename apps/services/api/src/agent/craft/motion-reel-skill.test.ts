@@ -90,6 +90,13 @@ describe('renderMotionReelSkill', () => {
     expect(skill).toMatch(/keep text out of the bottom 15% and the right 12% of the width/)
   })
 
+  it('sends every reel to the launch film skill before the music and the plan', () => {
+    expect(skill).toMatch(/read the `reelmakeeasy-launch-film` skill: the owner's quality bar/)
+    expect(skill).toMatch(/a stop of silence before the drop, the reveal on the drop/)
+    expect(skill).toMatch(/the composer's recipe E is that arc/)
+    expect(skill).toMatch(/is content, not chrome/)
+  })
+
   it('treats depth as one tool: mostly flat scenes, transitions that join them', () => {
     expect(skill).toMatch(/## Transitions and depth/)
     expect(skill).toMatch(/Most scenes are flat and clean/)

@@ -6,6 +6,7 @@ import { renderAnimationSkill } from '../craft/animation-skill'
 import { BEAT_LOOP_SKILL_NAME, renderBeatLoopSkill } from '../craft/beat-loop-skill'
 import { CAMERA_SKILL_NAME, renderCameraSkill } from '../craft/camera-skill'
 import { MOTION_REEL_SKILL_NAME, renderMotionReelSkill } from '../craft/motion-reel-skill'
+import { LAUNCH_FILM_SKILL_NAME, launchFilmSkillDir } from '../craft/launch-film-skill'
 import * as musicComposerSkill from '../craft/music-composer-skill'
 import { MUSIC_COMPOSER_SKILL_NAME, musicComposerSkillDir } from '../craft/music-composer-skill'
 import { RANKING_SKILL_NAME } from '../craft/ranking-skill'
@@ -111,6 +112,7 @@ describe('ensureAgentCodexHome', () => {
       'reelmakeeasy-animation-3d',
       'reelmakeeasy-animation-8bit',
       MUSIC_COMPOSER_SKILL_NAME,
+      LAUNCH_FILM_SKILL_NAME,
     ])
     const animation = path.join(home, 'skills', 'reelmakeeasy-animation-8bit', 'SKILL.md')
     expect(fs.readFileSync(animation, 'utf8')).toBe(renderAnimationSkill('8bit'))
@@ -131,6 +133,18 @@ describe('ensureAgentCodexHome', () => {
     ensureAgentCodexHome({ home, userHome })
     expect(fs.readFileSync(path.join(skill, 'SKILL.md'), 'utf8')).toMatch(
       new RegExp(`^---\nname: ${MUSIC_COMPOSER_SKILL_NAME}\n`),
+    )
+  })
+
+  it('copies the launch film skill whole, its measured breakdown too', () => {
+    ensureAgentCodexHome({ home, userHome })
+    const skill = path.join(home, 'skills', LAUNCH_FILM_SKILL_NAME)
+    for (const file of ['SKILL.md', 'references/reference-breakdown.md'])
+      expect(fs.readFileSync(path.join(skill, file), 'utf8')).toBe(
+        fs.readFileSync(path.join(launchFilmSkillDir(), file), 'utf8'),
+      )
+    expect(fs.readFileSync(path.join(skill, 'SKILL.md'), 'utf8')).toMatch(
+      new RegExp(`^---\nname: ${LAUNCH_FILM_SKILL_NAME}\n`),
     )
   })
 
