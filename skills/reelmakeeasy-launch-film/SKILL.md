@@ -62,20 +62,23 @@ Every join is designed; none is a plain slide or a crossfade. The reference's jo
 | Join | How it moves | Use it |
 |---|---|---|
 | Collapse to a dot | the scene shrinks into one glowing dot (the input field, a card) on the stop | into the drop |
-| Burst | the dot flashes white for 2-3 frames, then light streaks fly out from the centre and fade into particles | the drop, once |
+| Burst | the dot swells, a white flash fills the whole frame for 2-3 frames, then dense light streaks rush out from the centre (hyperspace), then a thick particle cloud: a few sparse dots read as weak | the drop, once |
 | Particles to a mark | particles swirl along a spiral and settle into the logo | the reveal |
-| Zoom through | the logo or a dot rushes at the camera until it fills the frame with its colour; the next world is that colour | from a reveal into the staccato, from the tunnel into the slam |
+| Zoom through | the logo or a dot rushes at the camera (other elements gone first) until it fills the whole frame with its colour in about half a beat; the next world is that colour | from a reveal into the staccato, from the tunnel into the slam |
 | Hard cut on the beat, new colour | the next word's world simply replaces the last, on the beat | the staccato and the slam |
 | Shape match | the last scene's main shape becomes the next one's (the logo's arch grows into a ring, the ring is the globe's rim; a white sun becomes a gauge's dial) | between proof scenes |
 | Collapse to a glow | cards or UI fall into one bright glow, which becomes the next scene's mark | after a busy scene |
 | Whip | a fast motion-blurred pan or stretch (a card slides off with smear, the frame goes white) into the next world | into a new section |
 | Fly out, fly in | the next scene's parts fly out of the current one (the chat's answer bursts into cards) | the output act |
-| Strokes assemble | coloured brush strokes swoop in on curved paths and lock into the logo | the end, in the stop |
+| Strokes assemble | three or four big coloured strokes swoop in from the frame's edges on long curves across the whole frame and lock into the logo at the centre | the end, in the stop |
+
+Joins happen on the scenes' own grounds: never dim the frame to a flat grey with a small shape in it (a dead frame), and never leave a frame where one small mark sits alone on an empty ground, except the end card's first beat.
 
 Use depth (perspective, `translateZ`, a tilted UI) for two or three of these at most: the tilted UI building itself, the cards flying out, the tunnel. Everything else faces the camera.
 
 ## 4. Each scene
 
+- **Scale: fill the frame.** The reference's UI is big and dense: on 16:9 the product's cards, phone or site own the right two thirds from top to bottom (a phone 80-90% of the frame's height, a card stack filling its half), the headline is about 5% of the height a line and its number about 10%. A small phone or a few small cards in a corner with an empty lower half is the first thing that makes a reel look cheaper than the reference. Sizes that work at 1920x1080 (scale with the frame): headline lines about 56 px, a live number about 160 px; a card stack of cards about 520 px wide spanning y 120-960 on the right 60%; the product's screen (a tablet or a big tilted window) about 1100 px wide; a ring, gauge or globe about 800 px across; the end card's mark and wordmark one centred block about 900 px wide (cap height about 140 px), the tagline about 44 px under it; the logo's strokes 24-30 px thick, each sweeping across at least half the frame. Write the sizes in the plan: a size in percent is easy to misread.
 - **Layout (16:9):** the headline on the left third, two lines, the first light and grey, the second bold in the accent colour ("Opening a store" / **"still takes weeks."**); the visual on the right two thirds; a live number under the headline with a small mono label above it (DAY, ORDERS TODAY, STORES OPENED). Those small labels belong to the number they name; they are not HUD chrome. 9:16: the headline on top, the visual filling the middle, the number low but above the bottom 15%.
 - **One live thing in every scene:** a counter stepping on the beat, a UI building, arcs flying, a gauge sweeping, text typing. A counter counts up with easing and lands on its value on a beat; a sentence types at about 20 characters a second with a cursor.
 - **Worlds alternate:** dark (ink with soft violet and coral glows), light (warm cream with soft colour clouds) and full colour fills (violet, coral, yellow, pink), never two neighbours alike in the staccato. One accent colour carries the second headline line and the counters all film long.
@@ -98,4 +101,6 @@ Check the plan against this list and say in the plan how each one is met:
 - [ ] Every join named from §3; no plain slide, no crossfade, no fade to black; depth on at most three.
 - [ ] Every scene has its live thing and its world (dark, light or colour), and neighbours differ.
 - [ ] The words: one headline (two lines) per scene at most, the staccato words, the slam, the end line. Nothing else.
+- [ ] Scale: the product's UI owns the right two thirds top to bottom; no scene is a small element in a corner.
+- [ ] The end card: the mark and the wordmark centred as one block (about a quarter of the frame's width), the tagline under it, one soft ring on the final hit.
 - [ ] The shared mark is named and carried to the end.
