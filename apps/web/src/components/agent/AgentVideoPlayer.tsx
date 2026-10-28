@@ -10,6 +10,8 @@ import { claimPlayback } from './exclusivePlayback'
 export type AgentVideoPlayerProps = {
   /** The project's aspect ratio, as CSS `w / h`. */
   aspectRatio: string
+  /** How fast it plays (1: as made); the voices keep their pitch. */
+  playbackRate?: number
   /** A still shown before it plays (default: the first frame). */
   poster?: string
   src: string
@@ -24,6 +26,7 @@ export type AgentVideoPlayerProps = {
  */
 export function AgentVideoPlayer({
   aspectRatio,
+  playbackRate = 1,
   poster,
   src,
   videoClassName,
@@ -37,6 +40,14 @@ export function AgentVideoPlayer({
     wrapper.addEventListener('play', onPlay, true)
     return () => wrapper.removeEventListener('play', onPlay, true)
   }, [])
+  useEffect(() => {
+    const video = wrapperRef.current?.querySelector('video')
+    if (!video) return
+    // The default rate too: a new source would otherwise load back at 1x.
+    video.defaultPlaybackRate = playbackRate
+    video.playbackRate = playbackRate
+    video.preservesPitch = true
+  }, [playbackRate, src])
 
   return (
     <div className="w-fit max-w-full" ref={wrapperRef}>

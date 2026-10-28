@@ -18,6 +18,7 @@ import { type ReactNode, useEffect, useMemo, useState } from 'react'
 import { AgentChat } from '@/components/agent/AgentChat'
 import { useAgentPicker } from '@/components/agent/AgentPickerDialog'
 import { AgentSessionSidebar } from '@/components/agent/AgentSessionSidebar'
+import { MotionReelPanel } from '@/components/agent/motion/MotionReelPanel'
 import { ProjectProgressProvider } from '@/components/agent/ProjectProgressProvider'
 import { RankingChatPanel } from '@/components/agent/ranking/RankingChatPanel'
 import { useSidebarProjectActions } from '@/components/agent/SidebarProjectActions'
@@ -28,7 +29,6 @@ import {
   toolOf,
   useStartEasyOnce,
 } from '@/components/agent/start-easy'
-import { MotionReelPanel } from '@/components/agent/motion/MotionReelPanel'
 import { StoryboardPanel } from '@/components/agent/StoryboardPanel'
 import { useAgentSession } from '@/components/agent/useAgentSession'
 import { useAgentSessions, useRefreshAgentSessions } from '@/components/agent/useAgentSessions'
@@ -272,7 +272,7 @@ function AgentWorkspace({
         </div>
         <div className="min-h-0 min-w-0 flex-1">
           {isCodeVideoMode(mode) ? (
-            <MotionReelPanel transcript={agent.transcript} />
+            <MotionReelPanel sessionId={sessionId} transcript={agent.transcript} />
           ) : isRankingMode(mode) ? (
             <RankingChatPanel
               easy={mode === 'ranking_easy'}
