@@ -2,6 +2,8 @@ import { beatPulse, music } from '../beat'
 import { spec, type VoiceLine, voiceLines } from '../clock'
 import { type Vowel, vowelOf } from '../kit'
 
+import type { Shot } from './framing'
+
 /**
  * The host's pose on every frame: what the avatar draws. The voice drives the mouth, the blinks,
  * the breath and the small head moves; Claude's cues add gestures, looks, moods and leans on the
@@ -23,8 +25,15 @@ export const GESTURES: readonly Gesture[] = [
 ]
 
 /** One arm: its gesture, how far into it (0 rest .. 1 the full gesture), fingers up for `count`,
- *  and seconds since the gesture began (a wave swings with it). */
-export type ArmPose = { gesture: Gesture; k: number; n: number; since: number }
+ *  and seconds since the gesture began (a wave swings with it). `aim`: for a `point` at a
+ *  target, the way to it from the shoulder (a unit vector in the avatar's box, y down). */
+export type ArmPose = {
+  aim?: [number, number]
+  gesture: Gesture
+  k: number
+  n: number
+  since: number
+}
 
 export type Mood = 'serious' | 'smile' | 'surprised'
 
@@ -62,7 +71,12 @@ export type Pose = {
 /**
  * A cue on the timeline, at `at` seconds (put it on its word: `word(i, 'three').start`):
  * a gesture (`hand` left, right or both; held `hold` seconds, `n` fingers for count), a look,
- * a mood, a lean, or a nod.
+ * a mood, a lean, a nod, or a move.
+ * - `target` (with `gesture: 'point'`): the spot on screen (1080x1920 pixels) the host points
+ *   at: the arm aims there, the eyes follow, and the hand nearest it points unless `hand` says.
+ *   `pointedAt(cues, t, spot)` tells the board, so the thing pointed at can react.
+ * - `move`: the host walks to that shot's spot (left, right, close: to the front, corner...) and
+ *   stays there until the next line's shot or move.
  */
 export type Cue = {
   at: number
@@ -72,9 +86,17 @@ export type Cue = {
   lean?: number
   look?: Look
   mood?: Mood
+  move?: Shot
   n?: number
   nod?: boolean
+  target?: [number, number]
 }
+
+/** Turns a spot on screen into the avatar's own box (where the stage has placed it now). */
+export type ToBox = (x: number, y: number) => [number, number]
+
+/** The shoulders in the avatar's box, for aiming (the avatars' are near here). */
+const SHOULDER: [number, number] = [220, -580]
 
 const clamp = (v: number, a = 0, b = 1) => Math.min(b, Math.max(a, v))
 const smooth = (x: number) => {
@@ -152,19 +174,38 @@ export function blinkAt(t: number): number {
   return v
 }
 
+/** The way from a shoulder to a target in the box, as a unit vector. */
+function aimFrom(side: 'left' | 'right', [x, y]: [number, number]): [number, number] {
+  const dx = x - (side === 'left' ? -SHOULDER[0] : SHOULDER[0])
+  const dy = y - SHOULDER[1]
+  const d = Math.hypot(dx, dy) || 1
+  return [dx / d, dy / d]
+}
+
+/** The hand a cue uses: as it says; a point at a target, the hand on the target's side. */
+function handOf(c: Cue, toBox?: ToBox): 'both' | 'left' | 'right' {
+  if (c.hand) return c.hand
+  if (c.target && toBox) return toBox(c.target[0], c.target[1])[0] < 0 ? 'left' : 'right'
+  return 'right'
+}
+
 /** An arm at t from the cues for its side. */
-function armAt(cues: Cue[], side: 'left' | 'right', t: number): ArmPose {
+function armAt(cues: Cue[], side: 'left' | 'right', t: number, toBox?: ToBox): ArmPose {
   let pose = REST
   for (const c of cues) {
     if (!c.gesture || c.at > t) continue
-    const hand = c.hand ?? 'right'
+    const hand = handOf(c, toBox)
     if (hand !== side && hand !== 'both') continue
     const hold = c.hold ?? DEFAULT_HOLD
     const k =
       ss(c.at - IN_SEC * 0.5, c.at + IN_SEC * 0.5, t) *
       (1 - ss(c.at + hold, c.at + hold + OUT_SEC, t))
     if (k <= 0.001) continue
-    pose = { gesture: c.gesture, k, n: c.n ?? 1, since: t - c.at }
+    const aim =
+      c.gesture === 'point' && c.target && toBox
+        ? aimFrom(side, toBox(c.target[0], c.target[1]))
+        : undefined
+    pose = { ...(aim ? { aim } : {}), gesture: c.gesture, k, n: c.n ?? 1, since: t - c.at }
   }
   return pose
 }
@@ -177,8 +218,9 @@ function last<K extends keyof Cue>(cues: Cue[], key: K, t: number): Cue | undefi
   return found
 }
 
-/** The host's pose at t (seconds), from the voice and the cues. */
-export function hostPose(t: number, cues: Cue[] = []): Pose {
+/** The host's pose at t (seconds), from the voice and the cues. `toBox`: where the stage has
+ *  placed the avatar now, so a point aims at its target on screen. */
+export function hostPose(t: number, cues: Cue[] = [], toBox?: ToBox): Pose {
   const open = mouthOpen(t)
   const line = lineAt(t)
   const talking = line ? 1 : 0
@@ -232,8 +274,14 @@ export function hostPose(t: number, cues: Cue[] = []): Pose {
   const leanCue = last(cues, 'lean', t)
   const lean = leanCue ? (leanCue.lean ?? 0) * ss(leanCue.at - 0.3, leanCue.at + 0.3, t) : 0
   const groove = grooveAt(t, talking)
-  const left = armAt(cues, 'left', t)
-  const right = armAt(cues, 'right', t)
+  const left = armAt(cues, 'left', t, toBox)
+  const right = armAt(cues, 'right', t, toBox)
+  // Eyes on what the hand points at.
+  const aimed = [left, right].find((a) => a.aim && a.k > 0.05)
+  if (aimed?.aim) {
+    gaze[0] += (aimed.aim[0] * 0.9 - gaze[0]) * aimed.k
+    gaze[1] += (Math.max(-0.6, Math.min(0.4, aimed.aim[1])) - gaze[1]) * aimed.k * 0.6
+  }
   const shrug = Math.max(
     left.gesture === 'shrug' ? left.k : 0,
     right.gesture === 'shrug' ? right.k : 0,
@@ -247,9 +295,16 @@ export function hostPose(t: number, cues: Cue[] = []): Pose {
       // A small nod on each beat of the music, softer while talking.
       nod: nod + open * 2.5 * talking + groove.nod,
       tilt: Math.sin(t * 0.7) * 2.2 + (look === 'left' ? -3 : look === 'right' ? 3 : 0) * lookK,
-      turn: Math.sin(t * 0.43 + 1) * 3 + target[0] * 10 * lookK,
+      turn:
+        Math.sin(t * 0.43 + 1) * 3 +
+        target[0] * 10 * lookK +
+        (aimed?.aim ? aimed.aim[0] * 9 * aimed.k : 0),
     },
-    lean: lean + (music.bpm ? groove.sway : Math.sin(t * 0.5) * 0.8),
+    // Leaning toward what the hand points at.
+    lean:
+      lean +
+      (music.bpm ? groove.sway : Math.sin(t * 0.5) * 0.8) +
+      (aimed?.aim ? Math.sign(aimed.aim[0]) * 4 * aimed.k : 0),
     left,
     mouth: open,
     right,

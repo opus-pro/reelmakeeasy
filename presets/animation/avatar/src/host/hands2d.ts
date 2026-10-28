@@ -39,13 +39,40 @@ const TARGETS: Record<Gesture, (side: number, since: number) => Target> = {
   }),
 }
 
+/** A point along `aim` (a unit vector from the shoulder): the arm reaching out almost straight,
+ *  the finger along it. The arm stays on its own side, never across the face: a target straight
+ *  above gets a diagonal arm, as a person points up at a sign. */
+function aimTarget(side: number, [ax, ay]: [number, number]): Target {
+  const out = 0.42
+  let x = ax
+  let y = ay
+  if (x * side < out) {
+    x = out * side
+    y = (y < 0 ? -1 : 1) * Math.sqrt(1 - out * out)
+  }
+  const reach = 500
+  return {
+    dx: x * reach,
+    dy: y * reach,
+    ex: x * reach * 0.52 + side * 14,
+    ey: y * reach * 0.52 + 30,
+    rot: (Math.atan2(x, -y) * 180) / Math.PI,
+    shape: 'point',
+  }
+}
+
 /** One arm's elbow and hand for its pose: eased from rest into the gesture by `a.k`. `side` is
  *  -1 for the screen's left arm, 1 for the right. `scale` sizes the reach to the avatar (1 =
  *  shoulders about 430 apart). */
 export function armFor(side: -1 | 1, a: ArmPose, [sx, sy]: [number, number], scale = 1): HandAt {
   const rest = TARGETS.rest(side, 0)
-  const to = TARGETS[a.gesture](side, a.since)
+  const to =
+    a.gesture === 'point' && a.aim ? aimTarget(side, a.aim) : TARGETS[a.gesture](side, a.since)
   const k = a.gesture === 'rest' ? 0 : a.k
+  // The hand turns the short way round from rest (a point to the left is -90, i.e. 270).
+  const turn = to.rot - rest.rot
+  if (turn < -180) to.rot += 360
+  else if (turn > 180) to.rot -= 360
   const mix = (key: 'dx' | 'dy' | 'ex' | 'ey' | 'rot') => rest[key] + (to[key] - rest[key]) * k
   return {
     elbow: [sx + mix('ex') * scale, sy + mix('ey') * scale],
