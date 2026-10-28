@@ -10,8 +10,10 @@ The owner set one 60 s launch film as the bar for every Motion Reel. This skill 
 What makes it work, in one line each:
 - **A story, not a feature list.** A problem, a question in silence, the product revealed on the drop, what it does in eight one-beat words, the product working, proof in live numbers, a manifesto, a slam, the logo in silence, the final hit.
 - **The music is the editor.** 120 BPM, a major key, the kick at full level from the first frame, a stop of silence before the drop and another before the final hit. Every cut sits on a beat; every act starts on a phrase.
-- **Every scene is a world.** Its own ground (dark, light or a colour fill), its own type and its own trick, but one shared mark (a dot, the logo) carries the eye from one world into the next.
+- **Every scene is a world.** Its own ground (dark, light or a colour fill), its own type and its own trick, but one shared mark (a shape from the subject's world that ends as the logo) carries the eye from one world into the next.
 - **Nothing is ever still and nothing is a plain slide.** Every scene has a live counter or a building UI, and every join is designed: a collapse to a dot, an explosion, a zoom through, a shape match, a whip.
+
+**What stays and what changes.** Every reel keeps the same spine: the arc and its bars (§1), the music arc (§3), the kinds of join (§4), the scale, the live thing and the worlds (§5), the pacing (§6). Only the pictures change, and they change because the subject changes, not to be different: each act shows what this product's world looks like doing that job (§2). Never drop a stop, the staccato, a live number or a designed join to look new; never invent a picture that has nothing to do with the product. A reel that looks like an earlier one has borrowed its pictures; the fix is a picture from the subject, not a new structure.
 
 ## 1. The arc
 
@@ -45,7 +47,7 @@ A `showreel` (pure show-off motion) keeps the music arc, the joins, the worlds a
 
 ## 2. Make every act your own
 
-Keep each act's job, length and music; invent its picture from the subject. Ask, per act: what does this product's world look like when it does this job? A running app's problem is a loop run again and again on a map; a bank's is a pile of paper; a camera's is a blurry photo. The reference's answer only fits a shop builder.
+Keep each act's job, length and music; invent its picture from the subject. Ask, per act: what does this product's world look like when it does this job? A bank's problem is a pile of paper; a camera's is a blurry photo; a language app's is a menu you can't read. The reference's answer only fits a shop builder.
 
 **Never reuse the reference's signature devices**, the ones a viewer of both films would spot. In the opening above all:
 - a dark ink ground with soft violet and coral glows behind a two-line headline on the left, the second line in the accent colour, a mono-labelled day or count counter under it;
@@ -55,14 +57,18 @@ Keep each act's job, length and music; invent its picture from the subject. Ask,
 - a white flash and hyperspace streaks into particles that swirl into the logo, with "Introducing";
 - later: a dark light-streak tunnel with three centred phrases, a one-word slam whose words read as one sentence on colour fills, brush strokes assembling the logo on cream.
 
+The ideas are banned too, in any styling: a counter stepping on every beat in the opening (the reference's DAY counter), a question phrased "What if…?", a plain glowing dot as the shared mark (start from the subject's own shape: a bean, a nib, a pin).
+
+**Nor the pictures of the reels already made with this skill** (`references/made-reels.md`): the owner posts them side by side, so a new reel takes none of their act pictures, and a second reel for the same product picks a new picture for every act. The owner adds each finished reel there.
+
 The mechanics stay yours to use: the stops, a word a beat, live numbers, shape matches, zoom throughs. Their look changes. Ways to do each opening job differently:
 
 | Job | Ways that are not the reference's |
 |---|---|
-| Problem | the product's own world in trouble, full frame (a loop run over and over, an inbox overflowing, a blank page with a blinking cursor, a phone ringing unanswered); a single big line at the bottom or no words at all; a light, daylight or colour ground |
-| Question | the product speaks in its own UI (a notification, a watch face, a voice wave, a coach card), or the picture asks it (a fork in the path, a hand hovering, a door ajar) |
+| Problem | the product's own world in trouble, full frame (an inbox overflowing, a blank page with a blinking cursor, a phone ringing unanswered); a single big line at the bottom or no words at all; a light, daylight or colour ground |
+| Question | the product speaks in its own UI (a notification, a voice wave, a badge on an icon), or the picture asks it (a hand hovering, a door ajar) |
 | Stop | the world holds its breath: one element frozen mid-move, a heartbeat or footstep ripple, a held breath of camera; whatever is still, something small moves |
-| Drop, reveal | the world breaks open in its own way: the line escapes the loop and rides into new streets, the pile clears in one sweep, the page fills; the mark is drawn by that movement, not by particles |
+| Drop, reveal | the world breaks open in its own way: what was stuck gets free (the pile clears in one sweep, the page fills, the product switches on); the mark comes out of that movement, not out of particles |
 
 ## 3. The music arc
 
@@ -100,7 +106,9 @@ Use depth (perspective, `translateZ`, a tilted UI) for two or three of these at 
 ## 5. Each scene
 
 - **Scale: fill the frame.** The reference's UI is big and dense: on 16:9 the product's cards, phone or site own the right two thirds from top to bottom (a phone 80-90% of the frame's height, a card stack filling its half), the headline is about 5% of the height a line and its number about 10%. A small phone or a few small cards in a corner with an empty lower half is the first thing that makes a reel look cheaper than the reference. Sizes that work at 1920x1080 (scale with the frame): headline lines about 56 px, a live number about 160 px; a card stack of cards about 520 px wide spanning y 120-960 on the right 60%; the product's screen (a tablet or a big tilted window) about 1100 px wide; a ring, gauge or globe about 800 px across; the end card's mark and wordmark one centred block about 900 px wide (cap height about 140 px), the tagline about 44 px under it; the logo's strokes 24-30 px thick, each sweeping across at least half the frame. Write the sizes in the plan: a size in percent is easy to misread.
+- **Scale on 9:16 (1080x1920).** The frame is tall: a scene whose subject sits in the top half and leaves the lower half empty looks unfinished (the first vertical reel did this for 5 s: a shelf, a bag and a bean in the top half). The hero spans y 280-1630 (a phone about 820x1500, a product or prop at least 900 px tall or the full width); headline lines about 72 px in the top 15%, a live number about 200 px; a ring or dial about 860 px across; staccato words 300-420 px tall; the end card one block about 860 px wide centred on y 900 (wordmark cap about 130 px, tagline about 48 px). Keep text above y 1630 (the apps' captions).
 - **Layout (16:9):** words and a live number on one side, the visual owning the rest, is what the reference does in most scenes (a two-line headline on the left with the second line in the accent colour, a mono-labelled number under it). Use that layout for a few middle scenes at most and never in the opening; elsewhere set the words the subject's own way (one big line at the bottom, words on the UI itself, a centred line, none). A small label naming a live number belongs to it; it is not HUD chrome. 9:16: the headline on top, the visual filling the middle, the number low but above the bottom 15%.
+- **The staccato:** each word does its trick across its beat (beans rain into POUR, CRACK splits, a highlighter swipes FIND). A word set still on a plain colour ground is a slide, even for one beat; if a word has no trick, pick another word.
 - **One live thing in every scene:** a counter stepping on the beat, a UI building, arcs flying, a gauge sweeping, text typing. A counter counts up with easing and lands on its value on a beat; a sentence types at about 20 characters a second with a cursor.
 - **Worlds alternate:** dark, light and full colour fills, never two neighbours alike in the staccato, in the subject's own palette (not the reference's ink with violet and coral glows and warm cream). One accent colour carries the key words and the counters all film long.
 - **Type:** three or four families, each with one job (headlines, the one-word slams, labels and code, one contrasting face for a single moment), chosen for the subject; don't repeat the reference's italic-serif question.
@@ -118,11 +126,12 @@ Use depth (perspective, `translateZ`, a tilted UI) for two or three of these at 
 
 Check the plan against this list and say in the plan how each one is met:
 - [ ] The arc for the reel's length (§1), each act on its bars.
-- [ ] Every act's picture is the subject's own (§2): none of the reference's signature devices, the opening above all. Say per act what it shows instead.
+- [ ] Every act's picture is the subject's own (§2): none of the reference's signature devices or banned ideas, the opening above all, and none of the act pictures in `references/made-reels.md`. Say per act what it shows instead.
 - [ ] The music has full level from 0.00, the stop before the drop, the drop on a downbeat, stop 2 and the final hit (§3).
 - [ ] Every join named from §4; no plain slide, no crossfade, no fade to black; depth on at most three.
 - [ ] Every scene has its live thing and its world (dark, light or colour), and neighbours differ.
 - [ ] The words: one headline (two lines) per scene at most, the staccato words, the slam, the end line. Nothing else.
-- [ ] Scale: the product's UI owns the right two thirds top to bottom; no scene is a small element in a corner.
+- [ ] Scale: the product's UI owns the right two thirds top to bottom (16:9) or spans y 280-1630 (9:16); no scene is a small element in a corner or in one half of the frame.
+- [ ] Every staccato word has its trick.
 - [ ] The end card: the mark and the wordmark centred as one block (about a quarter of the frame's width), the tagline under it, one soft ring on the final hit.
 - [ ] The shared mark is named and carried to the end.

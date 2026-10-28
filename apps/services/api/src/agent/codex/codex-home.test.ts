@@ -136,10 +136,10 @@ describe('ensureAgentCodexHome', () => {
     )
   })
 
-  it('copies the launch film skill whole, its measured breakdown too', () => {
+  it('copies the launch film skill whole, its measured breakdown and the reels already made too', () => {
     ensureAgentCodexHome({ home, userHome })
     const skill = path.join(home, 'skills', LAUNCH_FILM_SKILL_NAME)
-    for (const file of ['SKILL.md', 'references/reference-breakdown.md'])
+    for (const file of ['SKILL.md', 'references/reference-breakdown.md', 'references/made-reels.md'])
       expect(fs.readFileSync(path.join(skill, file), 'utf8')).toBe(
         fs.readFileSync(path.join(launchFilmSkillDir(), file), 'utf8'),
       )
