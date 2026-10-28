@@ -25,6 +25,7 @@ import {
   isMotionModel,
   motionModelChoice,
   motionModelGate,
+  motionOption,
   usableChoice,
 } from './chat-models'
 
@@ -113,12 +114,14 @@ export class ChatModelService {
     }).current
   }
 
-  /** A Motion Reel chat's model (its family's newest; see `motionModelChoice`), from what is
-   *  known now; while the list is unknown, the usual choice (the gate already checked it). */
+  /** A Motion Reel or Claude Animation chat's model (its family's newest; see
+   *  `motionModelChoice`), from what is known now: picked for the chat, else the recommended
+   *  level (the saved default is for other chats). While the list is unknown, the usual choice
+   *  (the gate already checked it). */
   motionChoiceFor(harness: AgentHarnessName, chat?: ChatModelChoice): ChatModelChoice | null {
     const models = this.cache.get(harness)?.catalog?.models ?? []
     if (!models.length) return this.choiceFor(harness, chat)
-    return motionModelChoice(harness, models, chat ?? this.saved(harness))
+    return motionModelChoice(harness, models, chat)
   }
 
   /** Why this account can't run a Motion Reel on `harness`, or null when it can (or the
@@ -143,17 +146,18 @@ export class ChatModelService {
     return isMotionModel(harness, models, choice.model) && (await this.offers(harness, choice))
   }
 
-  /** `GET .../model` for a Motion Reel chat: only the allowed model is offered, at its level. */
+  /** `GET .../model` for a Motion Reel or Claude Animation chat: only the allowed model is
+   *  offered (its levels from medium up), at the level picked for the chat, else the
+   *  recommended one. */
   async motionState(harness: AgentHarnessName, chat?: ChatModelChoice): Promise<ChatModelState> {
     const state = await this.state(harness, chat)
-    const current = state.models.length
-      ? motionModelChoice(harness, state.models, chat ?? state.default)
-      : state.current
+    if (!state.models.length) return state
+    const current = motionModelChoice(harness, state.models, chat)
     return {
       ...state,
       current,
-      models: state.models.filter((m) => m.id === current?.model),
-      recommended: current,
+      models: state.models.filter((m) => m.id === current?.model).map(motionOption),
+      recommended: motionModelChoice(harness, state.models),
       source: chat ? 'chat' : 'recommended',
     }
   }

@@ -60,7 +60,7 @@ describe('chat model helpers', () => {
     const levels = rows[0]?.children ?? []
     expect(levels.map((r) => [r.label, r.checked])).toEqual([
       ['Low', false],
-      ['Medium', true],
+      ['Medium (Recommended)', true],
       ['High', false],
       ['Extra high', false],
     ])

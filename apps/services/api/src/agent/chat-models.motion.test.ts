@@ -2,7 +2,7 @@ import type { ChatModelOption } from '@shared/types/api/agent'
 
 import { isMotionModel, motionModelChoice, motionModelGate } from './chat-models'
 
-const model = (id: string, efforts = ['low', 'medium', 'high']): ChatModelOption =>
+const model = (id: string, efforts = ['low', 'medium', 'high', 'xhigh', 'max']): ChatModelOption =>
   ({ efforts, id, label: id }) as unknown as ChatModelOption
 
 describe('Motion Reel models', () => {
@@ -10,11 +10,16 @@ describe('Motion Reel models', () => {
   const codex = [model('gpt-6-sol'), model('gpt-6-astra'), model('gpt-5.5-astra')]
 
   it("runs on the family's newest model at medium thinking or more", () => {
+    // Unpicked, it starts at Extra high on Claude Code and medium on Codex.
     expect(motionModelChoice('claude', claude)).toEqual({
-      effort: 'medium',
+      effort: 'xhigh',
       model: 'claude-opus-5-5',
     })
     expect(motionModelChoice('codex', codex)).toEqual({ effort: 'medium', model: 'gpt-6-astra' })
+    // A model without Extra high starts at medium.
+    expect(
+      motionModelChoice('claude', [model('claude-opus-5-5', ['low', 'medium', 'high'])]),
+    ).toEqual({ effort: 'medium', model: 'claude-opus-5-5' })
     expect(
       motionModelChoice('claude', claude, { effort: 'high', model: 'claude-opus-5-5' }),
     ).toEqual({

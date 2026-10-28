@@ -151,10 +151,19 @@ export function isMotionModel(
   return newestOf(models, MOTION_MODEL_FAMILY[harness])?.id === id
 }
 
+/** The thinking level a Motion Reel or Claude Animation chat starts at, and the one recommended:
+ *  Extra high on Claude Code (Opus plans the scenes and their timing better with more thought),
+ *  medium on Codex. */
+export const CODE_VIDEO_EFFORT: Record<AgentHarnessName, string> = {
+  claude: 'xhigh',
+  codex: 'medium',
+}
+
 /**
- * The model a Motion Reel chat runs on: its family's newest model, at the picked thinking level
- * when that is medium or more, else at medium (or the model's own level when it has no medium).
- * Null when the harness doesn't offer the family to this account.
+ * The model a Motion Reel or Claude Animation chat runs on: its family's newest model, at the
+ * level picked for it (lifted to medium when lower). Unpicked, or picked on another model, at the
+ * harness's starting level (`CODE_VIDEO_EFFORT`), else medium (or the model's own level when it
+ * has neither). Null when the harness doesn't offer the family to this account.
  */
 export function motionModelChoice(
   harness: AgentHarnessName,
@@ -163,15 +172,22 @@ export function motionModelChoice(
 ): ChatModelChoice | null {
   const model = newestOf(models, MOTION_MODEL_FAMILY[harness])
   if (!model) return null
-  if (
-    picked?.model === model.id &&
-    atLeastMedium(picked.effort) &&
-    model.efforts.includes(picked.effort as string)
-  )
-    return { effort: picked.effort, model: model.id }
+  if (picked?.model === model.id && picked.effort && model.efforts.includes(picked.effort)) {
+    if (atLeastMedium(picked.effort)) return { effort: picked.effort, model: model.id }
+    if (model.efforts.includes('medium')) return { effort: 'medium', model: model.id }
+  }
+  const start = CODE_VIDEO_EFFORT[harness]
+  if (model.efforts.includes(start)) return { effort: start, model: model.id }
   if (model.efforts.includes('medium')) return { effort: 'medium', model: model.id }
   const effort = model.efforts.find(atLeastMedium)
   return effort ? { effort, model: model.id } : atMedium(model)
+}
+
+/** A model as a Motion Reel or Claude Animation chat offers it: only its thinking levels from
+ *  medium up (a lower pick would be lifted to medium anyway). */
+export function motionOption(model: ChatModelOption): ChatModelOption {
+  const efforts = model.efforts.filter(atLeastMedium)
+  return efforts.length ? { ...model, efforts } : model
 }
 
 /** Why a harness can't run a Motion Reel for this account, or null when it can. */
