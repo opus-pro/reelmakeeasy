@@ -24,6 +24,10 @@ describe('agentCodexHome', () => {
   })
 })
 
+// A standard Windows user can't make a symlink (that needs admin rights or Developer Mode), so
+// the tests that check a real one don't run there; the EPERM fallback below is what runs.
+const itLinks = process.platform === 'win32' ? it.skip : it
+
 describe('ensureAgentCodexHome', () => {
   let home: string
   let userHome: string
@@ -44,7 +48,7 @@ describe('ensureAgentCodexHome', () => {
     expect(fs.readFileSync(path.join(home, 'config.toml'), 'utf8')).toBe(AGENT_CODEX_CONFIG)
   })
 
-  it('links auth.json to the user home, even when the target does not exist yet', () => {
+  itLinks('links auth.json to the user home, even when the target does not exist yet', () => {
     ensureAgentCodexHome({ home, userHome })
     const link = path.join(home, 'auth.json')
     expect(fs.lstatSync(link).isSymbolicLink()).toBe(true)
@@ -52,7 +56,7 @@ describe('ensureAgentCodexHome', () => {
     expect(fs.existsSync(path.join(userHome, 'auth.json'))).toBe(false)
   })
 
-  it('is a no-op on a second call: the link is unchanged and nothing throws', () => {
+  itLinks('is a no-op on a second call: the link is unchanged and nothing throws', () => {
     ensureAgentCodexHome({ home, userHome })
     const link = path.join(home, 'auth.json')
     const before = fs.readlinkSync(link)
@@ -60,7 +64,7 @@ describe('ensureAgentCodexHome', () => {
     expect(fs.readlinkSync(link)).toBe(before)
   })
 
-  it('replaces a link pointing somewhere else with the correct link', () => {
+  itLinks('replaces a link pointing somewhere else with the correct link', () => {
     fs.mkdirSync(home, { recursive: true })
     const link = path.join(home, 'auth.json')
     const wrongTarget = path.join(userHome, 'wrong.json')

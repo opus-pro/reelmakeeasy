@@ -72,3 +72,49 @@ jobs:
         run: |
           python3 -m pip install --quiet --disable-pip-version-check "numpy>=1.26,<3" "fastapi==0.142.1" "httpx>=0.27,<1" "num2words==0.5.14"
           python3 -m unittest discover -s tools/local-tts
+
+  # The checks in CONTRIBUTING.md ("Before you open a pull request") on Windows, to catch the
+  # path, shell and symlink assumptions that only break there. Always a GitHub-hosted runner, so
+  # a copy that names its own runner in CI_RUNNER (it can't use those) skips it. Each check is
+  # its own step, so one PowerShell line failing can't hide behind a later one passing, and
+  # every check after the install runs and reports even when an earlier one fails.
+  windows:
+    if: ${{ github.event.pull_request.head.repo.fork || !vars.CI_RUNNER }}
+    runs-on: windows-latest
+    timeout-minutes: 45
+    env:
+      # A developer's .env must not leak into the tests (CI has none, but say so).
+      NX_LOAD_DOT_ENV_FILES: 'false'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - id: deps
+        run: |
+          pnpm install --frozen-lockfile
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          pnpm exec prisma generate --schema=libs/api/db/prisma/schema.prisma --no-hints
+      # The beat-loop tests in common run real FFmpeg.
+      - name: FFmpeg
+        run: |
+          if (-not (Get-Command ffprobe -ErrorAction SilentlyContinue)) {
+            choco install ffmpeg -y --no-progress
+            if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          }
+          ffmpeg -hide_banner -version | Select-Object -First 1
+          ffprobe -hide_banner -version | Select-Object -First 1
+      - name: Type-check
+        if: ${{ !cancelled() && steps.deps.outcome == 'success' }}
+        run: pnpm exec nx run-many -t type-check
+      - name: Type-check the web app
+        if: ${{ !cancelled() && steps.deps.outcome == 'success' }}
+        run: pnpm exec tsc -p apps/web/tsconfig.json --noEmit
+      - name: Test
+        if: ${{ !cancelled() && steps.deps.outcome == 'success' }}
+        run: pnpm exec nx run-many -t test -p workflow-engine llm common
+      - name: Script tests
+        if: ${{ !cancelled() && steps.deps.outcome == 'success' }}
+        run: node --test scripts/reelmakeeasy-onboarding.test.mjs scripts/reelmakeeasy-setup-ui.test.mjs scripts/reelmakeeasy-build.test.mjs scripts/reelmakeeasy-docs.test.mjs scripts/repo-hygiene.test.mjs
