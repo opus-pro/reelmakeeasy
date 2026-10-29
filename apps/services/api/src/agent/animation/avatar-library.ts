@@ -10,11 +10,12 @@ import type { AgentAvatar, AvatarStyle } from '@shared/types/api/agent'
 /**
  * Saved avatars: the digital avatars Claude drew from the user's photos, kept for every later
  * Avatar video. Each is a folder of stored files, `avatars/<id>/`:
- * - `avatar.json`: its name, style, voice description and dates;
+ * - `avatar.json`: its name, style, voice (its fixed voice's id, and how it sounds) and dates;
  * - `avatar.ts`: the rig, Claude's code (the project's `src/avatar/avatar.ts`);
  * - `preview.png`: its picture for the card;
  * - `photo.<ext>`: the photo it was drawn from;
- * - `voice.wav` + `voice.txt`: its voice sample and what it says (lines are cloned from it).
+ * - `voice.wav` + `voice.txt`: the voice made from its description and what it says, for an
+ *   avatar with no fixed voice (its lines are cloned from it).
  */
 
 export const AVATAR_FOLDER = 'avatars'
@@ -30,6 +31,8 @@ export type AvatarRecord = {
   updatedAt: string
   /** The voice's description, as its sample was made from it. */
   voice: string
+  /** Its fixed voice (a voice library id), when it has one: every line is spoken in it. */
+  voiceId?: string
 }
 
 export const isAvatarId = (id: unknown): id is string => typeof id === 'string' && ID.test(id)
@@ -63,6 +66,9 @@ export function readAvatar(id: string): AvatarRecord | null {
       style: raw.style as AvatarStyle,
       updatedAt: raw.updatedAt ?? raw.createdAt ?? new Date(0).toISOString(),
       voice: typeof raw.voice === 'string' ? raw.voice : '',
+      ...(typeof raw.voiceId === 'string' && raw.voiceId.trim()
+        ? { voiceId: raw.voiceId.trim() }
+        : {}),
     }
   } catch {
     return null
@@ -89,6 +95,9 @@ export function listAvatars(): AgentAvatar[] {
         ? storeUri(`${AVATAR_FOLDER}/${a.id}/preview.png`)
         : null,
       style: a.style,
+      voiceDescription: a.voice,
+      voiceId: a.voiceId ?? null,
+      voiceSampleUrl: avatarVoice(a.id)?.wav ?? null,
     }))
 }
 
@@ -116,6 +125,8 @@ export function saveAvatar(o: {
   rig: string
   style: AvatarStyle
   voice: string
+  /** Its fixed voice; unset keeps the one it has. */
+  voiceId?: string
   voiceSample?: { text: string; wav: string }
 }): AvatarRecord {
   const dir = avatarDir(o.id)
@@ -129,6 +140,7 @@ export function saveAvatar(o: {
     style: o.style,
     updatedAt: now,
     voice: o.voice,
+    ...((o.voiceId ?? before?.voiceId) ? { voiceId: o.voiceId ?? before?.voiceId } : {}),
   }
   fs.copyFileSync(o.rig, path.join(dir, 'avatar.ts'))
   fs.copyFileSync(o.preview, path.join(dir, 'preview.png'))
@@ -144,6 +156,24 @@ export function saveAvatar(o: {
     fs.rmSync(path.join(dir, 'voice.safetensors'), { force: true })
   }
   fs.writeFileSync(path.join(dir, 'avatar.json'), `${JSON.stringify(record, null, 1)}\n`)
+  return record
+}
+
+/** Gives a saved avatar its fixed voice (null: back to the voice made from its description);
+ *  null when there is no such avatar. */
+export function setAvatarVoice(id: string, voiceId: null | string): AvatarRecord | null {
+  const before = readAvatar(id)
+  if (!before) return null
+  const record: AvatarRecord = {
+    createdAt: before.createdAt,
+    id: before.id,
+    name: before.name,
+    style: before.style,
+    updatedAt: new Date().toISOString(),
+    voice: before.voice,
+    ...(voiceId ? { voiceId } : {}),
+  }
+  fs.writeFileSync(path.join(avatarDir(id), 'avatar.json'), `${JSON.stringify(record, null, 1)}\n`)
   return record
 }
 

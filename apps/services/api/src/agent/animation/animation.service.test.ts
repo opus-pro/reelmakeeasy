@@ -13,7 +13,7 @@ import { renderReel, renderStills } from '../motion-reel/motion-render'
 import { voiceReadiness } from './animation-setup'
 import type { VoiceDeps } from './animation-voice'
 import { sineWav } from './test-wav'
-import { saveAvatar } from './avatar-library'
+import { saveAvatar, setAvatarVoice } from './avatar-library'
 import {
   AnimationService,
   type AnimationSessions,
@@ -65,6 +65,14 @@ jest.mock('@reelmakeeasy/common/storage/stored-files', () => ({
 jest.mock('./animation-setup', () => ({
   ...jest.requireActual('./animation-setup'),
   voiceReadiness: jest.fn(async () => ({ designed: 'local', preset: 'local' })),
+}))
+// Fixed voices without the voice library's database: a Kokoro preset, an ElevenLabs preset.
+jest.mock('./avatar-voice', () => ({
+  fixedVoiceEngine: jest.fn(async (id: string) => (id.startsWith('kokoro-') ? 'kokoro' : 'cloud')),
+  fixedVoiceSpeech: jest.fn(),
+  isKnownVoice: jest.fn(
+    async (id: string) => id === 'kokoro-am_michael' || id === 'EXAVITQu4vr4xnSDxMaL',
+  ),
 }))
 
 const CARD = {
@@ -287,6 +295,65 @@ describe('AnimationService, animation_voice', () => {
       restoreDataDir(before)
       fs.rmSync(data, { force: true, recursive: true })
     }
+  })
+
+  it("speaks with the avatar's fixed voice, and asks before a paid one", async () => {
+    const data = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'animation-avatars-')))
+    const before = process.env['DATA_DIR']
+    process.env['DATA_DIR'] = data
+    try {
+      const rig = path.join(data, 'rig.ts')
+      fs.writeFileSync(rig, 'export const avatar = 1')
+      saveAvatar({
+        id: 'av-0123456789',
+        name: 'Sam',
+        preview: rig,
+        rig,
+        style: '2d',
+        voice: 'warm',
+        voiceId: 'kokoro-am_michael',
+      })
+      const voice = fakeVoice()
+      const made = makeAnimation('animation', voice)
+      made.service.setup('s1', { ...CARD, avatar: { id: 'av-0123456789' }, lookId: 'avatar' })
+      await waitFor(() => made.started.length === 1)
+      const say = { lines: 'Host: Did you know honey never spoils?', voices: 'Host: avatar' }
+      expect((await made.service.callTool('s1', 'animation_voice', say)).success).toBe(true)
+      expect(voice.voices[0]).toBe('avatar:av-0123456789')
+
+      // An ElevenLabs voice is paid: Claude tells the user first.
+      setAvatarVoice('av-0123456789', 'EXAVITQu4vr4xnSDxMaL')
+      expect(await made.service.callTool('s1', 'animation_voice', say)).toMatchObject({
+        success: false,
+        text: expect.stringMatching(/The avatar's voice \(Sarah\) is a paid voice/),
+      })
+      expect(
+        (await made.service.callTool('s1', 'animation_voice', { ...say, confirmPaid: true }))
+          .success,
+      ).toBe(true)
+    } finally {
+      restoreDataDir(before)
+      fs.rmSync(data, { force: true, recursive: true })
+    }
+  })
+
+  it('asks a new avatar for its fixed voice before saving it', async () => {
+    const made = makeAnimation('animation', fakeVoice())
+    fs.mkdirSync(path.join(made.workspace, 'attachments'), { recursive: true })
+    fs.writeFileSync(path.join(made.workspace, 'attachments', 'me.jpg'), 'jpg')
+    made.service.setup('s1', {
+      ...CARD,
+      avatar: { name: 'Ana', photo: 'me.jpg', style: '2d' },
+      lookId: 'avatar',
+    })
+    await waitFor(() => made.started.length === 1)
+    expect(
+      await made.service.callTool('s1', 'avatar_save', { voice: 'a warm voice' }),
+    ).toMatchObject({ success: false, text: expect.stringMatching(/^Pass voiceId/) })
+    expect(await made.service.callTool('s1', 'avatar_save', { voiceId: 'nope' })).toMatchObject({
+      success: false,
+      text: expect.stringMatching(/There is no voice "nope"/),
+    })
   })
 
   it('records the lines and points the project at the voice', async () => {

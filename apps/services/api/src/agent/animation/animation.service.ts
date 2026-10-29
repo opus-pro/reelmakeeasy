@@ -87,6 +87,8 @@ import {
   readAvatar,
   saveAvatar,
 } from './avatar-library'
+import { fixedVoiceEngine, fixedVoiceSpeech, isKnownVoice } from './avatar-voice'
+import { voiceName } from './avatar-voice-list'
 
 const logger = new Logger('AnimationService')
 
@@ -108,15 +110,19 @@ const COMPOSITION = 'Animation'
 /** A narrator's voice when designed voices can't be made here: a calm, clear Kokoro preset. */
 const NARRATOR_PRESET = 'kokoro-am_michael'
 
-/** A voice that speaks as a saved avatar (`avatar:<id>`): cloned from its voice sample. */
+/** A voice that speaks as a saved avatar (`avatar:<id>`): its fixed voice, else cloned from its
+ *  voice sample. */
 const AVATAR_VOICE_PREFIX = 'avatar:'
 
 /** What an avatar's voice sample says: about 10 s of clear, varied speech to clone from. */
 export const AVATAR_SAMPLE_TEXT =
   "Hi, it's me! Today I'll show you something surprising, step by step. Ready? Let's go, it only takes a minute, and you'll see it everywhere after this."
 
-/** An avatar's voice: cloned from its saved sample, else designed from its description. */
+/** An avatar's voice: its fixed voice, else cloned from its saved sample, else designed from its
+ *  description. */
 async function avatarSpeech(id: string, text: string) {
+  const fixed = readAvatar(id)?.voiceId
+  if (fixed) return fixedVoiceSpeech(fixed, text)
   const sample = avatarVoice(id)
   if (sample)
     return qwen3TextToSpeech({
@@ -508,18 +514,32 @@ export class AnimationService {
       ('name' in chosen ? chosen.name : (before?.name ?? setup.avatarName ?? 'My avatar'))
     if (name.length > AVATAR_NAME_MAX)
       return { success: false, text: `Keep the name under ${AVATAR_NAME_MAX} characters.` }
+    const voiceIdArg = typeof a['voiceId'] === 'string' ? a['voiceId'].trim() : ''
+    if (voiceIdArg && !(await isKnownVoice(voiceIdArg)))
+      return {
+        success: false,
+        text: `There is no voice "${voiceIdArg}": pass a voiceId from the list in its description, or the id of the voice the user picked.`,
+      }
+    // Its fixed voice: the one passed, else the one it has (the user may have picked it).
+    const voiceId = voiceIdArg || before?.voiceId || ''
+    if (!before && !voiceId)
+      return {
+        success: false,
+        text: 'Pass voiceId: the fixed voice this avatar keeps in every video, the one from the list that best fits the person in the photo (or the voice the user asked for).',
+      }
     const voice = (typeof a['voice'] === 'string' && a['voice'].trim()) || before?.voice || ''
-    if (voice.length < 8)
+    if (!voiceId && voice.length < 8)
       return {
         success: false,
         text: 'Pass voice: a vivid description of how the avatar sounds (age, warmth, energy, pace: "a bright, friendly woman in her 30s, quick and warm").',
       }
     const style = 'style' in chosen ? chosen.style : (before?.style ?? '2d')
     const avatarId = 'id' in chosen ? chosen.id : newAvatarId()
-    // A new voice sample only when the voice is new: the same voice keeps its sample.
+    // A voice sample only for a voice made from its description, and only when that voice is
+    // new: the same voice keeps its sample. A fixed voice needs none.
     let voiceSample: undefined | { text: string; wav: string }
     let voiceNote = ''
-    if (!before || before.voice !== voice || !avatarVoice(avatarId)) {
+    if (!voiceId && (!before || before.voice !== voice || !avatarVoice(avatarId))) {
       const ready = await voiceReadiness()
       if (!ready.designed)
         voiceNote =
@@ -553,6 +573,7 @@ export class AnimationService {
       rig: path.join(projectDir, AVATAR_RIG),
       style,
       voice,
+      ...(voiceId ? { voiceId } : {}),
       ...(voiceSample ? { voiceSample } : {}),
     })
     markAvatarSaved(projectDir, avatarId)
@@ -562,7 +583,7 @@ export class AnimationService {
     this.sessions.emitImage(id, preview)
     return {
       success: true,
-      text: `Saved the avatar "${name}" (${style.toUpperCase()}) to the user's avatars: every later Avatar video can use it.${voiceSample ? ' Its voice sample is made: record its lines with voices "Host: avatar" and they are cloned from it, the same voice every time.' : ' Record its lines with voices "Host: avatar".'}${voiceNote} Save again after changing it.`,
+      text: `Saved the avatar "${name}" (${style.toUpperCase()}) to the user's avatars: every later Avatar video can use it.${voiceId ? ` Its voice is ${voiceName(voiceId)}, fixed: every video with ${name} speaks in it (the user can change it on the setup card). Record its lines with voices "Host: avatar".` : voiceSample ? ' Its voice sample is made: record its lines with voices "Host: avatar" and they are cloned from it.' : ' Record its lines with voices "Host: avatar".'}${voiceNote} Save again after changing it.`,
     }
   }
 
@@ -622,28 +643,41 @@ export class AnimationService {
         ? { ...l, voice: `${AVATAR_VOICE_PREFIX}${avatarId}` }
         : l,
     )
+    // Where each line speaks: a Kokoro preset, Qwen3 (a designed voice, an avatar's sample, a
+    // Qwen3 preset or user voice), or a paid service (an avatar's ElevenLabs or Gemini voice).
+    const fixed = avatarId ? readAvatar(avatarId)?.voiceId : undefined
+    const avatarEngine = fixed ? await fixedVoiceEngine(fixed) : 'qwen3'
+    const engineOf = (voice: string) =>
+      voice.startsWith(KOKORO_VOICE_PREFIX)
+        ? 'kokoro'
+        : voice.startsWith(AVATAR_VOICE_PREFIX)
+          ? avatarEngine
+          : 'qwen3'
     let note = ''
-    const designed = lines.some((l) => !l.voice.startsWith(KOKORO_VOICE_PREFIX))
-    if (designed && !ready.designed) {
+    if (lines.some((l) => engineOf(l.voice) === 'qwen3') && !ready.designed) {
       if (look?.cast === 'duo' || !ready.preset)
         return {
           success: false,
           text: 'No designed voices here: install Qwen3 voices (run setup again) or add a fal key.',
         }
       lines = lines.map((l) =>
-        l.voice.startsWith(KOKORO_VOICE_PREFIX) ? l : { ...l, voice: NARRATOR_PRESET },
+        engineOf(l.voice) === 'qwen3' ? { ...l, voice: NARRATOR_PRESET } : l,
       )
       note = ` Designed voices can't be made here, so the narrator uses a preset voice (${NARRATOR_PRESET}).`
     }
-    const usesDesigned = lines.some((l) => !l.voice.startsWith(KOKORO_VOICE_PREFIX))
-    const usesPreset = lines.some((l) => l.voice.startsWith(KOKORO_VOICE_PREFIX))
+    const engines = new Set(lines.map((l) => engineOf(l.voice)))
+    const cloud = engines.has('cloud')
     const paid =
-      (usesDesigned && ready.designed === 'fal') || (usesPreset && ready.preset === 'fal')
+      cloud ||
+      (engines.has('qwen3') && ready.designed === 'fal') ||
+      (engines.has('kokoro') && ready.preset === 'fal')
     if (paid && !parsed.confirmPaid) {
       const chars = lines.reduce((n, l) => n + l.text.length, 0)
       return {
         success: false,
-        text: `These voices would run on fal, paid (about ${chars} characters, a few takes may be needed): this computer doesn't have the voices installed. Tell the user in one line, then call animation_voice again with the same lines and confirmPaid: true.`,
+        text: cloud
+          ? `The avatar's voice (${voiceName(fixed ?? '')}) is a paid voice (about ${chars} characters, a few takes may be needed). Tell the user in one line, then call animation_voice again with the same lines and confirmPaid: true.`
+          : `These voices would run on fal, paid (about ${chars} characters, a few takes may be needed): this computer doesn't have the voices installed. Tell the user in one line, then call animation_voice again with the same lines and confirmPaid: true.`,
       }
     }
     const spec = readAnimationJson(projectDir)

@@ -38,6 +38,13 @@ export type AgentAvatar = {
   /** Its picture (head and shoulders), or null before it has one. */
   previewUrl: null | string
   style: AvatarStyle
+  /** How it sounds, in words (the voice made from it when it has no fixed voice). */
+  voiceDescription: string
+  /** Its fixed voice, every video the same: a voice library id (a preset or one of the user's
+   *  own voices). Null: it speaks with the voice made from its description. */
+  voiceId: null | string
+  /** The voice made from its description, to listen to; null when it has none. */
+  voiceSampleUrl: null | string
 }
 
 /** The Avatar video's avatar: a saved one, or a new one Claude draws from a photo (an attachment

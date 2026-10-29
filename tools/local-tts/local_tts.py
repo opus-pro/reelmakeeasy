@@ -80,6 +80,10 @@ QWEN3_MODELS = {
 
 # 12 codec frames per second: 4096 tokens is about 5.7 minutes, far above one chunk.
 QWEN3_MAX_TOKENS = 4096
+# Sampling temperature for a cloned voice (the models' default is 0.9). Lower keeps every line
+# closer to the reference, so a voice cloned from one sample sounds the same from line to line
+# and video to video, while takes still differ enough to retry a clipped word.
+QWEN3_CLONE_TEMPERATURE = 0.7
 
 
 # ---------- backend detection ----------
@@ -501,6 +505,7 @@ class Engines:
                 kwargs.update(
                     ref_audio=mx.array(resample(samples, rate, model.sample_rate)),
                     ref_text=ref_text or None,
+                    temperature=QWEN3_CLONE_TEMPERATURE,
                 )
             # Streaming decodes the audio a couple of seconds at a time instead
             # of all at once: same speech, a fraction of the peak memory.
@@ -542,6 +547,7 @@ class Engines:
                 ref_audio=ref,
                 ref_text=ref_text or None,
                 x_vector_only_mode=not ref_text,
+                temperature=QWEN3_CLONE_TEMPERATURE,
                 **gen,
             )
 

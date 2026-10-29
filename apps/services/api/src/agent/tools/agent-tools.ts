@@ -1,5 +1,6 @@
 import { type AgentHarnessName, type AgentMode, isRankingMode } from '@shared/types/api/agent'
 
+import { avatarVoiceList } from '../animation/avatar-voice-list'
 import { MAKE_LOOP_LABEL } from '../craft/beat-loop-skill'
 
 export type AgentToolName =
@@ -307,7 +308,7 @@ export const AGENT_TOOLS: Record<AgentToolName, DynamicToolSpec> = {
   },
   avatar_save: {
     description:
-      'Save the Avatar video\'s avatar to the user\'s avatars (free on this computer; its voice sample says so first when it would run on fal, paid): its rig, its picture, the photo and a voice sample made from `voice`, so every later Avatar video uses the same avatar and voice. Call it once the user keeps the avatar, and again after changing it. Then record its lines with voices "Host: avatar".',
+      'Save the Avatar video\'s avatar to the user\'s avatars: its rig, its picture, the photo and its fixed voice (`voiceId`), so every later Avatar video uses the same avatar and the same voice. Call it once the user keeps the avatar, and again after changing it. Then record its lines with voices "Host: avatar".',
     inputSchema: {
       additionalProperties: false,
       properties: {
@@ -321,7 +322,11 @@ export const AGENT_TOOLS: Record<AgentToolName, DynamicToolSpec> = {
         },
         voice: {
           description:
-            'How the avatar sounds, vividly (age, warmth, energy, pace: "a bright, friendly woman in her 30s, quick and warm"). Fits the person in the photo. Default: the voice it was saved with.',
+            'How the avatar sounds, in words (age, warmth, energy, pace: "a bright, friendly woman in her 30s, quick and warm"), kept with it. Default: the one it was saved with.',
+          type: 'string',
+        },
+        voiceId: {
+          description: `The avatar's fixed voice, the same in every video: required for a new avatar. Pick the one that best fits the person in the photo (age, gender, energy) from these free voices: ${avatarVoiceList()}. Or the id of a voice the user named (from their voice library). Default: the voice it has; change it only when the user asks.`,
           type: 'string',
         },
       },

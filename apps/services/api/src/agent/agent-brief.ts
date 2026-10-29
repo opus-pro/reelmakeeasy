@@ -377,7 +377,7 @@ export function animationNextSteps(
     `${readSkill ? `Read the \`${skill}\` skill, then` : `Follow the \`${skill}\` skill:`} read \`animation/brief.md\` and \`animation/look.md\`.`,
     ...(newAvatar
       ? [
-          'First draw the user\'s avatar from their photo (`animation/public/avatar/`), as the skill\'s "First: the avatar" says: write `src/avatar/avatar.ts`, check it with avatar_check until it looks like them, show it and ask with {ASK} whether to keep it ("Keep this avatar (Recommended)" or "Change something"), then save it with avatar_save and a voice that fits them. Only then write the script.',
+          'First draw the user\'s avatar from their photo (`animation/public/avatar/`), as the skill\'s "First: the avatar" says: write `src/avatar/avatar.ts`, check it with avatar_check until it looks like them, show it and ask with {ASK} whether to keep it ("Keep this avatar (Recommended)" or "Change something"), then save it with avatar_save and its fixed voice (voiceId, the voice from the list that fits them). Only then write the script.',
         ]
       : []),
     ...(makeMusic && setup.music.source === 'agent'
