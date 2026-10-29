@@ -108,22 +108,23 @@ describe('AvatarCreator', () => {
     expect(screen.getByLabelText('Describe it (optional)')).toBeTruthy()
   })
 
-  it('makes one up for Surprise me: 2D or 3D, male or female', async () => {
+  it('makes one up for Surprise me: 2D, 3D or Pixel art, male or female', async () => {
     mockFetch.mockImplementation(async (url: string) =>
       url === '/api/agent/sessions' ? { data: { id: 's5' }, ok: true } : { ok: true },
     )
     renderCreator(['3d', '2d', 'pixel'])
     fireEvent.change(screen.getByLabelText('Name'), { target: { value: 'Ada' } })
     fireEvent.click(screen.getByRole('radio', { name: 'Surprise me' }))
-    // 2D is recommended; a 3D video starts on 3D.
+    // 2D and Pixel art are recommended; a 3D video starts on 3D.
     expect(
       screen
         .getAllByRole('radio')
-        .filter((r) => ['2D', '3D'].includes(r.getAttribute('aria-label') ?? ''))
+        .filter((r) => ['2D', '3D', 'Pixel art'].includes(r.getAttribute('aria-label') ?? ''))
         .map((r) => [r.textContent, r.getAttribute('aria-checked')]),
     ).toEqual([
       ['2DRecommended', 'false'],
       ['3D', 'true'],
+      ['Pixel artRecommended', 'false'],
     ])
     const generate = screen.getByRole('button', { name: 'Generate avatar' }) as HTMLButtonElement
     expect(generate.disabled).toBe(true)

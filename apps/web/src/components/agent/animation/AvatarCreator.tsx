@@ -4,6 +4,7 @@ import {
   AVATAR_GENDERS,
   AVATAR_NAME_MAX,
   AVATAR_STYLE_LABEL,
+  AVATAR_STYLES,
   avatarStyleFromDescription,
 } from '@reelmakeeasy/common/animation/looks'
 import { VIDEO_DEFAULT_DETAIL } from '@reelmakeeasy/common/motion-reel/video-detail'
@@ -43,8 +44,8 @@ const AVATAR_DETAIL: Record<VideoDetail, string> = {
 
 /**
  * The avatar creator, its own step before any video: a name; a photo and/or a description (drawn
- * in 3D or pixel art when it says so, else 2D), or Surprise me (2D or 3D, male or female, and
- * Claude makes up the rest); the detail and its voice. Generate
+ * in 3D or pixel art when it says so, else 2D), or Surprise me (2D, 3D or Pixel art, male or
+ * female, and Claude makes up the rest); the detail and its voice. Generate
  * starts Claude on it in a chat of its own, shown here: Claude draws it, checks it, asks to keep
  * it, and saves it; "Use this avatar" then picks it on the card.
  */
@@ -57,8 +58,7 @@ export function AvatarCreator({
   onClose: () => void
   onCreated: (avatar: AgentAvatar) => void
   open: boolean
-  /** The avatar styles the video's style takes, its own first (Surprise me starts on 3D for a 3D
-   *  video). */
+  /** The avatar styles the video's style takes, its own first (Surprise me starts on it). */
   styles: readonly AvatarStyle[]
 }) {
   const [sessionId, setSessionId] = useState<null | string>(null)
@@ -133,8 +133,8 @@ function AvatarForm({
   const [way, setWay] = useState<LookWay>('describe')
   const [photo, setPhoto] = useState<null | { name: string; preview: string }>(null)
   const [description, setDescription] = useState('')
-  // Surprise me: 2D or 3D (3D first when the video is 3D) and a gender.
-  const [kind, setKind] = useState<AvatarStyle>(styles[0] === '3d' ? '3d' : '2d')
+  // Surprise me: 2D, 3D or Pixel art (the video's own first) and a gender.
+  const [kind, setKind] = useState<AvatarStyle>(styles[0] ?? '2d')
   const [gender, setGender] = useState<AvatarGender | null>(null)
   const [detail, setDetail] = useState<VideoDetail>(VIDEO_DEFAULT_DETAIL)
   const [voice, setVoice] = useState<null | VoiceOption>(null)
@@ -325,9 +325,9 @@ function AvatarForm({
             <Choices
               label="Kind"
               onPick={setKind}
-              options={(['2d', '3d'] as const).map((value) => ({
+              options={AVATAR_STYLES.map((value) => ({
                 label: AVATAR_STYLE_LABEL[value],
-                recommended: value === '2d',
+                recommended: value !== '3d',
                 value,
               }))}
               selected={kind}
