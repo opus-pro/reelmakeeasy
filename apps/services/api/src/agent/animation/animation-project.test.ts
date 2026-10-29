@@ -4,7 +4,12 @@ import path from 'node:path'
 
 import type { AgentAnimationSetup } from '@shared/types/api/agent'
 
-import { ANIMATION_DIR, markAvatarSaved, prepareAnimationProject } from './animation-project'
+import {
+  ANIMATION_DIR,
+  markAvatarSaved,
+  prepareAnimationProject,
+  projectLibs,
+} from './animation-project'
 
 const setup2d: AgentAnimationSetup = {
   lengthSec: 30,
@@ -209,6 +214,27 @@ describe('prepareAnimationProject', () => {
       expect(fs.readFileSync(path.join(projectDir, 'brief.md'), 'utf8')).toMatch(
         /\*\*Avatar:\*\* new, 3D, named "Sam": draw it first from the photo/,
       )
+    })
+
+    it("in Pixel art, gets the pixel stage and the host's pixel kit too", async () => {
+      const photo = path.join(workspace, 'me.JPG')
+      fs.writeFileSync(photo, 'jpg')
+      const { projectDir } = await prepareAnimationProject({
+        avatar: { id: null, name: 'Sam', photo, style: '2d' },
+        music: null,
+        setup: { ...head, avatar: { name: 'Sam', photo: 'me.jpg', style: '2d' }, stage: '8bit' },
+        workspace,
+      })
+      for (const lib of ['host', 'pixel', 'pixel-host'])
+        expect(fs.readdirSync(path.join(projectDir, 'src', lib)).length).toBeGreaterThan(0)
+      expect(fs.readFileSync(path.join(projectDir, 'look.md'), 'utf8')).toMatch(
+        /^# Look: Avatar explainer, in Pixel art/,
+      )
+      expect(fs.readFileSync(path.join(projectDir, 'brief.md'), 'utf8')).toContain(
+        '**Look:** Avatar explainer, in Pixel art',
+      )
+      expect(projectLibs({ ...head, stage: '3d' })).toEqual(['2d', '3d', 'avatar'])
+      expect(projectLibs(setup2d)).toEqual(['2d'])
     })
 
     it("keeps Claude's rig for the same avatar, and swaps in another avatar's", async () => {

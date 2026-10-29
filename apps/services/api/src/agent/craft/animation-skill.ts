@@ -21,9 +21,9 @@ const DESCRIPTION: Record<AnimationLookId, string> = {
   '2d': 'How to write and build a ReelMakeEasy Claude Animation in the 2D look (two cartoon characters with faces chatting, lip-synced, drawn in code in Remotion). Use in every 2D Claude Animation chat, before writing the script, recording voices, building scenes, rendering or changing it.',
   '3d': 'How to write and build a ReelMakeEasy Claude Animation in the 3D look (a narrated explainer around one detailed 3D object, drawn in code with three.js in Remotion). Use in every 3D Claude Animation chat, before writing the script, recording the voice, building scenes, rendering or changing it.',
   '8bit':
-    'How to write and build a ReelMakeEasy Claude Animation in the 8-bit look (a narrated pixel-art explainer like an old video game, drawn in code with three.js in Remotion). Use in every 8-bit Claude Animation chat, before writing the script, recording the voice, building scenes, rendering or changing it.',
+    'How to write and build a ReelMakeEasy Claude Animation in the Pixel art look (8-bit, a narrated pixel-art explainer like an old video game, drawn in code with three.js in Remotion), and the pixel world an Avatar explainer in Pixel art stands in. Use in every Pixel art Claude Animation chat, before writing the script, recording the voice, building scenes, rendering or changing it.',
   avatar:
-    "How to make a ReelMakeEasy Avatar video (draw the user's digital avatar from their photo (2D or 3D, a rig of moving parts), save it, and build a video where it talks to the camera, waist up, with gestures and pictures). Use in every Avatar video Claude Animation chat, before drawing or changing the avatar, writing the script, recording, building, rendering or changing it.",
+    "How to make a ReelMakeEasy Avatar explainer (draw the user's digital avatar from their photo (2D or 3D, a rig of moving parts), save it, and build a video where it talks to the camera, waist up, with gestures and pictures, in 2D, 3D or Pixel art). Use in every Avatar explainer Claude Animation chat, before drawing or changing the avatar, writing the script, recording, building, rendering or changing it.",
 }
 
 /** What each look's script and scenes are, and how its library is used. */
@@ -106,7 +106,7 @@ const LOOK_SECTION: Record<AnimationLookId, string[]> = {
     '- Build the hero from three.js shapes (spheres, cylinders, tori, `LatheGeometry`, `ExtrudeGeometry`, `TubeGeometry` along a curve) with enough parts to look real, and animate what it does (a beat, a turn, a flow along a tube with small instanced spheres). A cutaway: hide the outer shell with `ss` and show the inside.',
   ],
   '8bit': [
-    '## The 8-bit look: a narrated pixel-art explainer',
+    '## The Pixel art look (8-bit): a narrated pixel-art explainer',
     '',
     'A low-resolution 3D scene drawn blocky and dithered like an old video game, with crisp pixel-font captions and labels on top, and a narrator.',
     '',
@@ -129,7 +129,7 @@ const LOOK_SECTION: Record<AnimationLookId, string[]> = {
     '- Build the hero from boxes, cylinders and extrusions with real detail (floors, windows as `windowTexture`, a crown, the inside parts on the x-ray layer). Keep low-poly elsewhere.',
   ],
   avatar: [
-    '## The Avatar video: your avatar talks to the camera',
+    '## The Avatar explainer: your avatar talks to the camera',
     '',
     "A host, the user's own digital avatar, stands waist up in a simple set, looks into the camera and explains one thing, with gestures on its key words and pictures popping up beside or above it on the words they show. It is drawn in code like everything else: no AI picture or video model.",
     '',
@@ -190,6 +190,14 @@ const LOOK_SECTION: Record<AnimationLookId, string[]> = {
     "  return chip(a.x + a.w / 2, a.y + 200, '3 TIMES', { size: 64, k: back(ss(w.start - 0.2, w.start + 0.2, t)) })",
     '}',
     '```',
+    '',
+    '### In Pixel art',
+    '',
+    'When `look.md` says "in Pixel art", the host stands in a pixel world. Read the `reelmakeeasy-animation-8bit` skill for the world (the engine `E`, its helpers, the HUD and its layout) and build the world as it says, in `src/scenes/world.ts`. `Animation.tsx` then holds `<Voice />`, `<Music />` and `<PixelTalkingHead avatar={avatar} build={world} cues={cues} res={…} />` from `./pixel-host` (the pixel grid from the Detail in `brief.md`), and no `<Captions />`: call `narration(H, t)` at the end of the world\'s update, as the 8-bit skill does.',
+    '',
+    "- **A 3D avatar** stands in the scene: `build(E, host)` gets `host.root` (the waist at the origin, facing +z, the head about 0.72 m up). Stand it on your world's ground (`host.root.position`), face it to the camera, light it with the world's lights, and frame each line with `E.camera` (a close shot about 1.3 m from the head, a medium one about 3 m, a wide one that shows the world around it). It is drawn, dithered and lit with everything else.",
+    "- **A 2D avatar** is drawn over the world, cut to the same pixel grid: `place={(t) => ({ x, y, s })}` puts its waist at (x, y) on the 1080×1920 screen, scaled (0.92 waist up at the bottom centre, 1.45 a close-up, 0.5 small in a corner). Move it between spots by easing x, y and s over a line's start. `build(E, null)` builds the world alone.",
+    '- The script, cues and gestures are as above (the voice drives the mouth; `cues` the gestures, looks and moods). There is no board: put the pictures, labels and counters in the world and on the HUD (`H`), beside the host, on the words they show. `PixelSprite` from `./pixel-host` cuts any other SVG to the same grid.',
   ],
 }
 

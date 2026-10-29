@@ -139,16 +139,20 @@ function restoreDataDir(value: string | undefined): void {
 }
 
 describe('AnimationService, the setup card', () => {
-  it('lists the four looks with their lengths and tracks', async () => {
+  it('lists the looks with their lengths and tracks, each style with its avatar version', async () => {
     const { service } = makeAnimation('animation')
     const options = await service.options()
     const lengths = [15, 30, 45, 60, 90]
     expect(options.looks.map((l) => [l.id, l.label, l.lengths, l.disabledReason ?? null])).toEqual([
       ['2d', '2D', lengths, null],
       ['3d', '3D', lengths, null],
-      ['8bit', '8-bit', lengths, null],
-      ['avatar', 'Avatar', lengths, null],
+      ['8bit', 'Pixel art', lengths, null],
+      ['avatar', 'Avatar explainer', lengths, null],
     ])
+    // Each style says what it is with the avatar hosting; 2D shows the Avatar look's clip.
+    expect(options.looks.map((l) => !!l.withAvatar)).toEqual([true, true, true, false])
+    expect(options.looks[0]?.withAvatar?.previewUrl).toMatch(/animation\/looks\/avatar/)
+    expect(options.looks[2]?.withAvatar?.description).toMatch(/pixel art/)
     expect([options.minLengthSec, options.maxLengthSec]).toEqual([10, 90])
     expect(options.looks[0]?.defaultTrackId).toBe('data-pulse')
     // Every look has a preview clip in the presets, its link carrying the file's version (so a

@@ -1,4 +1,4 @@
-import type { AnimationLookId, VideoDetail } from '@shared/types/api/agent'
+import type { AnimationLookId, AnimationStyleId, VideoDetail } from '@shared/types/api/agent'
 
 import { detailBrief } from '../video-detail'
 
@@ -39,7 +39,16 @@ const FOR_LOOK: Record<AnimationLookId, Record<VideoDetail, string>> = {
   },
 }
 
-/** `brief.md`'s Detail section for an animation in this look. */
-export function animationDetailBrief(lookId: AnimationLookId, detail: VideoDetail): string {
-  return detailBrief(detail, FOR_LOOK[lookId][detail])
+/** `brief.md`'s Detail section for an animation in this look (an Avatar explainer in Pixel art:
+ *  the pixel grid, then the host). */
+export function animationDetailBrief(
+  lookId: AnimationLookId,
+  detail: VideoDetail,
+  stage?: AnimationStyleId,
+): string {
+  const here =
+    lookId === 'avatar' && stage === '8bit'
+      ? `${FOR_LOOK['8bit'][detail]} The host: ${FOR_LOOK.avatar[detail]}`
+      : FOR_LOOK[lookId][detail]
+  return detailBrief(detail, here)
 }

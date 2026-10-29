@@ -1,9 +1,9 @@
 ---
 name: reelmakeeasy-animation-avatar
-description: How to make a ReelMakeEasy Avatar video (draw the user's digital avatar from their photo (2D or 3D, a rig of moving parts), save it, and build a video where it talks to the camera, waist up, with gestures and pictures). Use in every Avatar video Claude Animation chat, before drawing or changing the avatar, writing the script, recording, building, rendering or changing it.
+description: How to make a ReelMakeEasy Avatar explainer (draw the user's digital avatar from their photo (2D or 3D, a rig of moving parts), save it, and build a video where it talks to the camera, waist up, with gestures and pictures, in 2D, 3D or Pixel art). Use in every Avatar explainer Claude Animation chat, before drawing or changing the avatar, writing the script, recording, building, rendering or changing it.
 ---
 
-# Claude Animation: Avatar
+# Claude Animation: Avatar explainer
 
 A Claude Animation is a short vertical video (9:16) that you draw and animate yourself, every frame in code, as a Remotion project. No AI video or image model makes any of it: the voices come from the app, the pictures from your code. It looks good when it teaches one surprising, true thing clearly, and the picture moves with what is being said.
 
@@ -35,7 +35,7 @@ Remotion is installed. Its own skills (`remotion-best-practices`, `remotion-mark
 - A picture change lands on the word it shows (the number appears on "500", the arrow on "flows").
 - `useMouth(who)` gives a speaker's mouth (0..1) and vowel on every frame; `useSpeaking()` says who is talking.
 
-## The Avatar video: your avatar talks to the camera
+## The Avatar explainer: your avatar talks to the camera
 
 A host, the user's own digital avatar, stands waist up in a simple set, looks into the camera and explains one thing, with gestures on its key words and pictures popping up beside or above it on the words they show. It is drawn in code like everything else: no AI picture or video model.
 
@@ -104,6 +104,14 @@ export function board(t: number, i: number, a: Area) {
   return chip(a.x + a.w / 2, a.y + 200, '3 TIMES', { size: 64, k: back(ss(w.start - 0.2, w.start + 0.2, t)) })
 }
 ```
+
+### In Pixel art
+
+When `look.md` says "in Pixel art", the host stands in a pixel world. Read the `reelmakeeasy-animation-8bit` skill for the world (the engine `E`, its helpers, the HUD and its layout) and build the world as it says, in `src/scenes/world.ts`. `Animation.tsx` then holds `<Voice />`, `<Music />` and `<PixelTalkingHead avatar={avatar} build={world} cues={cues} res={…} />` from `./pixel-host` (the pixel grid from the Detail in `brief.md`), and no `<Captions />`: call `narration(H, t)` at the end of the world's update, as the 8-bit skill does.
+
+- **A 3D avatar** stands in the scene: `build(E, host)` gets `host.root` (the waist at the origin, facing +z, the head about 0.72 m up). Stand it on your world's ground (`host.root.position`), face it to the camera, light it with the world's lights, and frame each line with `E.camera` (a close shot about 1.3 m from the head, a medium one about 3 m, a wide one that shows the world around it). It is drawn, dithered and lit with everything else.
+- **A 2D avatar** is drawn over the world, cut to the same pixel grid: `place={(t) => ({ x, y, s })}` puts its waist at (x, y) on the 1080×1920 screen, scaled (0.92 waist up at the bottom centre, 1.45 a close-up, 0.5 small in a corner). Move it between spots by easing x, y and s over a line's start. `build(E, null)` builds the world alone.
+- The script, cues and gestures are as above (the voice drives the mouth; `cues` the gestures, looks and moods). There is no board: put the pictures, labels and counters in the world and on the HUD (`H`), beside the host, on the words they show. `PixelSprite` from `./pixel-host` cuts any other SVG to the same grid.
 
 ## Sound and music
 

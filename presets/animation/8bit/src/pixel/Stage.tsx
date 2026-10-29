@@ -1,4 +1,4 @@
-import { useLayoutEffect, useRef } from 'react'
+import { type ReactNode, useLayoutEffect, useRef } from 'react'
 import { AbsoluteFill, useCurrentFrame, useVideoConfig } from 'remotion'
 
 import { createEngine as create } from './px'
@@ -26,9 +26,12 @@ export type PixelEpisode = { update: (t: number) => void }
  */
 export function PixelStage({
   build,
+  children,
   res = 270,
 }: {
   build: (E: Engine) => PixelEpisode
+  /** Drawn over the scene and under the HUD (an Avatar explainer's 2D host). */
+  children?: ReactNode
   res?: 180 | 270 | 360 | 540
 }) {
   const frame = useCurrentFrame()
@@ -59,6 +62,7 @@ export function PixelStage({
           width: 1080,
         }}
       />
+      {children}
       <canvas
         height={1920}
         ref={hud}

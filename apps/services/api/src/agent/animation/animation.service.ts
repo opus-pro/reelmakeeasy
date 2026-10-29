@@ -726,6 +726,18 @@ export class AnimationService {
         label: look.label,
         lengths: [...look.lengths],
         previewUrl: previewUrl(look.id),
+        ...(look.withAvatar
+          ? {
+              withAvatar: {
+                avatarStyles: [...look.withAvatar.avatarStyles],
+                description: look.withAvatar.description,
+                // The 2D one is the Avatar look's own clip until it has its own.
+                previewUrl:
+                  previewUrl(`avatar-${look.id}`) ??
+                  (look.id === '2d' ? previewUrl('avatar') : null),
+              },
+            }
+          : {}),
       })),
       maxLengthSec: ANIMATION_MAX_SEC,
       minLengthSec: ANIMATION_MIN_SEC,
@@ -778,6 +790,11 @@ export class AnimationService {
       const saved = readAvatar(choice.id)
       if (!saved)
         throw new AnimationSetupError('That avatar is gone: pick another or make a new one.')
+      const styles = setup.stage ? animationLook(setup.stage)?.withAvatar?.avatarStyles : undefined
+      if (styles && !styles.includes(saved.style))
+        throw new AnimationSetupError(
+          `${saved.name} is drawn ${saved.style.toUpperCase()}: pick a ${styles.join(' or ').toUpperCase()} avatar for this style.`,
+        )
       return {
         id: saved.id,
         name: saved.name,
@@ -831,7 +848,7 @@ export class AnimationService {
     return {
       ...setup,
       ...(avatar ? { avatarName: avatar.name } : {}),
-      lookLabel: animationLook(setup.lookId)?.label ?? setup.lookId,
+      lookLabel: `${animationLook(setup.lookId)?.label ?? setup.lookId}${setup.stage ? `, in ${animationLook(setup.stage)?.label ?? setup.stage}` : ''}`,
       musicTitle: music?.title ?? null,
     }
   }
@@ -902,6 +919,7 @@ function setupFrom(view: AgentAnimationSetupView): AgentAnimationSetup {
     lengthSec: view.lengthSec,
     lookId: view.lookId,
     music: view.music,
+    ...(view.stage ? { stage: view.stage } : {}),
     subject: view.subject,
   }
 }

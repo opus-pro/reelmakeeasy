@@ -137,7 +137,7 @@ const TOOLS: ToolOption[] = [
     modes: [
       {
         description: () =>
-          "Claude animates your video itself, every frame in code: 2D, 3D or 8-bit. Pick a look and say what it's about. No AI video model.",
+          "Claude animates your video itself, every frame in code: 2D, 3D or Pixel art, narrated or hosted by your own avatar. Pick a style and say what it's about. No AI video model.",
         label: 'Easy (Guided)',
         mode: AGENT_TOOL_MODES.animation.easy,
         recommended: true,

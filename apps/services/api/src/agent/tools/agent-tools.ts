@@ -222,7 +222,8 @@ export const AGENT_TOOLS: Record<AgentToolName, DynamicToolSpec> = {
           type: 'string',
         },
         lookId: {
-          description: "The look ('avatar': an Avatar video, with avatarId or a new avatar).",
+          description:
+            "The look: a style ('2d', '3d', '8bit' is Pixel art), or 'avatar' for an Avatar explainer (with avatarId or a new avatar, and its stage).",
           enum: ['2d', '3d', '8bit', 'avatar'],
           type: 'string',
         },
@@ -240,6 +241,12 @@ export const AGENT_TOOLS: Record<AgentToolName, DynamicToolSpec> = {
         },
         musicId: {
           description: "The library track's id, or the user's file's path.",
+          type: 'string',
+        },
+        stage: {
+          description:
+            "An Avatar explainer's style, the world the host is drawn in: '2d' (a 2D avatar), '3d' (a 3D avatar) or '8bit' (Pixel art, a 2D or 3D avatar). Default: the avatar's own style.",
+          enum: ['2d', '3d', '8bit'],
           type: 'string',
         },
         subject: {
