@@ -54,7 +54,8 @@ import { RankingService } from '../ranking/ranking.service'
 
 import { AnimationService, AnimationSetupTakenError } from './animation/animation.service'
 import { AnimationSetupError } from './animation/animation-setup'
-import { deleteAvatar, isAvatarId, listAvatars } from './animation/avatar-library'
+import { deleteAvatar, isAvatarId, listAvatars, setAvatarVoice } from './animation/avatar-library'
+import { isKnownVoice } from './animation/avatar-voice'
 import {
   AutonomousService,
   StyleNotRequestedError,
@@ -377,6 +378,29 @@ export class AgentController {
         }
         return this.sessions.getSession(session.id)
       })
+  }
+
+  /**
+   * `PUT /api/agent/avatars/:id/voice { voiceId }`: gives a saved avatar its fixed voice, a voice
+   * library id (a preset or one of the user's own voices) that speaks every line of every video
+   * with it; `null` goes back to the voice made from its description. Answers the avatar.
+   */
+  @Put('avatars/:id/voice')
+  async setAvatarVoice(
+    @Param('id') id: string,
+    @Body() body: { voiceId?: unknown },
+  ): Promise<AgentAvatar> {
+    if (!isAvatarId(id)) throw new NotFoundException('No such avatar.')
+    const raw = body?.voiceId
+    const voiceId = typeof raw === 'string' ? raw.trim() : null
+    if (raw !== null && (!voiceId || voiceId.length > 200))
+      throw new BadRequestException('Pass voiceId: a voice from the voice library, or null.')
+    if (voiceId && !(await isKnownVoice(voiceId)))
+      throw new BadRequestException('There is no such voice.')
+    if (!setAvatarVoice(id, voiceId)) throw new NotFoundException('No such avatar.')
+    const avatar = listAvatars().find((a) => a.id === id)
+    if (!avatar) throw new NotFoundException('No such avatar.')
+    return avatar
   }
 
   /** Deletes a saved avatar: its rig, picture, photo and voice sample. */

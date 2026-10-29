@@ -11,6 +11,8 @@ import { apiOriginAtom } from '@/atom/apiOrigin'
 import { attachmentName, uploadAttachment } from '../attachments/attachments'
 import { ChipRow, LABEL_CLASS } from '../motion/setup-parts'
 
+import { AvatarVoice } from './AvatarVoice'
+
 /** The avatar an Avatar video card is set to: a saved one, or a new one drawn from a photo. */
 export type AvatarPick =
   | { id: string; kind: 'saved' }
@@ -44,8 +46,9 @@ const TILE =
   'flex w-24 shrink-0 flex-col overflow-hidden rounded-lg border text-left transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-white/50'
 
 /**
- * The Avatar video's avatar: the user's saved avatars as picture tiles, and "New avatar" (a photo,
- * a name, 2D or 3D), which Claude draws from the photo before the video.
+ * The Avatar video's avatar: the user's saved avatars as picture tiles (the picked one's voice
+ * under them, to listen to and change), and "New avatar" (a photo, a name, 2D or 3D), which
+ * Claude draws from the photo before the video.
  */
 export function AvatarPicker({
   avatars,
@@ -68,6 +71,10 @@ export function AvatarPicker({
   )
   const preview = draft.photo?.preview
   useEffect(() => () => void (preview && URL.revokeObjectURL(preview)), [preview])
+  // Avatars whose voice was changed here, as saved.
+  const [changed, setChanged] = useState<Record<string, AgentAvatar>>({})
+  const picked =
+    pick.kind === 'saved' ? (changed[pick.id] ?? avatars.find((a) => a.id === pick.id)) : undefined
 
   const setNew = (next: Extract<AvatarPick, { kind: 'new' }>) => {
     setDraft(next)
@@ -143,11 +150,18 @@ export function AvatarPicker({
           </button>
         ))}
       </div>
+      {picked && (
+        <AvatarVoice
+          avatar={picked}
+          key={picked.id}
+          onChange={(avatar) => setChanged((all) => ({ ...all, [avatar.id]: avatar }))}
+        />
+      )}
       {pick.kind === 'new' && (
         <div className="flex flex-col gap-3 rounded-lg border border-white/10 bg-black/20 p-3">
           <p className="text-xs text-secondary">
-            Claude draws your avatar from a photo, checks it with you, and saves it with its own
-            voice for your next videos.
+            Claude draws your avatar from a photo, checks it with you, and saves it with a voice
+            that fits, the same in every video (you can change it after).
           </p>
           <div className="flex items-center gap-3">
             {pick.photo ? (

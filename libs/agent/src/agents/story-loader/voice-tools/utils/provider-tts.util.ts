@@ -398,7 +398,7 @@ function substituteDefaultVoice(voiceId: string, from: string, reason: string): 
 }
 
 /** The Qwen3 speaker for a voice id: a preset name, or a user's cloned or designed voice. */
-async function resolveQwen3Speaker(voiceId: string): Promise<Qwen3Speaker> {
+export async function resolveQwen3Speaker(voiceId: string): Promise<Qwen3Speaker> {
   const preset = qwen3PresetSpeaker(voiceId)
   if (preset) return { voice: preset }
   const record = await getUserVoiceCloneDataService().getQwen3Speaker(voiceId)

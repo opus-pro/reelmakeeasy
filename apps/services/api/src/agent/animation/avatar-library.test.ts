@@ -10,6 +10,7 @@ import {
   newAvatarId,
   readAvatar,
   saveAvatar,
+  setAvatarVoice,
 } from './avatar-library'
 
 /** Puts DATA_DIR back as it was (unset stays unset: assigning undefined would set "undefined"). */
@@ -75,6 +76,26 @@ describe('the avatar library', () => {
     expect(listAvatars()).toEqual([
       expect.objectContaining({ id, name: 'Sam', previewUrl: `store://avatars/${id}/preview.png` }),
     ])
+  })
+
+  it('keeps a fixed voice through saves, and changes or clears it', () => {
+    const id = newAvatarId()
+    const base = { id, preview: file('preview.png'), rig: file('avatar.ts'), style: '2d' as const }
+    saveAvatar({ ...base, name: 'Sam', voice: 'calm', voiceId: 'kokoro-am_michael' })
+    saveAvatar({ ...base, name: 'Sam', voice: 'calm' })
+    expect(readAvatar(id)?.voiceId).toBe('kokoro-am_michael')
+    expect(listAvatars()).toEqual([
+      expect.objectContaining({
+        voiceDescription: 'calm',
+        voiceId: 'kokoro-am_michael',
+        voiceSampleUrl: null,
+      }),
+    ])
+    expect(setAvatarVoice(id, 'qwen3-ryan')?.voiceId).toBe('qwen3-ryan')
+    expect(readAvatar(id)?.voiceId).toBe('qwen3-ryan')
+    expect(setAvatarVoice(id, null)?.voiceId).toBeUndefined()
+    expect(listAvatars()[0]?.voiceId).toBeNull()
+    expect(setAvatarVoice(newAvatarId(), 'qwen3-ryan')).toBeNull()
   })
 
   it('keeps the photo, voice and first date when saved again, and deletes it', () => {

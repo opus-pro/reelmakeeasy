@@ -5,6 +5,7 @@ import { AnimationSetupCard } from './AnimationSetupCard'
 import { useAnimationOptions } from './useAnimationOptions'
 
 jest.mock('./useAnimationOptions', () => ({ useAnimationOptions: jest.fn() }))
+jest.mock('./AvatarVoice', () => ({ AvatarVoice: () => null }))
 jest.mock('jotai', () => ({ ...jest.requireActual('jotai'), useAtomValue: () => '' }))
 jest.mock('../attachments/attachments', () => ({
   ...jest.requireActual('../attachments/attachments'),
@@ -240,6 +241,9 @@ describe('AnimationSetupCard', () => {
             name: 'Sam',
             previewUrl: '/p.png',
             style: '2d',
+            voiceDescription: 'warm',
+            voiceId: 'kokoro-am_michael',
+            voiceSampleUrl: null,
           },
         ],
       })
