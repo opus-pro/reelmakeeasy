@@ -1451,12 +1451,18 @@ async function startServices(env) {
       {
         cwd: ROOT,
         env,
-        stdio: 'ignore',
+        stdio: ['ignore', 'pipe', 'pipe'],
       },
     )
+    // Kept to say why it failed.
+    let output = ''
+    for (const stream of [push.stdout, push.stderr])
+      stream.on('data', (chunk) => (output = (output + chunk).slice(-4000)))
     push.on('error', reject)
     push.on('exit', (code) =>
-      code === 0 ? resolve() : reject(new Error(`prisma db push exited with code ${code}`)),
+      code === 0
+        ? resolve()
+        : reject(new Error(`prisma db push exited with code ${code}:\n${output.trim()}`)),
     )
   })
   console.log(`${green('✓')} Database schema in sync\n`)
