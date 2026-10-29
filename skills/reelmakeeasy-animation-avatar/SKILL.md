@@ -109,6 +109,14 @@ export function board(t: number, i: number, a: Area) {
 }
 ```
 
+### Mixing styles
+
+The avatar's style and the world's are separate: any avatar can host any world, and `brief.md` ("Host in this world") says which kit to use.
+- **2D or pixel-art avatar, 2D world:** `TalkingHead2D` (a pixel-art avatar is cut to its grid on its own).
+- **3D avatar, 2D world:** `TalkingHead3D` with `backdrop={(t, i, shot) => svg}`, your flat 2D sets drawn as for a 2D host, behind a see-through 3D scene: only the host (and anything you add in `set`) is 3D. Keep the sets flat and bright, as the 2D look draws them.
+- **2D or pixel-art avatar, 3D world:** `TalkingHead3D` with your 3D `set`; the avatar is drawn flat over the scene where a 2D host would stand in each shot (a cut-out in a 3D world). Frame the world so the host has room, and keep the busiest parts behind or beside it.
+- **Any avatar, pixel world:** `PixelTalkingHead`, below.
+
 ### In Pixel art
 
 When `look.md` says "in Pixel art", the host stands in a pixel world. Read the `reelmakeeasy-animation-8bit` skill for the world (the engine `E`, its helpers, the HUD and its layout) and build the world as it says, in `src/scenes/world.ts`. `Animation.tsx` then holds `<Voice />`, `<Music />` and `<PixelTalkingHead avatar={avatar} build={world} cues={cues} res={…} />` from `./pixel-host` (the pixel grid from the Detail in `brief.md`), and no `<Captions />`: call `narration(H, t)` at the end of the world's update, as the 8-bit skill does.

@@ -263,6 +263,20 @@ const AVATAR_DETAIL: Record<VideoDetail, string> = {
     "The most detailed you can draw: every lock of hair with its highlight, shading and a rim light, the lids and lashes, the clothes' fabric (seams, folds, buttons, a logo) and accessories, all still moving with the pose. In 3D: 200 or more parts and smooth curves; in pixel art: a fine grid with dithered shading.",
 }
 
+/** How the host kit draws an avatar of this style in this world (any avatar takes any world). */
+export function hostInWorld(stage: AnimationLookId, avatar: AvatarStyle): string {
+  const kind = AVATAR_STYLE_LABEL[avatar]
+  if (stage === '8bit')
+    return `a ${kind} avatar in a pixel world: \`PixelTalkingHead\` (it draws ${avatar === '3d' ? 'a 3D avatar in the low-res scene' : 'the avatar cut to the pixel grid'}).`
+  if (stage === '3d')
+    return avatar === '3d'
+      ? 'a 3D avatar in a 3D world: `TalkingHead3D` with your 3D `set`.'
+      : `a flat ${kind} avatar in a 3D world: \`TalkingHead3D\` with your 3D \`set\`; it draws the avatar flat over the scene where a 2D host would stand in each shot.`
+  return avatar === '3d'
+    ? 'a 3D avatar in a flat 2D world: `TalkingHead3D` with `backdrop` (your flat 2D sets, as SVG, behind it); the scene is see-through, so only the host (and anything you add in `set`) is 3D.'
+    : `a ${kind} avatar in a flat 2D world: \`TalkingHead2D\`${avatar === 'pixel' ? ' (it draws the avatar cut to its pixel grid)' : ''}.`
+}
+
 /** Where a new avatar is drawn from: its photo, its description, or both. */
 function avatarSource(setup: AgentAnimationSetup): string {
   const fresh = setup.avatar && !('id' in setup.avatar) ? setup.avatar : undefined
@@ -320,6 +334,11 @@ export function renderAnimationBrief(
     `- **Frame:** 9:16, ${ANIMATION_SIZE.width}×${ANIMATION_SIZE.height}, ${ANIMATION_FPS} fps`,
     `- **Music:** ${music}`,
     `- **Detail:** ${VIDEO_DETAIL_LABEL[detail]} (see "Detail" below)`,
+    ...(avatar && setup.lookId === 'avatar'
+      ? [
+          `- **Host in this world:** ${hostInWorld(setup.stage ?? (avatar.style === '3d' ? '3d' : '2d'), avatar.style)}`,
+        ]
+      : []),
     ...(avatar
       ? [
           avatar.id

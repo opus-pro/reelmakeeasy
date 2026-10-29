@@ -126,10 +126,7 @@ export function AvatarPicker({
         ))}
       </div>
       {!shown.length && (
-        <p className="text-xs text-secondary">
-          No {styles.map((s) => AVATAR_STYLE_LABEL[s]).join(' or ')} avatar yet: make one with New
-          avatar.
-        </p>
+        <p className="text-xs text-secondary">No avatar yet: make one with New avatar.</p>
       )}
       {picked && (
         <AvatarVoice

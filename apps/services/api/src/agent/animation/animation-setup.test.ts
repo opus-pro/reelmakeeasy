@@ -63,7 +63,7 @@ describe('parseAnimationSetup', () => {
     ).toBeUndefined()
   })
 
-  it("takes an Avatar explainer's style: 2D and 3D take their own avatars, Pixel art either", () => {
+  it("takes an Avatar explainer's style, with any avatar: the two are separate", () => {
     const head = { ...ok, avatar: { id: 'av-0123456789' }, lookId: 'avatar' }
     expect(parseAnimationSetup(head).stage).toBeUndefined()
     expect(parseAnimationSetup({ ...head, stage: '8bit' }).stage).toBe('8bit')
@@ -72,9 +72,10 @@ describe('parseAnimationSetup', () => {
     expect(fresh('2d', '8bit').stage).toBe('8bit')
     expect(fresh('3d', '8bit').stage).toBe('8bit')
     expect(fresh('3d', '3d').stage).toBe('3d')
-    expect(() => fresh('2d', '3d')).toThrow(/A 3D explainer needs a 3D avatar/)
+    expect(fresh('2d', '3d').stage).toBe('3d')
     expect(fresh('pixel', '8bit').stage).toBe('8bit')
-    expect(() => fresh('pixel', '2d')).toThrow(/A 2D explainer needs a 2D avatar/)
+    expect(fresh('pixel', '2d').stage).toBe('2d')
+    expect(fresh('3d', '2d').stage).toBe('2d')
     expect(() => parseAnimationSetup({ ...head, stage: 'avatar' })).toThrow(/Pick the style/)
     // Another look never carries a style.
     expect(parseAnimationSetup({ ...ok, stage: '8bit' }).stage).toBeUndefined()

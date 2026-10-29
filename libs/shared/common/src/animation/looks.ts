@@ -25,7 +25,8 @@ export type AnimationLook = {
   /** A style's Avatar explainer version: the user's avatar hosts it in this style. */
   withAvatar?: {
     description: string
-    /** The avatar styles it takes: one, or the user's pick. */
+    /** The avatar styles it takes (any: the avatar's style and the world's are separate), the
+     *  one that matches the world first. */
     avatarStyles: readonly AvatarStyle[]
     /** How the host lives in this world, for look.md. */
     host: string
@@ -57,9 +58,10 @@ export const ANIMATION_LOOKS: readonly AnimationLook[] = [
     palette: ['#FFF4E0', '#2B2140', '#FF7A59', '#4CC9F0', '#FFD166'],
     skill: 'reelmakeeasy-animation-2d',
     withAvatar: {
-      avatarStyles: ['2d'],
-      description: 'Your avatar hosts it as a 2D cartoon, pointing at pictures as it talks.',
-      host: 'The avatar drawn 2D, waist up, talking to the camera in a flat cartoon set.',
+      avatarStyles: ['2d', '3d', 'pixel'],
+      description:
+        'Your avatar hosts it in a flat 2D cartoon world, pointing at pictures as it talks.',
+      host: 'The avatar waist up, talking to the camera in a flat cartoon set.',
       ownWorld: true,
     },
   },
@@ -74,9 +76,9 @@ export const ANIMATION_LOOKS: readonly AnimationLook[] = [
     palette: ['#0E1116', '#F5F7FA', '#5EEAD4', '#F59E0B', '#A78BFA'],
     skill: 'reelmakeeasy-animation-3d',
     withAvatar: {
-      avatarStyles: ['3d'],
-      description: 'Your avatar hosts it as a 3D figure, in the 3D world it explains.',
-      host: 'The avatar as a 3D figure in the 3D scene, under its studio light.',
+      avatarStyles: ['3d', '2d', 'pixel'],
+      description: 'Your avatar hosts it in a 3D world, the one it explains.',
+      host: 'The avatar in the 3D scene, under its studio light.',
       ownWorld: true,
     },
   },
@@ -92,7 +94,7 @@ export const ANIMATION_LOOKS: readonly AnimationLook[] = [
     skill: 'reelmakeeasy-animation-8bit',
     withAvatar: {
       avatarStyles: ['pixel', '2d', '3d'],
-      description: 'Your avatar hosts it in pixel art, inside the game world.',
+      description: 'Your avatar hosts it in a pixel-art game world.',
       host: 'The avatar drawn into the pixel world with the same pixel grid (`PixelTalkingHead`): a pixel-art or 2D avatar is cut to the grid on top of the scene, a 3D one stands in the low-res scene.',
     },
   },

@@ -152,7 +152,14 @@ describe('AnimationService, the setup card', () => {
     // Each style says what it is with the avatar hosting; 2D shows the Avatar look's clip.
     expect(options.looks.map((l) => !!l.withAvatar)).toEqual([true, true, true, false])
     expect(options.looks[0]?.withAvatar?.previewUrl).toMatch(/animation\/looks\/avatar/)
-    expect(options.looks[2]?.withAvatar?.description).toMatch(/pixel art/)
+    expect(options.looks[2]?.withAvatar?.description).toMatch(/pixel-art/)
+    // Any avatar in any world, the world's own kind first.
+    expect(options.looks.map((l) => l.withAvatar?.avatarStyles)).toEqual([
+      ['2d', '3d', 'pixel'],
+      ['3d', '2d', 'pixel'],
+      ['pixel', '2d', '3d'],
+      undefined,
+    ])
     expect([options.minLengthSec, options.maxLengthSec]).toEqual([10, 90])
     expect(options.looks[0]?.defaultTrackId).toBe('data-pulse')
     // Every look has a preview clip in the presets, its link carrying the file's version (so a

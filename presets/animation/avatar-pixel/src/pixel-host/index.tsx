@@ -3,7 +3,6 @@ import { useCurrentFrame, useVideoConfig } from 'remotion'
 
 import {
   type Avatar,
-  AVATAR_PIXEL,
   type Cue,
   type GestureSounds,
   GestureSoundTrack,
@@ -67,14 +66,7 @@ export function PixelTalkingHead({
       {sounds !== false && <GestureSoundTrack cues={cues} sounds={sounds} />}
       <PixelStage build={withHost} res={res}>
         {avatar.style !== '3d' && (
-          <PixelSprite
-            block={
-              avatar.style === 'pixel'
-                ? Math.max(1080 / res, Math.round(AVATAR_PIXEL * place(t).s))
-                : 1080 / res
-            }
-            id="pixel-host"
-          >
+          <PixelSprite block={1080 / res} id="pixel-host">
             {placeAvatar2D(avatar, hostPose(t, cues), place(t))}
           </PixelSprite>
         )}

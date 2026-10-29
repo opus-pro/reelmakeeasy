@@ -21,24 +21,32 @@ export function createEngine3D({
   background = '#0E1116',
   gl,
   overlay,
+  transparent = false,
 }: {
   background?: string
   gl: HTMLCanvasElement
   overlay: HTMLCanvasElement
+  /** No sky, fog or ground: only what is in the scene is drawn, over whatever is behind the
+   *  canvas (a 3D avatar in a flat 2D world). */
+  transparent?: boolean
 }): Engine3D {
   const renderer = new THREE.WebGLRenderer({
+    alpha: transparent,
     antialias: true,
     canvas: gl,
     preserveDrawingBuffer: true,
   })
+  if (transparent) renderer.setClearColor(0x000000, 0)
   renderer.setPixelRatio(1)
   renderer.setSize(1080, 1920, false)
   renderer.toneMapping = THREE.ACESFilmicToneMapping
   renderer.shadowMap.enabled = true
   renderer.shadowMap.type = THREE.PCFSoftShadowMap
   const scene = new THREE.Scene()
-  scene.background = new THREE.Color(background)
-  scene.fog = new THREE.Fog(background, 18, 60)
+  if (!transparent) {
+    scene.background = new THREE.Color(background)
+    scene.fog = new THREE.Fog(background, 18, 60)
+  }
   scene.add(new THREE.HemisphereLight('#DDE6FF', '#20242C', 1.1))
   const key = new THREE.DirectionalLight('#FFF4E5', 2.4)
   key.position.set(6, 12, 8)
@@ -53,7 +61,7 @@ export function createEngine3D({
     new THREE.MeshStandardMaterial({ color: background, roughness: 0.95 }),
   )
   ground.receiveShadow = true
-  scene.add(ground)
+  if (!transparent) scene.add(ground)
   const camera = new THREE.PerspectiveCamera(35, 1080 / 1920, 0.1, 500)
   const labels = overlay.getContext('2d') as CanvasRenderingContext2D
   const v = new THREE.Vector3()

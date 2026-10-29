@@ -15,11 +15,13 @@ import {
   walkAt,
 } from './blocking'
 import { type Area, BOARD, type Shot, shotIndex, shotProgress } from './framing'
+import { AVATAR_PIXEL, pixelFilter } from './pixelate'
 import { type Cue, hostPose, type Pose } from './pose'
 import { type GestureSounds, GestureSoundTrack } from './sounds'
 
-/** Where the avatar's box sits in each shot: its waist at (x, y) on screen, scaled. */
-const PLACE: Record<Shot, Place> = {
+/** Where the avatar's box sits in each shot: its waist at (x, y) on screen, scaled. A flat
+ *  (2D or pixel-art) avatar in a 3D world stands in the same places. */
+export const PLACE: Record<Shot, Place> = {
   close: { s: 1.45, x: 540, y: 2330 },
   corner: { s: 0.5, x: 820, y: 1950 },
   'corner-left': { s: 0.5, x: 260, y: 1950 },
@@ -29,12 +31,19 @@ const PLACE: Record<Shot, Place> = {
   wide: { s: 0.62, x: 540, y: 1940 },
 }
 
-type Place = { s: number; x: number; y: number }
+export type Place = { s: number; x: number; y: number }
 
-/** The avatar drawn for a pose at a place on screen: leaning and breathing about its waist. */
+let pixelIds = 0
+
+/** The avatar drawn for a pose at a place on screen: leaning and breathing about its waist (a
+ *  pixel-art one cut to its grid). */
 export function placeAvatar2D(avatar: Avatar2D, p: Pose, { s, x, y }: Place): string {
   const breathe = 1 + 0.008 * p.breath
-  return `<g transform="translate(${x},${y}) scale(${s}) rotate(${p.lean}) scale(1,${breathe})">${avatar.draw(p)}</g>`
+  const drawn = `<g transform="translate(${x},${y}) scale(${s}) rotate(${p.lean}) scale(1,${breathe})">${avatar.draw(p)}</g>`
+  if (avatar.style !== 'pixel') return drawn
+  const id = `avatar-px-${(pixelIds = (pixelIds + 1) % 100000)}`
+  const block = Math.max(2, Math.round(AVATAR_PIXEL * s))
+  return `<defs>${pixelFilter(id, block, { height: 6000, width: 6000, x: -2500, y: -2500 })}</defs><g filter="url(#${id})">${drawn}</g>`
 }
 
 const ease = (k: number) => k * k * (3 - 2 * k)

@@ -8,6 +8,7 @@ import {
   ANIMATION_DIR,
   markAvatarSaved,
   prepareAnimationProject,
+  hostInWorld,
   projectLibs,
 } from './animation-project'
 
@@ -235,6 +236,17 @@ describe('prepareAnimationProject', () => {
       )
       expect(projectLibs({ ...head, stage: '3d' })).toEqual(['2d', '3d', 'avatar'])
       expect(projectLibs(setup2d)).toEqual(['2d'])
+    })
+
+    it('says which host kit draws each avatar in each world', () => {
+      expect(hostInWorld('2d', '3d')).toMatch(
+        /^a 3D avatar in a flat 2D world: `TalkingHead3D` with `backdrop`/,
+      )
+      expect(hostInWorld('3d', '2d')).toMatch(/^a flat 2D avatar in a 3D world: `TalkingHead3D`/)
+      expect(hostInWorld('2d', 'pixel')).toMatch(
+        /`TalkingHead2D` \(it draws the avatar cut to its pixel grid\)/,
+      )
+      expect(hostInWorld('8bit', '3d')).toMatch(/`PixelTalkingHead`/)
     })
 
     it('makes only the avatar in the creator: from a description, as pixel art', async () => {

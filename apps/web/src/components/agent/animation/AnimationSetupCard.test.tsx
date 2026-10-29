@@ -59,7 +59,7 @@ const OPTIONS: AgentAnimationOptions = {
       lengths: [15, 30, 45, 60, 90],
       previewUrl: null,
       withAvatar: {
-        avatarStyles: ['2d'],
+        avatarStyles: ['2d', '3d', 'pixel'],
         description: 'Your avatar hosts it as a 2D cartoon.',
         previewUrl: '/api/presets/animation/looks/avatar.mp4',
       },
@@ -73,7 +73,7 @@ const OPTIONS: AgentAnimationOptions = {
       lengths: [15, 30, 45, 60, 90],
       previewUrl: '/api/presets/animation/looks/3d.mp4',
       withAvatar: {
-        avatarStyles: ['3d'],
+        avatarStyles: ['3d', '2d', 'pixel'],
         description: 'Your avatar hosts it as a 3D figure.',
         previewUrl: null,
       },
@@ -306,29 +306,27 @@ describe('AnimationSetupCard', () => {
       )
     })
 
-    it('shows the avatars drawn in the style: 2D ones for 2D, 3D for 3D, either for Pixel art', () => {
+    it('shows every avatar for every style: the avatar and the world are separate', () => {
       renderCard({ ...OPTIONS, avatars })
       fireEvent.click(explainer())
       const names = () =>
         screen
-          .getAllByRole('radio', { name: /\((2D|3D)\)$/ })
+          .getAllByRole('radio', { name: /\((2D|3D|Pixel art)\)$/ })
           .map((r) => r.getAttribute('aria-label'))
-      expect(names()).toEqual(['Sam (2D)'])
+      expect(names()).toEqual(['Sam (2D)', 'Max (3D)'])
       fireEvent.click(look(/^3D$/))
-      expect(names()).toEqual(['Max (3D)'])
-      // The pick moves to an avatar that fits.
-      expect(screen.getByRole('radio', { name: 'Max (3D)' }).getAttribute('aria-checked')).toBe(
+      expect(names()).toEqual(['Sam (2D)', 'Max (3D)'])
+      // The pick stays: a 2D avatar can host a 3D world.
+      expect(screen.getByRole('radio', { name: 'Sam (2D)' }).getAttribute('aria-checked')).toBe(
         'true',
       )
-      fireEvent.click(look(/^Pixel art$/))
-      expect(names()).toEqual(['Sam (2D)', 'Max (3D)'])
     })
 
     it('opens the avatar creator from New avatar, and picks the avatar it makes', () => {
       const onSubmit = renderCard()
       fireEvent.click(explainer())
       // No avatar yet: the card waits for one.
-      expect(screen.getByText(/No 2D avatar yet/)).toBeTruthy()
+      expect(screen.getByText('No avatar yet: make one with New avatar.')).toBeTruthy()
       subject()
       expect((screen.getByRole('button', { name: 'Build it' }) as HTMLButtonElement).disabled).toBe(
         true,
