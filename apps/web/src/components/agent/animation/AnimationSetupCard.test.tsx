@@ -178,11 +178,14 @@ describe('AnimationSetupCard', () => {
     expect(onSubmit).toHaveBeenCalledWith(expect.objectContaining({ lookId: '3d' }))
   })
 
-  it('sends the detail picked, Extra high (recommended) until then', () => {
+  it('sends the detail picked on its slider, Extra high (recommended) until then', () => {
     const onSubmit = renderCard()
-    const extraHigh = screen.getByRole('radio', { name: 'Extra high (Recommended)' })
-    expect(extraHigh.getAttribute('aria-checked')).toBe('true')
-    fireEvent.click(screen.getByRole('radio', { name: 'Medium' }))
+    const detail = screen.getByRole('slider', { name: 'Detail' })
+    expect(detail.getAttribute('aria-valuetext')).toBe('Extra high')
+    expect(screen.getByText('Recommended')).toBeTruthy()
+    fireEvent.change(detail, { target: { value: '1' } })
+    expect(detail.getAttribute('aria-valuetext')).toBe('Medium')
+    expect(screen.getByText(/^Polished:/)).toBeTruthy()
     fireEvent.change(screen.getByRole('textbox', { name: "What's it about?" }), {
       target: { value: 'rain' },
     })

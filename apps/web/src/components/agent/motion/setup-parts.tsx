@@ -84,14 +84,118 @@ export function ChipRow<T extends number | string>({
   )
 }
 
-/** The detail chips, the recommended (and default) one marked. */
-const DETAIL_OPTIONS = VIDEO_DETAILS.map((value) => ({
-  label:
-    value === VIDEO_DEFAULT_DETAIL
-      ? `${VIDEO_DETAIL_LABEL[value]} (Recommended)`
-      : VIDEO_DETAIL_LABEL[value],
-  value,
-}))
+/** Where a slider stop sits on the track, the ends inset by half the thumb. */
+const stopAt = (i: number, stops: number) =>
+  `calc(1.375rem + (100% - 2.75rem) * ${stops > 1 ? i / (stops - 1) : 0})`
+
+/**
+ * A row of levels as a bar to drag or click (the setup cards' Detail and Effort): the picked
+ * level's name (marked when recommended), the ends' names, a dotted track with a stop per level
+ * and the thumb on the picked one, and what the level means.
+ */
+function LevelSlider<T extends string>({
+  footnote,
+  label,
+  levels,
+  low,
+  meaning,
+  onPick,
+  recommended,
+  selected,
+}: {
+  /** What more of it costs, under the meaning. */
+  footnote: string
+  label: string
+  /** From least to most. */
+  levels: readonly { label: string; value: T }[]
+  /** The low end's name ("Faster"); the high end shows the top level's own. */
+  low: string
+  /** What the picked level means. */
+  meaning?: string
+  onPick: (value: T) => void
+  recommended?: T
+  selected: T
+}) {
+  const index = Math.max(
+    0,
+    levels.findIndex((l) => l.value === selected),
+  )
+  const picked = levels[index]
+  if (!picked) return null
+  return (
+    <div className="flex flex-col gap-1.5">
+      <span className="flex items-center gap-2">
+        <span className={LABEL_CLASS}>{label}</span>
+        <span className="text-sm font-medium text-violet-300">{picked.label}</span>
+        {recommended === picked.value && (
+          <span className="rounded bg-accent-green/15 px-1.5 py-0.5 text-[10px] font-medium text-accent-green">
+            Recommended
+          </span>
+        )}
+      </span>
+      <div className="flex max-w-md flex-col gap-1">
+        <span className="flex justify-between text-xs text-secondary">
+          <span>{low}</span>
+          <span>{levels[levels.length - 1]?.label}</span>
+        </span>
+        <div className="relative h-11 rounded-xl border border-white/10 bg-black/30">
+          <span
+            aria-hidden
+            className="absolute inset-x-3 inset-y-2.5"
+            style={{
+              backgroundImage:
+                'radial-gradient(circle, rgb(255 255 255 / 0.6) 1px, transparent 1.6px)',
+              backgroundSize: '7px 7px',
+              maskImage: 'linear-gradient(to right, rgb(0 0 0 / 0.25), #000)',
+            }}
+          />
+          {levels.map((level, i) =>
+            i === index ? null : (
+              <span
+                aria-hidden
+                className="absolute top-1/2 h-4 w-0.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-white/70"
+                key={level.value}
+                style={{ left: stopAt(i, levels.length) }}
+              />
+            ),
+          )}
+          <span
+            aria-hidden
+            className="absolute top-1/2 size-8 -translate-x-1/2 -translate-y-1/2 rounded-lg bg-white shadow-[0_0_18px_rgb(255_255_255/0.35)] transition-[left] duration-200"
+            style={{ left: stopAt(index, levels.length) }}
+          />
+          <input
+            aria-label={label}
+            aria-valuetext={picked.label}
+            className="absolute inset-0 size-full cursor-pointer opacity-0 disabled:cursor-not-allowed"
+            max={levels.length - 1}
+            min={0}
+            onChange={(e) => {
+              const next = levels[Number(e.target.value)]
+              if (next && next.value !== picked.value) onPick(next.value)
+            }}
+            step={1}
+            type="range"
+            value={index}
+          />
+        </div>
+      </div>
+      {meaning && <span className="text-xs text-secondary">{meaning}</span>}
+      <span className="text-xs text-tertiary">{footnote}</span>
+    </div>
+  )
+}
+
+const DETAIL_LEVELS = VIDEO_DETAILS.map((value) => ({ label: VIDEO_DETAIL_LABEL[value], value }))
+
+/** What each detail level means on screen. */
+const DETAIL_TEXT: Record<VideoDetail, string> = {
+  high: 'Rich: layered depth, textured light, follow-through on every move, and particles on the big moments.',
+  low: 'Clean and simple: a few bold shapes per scene, flat colours and simple cuts.',
+  medium:
+    'Polished: more on screen, eased moves, a drifting background and small particle accents.',
+  xhigh: 'Film grade: fine parts, thousands of particles, and scenes that break apart and re-form.',
+}
 
 /** How much detail the agent builds in, and what it costs. */
 export function DetailPicker({
@@ -102,12 +206,16 @@ export function DetailPicker({
   onPick: (detail: VideoDetail) => void
 }) {
   return (
-    <div className="flex flex-col gap-1">
-      <ChipRow label="Detail" onPick={onPick} options={DETAIL_OPTIONS} selected={detail} />
-      <span className="text-xs text-secondary">
-        More detail takes longer and uses more tokens, and looks better.
-      </span>
-    </div>
+    <LevelSlider
+      footnote="More detail takes longer and uses more tokens, and looks better."
+      label="Detail"
+      levels={DETAIL_LEVELS}
+      low="Simpler"
+      meaning={DETAIL_TEXT[detail]}
+      onPick={onPick}
+      recommended={VIDEO_DEFAULT_DETAIL}
+      selected={detail}
+    />
   )
 }
 
@@ -121,15 +229,11 @@ const EFFORT_TEXT: Record<string, (agent: string) => string> = {
     `${agent} thinks hardest before each step: the best plan, timing and finish, and the longest build.`,
 }
 
-/** Where a slider stop sits on the track, the ends inset by half the thumb. */
-const stopAt = (i: number, stops: number) =>
-  `calc(1.375rem + (100% - 2.75rem) * ${stops > 1 ? i / (stops - 1) : 0})`
-
 /**
- * How hard the agent thinks while it builds (its thinking level), as a slider from Faster up
- * to the highest level a code video offers (Extra high). It reads and sets the chat's model, so
- * the model bar under the chat box shows the same level. Hidden until the model list loads, and
- * when the model has fewer than two levels.
+ * How hard the agent thinks while it builds (its thinking level), from Faster up to the highest
+ * level a code video offers (Extra high). It reads and sets the chat's model, so the model bar
+ * under the chat box shows the same level. Hidden until the model list loads, and when the
+ * model has fewer than two levels.
  */
 export function EffortSlider() {
   const model = useSharedChatModel()
@@ -142,74 +246,22 @@ export function EffortSlider() {
   }, [current?.effort, model?.error, picked])
   const efforts = state?.models.find((m) => m.id === current?.model)?.efforts ?? []
   if (!model || !state || !current?.effort || efforts.length < 2) return null
-  const index = Math.max(0, efforts.indexOf(picked ?? current.effort))
-  const effort = efforts[index] as string
+  const effort = picked ?? current.effort
   const agent = state.harness === 'claude' ? 'Claude' : 'Codex'
-  const pick = (next: string | undefined) => {
-    if (!next || next === effort) return
-    setPicked(next)
-    void model.pick({ effort: next, model: current.model })
-  }
   return (
-    <div className="flex flex-col gap-1.5">
-      <span className="flex items-center gap-2">
-        <span className={LABEL_CLASS}>Effort</span>
-        <span className="text-sm font-medium text-violet-300">{effortLabel(effort)}</span>
-        {state.recommended?.effort === effort && (
-          <span className="rounded bg-accent-green/15 px-1.5 py-0.5 text-[10px] font-medium text-accent-green">
-            Recommended
-          </span>
-        )}
-      </span>
-      <div className="flex max-w-md flex-col gap-1">
-        <span className="flex justify-between text-xs text-secondary">
-          <span>Faster</span>
-          <span>{effortLabel(efforts[efforts.length - 1] as string)}</span>
-        </span>
-        <div className="relative h-11 rounded-xl border border-white/10 bg-black/30">
-          <span
-            aria-hidden
-            className="absolute inset-x-3 inset-y-2.5"
-            style={{
-              backgroundImage:
-                'radial-gradient(circle, rgb(255 255 255 / 0.6) 1px, transparent 1.6px)',
-              backgroundSize: '7px 7px',
-              maskImage: 'linear-gradient(to right, rgb(0 0 0 / 0.25), #000)',
-            }}
-          />
-          {efforts.map((level, i) =>
-            i === index ? null : (
-              <span
-                aria-hidden
-                className="absolute top-1/2 h-4 w-0.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-white/70"
-                key={level}
-                style={{ left: stopAt(i, efforts.length) }}
-              />
-            ),
-          )}
-          <span
-            aria-hidden
-            className="absolute top-1/2 size-8 -translate-x-1/2 -translate-y-1/2 rounded-lg bg-white shadow-[0_0_18px_rgb(255_255_255/0.35)] transition-[left] duration-200"
-            style={{ left: stopAt(index, efforts.length) }}
-          />
-          <input
-            aria-label="Effort"
-            aria-valuetext={effortLabel(effort)}
-            className="absolute inset-0 size-full cursor-pointer opacity-0 disabled:cursor-not-allowed"
-            max={efforts.length - 1}
-            min={0}
-            onChange={(e) => pick(efforts[Number(e.target.value)])}
-            step={1}
-            type="range"
-            value={index}
-          />
-        </div>
-      </div>
-      <span className="text-xs text-secondary">{EFFORT_TEXT[effort]?.(agent)}</span>
-      <span className="text-xs text-tertiary">
-        More effort uses more of your {agent} plan (a longer build) for a better video.
-      </span>
-    </div>
+    <LevelSlider
+      footnote={`More effort uses more of your ${agent} plan (a longer build) for a better video.`}
+      label="Effort"
+      levels={efforts.map((value) => ({ label: effortLabel(value), value }))}
+      low="Faster"
+      meaning={EFFORT_TEXT[effort]?.(agent)}
+      onPick={(next) => {
+        setPicked(next)
+        void model.pick({ effort: next, model: current.model })
+      }}
+      {...(state.recommended?.effort ? { recommended: state.recommended.effort } : {})}
+      selected={effort}
+    />
   )
 }
 
