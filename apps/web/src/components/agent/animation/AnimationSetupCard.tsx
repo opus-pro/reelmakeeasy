@@ -21,6 +21,7 @@ import {
   ChipRow,
   COMPOSER_LABEL,
   DetailPicker,
+  EffortSlider,
   LABEL_CLASS,
   musicChoice,
   type MusicPick,
@@ -252,6 +253,7 @@ function SetupForm({
           </div>
         )}
         <DetailPicker detail={detail} onPick={setDetail} />
+        <EffortSlider />
         <MusicPicker
           agentName="Claude"
           composers={options.composers}

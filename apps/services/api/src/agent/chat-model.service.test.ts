@@ -76,7 +76,7 @@ describe('ChatModelService', () => {
     expect(state.current).toEqual(xhigh)
     expect(state.recommended).toEqual(xhigh)
     expect(state.models.map((m) => [m.id, m.efforts])).toEqual([
-      ['claude-opus-5-5', ['medium', 'high', 'xhigh', 'max']],
+      ['claude-opus-5-5', ['medium', 'high', 'xhigh']],
     ])
     expect(svc.motionChoiceFor('claude')).toEqual(xhigh)
     // A level picked for the chat stays, and Extra high is still the recommended one.

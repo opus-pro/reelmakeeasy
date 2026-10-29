@@ -6,7 +6,7 @@ import { cn, DropdownMenu, type MenuProps } from '@shared/ui'
 import { CheckMark, ChevronDownSmall } from '@/components/icons/core'
 
 import { choiceLabel, effortLabel, sameChoice, switchTo } from './chat-model'
-import { type ChatModel, useChatModel } from './useChatModel'
+import { type ChatModel, useChatModel, useSharedChatModel } from './useChatModel'
 
 const HARNESS_NAME = { claude: 'Claude Code', codex: 'Codex' } as const
 
@@ -94,7 +94,13 @@ export function modelMenuItems(model: ChatModel, harnessName: string): MenuProps
  * account, and "Set as default".
  */
 export function ChatModelBar({ session }: { session: AgentSession | null | undefined }) {
-  const model = useChatModel(session?.id, !!session, `${session?.harness}:${session?.mode}`)
+  const shared = useSharedChatModel()
+  const own = useChatModel(
+    session?.id,
+    !!session && !shared,
+    `${session?.harness}:${session?.mode}`,
+  )
+  const model = shared ?? own
   if (!session) return null
   const harnessName = HARNESS_NAME[session.harness ?? 'codex']
   const state = model.state

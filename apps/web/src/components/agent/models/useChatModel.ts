@@ -1,7 +1,7 @@
 'use client'
 
 import type { ChatModelChoice, ChatModelState } from '@shared/types/api/agent'
-import { useCallback, useEffect, useState } from 'react'
+import { createContext, useCallback, useContext, useEffect, useState } from 'react'
 
 import { useApi } from '@/hooks/useApi'
 
@@ -9,6 +9,15 @@ import { getChatModel, setChatModel, setDefaultChatModel } from './chat-model'
 
 /** A chat's model: what it runs on, what its harness offers, and the picks that change it. */
 export type ChatModel = ReturnType<typeof useChatModel>
+
+const ChatModelContext = createContext<ChatModel | null>(null)
+
+/** The open chat's model, shared by the model bar and a setup card's Effort slider so a pick in
+ *  one shows in the other. */
+export const ChatModelProvider = ChatModelContext.Provider
+
+/** The open chat's model, or null outside a `ChatModelProvider`. */
+export const useSharedChatModel = (): ChatModel | null => useContext(ChatModelContext)
 
 /** `key` changes when the chat's agent or mode does (a Claude Animation moves a Codex chat to
  *  Claude Code; a Motion Reel pins its model): the model is asked again then. */
