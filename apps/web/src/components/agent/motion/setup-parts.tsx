@@ -13,9 +13,11 @@ import { useEffect, useRef, useState } from 'react'
 import { apiOriginAtom } from '@/atom/apiOrigin'
 
 import { attachmentName, uploadAttachment } from '../attachments/attachments'
+import { effortLabel } from '../models/chat-model'
+import { useSharedChatModel } from '../models/useChatModel'
 
 /** Pieces the Motion Reel and Claude Animation setup cards share: the card and label styles, a
- *  row of chips, the detail level and the music picker. */
+ *  row of chips, the detail level, the effort slider and the music picker. */
 
 export const CARD_CLASS =
   'flex w-full max-w-2xl flex-col gap-4 rounded-xl border border-white/10 bg-fill-secondary/50 p-4'
@@ -104,6 +106,108 @@ export function DetailPicker({
       <ChipRow label="Detail" onPick={onPick} options={DETAIL_OPTIONS} selected={detail} />
       <span className="text-xs text-secondary">
         More detail takes longer and uses more tokens, and looks better.
+      </span>
+    </div>
+  )
+}
+
+/** What each thinking level means while the agent builds a code video. */
+const EFFORT_TEXT: Record<string, (agent: string) => string> = {
+  high: (agent) =>
+    `${agent} thinks longer before each step: better timing and scenes, and a longer build.`,
+  medium: (agent) =>
+    `${agent} thinks briefly before each step: the quickest build, and the lightest on your plan.`,
+  xhigh: (agent) =>
+    `${agent} thinks hardest before each step: the best plan, timing and finish, and the longest build.`,
+}
+
+/** Where a slider stop sits on the track, the ends inset by half the thumb. */
+const stopAt = (i: number, stops: number) =>
+  `calc(1.375rem + (100% - 2.75rem) * ${stops > 1 ? i / (stops - 1) : 0})`
+
+/**
+ * How hard the agent thinks while it builds (its thinking level), as a slider from Faster up
+ * to the highest level a code video offers (Extra high). It reads and sets the chat's model, so
+ * the model bar under the chat box shows the same level. Hidden until the model list loads, and
+ * when the model has fewer than two levels.
+ */
+export function EffortSlider() {
+  const model = useSharedChatModel()
+  const state = model?.state
+  const current = state?.current
+  // The level just picked, shown at once while the pick is saved.
+  const [picked, setPicked] = useState<null | string>(null)
+  useEffect(() => {
+    if (picked && (current?.effort === picked || model?.error)) setPicked(null)
+  }, [current?.effort, model?.error, picked])
+  const efforts = state?.models.find((m) => m.id === current?.model)?.efforts ?? []
+  if (!model || !state || !current?.effort || efforts.length < 2) return null
+  const index = Math.max(0, efforts.indexOf(picked ?? current.effort))
+  const effort = efforts[index] as string
+  const agent = state.harness === 'claude' ? 'Claude' : 'Codex'
+  const pick = (next: string | undefined) => {
+    if (!next || next === effort) return
+    setPicked(next)
+    void model.pick({ effort: next, model: current.model })
+  }
+  return (
+    <div className="flex flex-col gap-1.5">
+      <span className="flex items-center gap-2">
+        <span className={LABEL_CLASS}>Effort</span>
+        <span className="text-sm font-medium text-violet-300">{effortLabel(effort)}</span>
+        {state.recommended?.effort === effort && (
+          <span className="rounded bg-accent-green/15 px-1.5 py-0.5 text-[10px] font-medium text-accent-green">
+            Recommended
+          </span>
+        )}
+      </span>
+      <div className="flex max-w-md flex-col gap-1">
+        <span className="flex justify-between text-xs text-secondary">
+          <span>Faster</span>
+          <span>{effortLabel(efforts[efforts.length - 1] as string)}</span>
+        </span>
+        <div className="relative h-11 rounded-xl border border-white/10 bg-black/30">
+          <span
+            aria-hidden
+            className="absolute inset-x-3 inset-y-2.5"
+            style={{
+              backgroundImage:
+                'radial-gradient(circle, rgb(255 255 255 / 0.6) 1px, transparent 1.6px)',
+              backgroundSize: '7px 7px',
+              maskImage: 'linear-gradient(to right, rgb(0 0 0 / 0.25), #000)',
+            }}
+          />
+          {efforts.map((level, i) =>
+            i === index ? null : (
+              <span
+                aria-hidden
+                className="absolute top-1/2 h-4 w-0.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-white/70"
+                key={level}
+                style={{ left: stopAt(i, efforts.length) }}
+              />
+            ),
+          )}
+          <span
+            aria-hidden
+            className="absolute top-1/2 size-8 -translate-x-1/2 -translate-y-1/2 rounded-lg bg-white shadow-[0_0_18px_rgb(255_255_255/0.35)] transition-[left] duration-200"
+            style={{ left: stopAt(index, efforts.length) }}
+          />
+          <input
+            aria-label="Effort"
+            aria-valuetext={effortLabel(effort)}
+            className="absolute inset-0 size-full cursor-pointer opacity-0 disabled:cursor-not-allowed"
+            max={efforts.length - 1}
+            min={0}
+            onChange={(e) => pick(efforts[Number(e.target.value)])}
+            step={1}
+            type="range"
+            value={index}
+          />
+        </div>
+      </div>
+      <span className="text-xs text-secondary">{EFFORT_TEXT[effort]?.(agent)}</span>
+      <span className="text-xs text-tertiary">
+        More effort uses more of your {agent} plan (a longer build) for a better video.
       </span>
     </div>
   )

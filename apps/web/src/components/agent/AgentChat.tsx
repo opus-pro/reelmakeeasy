@@ -38,6 +38,7 @@ import {
 } from './attachments/ComposerAttachments'
 import { useAttachments } from './attachments/useAttachments'
 import { ChatModelBar } from './models/ChatModelBar'
+import { ChatModelProvider, useChatModel } from './models/useChatModel'
 import { AnimationSetupCard } from './animation/AnimationSetupCard'
 import { composerPlaceholder } from './composer-placeholder'
 import { MotionReelSetupCard } from './motion/MotionReelSetupCard'
@@ -408,6 +409,7 @@ export function AgentChat({
   const composerRef = useRef<HTMLTextAreaElement>(null)
   const voice = useVoiceTyping({ inputRef: composerRef, setValue: setInput, value: input })
   const files = useAttachments(sessionId)
+  const chatModel = useChatModel(session?.id, !!session, `${session?.harness}:${session?.mode}`)
   useAutoGrow(composerRef, input, COMPOSER_MAX_PX)
 
   const items = useMemo(() => groupEntries(transcript.entries), [transcript.entries])
@@ -622,94 +624,96 @@ export function AgentChat({
   const buttonLabel = answerMode ? 'Answer' : stopMode ? 'Stop' : 'Send'
 
   return (
-    <div className="flex h-full flex-col bg-background text-primary">
-      <div className="flex items-center gap-2 border-b border-white/10 px-4 py-3 text-sm font-medium text-secondary">
-        {headerStart}
-        <span className="min-w-0 truncate">{title || session?.title || 'Agent'}</span>
+    <ChatModelProvider value={chatModel}>
+      <div className="flex h-full flex-col bg-background text-primary">
+        <div className="flex items-center gap-2 border-b border-white/10 px-4 py-3 text-sm font-medium text-secondary">
+          {headerStart}
+          <span className="min-w-0 truncate">{title || session?.title || 'Agent'}</span>
+        </div>
+        <div
+          className="flex-1 overflow-y-auto p-4"
+          onLoadCapture={handleImageLoad}
+          onScroll={handleScroll}
+          ref={scrollRef}
+        >
+          <div className="flex flex-col gap-3" ref={contentRef}>
+            <WelcomeCard
+              chosenHarness={chosenHarnessOf(session)}
+              firstTool={firstTool}
+              mode={mode}
+              onChoose={chooseMode}
+              presetHarness={presetHarnessOf(session)}
+              startingMode={startingMode}
+              status={harnessStatus}
+            />
+            {items.map((item) =>
+              item.type === 'activity' ? (
+                <ActivityGroup entries={item.entries} key={item.key} />
+              ) : (
+                <TranscriptRow
+                  answer={answerQuestion}
+                  {...(item.entry.id === carryOnId ? { carryOn } : {})}
+                  chooseStyle={chooseStyle}
+                  editing={editing}
+                  entry={item.entry}
+                  expiredHints={expiredHints}
+                  key={item.key}
+                  onEdit={mode === 'autonomous' ? startEditing : undefined}
+                  sessionId={sessionId}
+                  setupAnimation={setupAnimation}
+                  setupMotionReel={setupMotionReel}
+                  startedProjectId={startedLines.get(item.entry.id)}
+                  submittedIds={submittedIds}
+                />
+              ),
+            )}
+            {pickUp && <ResumeCard action={session?.resume} onResume={resume} />}
+            {showWorkingIndicator && (
+              <div className="flex items-center gap-1.5 text-sm text-secondary">
+                <Spinner />
+                <span>{activity?.label ?? `${who} is working…`}</span>
+              </div>
+            )}
+          </div>
+        </div>
+        {showPlan && transcript.plan && (
+          <div className="max-h-40 overflow-y-auto border-t border-white/10 px-4 py-2">
+            <AgentPlan steps={transcript.plan} />
+          </div>
+        )}
+        <AttachmentDropZone canAttach={canAttach} files={files}>
+          <div className="flex items-end gap-2 p-3">
+            <AttachButton canAttach={canAttach} files={files} />
+            <Textarea
+              className="max-h-[200px] min-h-11 flex-1 resize-none rounded-lg border-white/10 bg-fill-secondary py-[11px] text-sm leading-5 text-primary placeholder:text-secondary disabled:opacity-60"
+              disabled={inputDisabled}
+              onChange={setInput}
+              onFocus={voice.prewarm}
+              onKeyDown={handleKeyDown}
+              onPaste={pasteFiles(canAttach, files)}
+              placeholder={placeholder}
+              ref={composerRef}
+              rows={1}
+              value={input}
+            />
+            <MicButton dictation={voice} disabled={inputDisabled} />
+            <Button
+              className="h-11 shrink-0 rounded-lg px-4"
+              disabled={
+                sending ||
+                answering ||
+                sendBlocked ||
+                (!stopMode && sendWaits(text, canAttach, files))
+              }
+              onClick={handleButtonClick}
+              type="button"
+            >
+              {buttonLabel}
+            </Button>
+          </div>
+          <ChatModelBar session={session} />
+        </AttachmentDropZone>
       </div>
-      <div
-        className="flex-1 overflow-y-auto p-4"
-        onLoadCapture={handleImageLoad}
-        onScroll={handleScroll}
-        ref={scrollRef}
-      >
-        <div className="flex flex-col gap-3" ref={contentRef}>
-          <WelcomeCard
-            chosenHarness={chosenHarnessOf(session)}
-            firstTool={firstTool}
-            mode={mode}
-            onChoose={chooseMode}
-            presetHarness={presetHarnessOf(session)}
-            startingMode={startingMode}
-            status={harnessStatus}
-          />
-          {items.map((item) =>
-            item.type === 'activity' ? (
-              <ActivityGroup entries={item.entries} key={item.key} />
-            ) : (
-              <TranscriptRow
-                answer={answerQuestion}
-                {...(item.entry.id === carryOnId ? { carryOn } : {})}
-                chooseStyle={chooseStyle}
-                editing={editing}
-                entry={item.entry}
-                expiredHints={expiredHints}
-                key={item.key}
-                onEdit={mode === 'autonomous' ? startEditing : undefined}
-                sessionId={sessionId}
-                setupAnimation={setupAnimation}
-                setupMotionReel={setupMotionReel}
-                startedProjectId={startedLines.get(item.entry.id)}
-                submittedIds={submittedIds}
-              />
-            ),
-          )}
-          {pickUp && <ResumeCard action={session?.resume} onResume={resume} />}
-          {showWorkingIndicator && (
-            <div className="flex items-center gap-1.5 text-sm text-secondary">
-              <Spinner />
-              <span>{activity?.label ?? `${who} is working…`}</span>
-            </div>
-          )}
-        </div>
-      </div>
-      {showPlan && transcript.plan && (
-        <div className="max-h-40 overflow-y-auto border-t border-white/10 px-4 py-2">
-          <AgentPlan steps={transcript.plan} />
-        </div>
-      )}
-      <AttachmentDropZone canAttach={canAttach} files={files}>
-        <div className="flex items-end gap-2 p-3">
-          <AttachButton canAttach={canAttach} files={files} />
-          <Textarea
-            className="max-h-[200px] min-h-11 flex-1 resize-none rounded-lg border-white/10 bg-fill-secondary py-[11px] text-sm leading-5 text-primary placeholder:text-secondary disabled:opacity-60"
-            disabled={inputDisabled}
-            onChange={setInput}
-            onFocus={voice.prewarm}
-            onKeyDown={handleKeyDown}
-            onPaste={pasteFiles(canAttach, files)}
-            placeholder={placeholder}
-            ref={composerRef}
-            rows={1}
-            value={input}
-          />
-          <MicButton dictation={voice} disabled={inputDisabled} />
-          <Button
-            className="h-11 shrink-0 rounded-lg px-4"
-            disabled={
-              sending ||
-              answering ||
-              sendBlocked ||
-              (!stopMode && sendWaits(text, canAttach, files))
-            }
-            onClick={handleButtonClick}
-            type="button"
-          >
-            {buttonLabel}
-          </Button>
-        </div>
-        <ChatModelBar session={session} />
-      </AttachmentDropZone>
-    </div>
+    </ChatModelProvider>
   )
 }

@@ -1,6 +1,6 @@
 import type { ChatModelOption } from '@shared/types/api/agent'
 
-import { isMotionModel, motionModelChoice, motionModelGate } from './chat-models'
+import { isMotionModel, motionModelChoice, motionModelGate, motionOption } from './chat-models'
 
 const model = (id: string, efforts = ['low', 'medium', 'high', 'xhigh', 'max']): ChatModelOption =>
   ({ efforts, id, label: id }) as unknown as ChatModelOption
@@ -26,10 +26,13 @@ describe('Motion Reel models', () => {
       effort: 'high',
       model: 'claude-opus-5-5',
     })
-    // A lower level, or another model, is lifted to the rule.
+    // A lower level, or another model, is lifted to the rule; Max is brought down to Extra high.
     expect(
       motionModelChoice('claude', claude, { effort: 'low', model: 'claude-opus-5-5' })?.effort,
     ).toBe('medium')
+    expect(
+      motionModelChoice('claude', claude, { effort: 'max', model: 'claude-opus-5-5' })?.effort,
+    ).toBe('xhigh')
     expect(motionModelChoice('claude', claude, { model: 'claude-sonnet-5' })?.model).toBe(
       'claude-opus-5-5',
     )
@@ -39,6 +42,10 @@ describe('Motion Reel models', () => {
     expect(motionModelGate('claude', claude)).toBeNull()
     expect(motionModelGate('codex', [model('gpt-6-sol')])).toMatch(/GPT Astra/)
     expect(motionModelGate('claude', [model('claude-sonnet-5')])).toMatch(/Claude Opus/)
+  })
+
+  it('offers the levels from Medium to Extra high', () => {
+    expect(motionOption(model('claude-opus-5-5')).efforts).toEqual(['medium', 'high', 'xhigh'])
   })
 
   it('only allows the newest model of the family', () => {

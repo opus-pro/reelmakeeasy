@@ -3,6 +3,7 @@ import { render, screen } from '@testing-library/react'
 import { ChatModelBar } from './ChatModelBar'
 
 jest.mock('./useChatModel', () => ({
+  useSharedChatModel: () => null,
   useChatModel: (_id: string, enabled: boolean) => ({
     busy: false,
     error: null,

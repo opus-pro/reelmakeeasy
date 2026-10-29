@@ -20,7 +20,7 @@ import { apiOriginAtom } from '@/atom/apiOrigin'
 import { attachmentName, uploadAttachment } from '../attachments/attachments'
 import { Spinner } from '../Spinner'
 
-import { DetailPicker } from './setup-parts'
+import { DetailPicker, EffortSlider } from './setup-parts'
 import { useMotionReelOptions } from './useMotionReelOptions'
 
 export type MotionReelSetupCardProps = {
@@ -257,6 +257,7 @@ function SetupForm({
           />
         </div>
         <DetailPicker detail={detail} onPick={setDetail} />
+        <EffortSlider />
         <MusicPicker
           composers={options.composers}
           music={music}
