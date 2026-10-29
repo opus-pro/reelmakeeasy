@@ -84,6 +84,12 @@ export function ChipRow<T extends number | string>({
   )
 }
 
+/** A slider track's grid of dots in `color`. */
+const dots = (color: string) => ({
+  backgroundImage: `radial-gradient(circle, ${color} 1px, transparent 1.6px)`,
+  backgroundSize: '7px 7px',
+})
+
 /** Where a slider stop sits on the track, the ends inset by half the thumb. */
 const stopAt = (i: number, stops: number) =>
   `calc(1.375rem + (100% - 2.75rem) * ${stops > 1 ? i / (stops - 1) : 0})`
@@ -122,6 +128,8 @@ function LevelSlider<T extends string>({
   )
   const picked = levels[index]
   if (!picked) return null
+  // At the top level the dots turn purple and glow, with light flowing along them.
+  const top = index === levels.length - 1
   return (
     <div className="flex flex-col gap-1.5">
       <span className="flex items-center gap-2">
@@ -138,17 +146,34 @@ function LevelSlider<T extends string>({
           <span>{low}</span>
           <span>{levels[levels.length - 1]?.label}</span>
         </span>
-        <div className="relative h-11 rounded-xl border border-white/10 bg-black/30">
+        <div
+          className={cn(
+            'relative h-11 rounded-xl border bg-black/30 transition-[border-color,box-shadow] duration-300',
+            top ? 'border-violet-400/40 shadow-[0_0_24px_rgb(139_92_246/0.25)]' : 'border-white/10',
+          )}
+        >
           <span
             aria-hidden
             className="absolute inset-x-3 inset-y-2.5"
             style={{
-              backgroundImage:
-                'radial-gradient(circle, rgb(255 255 255 / 0.6) 1px, transparent 1.6px)',
-              backgroundSize: '7px 7px',
+              ...dots(top ? 'rgb(167 139 250 / 0.9)' : 'rgb(255 255 255 / 0.6)'),
               maskImage: 'linear-gradient(to right, rgb(0 0 0 / 0.25), #000)',
             }}
           />
+          {top && (
+            <span
+              aria-hidden
+              className="absolute inset-x-3 inset-y-2.5 animate-dot-flow motion-reduce:hidden"
+              style={{
+                ...dots('rgb(196 181 253)'),
+                filter:
+                  'drop-shadow(0 0 3px rgb(167 139 250)) drop-shadow(0 0 8px rgb(124 58 237))',
+                maskImage: 'linear-gradient(90deg, transparent, #000 40%, #000 60%, transparent)',
+                maskRepeat: 'no-repeat',
+                maskSize: '40% 100%',
+              }}
+            />
+          )}
           {levels.map((level, i) =>
             i === index ? null : (
               <span
@@ -161,7 +186,12 @@ function LevelSlider<T extends string>({
           )}
           <span
             aria-hidden
-            className="absolute top-1/2 size-8 -translate-x-1/2 -translate-y-1/2 rounded-lg bg-white shadow-[0_0_18px_rgb(255_255_255/0.35)] transition-[left] duration-200"
+            className={cn(
+              'absolute top-1/2 size-8 -translate-x-1/2 -translate-y-1/2 rounded-lg bg-white transition-[left,box-shadow] duration-200',
+              top
+                ? 'shadow-[0_0_22px_rgb(167_139_250/0.85)]'
+                : 'shadow-[0_0_18px_rgb(255_255_255/0.35)]',
+            )}
             style={{ left: stopAt(index, levels.length) }}
           />
           <input

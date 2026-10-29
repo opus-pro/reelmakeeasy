@@ -292,6 +292,8 @@ const config: Config = {
         sparkle: 'sparkle 2s ease-in-out infinite',
         'glow-breathe':
           'glow-breathe var(--glow-duration, 4s) cubic-bezier(0.42, 0, 0.58, 1) infinite',
+        // A setup card slider at its top level: a band of light flowing along the dots.
+        'dot-flow': 'dot-flow 2.4s linear infinite',
       },
       backgroundImage: {
         blur: 'linear-gradient(180deg, rgba(0, 0, 0, 0.00) 0%, #2a2a2a 100%)',
@@ -422,6 +424,11 @@ const config: Config = {
         sparkle: {
           '0%, 100%': { transform: 'scale(1) rotate(0deg)' },
           '50%': { transform: 'scale(1.25) rotate(20deg)' },
+        },
+        // Sweeps a narrow mask across the element, from off its left edge to off its right.
+        'dot-flow': {
+          from: { maskPosition: '-60% 0', WebkitMaskPosition: '-60% 0' },
+          to: { maskPosition: '160% 0', WebkitMaskPosition: '160% 0' },
         },
         'glow-breathe': {
           // Organic breathing: inhale to full, hold briefly at the peak (45%-55%),
