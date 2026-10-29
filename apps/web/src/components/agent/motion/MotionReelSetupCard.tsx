@@ -1,10 +1,15 @@
 'use client'
 
 import type { TranscriptEntry } from '@reelmakeeasy/common/codex-agent/agent-transcript'
+import {
+  VIDEO_DEFAULT_DETAIL,
+  VIDEO_DETAIL_LABEL,
+} from '@reelmakeeasy/common/motion-reel/video-detail'
 import type {
   AgentMotionOptions,
   AgentMotionSetup,
   AgentMotionSetupView,
+  VideoDetail,
 } from '@shared/types/api/agent'
 import { Button, cn } from '@shared/ui'
 import { useAtomValue } from 'jotai'
@@ -15,6 +20,7 @@ import { apiOriginAtom } from '@/atom/apiOrigin'
 import { attachmentName, uploadAttachment } from '../attachments/attachments'
 import { Spinner } from '../Spinner'
 
+import { DetailPicker } from './setup-parts'
 import { useMotionReelOptions } from './useMotionReelOptions'
 
 export type MotionReelSetupCardProps = {
@@ -87,6 +93,7 @@ function ChosenSetup({ setup }: { setup: AgentMotionSetupView }) {
     setup.typeLabel,
     `${Math.round(setup.reelSec)} s · ${setup.bars} bars at ${Math.round(setup.bpm)} BPM`,
     setup.ratio,
+    ...(setup.detail ? [`${VIDEO_DETAIL_LABEL[setup.detail]} detail`] : []),
     setup.musicTitle
       ? `♪ ${setup.musicTitle}`
       : setup.music.source === 'agent'
@@ -158,6 +165,7 @@ function SetupForm({
   const [subject, setSubject] = useState('')
   const [lengthSec, setLengthSec] = useState(options.defaultLengthSec)
   const [ratio, setRatio] = useState<Ratio>(options.defaultRatio)
+  const [detail, setDetail] = useState<VideoDetail>(VIDEO_DEFAULT_DETAIL)
   const [referenceKind, setReferenceKind] = useState<ReferenceKind>('none')
   const [referenceUrl, setReferenceUrl] = useState('')
   const [music, setMusic] = useState<MusicPick>(() => defaultMusic(options))
@@ -170,6 +178,7 @@ function SetupForm({
     inFlightRef.current = true
     setPending(true)
     const ok = await onSubmit({
+      detail,
       lengthSec,
       music:
         music.kind === 'library'
@@ -247,6 +256,7 @@ function SetupForm({
             selected={ratio}
           />
         </div>
+        <DetailPicker detail={detail} onPick={setDetail} />
         <MusicPicker
           composers={options.composers}
           music={music}

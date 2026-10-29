@@ -3,7 +3,7 @@ import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
 
-import { animationReviewBlocker, reviewAnimation } from './animation-review'
+import { animationReviewBlocker, reviewAnimation, soundEffectsPlaced } from './animation-review'
 
 /** A 6 s 1080×1920 video: a big panel sliding for 3 s, then a still frame for 3 s (a stall). */
 function makeVideo(file: string): void {
@@ -62,5 +62,21 @@ describe('reviewing an animation', () => {
       /Stalls \(0\.5 s or more where nothing moves\): 1, at 3(\.\d)?-4 s\./,
     )
     expect(result.text).toMatch(/write what you find in animation\/review\.md/i)
+    // No sound effects in the code yet: the review says so.
+    expect(result.text).toMatch(
+      /Sound effects: 0 placed in your code for 6 s \(at least 1 wanted\)/,
+    )
+  })
+
+  it("counts the sound effects in your code, not the kit's", () => {
+    fs.mkdirSync(path.join(dir, 'src', 'scenes'), { recursive: true })
+    fs.writeFileSync(
+      path.join(dir, 'src', 'scenes', 'talk.tsx'),
+      `<Sfx name="pop" at={1} />\nconst SOUNDS = [{ at: 2, name: 'ding' }, { at: 3, name: 'boing' }]\nconst person = { name: 'Allen' }`,
+    )
+    fs.mkdirSync(path.join(dir, 'src', 'host'))
+    fs.writeFileSync(path.join(dir, 'src', 'host', 'sounds.tsx'), `{ name: 'boop' } <Sfx`)
+    fs.writeFileSync(path.join(dir, 'src', 'kit.tsx'), '<Sfx')
+    expect(soundEffectsPlaced(dir)).toBe(3)
   })
 })

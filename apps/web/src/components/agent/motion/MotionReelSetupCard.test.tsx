@@ -112,6 +112,7 @@ describe('MotionReelSetupCard', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Build my reel' }))
     await waitFor(() => expect(onSubmit).toHaveBeenCalledTimes(1))
     expect(onSubmit.mock.calls[0][0]).toEqual({
+      detail: 'xhigh',
       lengthSec: 15,
       music: { id: 'pulse-drive', source: 'library' },
       ratio: '16:9',

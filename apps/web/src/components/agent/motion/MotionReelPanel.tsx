@@ -1,19 +1,29 @@
 'use client'
 
 import type { Transcript, TranscriptEntry } from '@reelmakeeasy/common/codex-agent/agent-transcript'
+import { useState } from 'react'
 
 import { AgentVideoPlayer } from '../AgentVideoPlayer'
 
 import { MotionTasksPanel } from './MotionTasksPanel'
+import { VideoSpeedDownload, VideoSpeedSlider } from './VideoSpeedControl'
 
 type MotionVideo = Extract<TranscriptEntry, { kind: 'motion_video' }>
 
 /**
  * A Motion Reel or Claude Animation chat's side panel: its Tasks (what the agent is doing, the
  * phases, the plan, its to-do list), then the latest render, large, with its beat check (a Motion
- * Reel's). Before the first render, what the chat is set up to make.
+ * Reel's) and its pace (played faster or slower, downloaded at that speed). Before the first
+ * render, what the chat is set up to make.
  */
-export function MotionReelPanel({ transcript }: { transcript: Transcript }) {
+export function MotionReelPanel({
+  sessionId,
+  transcript,
+}: {
+  sessionId: string
+  transcript: Transcript
+}) {
+  const [speed, setSpeed] = useState(1)
   const videos = transcript.entries.filter((e): e is MotionVideo => e.kind === 'motion_video')
   const latest = videos.at(-1)
   const setup = transcript.entries.findLast(
@@ -28,21 +38,22 @@ export function MotionReelPanel({ transcript }: { transcript: Transcript }) {
         <>
           <div className="flex items-center justify-between text-xs text-secondary">
             <span>Latest render{videos.length > 1 ? ` · version ${videos.length}` : ''}</span>
-            <a
-              className="text-primary underline underline-offset-2"
-              download
-              href={latest.videoUrl}
-            >
-              Download
-            </a>
+            <VideoSpeedDownload
+              itemId={latest.id}
+              sessionId={sessionId}
+              speed={speed}
+              videoUrl={latest.videoUrl}
+            />
           </div>
           <AgentVideoPlayer
             aspectRatio="auto"
             key={latest.id}
+            playbackRate={speed}
             poster={latest.posterUrl}
             src={latest.videoUrl}
             videoClassName="max-h-[70vh] w-full"
           />
+          <VideoSpeedSlider onChange={setSpeed} speed={speed} />
           {latest.report && <p className="text-xs text-secondary">Beat check: {latest.report}</p>}
         </>
       ) : (

@@ -24,12 +24,12 @@ function ModelName({ current, label }: { current: boolean; label: string }) {
   )
 }
 
-/** The menu's rows: each model (a submenu of thinking levels when it has them), then the
- *  default's actions. */
+/** The menu's rows: each model (a submenu of thinking levels when it has them, the recommended
+ *  one marked), then the default's actions. */
 export function modelMenuItems(model: ChatModel, harnessName: string): MenuProps[] {
   const state = model.state
   if (!state) return []
-  const { current } = state
+  const { current, recommended } = state
   const rows: MenuProps[] = state.models.map((option: ChatModelOption) => {
     const checked = current?.model === option.id
     if (!option.efforts.length)
@@ -44,9 +44,13 @@ export function modelMenuItems(model: ChatModel, harnessName: string): MenuProps
       checked,
       children: option.efforts.map((effort) => ({
         checked: checked && current?.effort === effort,
-        className: ROW,
+        // Room for the check mark, which sits on the row's right edge.
+        className: cn(ROW, 'pr-8'),
         key: `${option.id}:${effort}`,
-        label: effortLabel(effort),
+        label:
+          recommended?.model === option.id && recommended.effort === effort
+            ? `${effortLabel(effort)} (Recommended)`
+            : effortLabel(effort),
         onClick: () => void model.pick({ effort, model: option.id }),
       })),
       className: ROW,

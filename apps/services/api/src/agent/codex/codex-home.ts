@@ -31,6 +31,7 @@ const AGENT_SKILLS: Record<string, () => string> = {
   [animationSkillName('2d')]: () => renderAnimationSkill('2d'),
   [animationSkillName('3d')]: () => renderAnimationSkill('3d'),
   [animationSkillName('8bit')]: () => renderAnimationSkill('8bit'),
+  [animationSkillName('avatar')]: () => renderAnimationSkill('avatar'),
 }
 
 /** Skills ReelMakeEasy ships as checked-in folders (a SKILL.md with its references), copied whole:

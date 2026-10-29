@@ -13,6 +13,7 @@ import { renderReel, renderStills } from '../motion-reel/motion-render'
 import { voiceReadiness } from './animation-setup'
 import type { VoiceDeps } from './animation-voice'
 import { sineWav } from './test-wav'
+import { saveAvatar } from './avatar-library'
 import {
   AnimationService,
   type AnimationSessions,
@@ -123,8 +124,14 @@ const waitFor = async (check: () => boolean) => {
   }
 }
 
+/** Puts DATA_DIR back as it was (unset stays unset: assigning undefined would set "undefined"). */
+function restoreDataDir(value: string | undefined): void {
+  if (value === undefined) delete process.env['DATA_DIR']
+  else process.env['DATA_DIR'] = value
+}
+
 describe('AnimationService, the setup card', () => {
-  it('lists the three looks with their lengths and tracks', async () => {
+  it('lists the four looks with their lengths and tracks', async () => {
     const { service } = makeAnimation('animation')
     const options = await service.options()
     const lengths = [15, 30, 45, 60, 90]
@@ -132,11 +139,14 @@ describe('AnimationService, the setup card', () => {
       ['2d', '2D', lengths, null],
       ['3d', '3D', lengths, null],
       ['8bit', '8-bit', lengths, null],
+      ['avatar', 'Avatar', lengths, null],
     ])
     expect([options.minLengthSec, options.maxLengthSec]).toEqual([10, 90])
     expect(options.looks[0]?.defaultTrackId).toBe('data-pulse')
-    // Every look has a preview clip in the presets.
-    for (const look of options.looks) expect(look.previewUrl).toMatch(/animation\/looks\/.+\.mp4$/)
+    // Every look has a preview clip in the presets, its link carrying the file's version (so a
+    // re-rendered clip is never played from the browser's old copy).
+    for (const look of options.looks)
+      expect(look.previewUrl).toMatch(/animation\/looks\/.+\.mp4\?v=\d+$/)
     expect(options.tracks.length).toBeGreaterThan(0)
     // Claude composing the music itself first (free), then the music models.
     expect(options.composers.map((c) => c.id)).toEqual(['composer', 'eleven-music', 'ace-step'])
@@ -151,6 +161,7 @@ describe('AnimationService, the setup card', () => {
       'Needs Qwen3 voices on this computer or a fal key.',
       null,
       null,
+      null,
     ])
   })
 
@@ -159,6 +170,7 @@ describe('AnimationService, the setup card', () => {
     service.setup('s1', CARD)
     await waitFor(() => started.length === 1)
     expect(started[0]?.setup).toEqual({
+      detail: 'xhigh',
       lengthSec: 30,
       lookId: '2d',
       lookLabel: '2D',
@@ -168,7 +180,10 @@ describe('AnimationService, the setup card', () => {
     })
     expect(started[0]?.prompt).toContain('reelmakeeasy-animation-2d')
     expect(messages).toContain('Remotion is ready.')
-    expect(fs.existsSync(path.join(workspace, 'animation', 'brief.md'))).toBe(true)
+    const brief = fs.readFileSync(path.join(workspace, 'animation', 'brief.md'), 'utf8')
+    expect(brief).toContain('- **Detail:** Extra high')
+    expect(brief).toContain('## Detail: Extra high')
+    expect(brief).toContain('professional motion graphics designer')
   })
 
   it('takes the card once', async () => {
@@ -219,6 +234,60 @@ describe('AnimationService, animation_voice', () => {
     await waitFor(() => made.started.length === 1)
     return { ...made, voice }
   }
+
+  it("speaks an Avatar video's host with its saved avatar's voice, once the avatar is saved", async () => {
+    const data = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'animation-avatars-')))
+    const before = process.env['DATA_DIR']
+    process.env['DATA_DIR'] = data
+    try {
+      const rig = path.join(data, 'rig.ts')
+      fs.writeFileSync(rig, 'export const avatar = 1')
+      saveAvatar({
+        id: 'av-0123456789',
+        name: 'Sam',
+        preview: rig,
+        rig,
+        style: '2d',
+        voice: 'warm',
+      })
+      const voice = fakeVoice()
+      const made = makeAnimation('animation', voice)
+      made.service.setup('s1', { ...CARD, avatar: { id: 'av-0123456789' }, lookId: 'avatar' })
+      await waitFor(() => made.started.length === 1)
+      expect(made.started[0]?.setup).toMatchObject({
+        avatar: { id: 'av-0123456789' },
+        avatarName: 'Sam',
+      })
+      const result = await made.service.callTool('s1', 'animation_voice', {
+        lines: 'Host: Did you know honey never spoils?',
+        voices: 'Host: avatar',
+      })
+      expect(result.success).toBe(true)
+      expect(voice.voices[0]).toBe('avatar:av-0123456789')
+
+      // A new avatar has no voice until it is saved.
+      const fresh = makeAnimation('animation', fakeVoice())
+      fs.mkdirSync(path.join(fresh.workspace, 'attachments'), { recursive: true })
+      fs.writeFileSync(path.join(fresh.workspace, 'attachments', 'me.jpg'), 'jpg')
+      fresh.service.setup('s1', {
+        ...CARD,
+        avatar: { name: 'Ana', photo: 'me.jpg', style: '2d' },
+        lookId: 'avatar',
+      })
+      await waitFor(() => fresh.started.length === 1)
+      const refused = await fresh.service.callTool('s1', 'animation_voice', {
+        lines: 'Host: Hi!',
+        voices: 'Host: avatar',
+      })
+      expect(refused).toMatchObject({
+        success: false,
+        text: expect.stringMatching(/save it with avatar_save/),
+      })
+    } finally {
+      restoreDataDir(before)
+      fs.rmSync(data, { force: true, recursive: true })
+    }
+  })
 
   it('records the lines and points the project at the voice', async () => {
     const { service, workspace } = await ready()
@@ -377,7 +446,21 @@ describe('AnimationService, music Claude composes', () => {
     fs.copyFileSync(presetPath('motion-reel/music/data-pulse-60s.mp3'), score)
     jest.mocked(readComposedMusic).mockReturnValueOnce({
       file: score,
-      grid: {} as never,
+      grid: {
+        beats: [0, 0.625, 1.25, 1.875],
+        beatsPerBar: 4,
+        bpm: 96,
+        downbeats: [0],
+        durationSec: 30,
+        events: {
+          chords: [],
+          kicks: [0],
+          melody: [],
+          sections: [{ endSec: 30, energy: 1, name: 'A', startSec: 0 }],
+          snares: [1.25],
+        },
+        strongHits: [0],
+      },
       key: 'C major',
       qc: ['QC: passes.'],
       title: 'Composed: C major, 96 BPM',
@@ -387,6 +470,10 @@ describe('AnimationService, music Claude composes', () => {
     expect(result.text).toMatch(/^Composed: C major, 96 BPM\. Put under the voice/)
     expect(updated.at(-1)?.musicTitle).toBe('Composed: C major, 96 BPM')
     expect(fs.existsSync(path.join(workspace, 'animation/public/music.wav'))).toBe(true)
+    // The score's own grid, exactly: the picture can move on its beats.
+    expect(
+      JSON.parse(fs.readFileSync(path.join(workspace, 'animation/public/music.json'), 'utf8')),
+    ).toMatchObject({ beats: [0, 0.625, 1.25, 1.875], bpm: 96, kicks: [0], snares: [1.25] })
   })
 })
 

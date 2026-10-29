@@ -112,7 +112,7 @@ import { ChatModelService } from './chat-model.service'
               ? rankingTools.call(id, tool, args)
               : tool.startsWith('motion_')
                 ? motionTasks.track(id, tool, () => motion().callTool(id, tool, args))
-                : tool.startsWith('animation_')
+                : tool.startsWith('animation_') || tool.startsWith('avatar_')
                   ? motionTasks.track(id, tool, () => animation().callTool(id, tool, args))
                   : edit().callTool(id, tool, args),
           onQuestion: (id) => session && motionTasks.questionAsked(id),

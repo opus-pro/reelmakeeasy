@@ -8,6 +8,16 @@ import { MotionReelPanel } from './MotionReelPanel'
 import { MotionTasksPanel, shownMotionTasks } from './MotionTasksPanel'
 
 // The player itself is tested on its own; jsdom can't load a video.
+// Radix sliders measure their track; jsdom has no ResizeObserver.
+globalThis.ResizeObserver ??= jest.fn(() => ({
+  disconnect: jest.fn(),
+  observe: jest.fn(),
+  unobserve: jest.fn(),
+})) as unknown as typeof ResizeObserver
+
+const mockFetchApiDomain = jest.fn()
+jest.mock('@/hooks/useApi', () => ({ useApi: () => ({ fetchApiDomain: mockFetchApiDomain }) }))
+
 jest.mock('../AgentVideoPlayer', () => ({
   AgentVideoPlayer: ({ src }: { src: string }) => <video data-src={src} />,
 }))
@@ -210,6 +220,7 @@ describe('MotionReelPanel', () => {
   it('shows the Tasks above the latest render', () => {
     const { container } = render(
       <MotionReelPanel
+        sessionId="s1"
         transcript={transcript({
           entries: [
             {
@@ -231,7 +242,7 @@ describe('MotionReelPanel', () => {
   })
 
   it('before a render: the Tasks and where the reel will play', () => {
-    render(<MotionReelPanel transcript={initialTranscript} />)
+    render(<MotionReelPanel sessionId="s1" transcript={initialTranscript} />)
     expect(screen.getByRole('region', { name: 'Tasks' })).toBeTruthy()
     expect(screen.getByText(/it will play here once it is rendered/)).toBeTruthy()
   })

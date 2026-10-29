@@ -1,11 +1,16 @@
 'use client'
 
 import type { TranscriptEntry } from '@reelmakeeasy/common/codex-agent/agent-transcript'
+import {
+  VIDEO_DEFAULT_DETAIL,
+  VIDEO_DETAIL_LABEL,
+} from '@reelmakeeasy/common/motion-reel/video-detail'
 import type {
   AgentAnimationOptions,
   AgentAnimationSetup,
   AgentAnimationSetupView,
   AnimationLookId,
+  VideoDetail,
 } from '@shared/types/api/agent'
 import { Button, cn } from '@shared/ui'
 import { Sparkles } from 'lucide-react'
@@ -15,6 +20,7 @@ import {
   CARD_CLASS,
   ChipRow,
   COMPOSER_LABEL,
+  DetailPicker,
   LABEL_CLASS,
   musicChoice,
   type MusicPick,
@@ -22,6 +28,7 @@ import {
 } from '../motion/setup-parts'
 import { Spinner } from '../Spinner'
 
+import { avatarChoice, type AvatarPick, AvatarPicker, firstAvatarPick } from './AvatarPicker'
 import { useAnimationOptions } from './useAnimationOptions'
 
 export type AnimationSetupCardProps = {
@@ -36,7 +43,7 @@ const SUBJECT_MAX = 600
 
 /**
  * A Claude Animation chat's first step: the look (2D, 3D or 8-bit), what it's about (or Surprise
- * me: Claude picks a fun fact), the music and the length. Sending it locks the card while
+ * me: Claude picks a fun fact), the music, the length and the detail. Sending it locks the card while
  * ReelMakeEasy readies the project; the chat then opens and the card shows what was chosen.
  */
 export function AnimationSetupCard({ entry, onSubmit, sessionId }: AnimationSetupCardProps) {
@@ -47,7 +54,9 @@ export function AnimationSetupCard({ entry, onSubmit, sessionId }: AnimationSetu
 function ChosenSetup({ setup }: { setup: AgentAnimationSetupView }) {
   const facts = [
     setup.lookLabel,
+    ...(setup.avatarName ? [`Avatar: ${setup.avatarName}`] : []),
     `${setup.lengthSec} s`,
+    ...(setup.detail ? [`${VIDEO_DETAIL_LABEL[setup.detail]} detail`] : []),
     setup.musicTitle
       ? `♪ ${setup.musicTitle}`
       : setup.music.source === 'agent'
@@ -104,6 +113,9 @@ function OpenSetup({ onSubmit, sessionId }: Omit<AnimationSetupCardProps, 'entry
 }
 
 function defaultMusic(options: AgentAnimationOptions, look: Look | undefined): MusicPick {
+  // A look without a track of its own (an Avatar video): Claude composes it.
+  if (look && look.defaultTrackId === null && options.composers.some((c) => c.id === 'composer'))
+    return { engine: 'composer', kind: 'agent' }
   const trackId = look?.defaultTrackId ?? options.tracks[0]?.id
   return trackId ? { kind: 'library', trackId } : { kind: 'none' }
 }
@@ -119,8 +131,12 @@ function SetupForm({
   const [subject, setSubject] = useState('')
   const [surprise, setSurprise] = useState(false)
   const [lengthSec, setLengthSec] = useState(first?.defaultLengthSec ?? 30)
+  const [detail, setDetail] = useState<VideoDetail>(VIDEO_DEFAULT_DETAIL)
   const [music, setMusic] = useState<MusicPick>(() => defaultMusic(options, first))
   const [musicTouched, setMusicTouched] = useState(false)
+  const [avatar, setAvatar] = useState<AvatarPick>(() => firstAvatarPick(options.avatars))
+  const talkingHead = lookId === 'avatar'
+  const avatarSent = talkingHead ? avatarChoice(avatar) : null
   const [pending, setPending] = useState(false)
   const inFlightRef = useRef(false)
 
@@ -142,12 +158,16 @@ function SetupForm({
   }
 
   const lengthOk = !custom.trim() || customOk
-  const ready = !!look && !look.disabledReason && (surprise || !!subject.trim()) && lengthOk
+  const avatarOk = !talkingHead || !!avatarSent
+  const ready =
+    !!look && !look.disabledReason && (surprise || !!subject.trim()) && lengthOk && avatarOk
   const submit = async () => {
     if (!ready || !look || inFlightRef.current) return
     inFlightRef.current = true
     setPending(true)
     const ok = await onSubmit({
+      ...(avatarSent ? { avatar: avatarSent } : {}),
+      detail,
       lengthSec: length,
       lookId: look.id,
       music: musicChoice(music),
@@ -165,6 +185,14 @@ function SetupForm({
       <Header />
       <fieldset className="flex flex-col gap-4" disabled={pending}>
         <LookGrid looks={options.looks} onPick={pickLook} selected={lookId} />
+        {talkingHead && (
+          <AvatarPicker
+            avatars={options.avatars}
+            onPick={setAvatar}
+            pick={avatar}
+            sessionId={sessionId}
+          />
+        )}
         <div className="flex flex-col gap-1.5">
           <label className={LABEL_CLASS} htmlFor="animation-subject">
             What&apos;s it about?
@@ -175,7 +203,9 @@ function SetupForm({
             id="animation-subject"
             maxLength={SUBJECT_MAX}
             onChange={(e) => setSubject(e.target.value)}
-            placeholder="e.g. Why honey never goes bad"
+            placeholder={
+              talkingHead ? 'e.g. Why we yawn, told by me' : 'e.g. Why honey never goes bad'
+            }
             value={subject}
           />
           <button
@@ -221,6 +251,7 @@ function SetupForm({
             </label>
           </div>
         )}
+        <DetailPicker detail={detail} onPick={setDetail} />
         <MusicPicker
           agentName="Claude"
           composers={options.composers}
@@ -237,9 +268,11 @@ function SetupForm({
         {pending && <Spinner className="text-secondary" />}
         {!ready && !pending && !look?.disabledReason && (
           <span className="text-xs text-secondary">
-            {lengthOk
-              ? "Say what it's about, or pick Surprise me."
-              : `Pick a length from ${options.minLengthSec} to ${options.maxLengthSec} seconds.`}
+            {!lengthOk
+              ? `Pick a length from ${options.minLengthSec} to ${options.maxLengthSec} seconds.`
+              : !avatarOk
+                ? 'Add a photo and a name for the new avatar.'
+                : "Say what it's about, or pick Surprise me."}
           </span>
         )}
       </div>
@@ -260,7 +293,7 @@ function LookGrid({
   return (
     <div className="flex flex-col gap-1.5">
       <span className={LABEL_CLASS}>Look</span>
-      <div className="grid grid-cols-3 gap-2" role="radiogroup">
+      <div className="grid max-w-md grid-cols-4 gap-2" role="radiogroup">
         {looks.map((look) => (
           <button
             aria-checked={look.id === selected}
@@ -279,7 +312,7 @@ function LookGrid({
             type="button"
           >
             <LookPreview look={look} />
-            <span className="truncate px-2 py-1.5 text-xs font-medium text-primary">
+            <span className="px-2 py-1.5 text-xs leading-tight font-medium text-primary">
               {look.label}
             </span>
           </button>
@@ -303,7 +336,7 @@ function LookPreview({ look }: { look: Look }) {
     return (
       <video
         autoPlay
-        className="aspect-[9/16] max-h-40 w-full bg-black object-cover"
+        className="aspect-[9/16] w-full bg-black object-cover"
         loop
         muted
         playsInline
@@ -311,7 +344,7 @@ function LookPreview({ look }: { look: Look }) {
       />
     )
   return (
-    <span className="flex aspect-[9/16] max-h-40 w-full items-center justify-center bg-white/[0.04] text-2xl font-semibold text-white/30">
+    <span className="flex aspect-[9/16] w-full items-center justify-center bg-white/[0.04] text-2xl font-semibold text-white/30">
       {look.label}
     </span>
   )

@@ -1,6 +1,11 @@
 'use client'
 
-import type { AgentMotionOptions, AgentMotionSetup } from '@shared/types/api/agent'
+import {
+  VIDEO_DEFAULT_DETAIL,
+  VIDEO_DETAIL_LABEL,
+  VIDEO_DETAILS,
+} from '@reelmakeeasy/common/motion-reel/video-detail'
+import type { AgentMotionOptions, AgentMotionSetup, VideoDetail } from '@shared/types/api/agent'
 import { Button, cn } from '@shared/ui'
 import { useAtomValue } from 'jotai'
 import { useEffect, useRef, useState } from 'react'
@@ -10,7 +15,7 @@ import { apiOriginAtom } from '@/atom/apiOrigin'
 import { attachmentName, uploadAttachment } from '../attachments/attachments'
 
 /** Pieces the Motion Reel and Claude Animation setup cards share: the card and label styles, a
- *  row of chips, and the music picker. */
+ *  row of chips, the detail level and the music picker. */
 
 export const CARD_CLASS =
   'flex w-full max-w-2xl flex-col gap-4 rounded-xl border border-white/10 bg-fill-secondary/50 p-4'
@@ -73,6 +78,33 @@ export function ChipRow<T extends number | string>({
           </button>
         ))}
       </div>
+    </div>
+  )
+}
+
+/** The detail chips, the recommended (and default) one marked. */
+const DETAIL_OPTIONS = VIDEO_DETAILS.map((value) => ({
+  label:
+    value === VIDEO_DEFAULT_DETAIL
+      ? `${VIDEO_DETAIL_LABEL[value]} (Recommended)`
+      : VIDEO_DETAIL_LABEL[value],
+  value,
+}))
+
+/** How much detail the agent builds in, and what it costs. */
+export function DetailPicker({
+  detail,
+  onPick,
+}: {
+  detail: VideoDetail
+  onPick: (detail: VideoDetail) => void
+}) {
+  return (
+    <div className="flex flex-col gap-1">
+      <ChipRow label="Detail" onPick={onPick} options={DETAIL_OPTIONS} selected={detail} />
+      <span className="text-xs text-secondary">
+        More detail takes longer and uses more tokens, and looks better.
+      </span>
     </div>
   )
 }

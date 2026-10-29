@@ -3,8 +3,6 @@ import path from 'node:path'
 import { Transform } from 'node:stream'
 import { pipeline } from 'node:stream/promises'
 
-import { Logger } from '@reelmakeeasy/common/logger'
-import { ensureError } from '@reelmakeeasy/common/utils/error-handler'
 import {
   BadRequestException,
   Body,
@@ -28,12 +26,16 @@ import {
   Sse,
   UseGuards,
 } from '@nestjs/common'
+import { Logger } from '@reelmakeeasy/common/logger'
+import { isVideoSpeed, VIDEO_SPEED } from '@reelmakeeasy/common/motion-reel/video-speed'
+import { ensureError } from '@reelmakeeasy/common/utils/error-handler'
 import {
   AGENT_HARNESSES,
+  type AgentAnimationOptions,
   type AgentAnswers,
   type AgentAttachment,
+  type AgentAvatar,
   type AgentHarnessName,
-  type AgentAnimationOptions,
   type AgentMode,
   type AgentMotionOptions,
   type AgentSession,
@@ -50,6 +52,9 @@ import { Observable } from 'rxjs'
 import { ProjectService } from '../projects/projects.service'
 import { RankingService } from '../ranking/ranking.service'
 
+import { AnimationService, AnimationSetupTakenError } from './animation/animation.service'
+import { AnimationSetupError } from './animation/animation-setup'
+import { deleteAvatar, isAvatarId, listAvatars } from './animation/avatar-library'
 import {
   AutonomousService,
   StyleNotRequestedError,
@@ -59,8 +64,6 @@ import { defaultHarness } from './claude/claude-config'
 import { getClaudeStatus } from './claude/claude-locator'
 import { getCodexStatus } from './codex/codex-locator'
 import { AgentEditService, EditNotReadyError } from './edit/agent-edit.service'
-import { AnimationSetupError } from './animation/animation-setup'
-import { AnimationService, AnimationSetupTakenError } from './animation/animation.service'
 import { MotionReelService, MotionSetupTakenError } from './motion-reel/motion-reel.service'
 import { MotionSetupError } from './motion-reel/motion-setup'
 import {
@@ -73,13 +76,13 @@ import { resolveAllowedImagePath } from './agent-files'
 import {
   AgentSessionBusyError,
   AgentSessionService,
+  AnimationSetupPendingError,
   FlowActiveError,
   HarnessNotReadyError,
   InvalidAnswerError,
   ModeAlreadyChosenError,
   ModeNotChattableError,
   MotionSetupPendingError,
-  AnimationSetupPendingError,
   NotResumableError,
   PickTopicFirstError,
   QuestionNotOpenError,
@@ -91,6 +94,7 @@ import { buildAgentSessionList } from './agent-session-list'
 import { ANIMATION_CLAUDE_ONLY, ChatModelService } from './chat-model.service'
 import { parseChoice } from './chat-models'
 import { LoopbackOnlyGuard } from './loopback-only.guard'
+import { renderedVideo, videoAtSpeed } from './video-speed'
 
 /** A Codex item id, or a stringified JSON-RPC request id. */
 const QUESTION_ID = /^[\w.:-]{1,200}$/
@@ -136,6 +140,11 @@ export class AgentController {
     private readonly motion: MotionReelService,
     private readonly animation: AnimationService,
   ) {}
+
+  @Get('animation/options')
+  animationOptions(): Promise<AgentAnimationOptions> {
+    return this.animation.options()
+  }
 
   @Post('sessions/:id/questions/:questionId/answer')
   answerQuestion(
@@ -223,6 +232,12 @@ export class AgentController {
         if (err && !res.headersSent) res.status(404).end()
       },
     )
+  }
+
+  /** The saved avatars (an Avatar video's), newest first. */
+  @Get('avatars')
+  avatars(): AgentAvatar[] {
+    return listAvatars()
   }
 
   /**
@@ -362,6 +377,13 @@ export class AgentController {
         }
         return this.sessions.getSession(session.id)
       })
+  }
+
+  /** Deletes a saved avatar: its rig, picture, photo and voice sample. */
+  @Delete('avatars/:id')
+  deleteAvatar(@Param('id') id: string): { ok: true } {
+    if (!isAvatarId(id) || !deleteAvatar(id)) throw new NotFoundException('No such avatar.')
+    return { ok: true }
   }
 
   /** Deletes a chat. Its project stays (with its Agent tag) and only forgets the chat. */
@@ -550,19 +572,6 @@ export class AgentController {
     return this.chatModels.state(harness, session.chatModel)
   }
 
-  /** Why `mode` can't run on `harness` for this account (a Motion Reel or a Claude Animation
-   *  needs the strongest model; a Claude Animation needs Claude Code), or null. */
-  private codeVideoGate(mode: AgentMode, harness: AgentHarnessName): Promise<null | string> {
-    return isAnimationMode(mode)
-      ? this.chatModels.animationGate(harness)
-      : this.chatModels.motionGate(harness)
-  }
-
-  @Get('animation/options')
-  animationOptions(): Promise<AgentAnimationOptions> {
-    return this.animation.options()
-  }
-
   /** A Claude Animation chat's setup card. Answers once it is checked; the project is readied in
    *  the background and the chat opens with an `animation_setup` event (or the card comes back
    *  with a notice saying what went wrong). */
@@ -615,6 +624,25 @@ export class AgentController {
     return { ...codex, claude, codex, defaultHarness: defaultHarness() }
   }
 
+  /** A rendered code video (Motion Reel, Claude Animation) at another pace, voices at their own
+   *  pitch: made from the finished file the first time it is asked for, then reused. */
+  @Post('sessions/:id/videos/:itemId/speed')
+  async videoSpeed(
+    @Param('id') id: string,
+    @Param('itemId') itemId: string,
+    @Body() body: { speed?: unknown },
+  ): Promise<{ videoUrl: string }> {
+    checkSessionId(id)
+    const speed = body?.speed
+    if (!isVideoSpeed(speed))
+      throw new BadRequestException(
+        `speed must be ${VIDEO_SPEED.min} to ${VIDEO_SPEED.max}, in steps of ${VIDEO_SPEED.step}.`,
+      )
+    const source = renderedVideo(this.sessions.events(id), itemId)
+    if (!source) throw new NotFoundException('No such video in this chat.')
+    return { videoUrl: await videoAtSpeed(source, speed) }
+  }
+
   /** A body's model choice for `harness`: null for `{ model: null }`, 400 for anything else
    *  that isn't a model (and thinking level) the harness offers. */
   private async choiceFrom(
@@ -628,5 +656,13 @@ export class AgentController {
     if (!(await this.chatModels.offers(harness, choice)))
       throw new BadRequestException(`${choice.model} isn't available for this account`)
     return choice
+  }
+
+  /** Why `mode` can't run on `harness` for this account (a Motion Reel or a Claude Animation
+   *  needs the strongest model; a Claude Animation needs Claude Code), or null. */
+  private codeVideoGate(mode: AgentMode, harness: AgentHarnessName): Promise<null | string> {
+    return isAnimationMode(mode)
+      ? this.chatModels.animationGate(harness)
+      : this.chatModels.motionGate(harness)
   }
 }

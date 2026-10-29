@@ -5,7 +5,7 @@ import { AGENT_SKILL_NAMES } from '../codex/codex-home'
 
 import { ANIMATION_SKILL_NAMES, renderAnimationSkill } from './animation-skill'
 
-const LOOKS = ['2d', '3d', '8bit'] as const
+const LOOKS = ['2d', '3d', '8bit', 'avatar'] as const
 
 const checkedIn = (look: string) =>
   path.resolve(__dirname, `../../../../../../skills/reelmakeeasy-animation-${look}/SKILL.md`)
@@ -50,6 +50,13 @@ describe('renderAnimationSkill', () => {
     expect(renderAnimationSkill('3d')).toContain('src/stage')
     expect(renderAnimationSkill('8bit')).toContain('src/pixel')
     expect(renderAnimationSkill('8bit')).toMatch(/narrator/)
+    // An Avatar video draws the avatar from the photo first, then checks and saves it.
+    const avatar = renderAnimationSkill('avatar')
+    expect(avatar).toContain('src/host')
+    expect(avatar).toMatch(/Study the photo/)
+    expect(avatar).toContain('avatar_check')
+    expect(avatar).toContain('avatar_save')
+    expect(avatar).toContain('"Host: avatar"')
   })
 
   it('is shipped into the agent skills', () => {

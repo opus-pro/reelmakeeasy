@@ -6,8 +6,18 @@ import { useAnimationOptions } from './useAnimationOptions'
 
 jest.mock('./useAnimationOptions', () => ({ useAnimationOptions: jest.fn() }))
 jest.mock('jotai', () => ({ ...jest.requireActual('jotai'), useAtomValue: () => '' }))
+jest.mock('../attachments/attachments', () => ({
+  ...jest.requireActual('../attachments/attachments'),
+  uploadAttachment: jest.fn(async (_o: string, _s: string, _f: File, name: string) => ({
+    kind: 'image',
+    name,
+    path: `/w/attachments/${name}`,
+    size: 3,
+  })),
+}))
 
 const OPTIONS: AgentAnimationOptions = {
+  avatars: [],
   composers: [
     { cost: 'Free', description: 'Claude writes it', id: 'composer', label: 'Composed by Claude' },
     { cost: '$0.60 a minute', description: 'Rich', id: 'eleven-music', label: 'ElevenLabs Music' },
@@ -43,6 +53,15 @@ const OPTIONS: AgentAnimationOptions = {
       lengths: [15, 30, 45, 60, 90],
       previewUrl: null,
     },
+    {
+      defaultLengthSec: 30,
+      defaultTrackId: 'data-pulse',
+      description: 'Your own avatar talks to the camera, waist up, with gestures.',
+      id: 'avatar',
+      label: 'Avatar',
+      lengths: [15, 30, 45, 60, 90],
+      previewUrl: null,
+    },
   ],
   tracks: [
     { bpm: 90, id: 'data-pulse', previewUrl: '/a.mp3', title: 'Data Pulse' },
@@ -67,9 +86,12 @@ describe('AnimationSetupCard', () => {
     const onSubmit = renderCard()
     fireEvent.click(look(/3D/))
     fireEvent.click(screen.getByRole('radio', { name: '45 s' }))
-    fireEvent.change(screen.getByRole('textbox', { name: "What's it about?" }), { target: { value: '  black holes  ' } })
+    fireEvent.change(screen.getByRole('textbox', { name: "What's it about?" }), {
+      target: { value: '  black holes  ' },
+    })
     fireEvent.click(screen.getByRole('button', { name: 'Build it' }))
     expect(onSubmit).toHaveBeenCalledWith({
+      detail: 'xhigh',
       lengthSec: 45,
       lookId: '3d',
       music: { id: 'dark-precision', source: 'library' },
@@ -156,6 +178,18 @@ describe('AnimationSetupCard', () => {
     expect(onSubmit).toHaveBeenCalledWith(expect.objectContaining({ lookId: '3d' }))
   })
 
+  it('sends the detail picked, Extra high (recommended) until then', () => {
+    const onSubmit = renderCard()
+    const extraHigh = screen.getByRole('radio', { name: 'Extra high (Recommended)' })
+    expect(extraHigh.getAttribute('aria-checked')).toBe('true')
+    fireEvent.click(screen.getByRole('radio', { name: 'Medium' }))
+    fireEvent.change(screen.getByRole('textbox', { name: "What's it about?" }), {
+      target: { value: 'rain' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Build it' }))
+    expect(onSubmit).toHaveBeenCalledWith(expect.objectContaining({ detail: 'medium' }))
+  })
+
   it('shows what was chosen once it is sent', () => {
     jest
       .mocked(useAnimationOptions)
@@ -165,6 +199,7 @@ describe('AnimationSetupCard', () => {
         entry={{
           ...open,
           setup: {
+            detail: 'high',
             lengthSec: 30,
             lookId: '2d',
             lookLabel: '2D',
@@ -182,6 +217,64 @@ describe('AnimationSetupCard', () => {
     expect(screen.getByText('A fun fact Claude picks')).toBeTruthy()
     expect(screen.getByText('2D')).toBeTruthy()
     expect(screen.getByText('30 s')).toBeTruthy()
+    expect(screen.getByText('High detail')).toBeTruthy()
     expect(screen.getByText('No music')).toBeTruthy()
+  })
+
+  describe('an Avatar video', () => {
+    const subject = () =>
+      fireEvent.change(screen.getByRole('textbox', { name: "What's it about?" }), {
+        target: { value: 'Why we yawn' },
+      })
+
+    it('picks the newest saved avatar and sends it', () => {
+      const onSubmit = renderCard({
+        ...OPTIONS,
+        avatars: [
+          {
+            createdAt: '2026-10-27T00:00:00Z',
+            id: 'av-0123456789',
+            name: 'Sam',
+            previewUrl: '/p.png',
+            style: '2d',
+          },
+        ],
+      })
+      fireEvent.click(look(/^Avatar$/))
+      expect(screen.getByRole('radio', { name: 'Sam (2D)' }).getAttribute('aria-checked')).toBe(
+        'true',
+      )
+      subject()
+      fireEvent.click(screen.getByRole('button', { name: 'Build it' }))
+      expect(onSubmit).toHaveBeenCalledWith(
+        expect.objectContaining({ avatar: { id: 'av-0123456789' }, lookId: 'avatar' }),
+      )
+    })
+
+    it('makes a new avatar only with a photo and a name', async () => {
+      global.URL.createObjectURL = jest.fn(() => 'blob:photo')
+      global.URL.revokeObjectURL = jest.fn()
+      const onSubmit = renderCard()
+      fireEvent.click(look(/^Avatar$/))
+      subject()
+      expect((screen.getByRole('button', { name: 'Build it' }) as HTMLButtonElement).disabled).toBe(
+        true,
+      )
+      screen.getByText('Add a photo and a name for the new avatar.')
+      const photo = new File(['abc'], 'me.jpg', { type: 'image/jpeg' })
+      fireEvent.change(screen.getByLabelText('Photo for the avatar'), {
+        target: { files: [photo] },
+      })
+      await screen.findByAltText('The photo to draw the avatar from')
+      fireEvent.change(screen.getByPlaceholderText('e.g. Sam'), { target: { value: ' Ana ' } })
+      fireEvent.click(screen.getByRole('radio', { name: '3D figure' }))
+      fireEvent.click(screen.getByRole('button', { name: 'Build it' }))
+      expect(onSubmit).toHaveBeenCalledWith(
+        expect.objectContaining({
+          avatar: { name: 'Ana', photo: 'me.jpg', style: '3d' },
+          lookId: 'avatar',
+        }),
+      )
+    })
   })
 })

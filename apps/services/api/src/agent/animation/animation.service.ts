@@ -11,6 +11,7 @@ import {
 } from '@reelmakeeasy/common/animation/looks'
 import { Logger } from '@reelmakeeasy/common/logger'
 import { motionReelTrack, motionReelTracks } from '@reelmakeeasy/common/motion-reel/music'
+import { VIDEO_DETAIL_LABEL, VIDEO_DETAILS } from '@reelmakeeasy/common/motion-reel/video-detail'
 import {
   isMotionMusicEngine,
   MOTION_MUSIC_ENGINE_INFO,
@@ -30,7 +31,10 @@ import {
   KOKORO_VOICE_PREFIX,
   kokoroTextToSpeech,
   qwen3DesignVoiceSample,
+  qwen3TextToSpeech,
+  toReferenceWav,
 } from '@reelmakeeasy/common/tts/fal-tts'
+import { qwen3VoiceReference } from '@reelmakeeasy/common/tts/qwen3-voice'
 import { ensureError } from '@reelmakeeasy/common/utils/error-handler'
 import {
   type AgentAnimationOptions,
@@ -39,10 +43,15 @@ import {
   type AgentSession,
   isAnimationMode,
 } from '@shared/types/api/agent'
+import { AVATAR_NAME_MAX } from '@reelmakeeasy/common/animation/looks'
 
 import { resolveAttachment } from '../agent-attachments'
 import { animationKickoff, animationNextSteps } from '../agent-brief'
-import { ensureComposer, readComposedMusic } from '../motion-reel/motion-composer'
+import {
+  ensureComposer,
+  keptComposerScore,
+  readComposedMusic,
+} from '../motion-reel/motion-composer'
 import { MotionSetupError } from '../motion-reel/motion-setup'
 import { composeMusic, parseComposeRequest } from '../motion-reel/motion-music'
 import { MAX_STILLS, renderReel, renderStills, typeCheck } from '../motion-reel/motion-render'
@@ -53,8 +62,12 @@ import type { ToolCallResult } from '../tools/agent-tools'
 import { animationReviewBlocker, reviewAnimation } from './animation-review'
 import {
   ANIMATION_DIR,
+  AVATAR_RIG,
+  avatarPhoto,
   composerSettings,
+  markAvatarSaved,
   prepareAnimationProject,
+  type ProjectAvatar,
   readAnimationJson,
   writeAnimationJson,
 } from './animation-project'
@@ -65,6 +78,15 @@ import {
   voiceReadiness,
 } from './animation-setup'
 import { parseVoiceArgs, recordVoices, VoiceArgsError, type VoiceDeps } from './animation-voice'
+import {
+  AVATAR_FOLDER,
+  avatarDir,
+  avatarVoice,
+  listAvatars,
+  newAvatarId,
+  readAvatar,
+  saveAvatar,
+} from './avatar-library'
 
 const logger = new Logger('AnimationService')
 
@@ -85,6 +107,31 @@ const COMPOSITION = 'Animation'
 
 /** A narrator's voice when designed voices can't be made here: a calm, clear Kokoro preset. */
 const NARRATOR_PRESET = 'kokoro-am_michael'
+
+/** A voice that speaks as a saved avatar (`avatar:<id>`): cloned from its voice sample. */
+const AVATAR_VOICE_PREFIX = 'avatar:'
+
+/** What an avatar's voice sample says: about 10 s of clear, varied speech to clone from. */
+export const AVATAR_SAMPLE_TEXT =
+  "Hi, it's me! Today I'll show you something surprising, step by step. Ready? Let's go, it only takes a minute, and you'll see it everywhere after this."
+
+/** An avatar's voice: cloned from its saved sample, else designed from its description. */
+async function avatarSpeech(id: string, text: string) {
+  const sample = avatarVoice(id)
+  if (sample)
+    return qwen3TextToSpeech({
+      languageCode: 'en',
+      speaker: {
+        reference: qwen3VoiceReference({
+          referenceText: sample.text,
+          speakerEmbeddingPath: storeUri(`${AVATAR_FOLDER}/${id}/voice.safetensors`),
+        }),
+      },
+      text,
+    })
+  const description = readAvatar(id)?.voice || 'a warm, clear, friendly voice'
+  return qwen3DesignVoiceSample({ description, languageCode: 'en', sampleText: text })
+}
 
 /** The app's own voices and aligner: Qwen3 voice design for a description, Kokoro for a preset id
  *  (each on this computer first, else fal), timed by the app's forced aligner. */
@@ -108,7 +155,9 @@ const APP_VOICES: VoiceDeps = {
   speak: async ({ text, voice }) => {
     const result = voice.startsWith(KOKORO_VOICE_PREFIX)
       ? await kokoroTextToSpeech({ text, voiceId: voice })
-      : await qwen3DesignVoiceSample({ description: voice, languageCode: 'en', sampleText: text })
+      : voice.startsWith(AVATAR_VOICE_PREFIX)
+        ? await avatarSpeech(voice.slice(AVATAR_VOICE_PREFIX.length), text)
+        : await qwen3DesignVoiceSample({ description: voice, languageCode: 'en', sampleText: text })
     return { audio: result.audioBuffer, ranOn: result.ranOn }
   },
 }
@@ -183,6 +232,19 @@ export class AnimationService {
     const projectDir = path.join(this.sessions.workingDir(id), ANIMATION_DIR)
     this.busy.add(id)
     try {
+      if (tool === 'avatar_check' || tool === 'avatar_save') {
+        if (session.animation.lookId !== 'avatar' || !session.animation.avatar)
+          return { success: false, text: 'Only an Avatar video has an avatar.' }
+        const errors = await typeCheck(projectDir)
+        if (errors)
+          return {
+            success: false,
+            text: `The avatar doesn't type-check; fix these first:\n${errors}`,
+          }
+        return tool === 'avatar_check'
+          ? await this.checkAvatar(id, projectDir)
+          : await this.saveAvatar(id, session.animation, projectDir, args)
+      }
       if (tool === 'animation_voice')
         return await this.recordVoice(session.animation, projectDir, args)
       if (tool === 'animation_music') return await this.compose(id, session.animation, args)
@@ -266,7 +328,7 @@ export class AnimationService {
         ),
       }
     await prepareAnimationProject({
-      music: { file: score.file, title: score.title },
+      music: { file: score.file, grid: score.grid, title: score.title },
       musicOnly: true,
       setup: setupFrom(setup),
       workspace,
@@ -320,10 +382,12 @@ export class AnimationService {
       }
     let setup: AgentAnimationSetup | null
     let music: null | ReelMusicSource
+    let avatar: ProjectAvatar | undefined
     try {
       setup = animationSetupFromTool(args)
       if (!setup) return { success: true, text: await this.optionsText() }
       music = this.musicFor(id, setup)
+      avatar = this.avatarFor(id, setup)
     } catch (error) {
       if (error instanceof AnimationSetupError) return { success: false, text: error.message }
       throw error
@@ -339,11 +403,15 @@ export class AnimationService {
     const made = sameWay
       ? newestComposed(path.join(this.sessions.workingDir(id), ANIMATION_DIR, 'music'))
       : null
-    const kept = made && before?.musicTitle ? { file: made, title: before.musicTitle } : null
+    const keptGrid = made ? keptComposerScore(made)?.grid : undefined
+    const kept =
+      made && before?.musicTitle
+        ? { file: made, title: before.musicTitle, ...(keptGrid ? { grid: keptGrid } : {}) }
+        : null
     if (kept) music = kept
     this.preparing.add(id)
     try {
-      const view = await this.ready(id, setup, music)
+      const view = await this.ready(id, setup, music, avatar)
       this.sessions.updateAnimation(id, view)
       const musicNote = view.musicTitle
         ? `music: ${view.musicTitle}`
@@ -387,7 +455,16 @@ export class AnimationService {
         (l) =>
           `- ${l.id}: ${l.label}. ${l.description}${l.disabledReason ? ` Not available here: ${l.disabledReason}` : ''}`,
       ),
+      ...(options.avatars.length
+        ? [
+            'Saved avatars for an Avatar video (avatarId: name, style):',
+            ...options.avatars.map((a) => `- ${a.id}: ${a.name}, ${a.style.toUpperCase()}`),
+          ]
+        : [
+            'No saved avatars yet: an Avatar video needs a new one (avatarName, avatarStyle 2d or 3d, and avatarPhoto: a photo the user attaches with the paperclip).',
+          ]),
       `Length (lengthSec): any whole number of seconds from ${options.minLengthSec} to ${options.maxLengthSec} (${ANIMATION_LENGTHS.slice(0, -1).join(', ')} or ${ANIMATION_LENGTHS.at(-1)} suggested; default ${ANIMATION_DEFAULT_SEC}).`,
+      `Detail (detail): how much detail to build in: ${VIDEO_DETAILS.map((d) => `${d} (${VIDEO_DETAIL_LABEL[d]})`).join(', ')}. Default and recommended: xhigh, the most detail (more time and tokens). Ask the user which they want.`,
       'Library tracks (music "library", musicId):',
       ...options.tracks.map((t) => `- ${t.id}: ${t.title}`),
       'Or music "upload" (the user\'s own file through the paperclip; musicId: its path), "none", or "agent": you make it with animation_music right after the setup, with the music model the user picks (musicEngine):',
@@ -396,6 +473,97 @@ export class AnimationService {
           `- ${e}: ${MOTION_MUSIC_ENGINE_INFO[e].label} (${MOTION_MUSIC_ENGINE_INFO[e].cost}). ${MOTION_MUSIC_ENGINE_INFO[e].description}`,
       ),
     ].join('\n')
+  }
+
+  /** avatar_check: the avatar in 16 poses on one sheet, shown to Claude and the user. */
+  private async checkAvatar(id: string, projectDir: string): Promise<ToolCallResult> {
+    const outDir = path.join(projectDir, 'out', 'avatar', String(Date.now()))
+    const [sheet] = await renderStills(projectDir, [0], outDir, 'AvatarSheet')
+    if (!sheet) return { success: false, text: 'The sheet did not render.' }
+    this.sessions.emitImage(id, sheet)
+    const photo = avatarPhoto(projectDir)
+    return {
+      success: true,
+      text: [
+        `Rendered the avatar's check sheet (the user sees it too): ${ANIMATION_DIR}/${path.relative(projectDir, sheet)}. Open it${photo ? ` next to the photo, ${ANIMATION_DIR}/${path.relative(projectDir, photo)},` : ''} and check: does it look like the person (face shape, skin tone, hair style and colour, eyes, glasses, beard, clothes)? Does every mouth shape read, does the blink close both eyes, do the hands land where each gesture says, is nothing cut off or detached?`,
+        'Fix what is off in src/avatar/avatar.ts and check again. When it looks right, show the user and ask with a card whether to keep it ("Keep this avatar (Recommended)" or "Change something"), then save it with avatar_save.',
+      ].join(' '),
+    }
+  }
+
+  /** avatar_save: keeps the avatar in the library (its rig, picture, photo and voice sample) and
+   *  makes it this chat's avatar, so "Host: avatar" speaks with its voice. */
+  private async saveAvatar(
+    id: string,
+    setup: AgentAnimationSetupView,
+    projectDir: string,
+    args: unknown,
+  ): Promise<ToolCallResult> {
+    const a = (args && typeof args === 'object' ? args : {}) as Record<string, unknown>
+    const chosen = setup.avatar
+    if (!chosen) return { success: false, text: 'Only an Avatar video has an avatar.' }
+    const before = 'id' in chosen ? readAvatar(chosen.id) : null
+    const name =
+      (typeof a['name'] === 'string' && a['name'].trim()) ||
+      ('name' in chosen ? chosen.name : (before?.name ?? setup.avatarName ?? 'My avatar'))
+    if (name.length > AVATAR_NAME_MAX)
+      return { success: false, text: `Keep the name under ${AVATAR_NAME_MAX} characters.` }
+    const voice = (typeof a['voice'] === 'string' && a['voice'].trim()) || before?.voice || ''
+    if (voice.length < 8)
+      return {
+        success: false,
+        text: 'Pass voice: a vivid description of how the avatar sounds (age, warmth, energy, pace: "a bright, friendly woman in her 30s, quick and warm").',
+      }
+    const style = 'style' in chosen ? chosen.style : (before?.style ?? '2d')
+    const avatarId = 'id' in chosen ? chosen.id : newAvatarId()
+    // A new voice sample only when the voice is new: the same voice keeps its sample.
+    let voiceSample: undefined | { text: string; wav: string }
+    let voiceNote = ''
+    if (!before || before.voice !== voice || !avatarVoice(avatarId)) {
+      const ready = await voiceReadiness()
+      if (!ready.designed)
+        voiceNote =
+          " Its voice couldn't be made here (no Qwen3 voices or fal key): lines will use a preset voice."
+      else if (ready.designed === 'fal' && a['confirmPaid'] !== true)
+        return {
+          success: false,
+          text: "The avatar's voice sample would be made on fal, paid (a few cents): this computer doesn't have Qwen3 voices installed. Tell the user in one line, then call avatar_save again with confirmPaid: true.",
+        }
+      else {
+        const sample = await qwen3DesignVoiceSample({
+          description: voice,
+          languageCode: 'en',
+          sampleText: AVATAR_SAMPLE_TEXT,
+        })
+        const wav = path.join(projectDir, 'out', 'avatar', 'voice.wav')
+        fs.mkdirSync(path.dirname(wav), { recursive: true })
+        fs.writeFileSync(wav, await toReferenceWav(sample.audioBuffer, 'sample.wav'))
+        voiceSample = { text: AVATAR_SAMPLE_TEXT, wav }
+      }
+    }
+    const previewDir = path.join(projectDir, 'out', 'avatar', `preview-${Date.now()}`)
+    const [preview] = await renderStills(projectDir, [0], previewDir, 'AvatarPreview')
+    if (!preview) return { success: false, text: "The avatar's picture did not render." }
+    const photo = avatarPhoto(projectDir)
+    saveAvatar({
+      id: avatarId,
+      name,
+      ...(photo && !('id' in chosen) ? { photo } : {}),
+      preview,
+      rig: path.join(projectDir, AVATAR_RIG),
+      style,
+      voice,
+      ...(voiceSample ? { voiceSample } : {}),
+    })
+    markAvatarSaved(projectDir, avatarId)
+    const spec = readAnimationJson(projectDir)
+    writeAnimationJson(projectDir, { ...spec, avatar: { id: avatarId, name, style } })
+    this.sessions.updateAnimation(id, { ...setup, avatar: { id: avatarId }, avatarName: name })
+    this.sessions.emitImage(id, preview)
+    return {
+      success: true,
+      text: `Saved the avatar "${name}" (${style.toUpperCase()}) to the user's avatars: every later Avatar video can use it.${voiceSample ? ' Its voice sample is made: record its lines with voices "Host: avatar" and they are cloned from it, the same voice every time.' : ' Record its lines with voices "Host: avatar".'}${voiceNote} Save again after changing it.`,
+    }
   }
 
   /** animation_review: the last render as contact sheets with its stalls and long scenes, shown
@@ -442,7 +610,18 @@ export class AnimationService {
     const parsed = parseVoiceArgs(args)
     const ready = await voiceReadiness()
     const look = animationLook(setup.lookId)
-    let lines = parsed.lines
+    // "Host: avatar": the saved avatar's own voice.
+    const avatarId = setup.avatar && 'id' in setup.avatar ? setup.avatar.id : null
+    if (parsed.lines.some((l) => l.voice.trim().toLowerCase() === 'avatar') && !avatarId)
+      return {
+        success: false,
+        text: 'The avatar has no voice yet: save it with avatar_save (with its voice) first, then record with "Host: avatar".',
+      }
+    let lines = parsed.lines.map((l) =>
+      l.voice.trim().toLowerCase() === 'avatar'
+        ? { ...l, voice: `${AVATAR_VOICE_PREFIX}${avatarId}` }
+        : l,
+    )
     let note = ''
     const designed = lines.some((l) => !l.voice.startsWith(KOKORO_VOICE_PREFIX))
     if (designed && !ready.designed) {
@@ -498,6 +677,7 @@ export class AnimationService {
   async options(): Promise<AgentAnimationOptions> {
     const voices = await voiceReadiness()
     return {
+      avatars: listAvatars(),
       composers: MOTION_MUSIC_ENGINES.map((id) => ({
         id,
         ...MOTION_MUSIC_ENGINE_INFO[id],
@@ -536,8 +716,9 @@ export class AnimationService {
     if (session.animation || this.preparing.has(id)) throw new AnimationSetupTakenError()
     const setup = parseAnimationSetup(body)
     const music = this.musicFor(id, setup)
+    const avatar = this.avatarFor(id, setup)
     this.preparing.add(id)
-    void this.prepare(id, setup, music).finally(() => this.preparing.delete(id))
+    void this.prepare(id, setup, music, avatar).finally(() => this.preparing.delete(id))
   }
 
   /** The music the card picked, as a file on this computer (null: none, or Claude makes it). */
@@ -554,14 +735,37 @@ export class AnimationService {
     return { file: found.path, title: found.name }
   }
 
+  /** The Avatar video's avatar as a project gets it: a saved one's rig, or a new one's photo (an
+   *  image the user attached). Undefined for the other looks. */
+  protected avatarFor(id: string, setup: AgentAnimationSetup): ProjectAvatar | undefined {
+    const choice = setup.avatar
+    if (setup.lookId !== 'avatar' || !choice) return undefined
+    if ('id' in choice) {
+      const saved = readAvatar(choice.id)
+      if (!saved)
+        throw new AnimationSetupError('That avatar is gone: pick another or make a new one.')
+      return {
+        id: saved.id,
+        name: saved.name,
+        rig: path.join(avatarDir(saved.id), 'avatar.ts'),
+        style: saved.style,
+      }
+    }
+    const photo = resolveAttachment(this.sessions.attachmentsDir(id), choice.photo)
+    if (!photo || photo.kind !== 'image')
+      throw new AnimationSetupError('Add the photo again: that file is gone or is not a picture.')
+    return { id: null, name: choice.name, photo: photo.path, style: choice.style }
+  }
+
   private async prepare(
     id: string,
     setup: AgentAnimationSetup,
     music: null | ReelMusicSource,
+    avatar: ProjectAvatar | undefined,
   ): Promise<void> {
     this.sessions.setFlowWorking(id, true)
     try {
-      const view = await this.ready(id, setup, music)
+      const view = await this.ready(id, setup, music, avatar)
       this.sessions.setFlowWorking(id, false)
       this.sessions.startAnimation(id, view, animationKickoff(view))
     } catch (error) {
@@ -581,11 +785,18 @@ export class AnimationService {
     id: string,
     setup: AgentAnimationSetup,
     music: null | ReelMusicSource,
+    avatar?: ProjectAvatar,
   ): Promise<AgentAnimationSetupView> {
     await ensureMotionReelRuntime((line) => this.sessions.emitMessage(id, line))
-    await prepareAnimationProject({ music, setup, workspace: this.sessions.workingDir(id) })
+    await prepareAnimationProject({
+      ...(avatar ? { avatar } : {}),
+      music,
+      setup,
+      workspace: this.sessions.workingDir(id),
+    })
     return {
       ...setup,
+      ...(avatar ? { avatarName: avatar.name } : {}),
       lookLabel: animationLook(setup.lookId)?.label ?? setup.lookId,
       musicTitle: music?.title ?? null,
     }
@@ -652,6 +863,8 @@ function videoSeconds(projectDir: string, spec: { lengthSec: number }): number {
 /** The setup card's choices back out of the chat's saved setup. */
 function setupFrom(view: AgentAnimationSetupView): AgentAnimationSetup {
   return {
+    ...(view.avatar ? { avatar: view.avatar } : {}),
+    ...(view.detail ? { detail: view.detail } : {}),
     lengthSec: view.lengthSec,
     lookId: view.lookId,
     music: view.music,
@@ -659,11 +872,15 @@ function setupFrom(view: AgentAnimationSetupView): AgentAnimationSetup {
   }
 }
 
-/** A look's preview clip in the presets, when there is one. */
+/** A look's preview clip in the presets, when there is one. The link carries the file's version
+ *  (its change time): the server lets browsers keep a preset for an hour, so a re-rendered clip
+ *  needs a new link or the card keeps playing the old one. */
 function previewUrl(lookId: string): null | string {
   const key = `animation/looks/${lookId}.mp4`
   try {
-    return fs.existsSync(presetPath(key)) ? presetUrl(key) : null
+    const file = presetPath(key)
+    if (!fs.existsSync(file)) return null
+    return `${presetUrl(key)}?v=${Math.round(fs.statSync(file).mtimeMs)}`
   } catch {
     return null
   }

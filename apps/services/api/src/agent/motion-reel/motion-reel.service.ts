@@ -21,6 +21,7 @@ import {
   MOTION_REEL_TYPES,
   motionReelTypeOf,
 } from '@reelmakeeasy/common/motion-reel/reel-type'
+import { VIDEO_DETAIL_LABEL, VIDEO_DETAILS } from '@reelmakeeasy/common/motion-reel/video-detail'
 import { storeUri } from '@reelmakeeasy/common/storage/address'
 import { presetPath, presetUrl } from '@reelmakeeasy/common/storage/presets'
 import { uploadToStore } from '@reelmakeeasy/common/storage/stored-files'
@@ -321,6 +322,7 @@ export class MotionReelService {
       'Types (type: label, then what it is):',
       ...options.types.map((t) => `- ${t.id}: ${t.label}. ${t.description}`),
       `Lengths (lengthSec): ${options.lengths.join(', ')} (default ${options.defaultLengthSec}). Frames (ratio): ${options.ratios.join(', ')} (default ${options.defaultRatio}).`,
+      `Detail (detail): how much detail to build in: ${VIDEO_DETAILS.map((d) => `${d} (${VIDEO_DETAIL_LABEL[d]})`).join(', ')}. Default and recommended: xhigh, the most detail (more time and tokens). Ask the user which they want.`,
       'Library tracks (music "library", musicId: title, tempo):',
       ...options.tracks.map((t) => `- ${t.id}: ${t.title}, ${t.bpm} BPM`),
       'Or music "upload" (the user\'s own file through the paperclip; musicId: its path), "none", or "agent": you make it with motion_music right after the setup, in the way the user picks (musicEngine):',
@@ -389,7 +391,7 @@ export class MotionReelService {
     if (referenceNote)
       fs.appendFileSync(
         path.join(prepared.projectDir, 'brief.md'),
-        `- **Reference files:** \`${REFERENCE_DIR}/\`: ${referenceNote}\n`,
+        `\n## Reference files\n\n\`${REFERENCE_DIR}/\`: ${referenceNote}\n`,
       )
     const view: AgentMotionSetupView = {
       ...setup,
@@ -556,6 +558,7 @@ export class MotionReelService {
 /** The setup card's choices back out of the chat's saved setup. */
 function setupFrom(view: AgentMotionSetupView): MotionReelSetup {
   return {
+    ...(view.detail ? { detail: view.detail } : {}),
     lengthSec: view.lengthSec as MotionReelSetup['lengthSec'],
     // A chat saved when music could be written in code reads as made by the default model.
     music:

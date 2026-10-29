@@ -19,16 +19,17 @@ export type Engine = any
 export type PixelEpisode = { update: (t: number) => void }
 
 /**
- * The 8-bit look's stage: a three.js scene drawn into a 270×480 (or 360×640) target, a post pass
- * (blocky glow, flash, vignette, ordered dithering), scaled up 4× (3×) with hard pixel edges, and a
- * 1080×1920 pixel-font HUD on top. `build(E)` runs once; its `update(t)` runs on every frame.
+ * The 8-bit look's stage: a three.js scene drawn into a 270×480 target (`res` 180, 360 or 540 for
+ * a coarser or finer grid), a post pass (blocky glow, flash, vignette, ordered dithering), scaled
+ * up to 1080 wide (4× at 270) with hard pixel edges, and a 1080×1920 pixel-font HUD on top.
+ * `build(E)` runs once; its `update(t)` runs on every frame.
  */
 export function PixelStage({
   build,
   res = 270,
 }: {
   build: (E: Engine) => PixelEpisode
-  res?: 270 | 360
+  res?: 180 | 270 | 360 | 540
 }) {
   const frame = useCurrentFrame()
   const { fps } = useVideoConfig()

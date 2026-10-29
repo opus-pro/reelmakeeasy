@@ -3,12 +3,20 @@ import {
   ANIMATION_MIN_SEC,
   ANIMATION_SUBJECT_MAX,
   animationLook,
+  AVATAR_NAME_MAX,
+  AVATAR_STYLES,
 } from '@reelmakeeasy/common/animation/looks'
+import { isVideoDetail, VIDEO_DEFAULT_DETAIL } from '@reelmakeeasy/common/motion-reel/video-detail'
 import { localTtsSupports } from '@reelmakeeasy/common/tts/local-tts'
 import { ensureError } from '@reelmakeeasy/common/utils/error-handler'
-import type { AgentAnimationSetup } from '@shared/types/api/agent'
+import type {
+  AgentAnimationAvatar,
+  AgentAnimationSetup,
+  AvatarStyle,
+  VideoDetail,
+} from '@shared/types/api/agent'
 
-import { musicFromTool, MotionSetupError, parseMusic } from '../motion-reel/motion-setup'
+import { MotionSetupError, musicFromTool, parseMusic } from '../motion-reel/motion-setup'
 
 /** A setup card (or animation_setup call) the API can't take; the message says what to fix. */
 export class AnimationSetupError extends Error {}
@@ -25,6 +33,32 @@ function checkedMusic(music: unknown): AgentAnimationSetup['music'] {
     if (error instanceof MotionSetupError) throw new AnimationSetupError(error.message)
     throw error
   }
+}
+
+/** The Avatar video's avatar, checked: a saved one by its id, or a new one (a name, the photo's
+ *  attachment name, 2D or 3D). Whether it exists is the service's to check. */
+function parseAvatar(raw: unknown): AgentAnimationAvatar {
+  if (!isRecord(raw))
+    throw new AnimationSetupError('Pick an avatar, or make a new one from a photo.')
+  if (typeof raw['id'] === 'string' && raw['id'].trim()) return { id: raw['id'].trim() }
+  const name = typeof raw['name'] === 'string' ? raw['name'].trim() : ''
+  if (!name) throw new AnimationSetupError('Give the new avatar a name.')
+  if (name.length > AVATAR_NAME_MAX)
+    throw new AnimationSetupError(`Keep the avatar's name under ${AVATAR_NAME_MAX} characters.`)
+  const photo = typeof raw['photo'] === 'string' ? raw['photo'].trim() : ''
+  if (!photo) throw new AnimationSetupError('Add a photo to draw the avatar from.')
+  const style = raw['style']
+  if (!AVATAR_STYLES.includes(style as AvatarStyle))
+    throw new AnimationSetupError('Pick 2D or 3D for the avatar.')
+  return { name, photo, style: style as AvatarStyle }
+}
+
+/** The detail level, checked: unset is the default (Extra high). */
+function parseDetail(raw: unknown): VideoDetail {
+  if (raw === undefined || raw === null || raw === '') return VIDEO_DEFAULT_DETAIL
+  if (!isVideoDetail(raw))
+    throw new AnimationSetupError('Pick the detail: low, medium, high or xhigh (Extra high).')
+  return raw
 }
 
 /** The setup card's body, checked: every field the card sends, nothing else trusted. */
@@ -48,6 +82,8 @@ export function parseAnimationSetup(body: unknown): AgentAnimationSetup {
       `Keep what it is about under ${ANIMATION_SUBJECT_MAX} characters.`,
     )
   return {
+    ...(look.id === 'avatar' ? { avatar: parseAvatar(body['avatar']) } : {}),
+    detail: parseDetail(body['detail']),
     lengthSec,
     lookId: look.id,
     music: checkedMusic(body['music']),
@@ -70,7 +106,12 @@ export function animationSetupFromTool(args: unknown): AgentAnimationSetup | nul
     if (error instanceof MotionSetupError) throw new AnimationSetupError(error.message)
     throw ensureError(error)
   }
+  const text = (key: string) => (typeof a[key] === 'string' ? (a[key] as string).trim() : '')
   return parseAnimationSetup({
+    avatar: text('avatarId')
+      ? { id: text('avatarId') }
+      : { name: text('avatarName'), photo: text('avatarPhoto'), style: text('avatarStyle') },
+    detail: text('detail') || undefined,
     lengthSec: Number(a['lengthSec']),
     lookId,
     music,

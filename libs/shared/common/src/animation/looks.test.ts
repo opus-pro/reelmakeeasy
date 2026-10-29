@@ -34,11 +34,12 @@ describe('animation modes', () => {
 })
 
 describe('animation looks', () => {
-  it('has exactly the three looks, in order', () => {
+  it('has exactly the four looks, in order', () => {
     expect(ANIMATION_LOOKS.map((l) => [l.id, l.label])).toEqual([
       ['2d', '2D'],
       ['3d', '3D'],
       ['8bit', '8-bit'],
+      ['avatar', 'Avatar'],
     ])
   })
 
@@ -47,8 +48,8 @@ describe('animation looks', () => {
     expect([ANIMATION_MIN_SEC, ANIMATION_MAX_SEC, ANIMATION_DEFAULT_SEC]).toEqual([10, 90, 30])
   })
 
-  it('casts two characters in 2D and a narrator in 3D and 8-bit', () => {
-    expect(ANIMATION_LOOKS.map((l) => l.cast)).toEqual(['duo', 'narrator', 'narrator'])
+  it('casts two characters in 2D, a narrator in 3D and 8-bit, and the avatar as the host', () => {
+    expect(ANIMATION_LOOKS.map((l) => l.cast)).toEqual(['duo', 'narrator', 'narrator', 'host'])
   })
 
   it('picks library tracks that exist', () => {

@@ -186,6 +186,16 @@ describe('the brief and the type', () => {
     )
   })
 
+  it('tells the agent the detail level: Extra high unless the user picked another', async () => {
+    const { reel } = await prepareReelProject({ music: null, musicOnly: true, setup, workspace })
+    const brief = renderBrief(setup, reel, null)
+    expect(brief).toContain('- **Detail:** Extra high (see "Detail" below)\n')
+    expect(brief).toContain('## Detail: Extra high')
+    expect(brief).toContain('professional motion graphics designer')
+    expect(brief).toContain('not the dimension')
+    expect(renderBrief({ ...setup, detail: 'medium' }, reel, null)).toContain('## Detail: Medium')
+  })
+
   it("runs a reel without music on its type's tempo: 120 BPM for a launch, 124 for a showreel", async () => {
     const launch = await prepareReelProject({
       music: null,

@@ -3,12 +3,14 @@ import {
   Audio,
   Easing,
   interpolate,
+  Sequence,
   spring,
   staticFile,
   useCurrentFrame,
   useVideoConfig,
 } from 'remotion'
 
+import { captionChunks, chunkAt, litWord } from './caption-chunks'
 import { sec, spec, type VoiceLine, voiceLines } from './clock'
 
 /**
@@ -60,6 +62,59 @@ export function Music({ volume = 1 }: { volume?: number }) {
       src={staticFile(spec.musicFile)}
       volume={(f) => musicLevel(f, durationInFrames, volume)}
     />
+  )
+}
+
+/** The sound effects in `public/sfx/` (ReelMakeEasy puts them there). */
+export const SFX = [
+  'whoosh',
+  'swish',
+  'riser',
+  'tick',
+  'click',
+  'pop',
+  'hit',
+  'sub-drop',
+  'glitch',
+  'shimmer',
+  'boing',
+  'boop',
+  'bubble',
+  'chime',
+  'coin',
+  'ding',
+  'shutter',
+  'slide-down',
+  'slide-up',
+  'tada',
+  'twinkle',
+  'typing',
+  'zip',
+] as const
+export type SfxName = (typeof SFX)[number]
+
+/** A sound effect at `at` seconds (put it on the word or entrance it belongs to). `volume` 0..1:
+ *  0.3-0.6 sits under the voice. A riser builds for 2 s and peaks on `at`. */
+export function Sfx({ at, name, volume = 0.45 }: { at: number; name: SfxName; volume?: number }) {
+  const from = name === 'riser' ? at - 2 : at
+  return (
+    <Sequence from={Math.max(0, sec(from))} layout="none" name={`sfx ${name}`}>
+      <Audio src={staticFile(`sfx/${name}.wav`)} volume={volume} />
+    </Sequence>
+  )
+}
+
+/** A sound cue: what plays when. */
+export type SoundCue = { at: number; name: SfxName; volume?: number }
+
+/** Every sound cue of a list (`<Sounds cues={SOUNDS} />` in `Animation.tsx`). */
+export function Sounds({ cues }: { cues: SoundCue[] }) {
+  return (
+    <>
+      {cues.map((c, i) => (
+        <Sfx at={c.at} key={`${c.name}-${c.at}-${i}`} name={c.name} volume={c.volume} />
+      ))}
+    </>
   )
 }
 
@@ -122,54 +177,83 @@ export function useMouth(who: string): { mouth: number; vowel: Vowel } {
 }
 
 /**
- * Captions: the line being said, the current word lit in `accent`. Sits in the lower third, inside
- * the safe margin, at least 3% of the frame's height. Up to `maxWords` words around the current one.
+ * Captions: the line being said, a phrase at a time as the app's captions page (1 to `maxWords`
+ * words, a phrase ending after punctuation; see `caption-chunks.ts`), the word being said lit in
+ * `accent`. A phrase stays whole until the next one: never a window sliding a word at a time.
+ * Sits in the lower third by default (`bottom`, a share of the height), inside the safe margin,
+ * at least 3% of the frame's height. `box` puts a soft dark plate behind it (over a busy picture
+ * or a face).
  */
 export function Captions({
   accent = '#FFD166',
+  align = 'center',
+  bottom = 0.16,
+  box = false,
   color = '#FFFFFF',
   fontFamily = 'Inter, Helvetica, Arial, sans-serif',
-  maxWords = 6,
+  maxWords = 3,
+  size = 1,
   style,
+  top,
 }: {
   accent?: string
+  /** `left` for a headline caption at the top-left (with `top`). */
+  align?: 'center' | 'left'
+  bottom?: number
+  box?: boolean
   color?: string
   fontFamily?: string
   maxWords?: number
+  /** Font size against the default (3.4% of the height): 1.6 for a big headline caption. */
+  size?: number
   style?: CSSProperties
+  /** Place it from the top instead (a share of the height), e.g. 0.07 for a headline. */
+  top?: number
 }) {
   const { height, width } = useVideoConfig()
-  const now = useSpeaking()
-  if (!now) return null
-  const words = now.line.words
-  const at = Math.max(0, now.wordIndex)
-  const first = Math.max(0, Math.min(at - Math.floor(maxWords / 2), words.length - maxWords))
-  const shown = words.slice(first, first + maxWords)
+  const t = useCurrentFrame() / spec.fps
+  const line = voiceLines.find((l) => t >= l.start - 0.1 && t <= l.end + 0.4)
+  const chunk = line ? chunkAt(captionChunks(line.words, maxWords), t) : null
+  if (!chunk) return null
+  const fontSize = Math.max(height * 0.034, 40) * size
+  const lit = litWord(chunk, t)
   return (
     <div
       style={{
-        bottom: height * 0.16,
-        color,
-        fontFamily,
-        fontSize: Math.max(height * 0.034, 40),
-        fontWeight: 800,
+        ...(top === undefined ? { bottom: height * bottom } : { top: height * top }),
+        display: 'flex',
+        justifyContent: align === 'left' ? 'flex-start' : 'center',
         left: width * 0.06,
-        lineHeight: 1.15,
         position: 'absolute',
         right: width * 0.06,
-        textAlign: 'center',
-        textShadow: '0 4px 14px rgba(0,0,0,0.55)',
         ...style,
       }}
     >
-      {shown.map((w, i) => (
-        <span
-          key={`${now.index}-${first + i}`}
-          style={{ color: first + i === at ? accent : color }}
-        >
-          {w.text}{' '}
-        </span>
-      ))}
+      <div
+        style={{
+          ...(box
+            ? {
+                background: 'rgba(10,12,20,0.62)',
+                borderRadius: fontSize * 0.4,
+                padding: `${fontSize * 0.18}px ${fontSize * 0.45}px`,
+              }
+            : {}),
+          color,
+          fontFamily,
+          fontSize,
+          fontWeight: 800,
+          lineHeight: 1.15,
+          textAlign: align,
+          textShadow: '0 4px 14px rgba(0,0,0,0.55)',
+        }}
+      >
+        {chunk.words.map((w, i) => (
+          <span key={`${chunk.from}-${i}`} style={{ color: i === lit ? accent : color }}>
+            {w.text}
+            {i < chunk.words.length - 1 ? ' ' : ''}
+          </span>
+        ))}
+      </div>
     </div>
   )
 }

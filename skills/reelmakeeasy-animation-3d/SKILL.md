@@ -23,7 +23,7 @@ Remotion is installed. Its own skills (`remotion-best-practices`, `remotion-mark
 2. **Write the script** the look asks for (below), and a plan of one short line per scene (what is said, what is on screen), into `animation/plan.md` ("## Script" with "Who: words" rows, "## Plan" with "Scene N: …" lines): the Tasks panel beside the chat shows it. Write both in your reply too (the user sees neither your thinking nor the file in the chat), then ask with a card whether to build it ("Build it (Recommended)" or "Change something"), unless they already said to go ahead.
 3. **Record the voices** with `animation_voice`: `lines` one "Who: words" per row, in order, and `voices` one "Who: description" per speaker. It keeps takes that say your words and match each speaker; listen to the lines it warns about (ask the user). When the total is much longer than the length asked for, shorten the script and record again.
 4. **Make the music** only when the brief says you make it: composed by you (write `animation/music/music.mjs` with the `reelmakeeasy-music-composer` skill, run `cd animation/music && node tools/score.mjs --no-cues`, then `animation_music` with engine "composer"), or a music model through `animation_music` with a prompt. Keep it calm under the voice.
-5. **Build.** One component per scene in `src/scenes/`, placed in `Animation.tsx` with `<Sequence from={lineStart(i)}>` so every scene starts on its line. Keep `<Voice />`, `<Music />` and `<Captions />` in `Animation.tsx` (captions in the look's palette and font).
+5. **Build.** One component per scene in `src/scenes/`, placed in `Animation.tsx` with `<Sequence from={lineStart(i)}>` so every scene starts on its line. Keep `<Voice />`, `<Music />` and `<Captions />` in `Animation.tsx` (captions in the look's palette and font). `<Captions />` pages a phrase at a time as the app's captions do (1-3 words, a phrase ending after punctuation, the spoken word lit): use it as it is, move it with `bottom` (a share of the height) and add `box` over a face or a busy picture; never write captions of your own that slide a word at a time.
 6. **Look.** Call `animation_still` on the important moments (each scene's start and its key word) and look at the images. Fix what is cut off, too small, crowded, off-palette or off-look before rendering.
 7. **Render** with `animation_render`: it shows the video to the user. You can't hear it: say so and ask the user to listen to the voices.
 8. **Review.** Nothing is one-shot: after every render, call `animation_review` (contact sheets of the render, with where nothing moves and the scenes held too long), open every sheet, and write `animation/review.md`: every problem by time (a mouth that doesn't move, something under the bubble or captions, cut-off or tiny text, a label off its part, a picture that misses its word, a stall, an empty or crowded frame) with its fix. Fix them, render again and check that render: up to 3 rounds, then say what is still off.
@@ -56,6 +56,40 @@ One detailed 3D hero (an object, a machine, an organ, a planet) explains how som
 - **Labels:** `label(E.labels, 'LEFT VENTRICLE', E.toScreen(point), [ox, oy], { k, color, fontFamily: font })` draws a dot, a leader line and the text (58 px, kept inside the margin); grow it in with `k = ss(start, start + 0.5, t)` on its word.
 - **Helpers:** `THREE`, `mat(color, { roughness, metalness })`, `emissive(color, k)` (a part that lights up), `ss`, `back`, `lerp`, `clamp`, `rng(seed)` (never `Math.random()`).
 - Build the hero from three.js shapes (spheres, cylinders, tori, `LatheGeometry`, `ExtrudeGeometry`, `TubeGeometry` along a curve) with enough parts to look real, and animate what it does (a beat, a turn, a flow along a tube with small instanced spheres). A cutaway: hide the outer shell with `ss` and show the inside.
+
+## Sound and music
+
+A video with only a voice feels flat. Sound effects and a picture that moves with the music are what make it feel alive.
+
+**Sound effects.** `<Sfx name="pop" at={word(2, 'three').start} />` from `src/kit.tsx` plays one at a moment in seconds (or list them as `SoundCue`s and put `<Sounds cues={SOUNDS} />` in `Animation.tsx`). `volume` 0..1: about 0.3 while someone speaks, 0.5-0.7 between lines; the voice always stays on top.
+- Every entrance gets its sound on its frame: an icon or picture popping in (`pop`, `bubble`), a panel or text sliding in (`swish`, `whoosh` for big moves), a headline typing in (`typing`), a counter or number (`tick` per step, `coin` when it lands), a photo (`shutter`), a fact landing or a right answer (`ding`, `chime`), something growing or flying up (`slide-up`), dropping or shrinking (`slide-down`), a bounce or surprise (`boing`), magic or stars (`twinkle`, `shimmer`), the big reveal or the end card (`tada`, `riser` leading into it).
+- About one every 1-2 seconds, none within 0.15 s of another, and varied: the same sound on every entrance becomes noise.
+- The pack (`public/sfx/`):
+  - `whoosh`: an air whoosh (transitions, big moves across the frame)
+  - `swish`: a fast light swish (small moves, text sliding in)
+  - `riser`: a 2-second build that ends on its frame (place it to end on the drop; the file starts 2 s earlier)
+  - `tick`: a crisp tick (counters, timecode, precise cuts)
+  - `click`: a dry UI click (buttons, toggles, a cursor press)
+  - `pop`: a bubbly pitch-drop pop (shapes, icons or cards appearing)
+  - `hit`: a punchy low impact with a crack (big title slams, the drop)
+  - `sub-drop`: a deep falling boom (scene drops, dark reveals)
+  - `glitch`: a short digital stutter (glitch cuts, data, tech reveals)
+  - `shimmer`: a bright sparkle tail (logo reveals, end cards)
+  - `boing`: a springy cartoon boing (a bounce, a surprise, a shrug, something landing)
+  - `boop`: a soft round boop (a wave, a tap, a small friendly accent)
+  - `bubble`: a quick rising blip (a bubble, an icon popping up from below)
+  - `chime`: a two-note chime (a new section, a notification, "here is the answer")
+  - `coin`: a bright two-note coin (a number, a reward, money, a score going up)
+  - `ding`: a clear little bell (a thumbs up, a right answer, a fact landing)
+  - `shutter`: a camera shutter (a photo or a picture appearing)
+  - `slide-down`: a slide whistle falling (something dropping, getting smaller, a fail)
+  - `slide-up`: a slide whistle rising (something growing, flying up, a reveal)
+  - `tada`: a bright four-note arpeggio (the big reveal, the end card)
+  - `twinkle`: a sparkle of rising bell notes (magic, stars, something appearing with a glow)
+  - `typing`: a short burst of key taps (text typing in, a headline being written)
+  - `zip`: a fast zip (a pointer, an arrow, a line drawing across)
+
+**Move with the music.** `src/beat.ts` has the music's grid (`music.bpm`, `beats`, `downbeats`, `kicks`, `snares`, `accents`, `sections`, in seconds; empty with no music). `beatPulse(t, 'beats')` is 1 on each beat easing to 0: give what is already on screen a small life on the beat (a background shape breathing 2-4%, a glow, a bounce of an icon, the ticker's dot). Land entrances that aren't tied to a word on the music with `onBeat(t)`, the bigger changes (a new panel, a scene's set) on a downbeat (`nextBeat(t, 'downbeats')`) or a section start (`sectionAt(t)`). Keep it light: one or two things pulse, never the whole frame on every beat.
 
 ## Craft rules
 

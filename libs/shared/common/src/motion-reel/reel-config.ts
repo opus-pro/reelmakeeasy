@@ -1,3 +1,5 @@
+import type { VideoDetail } from '@shared/types/api/agent'
+
 import type { BeatGrid, MusicEvents, ReelFit } from './beat-grid'
 import { steadyEvents } from './music-events'
 import type { MotionReelType } from './reel-type'
@@ -77,6 +79,8 @@ export type MotionReelReference = { kind: 'website' | 'youtube'; url: string }
 
 /** What the setup card sends. */
 export type MotionReelSetup = {
+  /** How much detail to build in; unset (a reel set up before it existed): Extra high. */
+  detail?: VideoDetail
   lengthSec: MotionReelLength
   music: MotionReelMusic
   ratio: MotionReelRatio

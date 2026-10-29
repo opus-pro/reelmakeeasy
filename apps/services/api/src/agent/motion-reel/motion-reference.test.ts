@@ -23,17 +23,23 @@ describe('remotionBrowserPath', () => {
 
 describe('checkReference', () => {
   it('takes YouTube links on YouTube hosts only', () => {
-    expect(checkReference({ kind: 'youtube', url: ' https://www.youtube.com/watch?v=x ' }).url).toBe(
-      'https://www.youtube.com/watch?v=x',
-    )
-    expect(() => checkReference({ kind: 'youtube', url: 'http://youtu.be/x' })).toThrow(BadReferenceError)
-    expect(() => checkReference({ kind: 'youtube', url: 'https://youtube.com.evil.example/x' })).toThrow(
+    expect(
+      checkReference({ kind: 'youtube', url: ' https://www.youtube.com/watch?v=x ' }).url,
+    ).toBe('https://www.youtube.com/watch?v=x')
+    expect(() => checkReference({ kind: 'youtube', url: 'http://youtu.be/x' })).toThrow(
       BadReferenceError,
     )
+    expect(() =>
+      checkReference({ kind: 'youtube', url: 'https://youtube.com.evil.example/x' }),
+    ).toThrow(BadReferenceError)
   })
 
   it('refuses websites on this computer or a private network', () => {
-    for (const url of ['https://localhost:5017', 'https://10.0.0.2', 'https://169.254.169.254/latest'])
+    for (const url of [
+      'https://localhost:5017',
+      'https://10.0.0.2',
+      'https://169.254.169.254/latest',
+    ])
       expect(() => checkReference({ kind: 'website', url })).toThrow(BadReferenceError)
   })
 })

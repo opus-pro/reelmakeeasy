@@ -110,6 +110,7 @@ describe('ensureAgentCodexHome', () => {
       'reelmakeeasy-animation-2d',
       'reelmakeeasy-animation-3d',
       'reelmakeeasy-animation-8bit',
+      'reelmakeeasy-animation-avatar',
       MUSIC_COMPOSER_SKILL_NAME,
     ])
     const animation = path.join(home, 'skills', 'reelmakeeasy-animation-8bit', 'SKILL.md')

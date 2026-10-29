@@ -11,6 +11,7 @@ import {
   type MotionReelSetup,
 } from '@reelmakeeasy/common/motion-reel/reel-config'
 import { MOTION_REEL_TYPES, motionReelTypeOf } from '@reelmakeeasy/common/motion-reel/reel-type'
+import { isVideoDetail, VIDEO_DEFAULT_DETAIL } from '@reelmakeeasy/common/motion-reel/video-detail'
 import { ensureError } from '@reelmakeeasy/common/utils/error-handler'
 
 import { checkReference } from './motion-reference'
@@ -61,6 +62,12 @@ export function parseMotionSetup(body: unknown): MotionReelSetup {
 
   const parsedMusic = parseMusic(body['music'])
 
+  // Unset (a card from before the detail level): Extra high.
+  const detail =
+    body['detail'] === undefined || body['detail'] === '' ? VIDEO_DEFAULT_DETAIL : body['detail']
+  if (!isVideoDetail(detail))
+    throw new MotionSetupError('Pick the detail: low, medium, high or xhigh (Extra high).')
+
   const reference = body['reference']
   let parsedReference: MotionReelSetup['reference']
   if (isRecord(reference) && typeof reference['url'] === 'string' && reference['url'].trim()) {
@@ -73,6 +80,7 @@ export function parseMotionSetup(body: unknown): MotionReelSetup {
   }
 
   return {
+    detail,
     lengthSec: lengthSec as MotionReelLength,
     music: parsedMusic,
     ratio: ratio as MotionReelRatio,
@@ -130,6 +138,7 @@ export function motionSetupFromTool(
   const music = musicFromTool(a, 'motion_setup')
   const reference = userReference(text('referenceUrl'), userTexts)
   return parseMotionSetup({
+    detail: text('detail') || undefined,
     lengthSec: Number(a['lengthSec']),
     music,
     ratio: text('ratio'),

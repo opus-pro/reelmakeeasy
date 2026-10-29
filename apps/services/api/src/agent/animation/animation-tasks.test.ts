@@ -126,6 +126,44 @@ describe('animationTasks', () => {
   })
 })
 
+describe('the Avatar row', () => {
+  const head = (avatar: AgentAnimationSetupView['avatar'], over = {}) =>
+    animationTasks(
+      input({ setup: { ...SETUP, avatar, lookId: 'avatar', lookLabel: 'Avatar', ...over } }),
+    )
+
+  it('shows only for an Avatar video, after Set up', () => {
+    expect(animationTasks(input()).some((t) => t.id === 'avatar')).toBe(false)
+    expect(
+      head({ id: 'av-0123456789' })
+        .map((t) => t.id)
+        .slice(0, 3),
+    ).toEqual(['setup', 'avatar', 'plan'])
+  })
+
+  it('is done for a saved avatar, and waits for a new one until it is saved', () => {
+    expect(row(head({ id: 'av-0123456789' }, { avatarName: 'Sam' }), 'avatar')).toMatchObject({
+      result: 'Sam',
+      state: 'done',
+    })
+    expect(row(head({ name: 'Ana', photo: 'me.jpg', style: '2d' }), 'avatar')).toMatchObject({
+      result: 'Drawing Ana from the photo',
+      state: 'waiting',
+    })
+    const checking = animationTasks(
+      input({
+        calls: [call('avatar_check', true, 'Rendered the sheet')],
+        setup: {
+          ...SETUP,
+          avatar: { name: 'Ana', photo: 'me.jpg', style: '2d' },
+          lookId: 'avatar',
+        },
+      }),
+    )
+    expect(row(checking, 'avatar')).toMatchObject({ state: 'running' })
+  })
+})
+
 describe('the Review row', () => {
   const SHEETS = 'Made 2 contact sheets of the render (the user sees them too): …'
   it('waits for a check after each render, and shows the round and review.md', () => {

@@ -18,8 +18,50 @@ const ok = {
 }
 
 describe('parseAnimationSetup', () => {
+  it("takes an Avatar video's avatar: a saved one, or a new one with a name, photo and style", () => {
+    const head = { ...ok, lookId: 'avatar' }
+    expect(parseAnimationSetup({ ...head, avatar: { id: 'av-0123456789' } }).avatar).toEqual({
+      id: 'av-0123456789',
+    })
+    expect(
+      parseAnimationSetup({ ...head, avatar: { name: ' Sam ', photo: 'me.jpg', style: '3d' } })
+        .avatar,
+    ).toEqual({ name: 'Sam', photo: 'me.jpg', style: '3d' })
+    expect(() => parseAnimationSetup(head)).toThrow(/Pick an avatar/)
+    expect(() =>
+      parseAnimationSetup({ ...head, avatar: { name: 'Sam', photo: '', style: '2d' } }),
+    ).toThrow(/Add a photo/)
+    expect(() =>
+      parseAnimationSetup({ ...head, avatar: { name: 'Sam', photo: 'me.jpg', style: '4d' } }),
+    ).toThrow(/2D or 3D/)
+    // Another look never carries an avatar.
+    expect(parseAnimationSetup({ ...ok, avatar: { id: 'av-0123456789' } }).avatar).toBeUndefined()
+  })
+
+  it("takes an Advanced chat's avatar from flat arguments", () => {
+    expect(
+      animationSetupFromTool({
+        avatarName: 'Sam',
+        avatarPhoto: 'attachments/me.jpg',
+        avatarStyle: '2d',
+        lengthSec: 30,
+        lookId: 'avatar',
+        music: 'none',
+      })?.avatar,
+    ).toEqual({ name: 'Sam', photo: 'attachments/me.jpg', style: '2d' })
+    expect(
+      animationSetupFromTool({
+        avatarId: 'av-0123456789',
+        lengthSec: 30,
+        lookId: 'avatar',
+        music: 'none',
+      })?.avatar,
+    ).toEqual({ id: 'av-0123456789' })
+  })
+
   it('takes a 2D setup with a library track', () => {
     expect(parseAnimationSetup(ok)).toEqual({
+      detail: 'xhigh',
       lengthSec: 30,
       lookId: '2d',
       music: { id: 'data-pulse', source: 'library' },
@@ -31,6 +73,12 @@ describe('parseAnimationSetup', () => {
     expect(parseAnimationSetup({ ...ok, lengthSec: 90 }).lengthSec).toBe(90)
     expect(parseAnimationSetup({ ...ok, lengthSec: 22, lookId: '3d' }).lengthSec).toBe(22)
     expect(parseAnimationSetup({ ...ok, lengthSec: 10, lookId: '8bit' }).lengthSec).toBe(10)
+  })
+
+  it('takes the detail level, Extra high when unset', () => {
+    expect(parseAnimationSetup({ ...ok, detail: 'medium' }).detail).toBe('medium')
+    expect(parseAnimationSetup({ ...ok, detail: '' }).detail).toBe('xhigh')
+    expect(() => parseAnimationSetup({ ...ok, detail: 'ultra' })).toThrow(AnimationSetupError)
   })
 
   it('reads an empty subject as Surprise me', () => {
@@ -86,11 +134,19 @@ describe('animationSetupFromTool', () => {
         subject: 'How Tokyo Skytree stays up in an earthquake',
       }),
     ).toEqual({
+      detail: 'xhigh',
       lengthSec: 45,
       lookId: '8bit',
       music: { engine: 'ace-step', source: 'agent' },
       subject: 'How Tokyo Skytree stays up in an earthquake',
     })
+  })
+
+  it('passes the detail level on', () => {
+    expect(
+      animationSetupFromTool({ detail: 'high', lengthSec: 30, lookId: '3d', music: 'none' })
+        ?.detail,
+    ).toBe('high')
   })
 
   it('takes the user file by its name', () => {

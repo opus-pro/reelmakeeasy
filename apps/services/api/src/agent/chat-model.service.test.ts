@@ -59,6 +59,34 @@ describe('ChatModelService', () => {
     await expect(svc.animationGate('claude')).resolves.toBeNull()
   })
 
+  it('starts a Motion Reel or Claude Animation chat at Extra high, whatever the saved default', async () => {
+    const opus = [
+      {
+        efforts: ['low', 'medium', 'high', 'xhigh', 'max'],
+        id: 'claude-opus-5-5',
+        label: 'Opus 5.5',
+      },
+      { efforts: ['low', 'medium'], id: 'claude-sonnet-5-5', label: 'Sonnet 5.5' },
+    ]
+    const probe = jest.fn().mockResolvedValue({ models: opus })
+    const svc = new ChatModelService({ probe, root })
+    svc.setDefault('claude', { effort: 'medium', model: 'claude-opus-5-5' })
+    const xhigh = { effort: 'xhigh', model: 'claude-opus-5-5' }
+    const state = await svc.motionState('claude')
+    expect(state.current).toEqual(xhigh)
+    expect(state.recommended).toEqual(xhigh)
+    expect(state.models.map((m) => [m.id, m.efforts])).toEqual([
+      ['claude-opus-5-5', ['medium', 'high', 'xhigh', 'max']],
+    ])
+    expect(svc.motionChoiceFor('claude')).toEqual(xhigh)
+    // A level picked for the chat stays, and Extra high is still the recommended one.
+    const high = { effort: 'high', model: 'claude-opus-5-5' }
+    const picked = await svc.motionState('claude', high)
+    expect(picked.current).toEqual(high)
+    expect(picked.recommended).toEqual(xhigh)
+    expect(svc.motionChoiceFor('claude', high)).toEqual(high)
+  })
+
   it('saves and clears a default per harness, kept on disk', async () => {
     const probe = jest.fn().mockResolvedValue({ models, plan: 'plus' })
     const svc = new ChatModelService({ probe, root })
