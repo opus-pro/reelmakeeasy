@@ -62,6 +62,9 @@ export function avatarChoice(pick: AvatarPick): AgentAnimationAvatar | null {
 
 const TILE =
   'flex w-24 shrink-0 flex-col overflow-hidden rounded-lg border text-left transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-white/50'
+/** A tile's name strip: the same height on every tile, the name centred in it. */
+const NAME =
+  'flex h-8 min-w-0 items-center justify-center px-2 text-center text-xs font-medium text-primary'
 
 /**
  * The Avatar explainer's avatar: the user's saved avatars drawn in the picked style as picture
@@ -137,10 +140,10 @@ export function AvatarPicker({
           role="radio"
           type="button"
         >
-          <span className="flex aspect-square w-full items-center justify-center bg-white/[0.04]">
+          <span className="flex aspect-[1/1] w-full shrink-0 items-center justify-center bg-white/[0.04]">
             <Plus className="size-6 text-white/50" />
           </span>
-          <span className="truncate px-2 py-1.5 text-xs font-medium text-primary">New avatar</span>
+          <span className={NAME}>New avatar</span>
         </button>
         {shown.map((a) => (
           <button
@@ -161,15 +164,15 @@ export function AvatarPicker({
               // eslint-disable-next-line @next/next/no-img-element -- served by the local API
               <img
                 alt=""
-                className="aspect-square w-full bg-white/5 object-cover"
+                className="aspect-[1/1] w-full shrink-0 bg-white/5 object-cover"
                 src={a.previewUrl}
               />
             ) : (
-              <span className="flex aspect-square w-full items-center justify-center bg-white/[0.04] text-lg font-semibold text-white/40">
+              <span className="flex aspect-[1/1] w-full shrink-0 items-center justify-center bg-white/[0.04] text-lg font-semibold text-white/40">
                 {a.name.slice(0, 1).toUpperCase()}
               </span>
             )}
-            <span className="flex items-center justify-between gap-1 px-2 py-1.5 text-xs font-medium text-primary">
+            <span className={cn(NAME, 'gap-1')}>
               <span className="truncate">{a.name}</span>
               {either && (
                 <span className="text-[10px] text-secondary">{a.style.toUpperCase()}</span>

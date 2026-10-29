@@ -13,7 +13,7 @@ import type {
   VideoDetail,
 } from '@shared/types/api/agent'
 import { Button, cn } from '@shared/ui'
-import { Sparkles } from 'lucide-react'
+import { Check, Sparkles } from 'lucide-react'
 import { useRef, useState } from 'react'
 
 import {
@@ -328,10 +328,27 @@ function AvatarExplainerCheck({
     >
       <input
         checked={checked}
-        className="size-4 shrink-0 accent-violet-400"
+        className="peer sr-only"
         onChange={(e) => onChange(e.target.checked)}
         type="checkbox"
       />
+      <span
+        aria-hidden
+        className={cn(
+          'flex size-5 shrink-0 items-center justify-center rounded-md border-2 transition-all duration-150 peer-focus-visible:ring-2 peer-focus-visible:ring-violet-300/60',
+          checked
+            ? 'border-violet-400 bg-violet-400 shadow-[0_0_10px_rgb(167_139_250/0.55)]'
+            : 'border-white/30 bg-transparent',
+        )}
+      >
+        <Check
+          className={cn(
+            'size-3.5 text-white transition-transform duration-150',
+            checked ? 'scale-100' : 'scale-0',
+          )}
+          strokeWidth={3.5}
+        />
+      </span>
       <span className="flex flex-col">
         <span className="text-sm font-medium text-primary">Avatar explainer</span>
         <span className="text-xs text-secondary">
@@ -393,7 +410,7 @@ function StyleGrid({
                   </span>
                 )}
               </span>
-              <span className="px-2 py-1.5 text-xs leading-tight font-medium text-primary">
+              <span className="flex h-8 items-center justify-center px-2 text-center text-xs leading-tight font-medium text-primary">
                 {style.label}
               </span>
             </button>
