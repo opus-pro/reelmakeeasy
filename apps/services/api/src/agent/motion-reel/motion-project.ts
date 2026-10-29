@@ -21,7 +21,14 @@ import {
   MOTION_REEL_FALLBACK_BPM,
   MOTION_REEL_TYPE_INFO,
 } from '@reelmakeeasy/common/motion-reel/reel-type'
+import {
+  VIDEO_DEFAULT_DETAIL,
+  VIDEO_DETAIL_LABEL,
+} from '@reelmakeeasy/common/motion-reel/video-detail'
 import { presetPath } from '@reelmakeeasy/common/storage/presets'
+import type { VideoDetail } from '@shared/types/api/agent'
+
+import { detailBrief } from '../video-detail'
 
 import { composerTitle, installComposer } from './motion-composer'
 import { run, runtimeDir, sfxDir } from './motion-runtime'
@@ -147,6 +154,17 @@ function makeWith(engine: MotionMusicEngine): string {
   return `with ${MOTION_MUSIC_ENGINE_INFO[engine].label} (engine "${engine}")`
 }
 
+/** What each detail level means for a reel: 2D, 3D or a mix, the dimension is the agent's call;
+ *  the level is how dense and finished every frame is. */
+const REEL_DETAIL: Record<VideoDetail, string> = {
+  high: 'Three or more layers moving at once (a textured background, shapes in the middle, type in front), something hitting every beat, particle accents on the big hits, a designed transition into every section, and depth and light (glow, shadow, a sweep).',
+  low: 'A few bold type and shape moves per section, flat colours, cuts on the bar.',
+  medium:
+    'Kinetic type and shapes over a background that keeps moving, an accent on most beats, transitions on the bar (a slide, a push, a zoom).',
+  xhigh:
+    'Every frame dense and finished: layered textures, grids, patterns and type; hundreds to thousands of particles or instanced shapes; every beat and accent hit; transitions that shatter, morph or fly through; light sweeps and motion blur; no two sections alike. 2D, 3D or a mix: what matters is the detail, not the dimension. A product launch shows the product itself at this level: its screens and parts built and animated piece by piece.',
+}
+
 /** The brief the agent reads first: what the user chose, in plain words. */
 export function renderBrief(
   setup: MotionReelSetup,
@@ -154,6 +172,7 @@ export function renderBrief(
   music: null | ReelMusicSource,
 ): string {
   const type = MOTION_REEL_TYPE_INFO[setup.type]
+  const detail = setup.detail ?? VIDEO_DEFAULT_DETAIL
   const musicLine = music
     ? `"${music.title}", trimmed to the reel and fading out over the last ${reel.fadeOutSec} s`
     : setup.music.source === 'agent'
@@ -171,9 +190,12 @@ export function renderBrief(
     `- **Length:** ${reel.lengthSec} s: ${reel.bars} bars of ${reel.beatsPerBar} beats at ${reel.bpm} BPM (asked for about ${setup.lengthSec} s; the length is whole bars)`,
     `- **Frame:** ${setup.ratio}, ${reel.width}×${reel.height}, ${reel.fps} fps`,
     `- **Music:** ${musicLine}`,
+    `- **Detail:** ${VIDEO_DETAIL_LABEL[detail]} (see "Detail" below)`,
     setup.reference
       ? `- **Reference:** ${referenceKind} (${setup.reference.url})`
       : '- **Reference:** none',
+    '',
+    detailBrief(detail, REEL_DETAIL[detail]),
     '',
   ].join('\n')
 }

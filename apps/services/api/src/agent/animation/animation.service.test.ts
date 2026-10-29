@@ -170,6 +170,7 @@ describe('AnimationService, the setup card', () => {
     service.setup('s1', CARD)
     await waitFor(() => started.length === 1)
     expect(started[0]?.setup).toEqual({
+      detail: 'xhigh',
       lengthSec: 30,
       lookId: '2d',
       lookLabel: '2D',
@@ -179,7 +180,10 @@ describe('AnimationService, the setup card', () => {
     })
     expect(started[0]?.prompt).toContain('reelmakeeasy-animation-2d')
     expect(messages).toContain('Remotion is ready.')
-    expect(fs.existsSync(path.join(workspace, 'animation', 'brief.md'))).toBe(true)
+    const brief = fs.readFileSync(path.join(workspace, 'animation', 'brief.md'), 'utf8')
+    expect(brief).toContain('- **Detail:** Extra high')
+    expect(brief).toContain('## Detail: Extra high')
+    expect(brief).toContain('professional motion graphics designer')
   })
 
   it('takes the card once', async () => {

@@ -35,8 +35,15 @@ describe('parseMotionSetup', () => {
   it('takes a full card', () => {
     expect(parseMotionSetup(base)).toEqual({
       ...base,
+      detail: 'xhigh',
       music: { id: 'pulse-drive', source: 'library' },
     })
+  })
+
+  it('takes the detail level, Extra high when unset', () => {
+    expect(parseMotionSetup({ ...base, detail: 'low' }).detail).toBe('low')
+    expect(parseMotionSetup({ ...base, detail: '' }).detail).toBe('xhigh')
+    expect(() => parseMotionSetup({ ...base, detail: 'max' })).toThrow(MotionSetupError)
   })
 
   it('trims the subject and refuses an empty or too long one', () => {
@@ -148,6 +155,7 @@ describe('motionSetupFromTool', () => {
 
   it("reads a full call as the card's setup, checked the same way", () => {
     expect(motionSetupFromTool(args, said)).toEqual({
+      detail: 'xhigh',
       lengthSec: 15,
       music: { id: 'pulse-drive', source: 'library' },
       ratio: '16:9',

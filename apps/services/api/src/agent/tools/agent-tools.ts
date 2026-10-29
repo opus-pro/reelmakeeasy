@@ -214,6 +214,12 @@ export const AGENT_TOOLS: Record<AgentToolName, DynamicToolSpec> = {
           enum: ['2d', '3d'],
           type: 'string',
         },
+        detail: {
+          description:
+            'How much detail to build in, as the user picked: low, medium, high or xhigh (Extra high, the default and recommended: the most detail, more time and tokens).',
+          enum: ['low', 'medium', 'high', 'xhigh'],
+          type: 'string',
+        },
         lookId: {
           description: "The look ('avatar': an Avatar video, with avatarId or a new avatar).",
           enum: ['2d', '3d', '8bit', 'avatar'],
@@ -389,6 +395,12 @@ export const AGENT_TOOLS: Record<AgentToolName, DynamicToolSpec> = {
     inputSchema: {
       additionalProperties: false,
       properties: {
+        detail: {
+          description:
+            'How much detail to build in, as the user picked: low, medium, high or xhigh (Extra high, the default and recommended: the most detail, more time and tokens).',
+          enum: ['low', 'medium', 'high', 'xhigh'],
+          type: 'string',
+        },
         lengthSec: {
           description: 'About how long, in seconds (the reel is whole bars of its music).',
           enum: [10, 15, 30, 60],

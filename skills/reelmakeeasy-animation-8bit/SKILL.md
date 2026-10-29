@@ -48,7 +48,7 @@ A low-resolution 3D scene drawn blocky and dithered like an old video game, with
 
 ### The 8-bit library (`src/pixel/`)
 
-`Animation.tsx` holds `<Voice />`, `<Music />` and `<PixelStage build={build} />` (add `res={360}` for a detailed hero); leave `<Captions />` out (call `narration(H, t)` instead). `build(E)` in `src/scenes/episode.ts` makes the whole scene once and returns `{ update(t) }`, which sets everything from t (seconds) alone: no state carried between frames, frames are drawn in any order.
+`Animation.tsx` holds `<Voice />`, `<Music />` and `<PixelStage build={build} res={…} />` (the pixel grid: `res` 180, 270, 360 or 540, as the Detail in `brief.md` says); leave `<Captions />` out (call `narration(H, t)` instead). `build(E)` in `src/scenes/episode.ts` makes the whole scene once and returns `{ update(t) }`, which sets everything from t (seconds) alone: no state carried between frames, frames are drawn in any order.
 
 - **Engine `E`:** `scene`, `camera` (a PerspectiveCamera), `post` (`bloom` ≈1, `threshold` 0.75, `levels` 18-28 posterize steps, `flash` 0-1 with `flashColor`, `vignette`, `scanline`), `lens` (the x-ray: `on`, `x`, `y` 0-1 of the screen, `r` a fraction of the width, `insideBg`; objects passed to `inside(obj)` only show inside it), `toScreen(vec3)` → `[x, y, inFront]` in HUD pixels, `sync()`, `hud` (H).
 - **Order inside `update(t)`:** move objects, set the camera, `camera.updateProjectionMatrix()`, `sync()`, then the lens and the HUD (they need fresh matrices). End with `narration(H, t)`.

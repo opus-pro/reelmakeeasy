@@ -91,6 +91,7 @@ describe('AnimationSetupCard', () => {
     })
     fireEvent.click(screen.getByRole('button', { name: 'Build it' }))
     expect(onSubmit).toHaveBeenCalledWith({
+      detail: 'xhigh',
       lengthSec: 45,
       lookId: '3d',
       music: { id: 'dark-precision', source: 'library' },
@@ -177,6 +178,18 @@ describe('AnimationSetupCard', () => {
     expect(onSubmit).toHaveBeenCalledWith(expect.objectContaining({ lookId: '3d' }))
   })
 
+  it('sends the detail picked, Extra high (recommended) until then', () => {
+    const onSubmit = renderCard()
+    const extraHigh = screen.getByRole('radio', { name: 'Extra high (Recommended)' })
+    expect(extraHigh.getAttribute('aria-checked')).toBe('true')
+    fireEvent.click(screen.getByRole('radio', { name: 'Medium' }))
+    fireEvent.change(screen.getByRole('textbox', { name: "What's it about?" }), {
+      target: { value: 'rain' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Build it' }))
+    expect(onSubmit).toHaveBeenCalledWith(expect.objectContaining({ detail: 'medium' }))
+  })
+
   it('shows what was chosen once it is sent', () => {
     jest
       .mocked(useAnimationOptions)
@@ -186,6 +199,7 @@ describe('AnimationSetupCard', () => {
         entry={{
           ...open,
           setup: {
+            detail: 'high',
             lengthSec: 30,
             lookId: '2d',
             lookLabel: '2D',
@@ -203,6 +217,7 @@ describe('AnimationSetupCard', () => {
     expect(screen.getByText('A fun fact Claude picks')).toBeTruthy()
     expect(screen.getByText('2D')).toBeTruthy()
     expect(screen.getByText('30 s')).toBeTruthy()
+    expect(screen.getByText('High detail')).toBeTruthy()
     expect(screen.getByText('No music')).toBeTruthy()
   })
 

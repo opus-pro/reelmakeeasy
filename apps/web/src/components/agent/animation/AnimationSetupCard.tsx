@@ -1,11 +1,16 @@
 'use client'
 
 import type { TranscriptEntry } from '@reelmakeeasy/common/codex-agent/agent-transcript'
+import {
+  VIDEO_DEFAULT_DETAIL,
+  VIDEO_DETAIL_LABEL,
+} from '@reelmakeeasy/common/motion-reel/video-detail'
 import type {
   AgentAnimationOptions,
   AgentAnimationSetup,
   AgentAnimationSetupView,
   AnimationLookId,
+  VideoDetail,
 } from '@shared/types/api/agent'
 import { Button, cn } from '@shared/ui'
 import { Sparkles } from 'lucide-react'
@@ -15,6 +20,7 @@ import {
   CARD_CLASS,
   ChipRow,
   COMPOSER_LABEL,
+  DetailPicker,
   LABEL_CLASS,
   musicChoice,
   type MusicPick,
@@ -37,7 +43,7 @@ const SUBJECT_MAX = 600
 
 /**
  * A Claude Animation chat's first step: the look (2D, 3D or 8-bit), what it's about (or Surprise
- * me: Claude picks a fun fact), the music and the length. Sending it locks the card while
+ * me: Claude picks a fun fact), the music, the length and the detail. Sending it locks the card while
  * ReelMakeEasy readies the project; the chat then opens and the card shows what was chosen.
  */
 export function AnimationSetupCard({ entry, onSubmit, sessionId }: AnimationSetupCardProps) {
@@ -50,6 +56,7 @@ function ChosenSetup({ setup }: { setup: AgentAnimationSetupView }) {
     setup.lookLabel,
     ...(setup.avatarName ? [`Avatar: ${setup.avatarName}`] : []),
     `${setup.lengthSec} s`,
+    ...(setup.detail ? [`${VIDEO_DETAIL_LABEL[setup.detail]} detail`] : []),
     setup.musicTitle
       ? `♪ ${setup.musicTitle}`
       : setup.music.source === 'agent'
@@ -124,6 +131,7 @@ function SetupForm({
   const [subject, setSubject] = useState('')
   const [surprise, setSurprise] = useState(false)
   const [lengthSec, setLengthSec] = useState(first?.defaultLengthSec ?? 30)
+  const [detail, setDetail] = useState<VideoDetail>(VIDEO_DEFAULT_DETAIL)
   const [music, setMusic] = useState<MusicPick>(() => defaultMusic(options, first))
   const [musicTouched, setMusicTouched] = useState(false)
   const [avatar, setAvatar] = useState<AvatarPick>(() => firstAvatarPick(options.avatars))
@@ -159,6 +167,7 @@ function SetupForm({
     setPending(true)
     const ok = await onSubmit({
       ...(avatarSent ? { avatar: avatarSent } : {}),
+      detail,
       lengthSec: length,
       lookId: look.id,
       music: musicChoice(music),
@@ -242,6 +251,7 @@ function SetupForm({
             </label>
           </div>
         )}
+        <DetailPicker detail={detail} onPick={setDetail} />
         <MusicPicker
           agentName="Claude"
           composers={options.composers}

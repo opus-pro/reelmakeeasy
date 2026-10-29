@@ -23,6 +23,10 @@ export type AgentMode =
  *  user's own avatar (2D or 3D) talking to the camera. */
 export type AnimationLookId = '2d' | '3d' | '8bit' | 'avatar'
 
+/** How much detail goes into a code video (Motion Reel, Claude Animation), the user's pick on the
+ *  setup card: `xhigh` is Extra high. */
+export type VideoDetail = 'high' | 'low' | 'medium' | 'xhigh'
+
 /** How an avatar is drawn. */
 export type AvatarStyle = '2d' | '3d'
 
@@ -46,6 +50,8 @@ export type AgentAnimationAvatar =
 export type AgentAnimationSetup = {
   /** The Avatar video look's avatar (only with lookId `avatar`). */
   avatar?: AgentAnimationAvatar
+  /** How much detail to build in; unset (a chat set up before it existed): Extra high. */
+  detail?: VideoDetail
   /** About this long, in seconds: a whole number from 10 to 90. */
   lengthSec: number
   lookId: AnimationLookId
@@ -89,6 +95,8 @@ export type AgentAnimationSetupView = AgentAnimationSetup & {
 
 /** What the Motion Reel setup card sends (`POST /api/agent/sessions/:id/motion-reel`). */
 export type AgentMotionSetup = {
+  /** How much detail to build in; unset (a chat set up before it existed): Extra high. */
+  detail?: VideoDetail
   /** About this long, in seconds; the reel is whole bars of its music. */
   lengthSec: number
   /** A library track's id, an attachment's name (`upload`), no music, or made by the agent

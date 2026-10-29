@@ -6,15 +6,17 @@ import {
   AVATAR_NAME_MAX,
   AVATAR_STYLES,
 } from '@reelmakeeasy/common/animation/looks'
+import { isVideoDetail, VIDEO_DEFAULT_DETAIL } from '@reelmakeeasy/common/motion-reel/video-detail'
 import { localTtsSupports } from '@reelmakeeasy/common/tts/local-tts'
 import { ensureError } from '@reelmakeeasy/common/utils/error-handler'
 import type {
   AgentAnimationAvatar,
   AgentAnimationSetup,
   AvatarStyle,
+  VideoDetail,
 } from '@shared/types/api/agent'
 
-import { musicFromTool, MotionSetupError, parseMusic } from '../motion-reel/motion-setup'
+import { MotionSetupError, musicFromTool, parseMusic } from '../motion-reel/motion-setup'
 
 /** A setup card (or animation_setup call) the API can't take; the message says what to fix. */
 export class AnimationSetupError extends Error {}
@@ -51,6 +53,14 @@ function parseAvatar(raw: unknown): AgentAnimationAvatar {
   return { name, photo, style: style as AvatarStyle }
 }
 
+/** The detail level, checked: unset is the default (Extra high). */
+function parseDetail(raw: unknown): VideoDetail {
+  if (raw === undefined || raw === null || raw === '') return VIDEO_DEFAULT_DETAIL
+  if (!isVideoDetail(raw))
+    throw new AnimationSetupError('Pick the detail: low, medium, high or xhigh (Extra high).')
+  return raw
+}
+
 /** The setup card's body, checked: every field the card sends, nothing else trusted. */
 export function parseAnimationSetup(body: unknown): AgentAnimationSetup {
   if (!isRecord(body)) throw new AnimationSetupError('The setup is missing.')
@@ -73,6 +83,7 @@ export function parseAnimationSetup(body: unknown): AgentAnimationSetup {
     )
   return {
     ...(look.id === 'avatar' ? { avatar: parseAvatar(body['avatar']) } : {}),
+    detail: parseDetail(body['detail']),
     lengthSec,
     lookId: look.id,
     music: checkedMusic(body['music']),
@@ -100,6 +111,7 @@ export function animationSetupFromTool(args: unknown): AgentAnimationSetup | nul
     avatar: text('avatarId')
       ? { id: text('avatarId') }
       : { name: text('avatarName'), photo: text('avatarPhoto'), style: text('avatarStyle') },
+    detail: text('detail') || undefined,
     lengthSec: Number(a['lengthSec']),
     lookId,
     music,

@@ -138,7 +138,7 @@ export const ANIMATION_FREE_BRIEF = [
   ANIMATION_BRIEF,
   '',
   '## Advanced: you set the animation up',
-  'The user picked Advanced: there is no setup card, and `animation/` doesn\'t exist until you call animation_setup. Call it with no arguments first: it answers the looks, their lengths and the music. Then settle with the user, one question at a time, as a card with {ASK} wherever there are options (the best first, with " (Recommended)"): what it is about (or a fun fact you pick), the look (2D, 3D, 8-bit, or an Avatar video: one of their saved avatars, or a new one you draw from a photo they attach with the paperclip, 2D or 3D), the length (10 to 90 s; 15, 30, 45, 60 or 90 suggested), and the music: a library track that suits the look, their own file through the paperclip, none, or music you make: "Composed by you (Recommended)" (free: you write it with the `reelmakeeasy-music-composer` skill), "ElevenLabs Music" ($0.60 a minute) or "ACE-Step" (about $0.01). Don\'t ask what they already told you, and suggest the rest.',
+  'The user picked Advanced: there is no setup card, and `animation/` doesn\'t exist until you call animation_setup. Call it with no arguments first: it answers the looks, their lengths and the music. Then settle with the user, one question at a time, as a card with {ASK} wherever there are options (the best first, with " (Recommended)"): what it is about (or a fun fact you pick), the look (2D, 3D, 8-bit, or an Avatar video: one of their saved avatars, or a new one you draw from a photo they attach with the paperclip, 2D or 3D), the length (10 to 90 s; 15, 30, 45, 60 or 90 suggested), the detail ("Extra high (Recommended)", "High", "Medium" or "Low": more detail takes longer and looks better), and the music: a library track that suits the look, their own file through the paperclip, none, or music you make: "Composed by you (Recommended)" (free: you write it with the `reelmakeeasy-music-composer` skill), "ElevenLabs Music" ($0.60 a minute) or "ACE-Step" (about $0.01). Don\'t ask what they already told you, and suggest the rest.',
   'Then call animation_setup with all of it: it readies `animation/` (the first time it also installs Remotion, a few minutes) and says what to read next. Call it again only when the user changes the look, length or music: the scenes you wrote are kept.',
 ].join('\n')
 
@@ -402,7 +402,7 @@ export const ANIMATION_FREE_KICKOFF =
 /** The hidden first turn of an Advanced Motion Reel chat (it has no setup card). */
 export function motionReelFreeKickoff(harness: AgentHarnessName): string {
   return fillToolNames(
-    '[ReelMakeEasy] The user chose Motion Reel, Advanced (free chat). Read the skill, and call motion_setup with no arguments to see the reel types and music. Then, in one or two short sentences, ask what the reel is about and which kind it is (a product launch or a motion reel), and say they can paste a website or a YouTube video whose look to borrow, or drop in their own music. Nothing else yet.',
+    '[ReelMakeEasy] The user chose Motion Reel, Advanced (free chat). Read the skill, and call motion_setup with no arguments to see the reel types and music. Then, in one or two short sentences, ask what the reel is about and which kind it is (a product launch or a motion reel), and how much detail ("Extra high (Recommended)", "High", "Medium" or "Low": more detail takes longer and looks better), and say they can paste a website or a YouTube video whose look to borrow, or drop in their own music. Nothing else yet.',
     harness,
   )
 }

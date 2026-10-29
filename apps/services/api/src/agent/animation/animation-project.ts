@@ -8,6 +8,10 @@ import {
   renderLookCard,
 } from '@reelmakeeasy/common/animation/looks'
 import { MOTION_MUSIC_ENGINE_INFO } from '@reelmakeeasy/common/motion-reel/reel-config'
+import {
+  VIDEO_DEFAULT_DETAIL,
+  VIDEO_DETAIL_LABEL,
+} from '@reelmakeeasy/common/motion-reel/video-detail'
 import { presetPath } from '@reelmakeeasy/common/storage/presets'
 import type { AgentAnimationSetup, AnimationLookId, AvatarStyle } from '@shared/types/api/agent'
 
@@ -15,6 +19,7 @@ import { composerTitle, installComposer } from '../motion-reel/motion-composer'
 import type { ReelMusicSource } from '../motion-reel/motion-project'
 import { run, runtimeDir } from '../motion-reel/motion-runtime'
 
+import { animationDetailBrief } from './animation-detail'
 import { musicGrid, musicJsonOf, NO_MUSIC, placeSfx, writeMusicJson } from './animation-music'
 
 /** The animation's Remotion project, inside the chat's working folder. */
@@ -242,6 +247,7 @@ export function renderAnimationBrief(
   avatar?: AnimationJson['avatar'],
 ): string {
   const look = animationLook(setup.lookId)
+  const detail = setup.detail ?? VIDEO_DEFAULT_DETAIL
   const music =
     setup.music.source === 'none'
       ? 'none (the voice alone)'
@@ -258,6 +264,7 @@ export function renderAnimationBrief(
     `- **Length:** about ${setup.lengthSec} s`,
     `- **Frame:** 9:16, ${ANIMATION_SIZE.width}×${ANIMATION_SIZE.height}, ${ANIMATION_FPS} fps`,
     `- **Music:** ${music}`,
+    `- **Detail:** ${VIDEO_DETAIL_LABEL[detail]} (see "Detail" below)`,
     ...(avatar
       ? [
           avatar.id
@@ -265,6 +272,8 @@ export function renderAnimationBrief(
             : `- **Avatar:** new, ${avatar.style.toUpperCase()}, named "${avatar.name}": draw it first from the photo in \`public/avatar/\` into \`src/avatar/avatar.ts\` (now the ${avatar.style.toUpperCase()} starter), check it with avatar_check, and save it with avatar_save once the user keeps it.`,
         ]
       : []),
+    '',
+    animationDetailBrief(setup.lookId, detail),
     '',
   ].join('\n')
 }

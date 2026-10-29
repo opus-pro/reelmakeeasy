@@ -11,6 +11,7 @@ import {
 } from '@reelmakeeasy/common/animation/looks'
 import { Logger } from '@reelmakeeasy/common/logger'
 import { motionReelTrack, motionReelTracks } from '@reelmakeeasy/common/motion-reel/music'
+import { VIDEO_DETAIL_LABEL, VIDEO_DETAILS } from '@reelmakeeasy/common/motion-reel/video-detail'
 import {
   isMotionMusicEngine,
   MOTION_MUSIC_ENGINE_INFO,
@@ -463,6 +464,7 @@ export class AnimationService {
             'No saved avatars yet: an Avatar video needs a new one (avatarName, avatarStyle 2d or 3d, and avatarPhoto: a photo the user attaches with the paperclip).',
           ]),
       `Length (lengthSec): any whole number of seconds from ${options.minLengthSec} to ${options.maxLengthSec} (${ANIMATION_LENGTHS.slice(0, -1).join(', ')} or ${ANIMATION_LENGTHS.at(-1)} suggested; default ${ANIMATION_DEFAULT_SEC}).`,
+      `Detail (detail): how much detail to build in: ${VIDEO_DETAILS.map((d) => `${d} (${VIDEO_DETAIL_LABEL[d]})`).join(', ')}. Default and recommended: xhigh, the most detail (more time and tokens). Ask the user which they want.`,
       'Library tracks (music "library", musicId):',
       ...options.tracks.map((t) => `- ${t.id}: ${t.title}`),
       'Or music "upload" (the user\'s own file through the paperclip; musicId: its path), "none", or "agent": you make it with animation_music right after the setup, with the music model the user picks (musicEngine):',
@@ -862,6 +864,7 @@ function videoSeconds(projectDir: string, spec: { lengthSec: number }): number {
 function setupFrom(view: AgentAnimationSetupView): AgentAnimationSetup {
   return {
     ...(view.avatar ? { avatar: view.avatar } : {}),
+    ...(view.detail ? { detail: view.detail } : {}),
     lengthSec: view.lengthSec,
     lookId: view.lookId,
     music: view.music,

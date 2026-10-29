@@ -61,6 +61,7 @@ describe('parseAnimationSetup', () => {
 
   it('takes a 2D setup with a library track', () => {
     expect(parseAnimationSetup(ok)).toEqual({
+      detail: 'xhigh',
       lengthSec: 30,
       lookId: '2d',
       music: { id: 'data-pulse', source: 'library' },
@@ -72,6 +73,12 @@ describe('parseAnimationSetup', () => {
     expect(parseAnimationSetup({ ...ok, lengthSec: 90 }).lengthSec).toBe(90)
     expect(parseAnimationSetup({ ...ok, lengthSec: 22, lookId: '3d' }).lengthSec).toBe(22)
     expect(parseAnimationSetup({ ...ok, lengthSec: 10, lookId: '8bit' }).lengthSec).toBe(10)
+  })
+
+  it('takes the detail level, Extra high when unset', () => {
+    expect(parseAnimationSetup({ ...ok, detail: 'medium' }).detail).toBe('medium')
+    expect(parseAnimationSetup({ ...ok, detail: '' }).detail).toBe('xhigh')
+    expect(() => parseAnimationSetup({ ...ok, detail: 'ultra' })).toThrow(AnimationSetupError)
   })
 
   it('reads an empty subject as Surprise me', () => {
@@ -127,11 +134,19 @@ describe('animationSetupFromTool', () => {
         subject: 'How Tokyo Skytree stays up in an earthquake',
       }),
     ).toEqual({
+      detail: 'xhigh',
       lengthSec: 45,
       lookId: '8bit',
       music: { engine: 'ace-step', source: 'agent' },
       subject: 'How Tokyo Skytree stays up in an earthquake',
     })
+  })
+
+  it('passes the detail level on', () => {
+    expect(
+      animationSetupFromTool({ detail: 'high', lengthSec: 30, lookId: '3d', music: 'none' })
+        ?.detail,
+    ).toBe('high')
   })
 
   it('takes the user file by its name', () => {
