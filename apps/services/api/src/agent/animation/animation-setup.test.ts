@@ -30,12 +30,37 @@ describe('parseAnimationSetup', () => {
     expect(() => parseAnimationSetup(head)).toThrow(/Pick an avatar/)
     expect(() =>
       parseAnimationSetup({ ...head, avatar: { name: 'Sam', photo: '', style: '2d' } }),
-    ).toThrow(/Add a photo/)
+    ).toThrow(/Add a photo, or describe how the avatar looks/)
+    // A description alone will do, in pixel art too.
+    expect(
+      parseAnimationSetup({
+        ...head,
+        avatar: { description: ' a tiny robot ', name: 'Pip', style: 'pixel' },
+      }).avatar,
+    ).toEqual({ description: 'a tiny robot', name: 'Pip', style: 'pixel' })
     expect(() =>
       parseAnimationSetup({ ...head, avatar: { name: 'Sam', photo: 'me.jpg', style: '4d' } }),
-    ).toThrow(/2D or 3D/)
+    ).toThrow(/2D, 3D or Pixel art/)
     // Another look never carries an avatar.
     expect(parseAnimationSetup({ ...ok, avatar: { id: 'av-0123456789' } }).avatar).toBeUndefined()
+  })
+
+  it("takes the avatar creator's setup: a new avatar only, with its voice", () => {
+    const head = { ...ok, lookId: 'avatar' }
+    const made = parseAnimationSetup({
+      ...head,
+      avatar: { description: 'a robot', name: 'Pip', style: '3d' },
+      avatarOnly: true,
+      avatarVoiceId: 'kokoro-am_eric',
+    })
+    expect(made).toMatchObject({ avatarOnly: true, avatarVoiceId: 'kokoro-am_eric' })
+    expect(() =>
+      parseAnimationSetup({ ...head, avatar: { id: 'av-0123456789' }, avatarOnly: true }),
+    ).toThrow(/makes a new avatar/)
+    // A video never takes the creator's fields unless it is one.
+    expect(
+      parseAnimationSetup({ ...head, avatar: { id: 'av-0123456789' } }).avatarOnly,
+    ).toBeUndefined()
   })
 
   it("takes an Avatar explainer's style: 2D and 3D take their own avatars, Pixel art either", () => {
@@ -48,6 +73,8 @@ describe('parseAnimationSetup', () => {
     expect(fresh('3d', '8bit').stage).toBe('8bit')
     expect(fresh('3d', '3d').stage).toBe('3d')
     expect(() => fresh('2d', '3d')).toThrow(/A 3D explainer needs a 3D avatar/)
+    expect(fresh('pixel', '8bit').stage).toBe('8bit')
+    expect(() => fresh('pixel', '2d')).toThrow(/A 2D explainer needs a 2D avatar/)
     expect(() => parseAnimationSetup({ ...head, stage: 'avatar' })).toThrow(/Pick the style/)
     // Another look never carries a style.
     expect(parseAnimationSetup({ ...ok, stage: '8bit' }).stage).toBeUndefined()

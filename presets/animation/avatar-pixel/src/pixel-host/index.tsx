@@ -3,10 +3,12 @@ import { useCurrentFrame, useVideoConfig } from 'remotion'
 
 import {
   type Avatar,
+  AVATAR_PIXEL,
   type Cue,
   type GestureSounds,
   GestureSoundTrack,
   hostPose,
+  pixelFilter,
   placeAvatar2D,
 } from '../host'
 import { type Engine, type PixelEpisode, PixelStage, THREE } from '../pixel'
@@ -21,9 +23,9 @@ import { type Engine, type PixelEpisode, PixelStage, THREE } from '../pixel'
  *   facing +z, the head about 0.72 m up). Place it (`host.root.position`, `.scale`,
  *   `.rotation.y`), frame it with `E.camera` and light it with your scene's lights; it is drawn,
  *   dithered and lit like everything else.
- * - A 2D avatar is drawn over the scene, cut to the same pixel grid: `place(t)` says where its
- *   waist sits on the 1080×1920 screen and how big it is (default: centre bottom, medium).
- *   `host` is null in `build`.
+ * - A 2D or pixel-art avatar is drawn over the scene, cut to the same pixel grid (a pixel-art one
+ *   to its own, coarser grid): `place(t)` says where its waist sits on the 1080×1920 screen and
+ *   how big it is (default: centre bottom, medium). `host` is null in `build`.
  */
 export function PixelTalkingHead({
   avatar,
@@ -64,8 +66,15 @@ export function PixelTalkingHead({
     <>
       {sounds !== false && <GestureSoundTrack cues={cues} sounds={sounds} />}
       <PixelStage build={withHost} res={res}>
-        {avatar.style === '2d' && (
-          <PixelSprite block={1080 / res} id="pixel-host">
+        {avatar.style !== '3d' && (
+          <PixelSprite
+            block={
+              avatar.style === 'pixel'
+                ? Math.max(1080 / res, Math.round(AVATAR_PIXEL * place(t).s))
+                : 1080 / res
+            }
+            id="pixel-host"
+          >
             {placeAvatar2D(avatar, hostPose(t, cues), place(t))}
           </PixelSprite>
         )}
@@ -90,9 +99,7 @@ export function PixelSprite({
   /** The filter's id: unique per sprite on screen. */
   id: string
 }) {
-  const half = Math.max(1, Math.floor(block / 2))
-  const steps = '0 0.2 0.4 0.6 0.8 1'
-  const filter = `<filter id="${id}" x="0" y="0" width="1080" height="1920" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB"><feFlood x="${half}" y="${half}" width="1" height="1"/><feComposite width="${block}" height="${block}"/><feTile result="grid"/><feComposite in="SourceGraphic" in2="grid" operator="in"/><feMorphology operator="dilate" radius="${half}"/><feComponentTransfer><feFuncR type="discrete" tableValues="${steps}"/><feFuncG type="discrete" tableValues="${steps}"/><feFuncB type="discrete" tableValues="${steps}"/><feFuncA type="discrete" tableValues="0 1"/></feComponentTransfer></filter>`
+  const filter = pixelFilter(id, block, { height: 1920, width: 1080 })
   return (
     <svg
       dangerouslySetInnerHTML={{

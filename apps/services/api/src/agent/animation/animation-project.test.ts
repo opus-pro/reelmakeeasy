@@ -237,6 +237,28 @@ describe('prepareAnimationProject', () => {
       expect(projectLibs(setup2d)).toEqual(['2d'])
     })
 
+    it('makes only the avatar in the creator: from a description, as pixel art', async () => {
+      const { projectDir } = await prepareAnimationProject({
+        avatar: { description: 'a tiny robot', id: null, name: 'Pip', style: 'pixel' },
+        music: null,
+        setup: {
+          ...head,
+          avatar: { description: 'a tiny robot', name: 'Pip', style: 'pixel' },
+          avatarOnly: true,
+          avatarVoiceId: 'kokoro-am_eric',
+          detail: 'low',
+        },
+        workspace,
+      })
+      expect(rig(projectDir)).toContain("style: 'pixel'")
+      const brief = fs.readFileSync(path.join(projectDir, 'brief.md'), 'utf8')
+      expect(brief).toMatch(/^# Avatar brief/)
+      expect(brief).toContain('drawn Pixel art, and nothing else')
+      expect(brief).toContain('this description: "a tiny robot"')
+      expect(brief).toContain('the user picked Kokoro Eric')
+      expect(brief).toContain('## Detail: Low')
+    })
+
     it("keeps Claude's rig for the same avatar, and swaps in another avatar's", async () => {
       const { projectDir } = await prepareAnimationProject({
         avatar: { id: null, name: 'Sam', style: '2d' },

@@ -50,9 +50,13 @@ A host, the user's own digital avatar, stands waist up in a simple set, looks in
 
 When the user asks to change a saved avatar (new glasses, a different shirt), change `avatar.ts`, check, and save again (the same avatar is updated; pass a new `voice` only to change the voice).
 
+- **From a description:** a new avatar can come from a photo, a description, or both (`brief.md` says which). With no photo, draw what the description says and fill in the rest so it reads as one person; with both, the photo is who it is and the description how to draw it ("in a hoodie", "anime eyes").
+- **Pixel art** (`style: 'pixel'`): drawn like a 2D avatar and always shown cut to a pixel grid of about 9 units of its box (the sheet shows it so). Use bold, flat shapes of a few colours: no thin lines, no gradients, nothing under about 20 units; the likeness is in the hair's shape, the colours and what they wear.
+- **The avatar creator:** when `brief.md` says this chat only makes the avatar, draw it, check it, ask, save it, say it's ready, and stop.
+
 ### The rig contract
 
-`avatar.ts` exports `avatar`: a 2D one (`{ style: '2d', name, draw(p) }`, `draw` returning SVG for the avatar's own box: 1000 wide, origin at the waist (bottom centre), y up negative, the face's centre near y -900, shoulders near (±215, -560)) or a 3D one (`{ style: '3d', name, build(THREE) }` returning `{ root, pose(p) }`, metres, origin at the waist, facing +z, the head's centre near 0.72 m). Everything moves from the pose `p` alone:
+`avatar.ts` exports `avatar`: a 2D or pixel-art one (`{ style: '2d' | 'pixel', name, draw(p) }`, `draw` returning SVG for the avatar's own box: 1000 wide, origin at the waist (bottom centre), y up negative, the face's centre near y -900, shoulders near (±215, -560)) or a 3D one (`{ style: '3d', name, build(THREE) }` returning `{ root, pose(p) }`, metres, origin at the waist, facing +z, the head's centre near 0.72 m). Everything moves from the pose `p` alone:
 - `p.mouth` (0 shut .. 1 wide) and `p.vowel` (`A E I O U M`): use `mouthShape(p.vowel)` for the width and height factors.
 - `p.blink` (0 open .. 1 shut), `p.gaze` ([x, y], -1..1), `p.brows` (-1 frown .. 1 raised), `p.smile` (0..1).
 - `p.head` (`nod`, `tilt`, `turn`, degrees): tilt the head about the neck, slide the features with turn and nod.

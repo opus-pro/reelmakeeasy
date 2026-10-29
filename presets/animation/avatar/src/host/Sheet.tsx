@@ -7,6 +7,7 @@ import { THREE } from '../stage'
 
 import type { Avatar, Avatar3D } from './avatar-types'
 import { placeAvatar2D } from './Host2D'
+import { AVATAR_PIXEL, pixelFilter } from './pixelate'
 import { WAIST_Y } from './Host3D'
 import { type Pose, REST, stillPose } from './pose'
 
@@ -64,6 +65,13 @@ function Label({ text, x, y }: { text: string; x: number; y: number }) {
   )
 }
 
+/** A 2D avatar's markup as drawn: a pixel-art one cut to its grid at this scale. */
+function pixelated(markup: string, scale: number, j: number): string {
+  if (avatar.style !== 'pixel') return markup
+  const id = `sheet-px-${j}`
+  return `<defs>${pixelFilter(id, Math.max(2, Math.round(AVATAR_PIXEL * scale)), { height: 4000, width: 4000, x: -2000, y: -2000 })}</defs><g filter="url(#${id})">${markup}</g>`
+}
+
 /**
  * The avatar check: the avatar in 16 poses (faces, mouths, a blink, every gesture), 4 to a row,
  * each named. ReelMakeEasy renders it for avatar_check; it reads `src/avatar/avatar.ts`.
@@ -71,7 +79,7 @@ function Label({ text, x, y }: { text: string; x: number; y: number }) {
 export function AvatarSheet() {
   return (
     <AbsoluteFill style={{ background: '#2E3440' }}>
-      {avatar.style === '2d' ? (
+      {avatar.style !== '3d' ? (
         <Sheet2D />
       ) : (
         <Sheet3D avatar={avatar} tiles={SHEET_POSES} size={SIZE} cols={COLS} />
@@ -84,12 +92,13 @@ export function AvatarSheet() {
 }
 
 function Sheet2D() {
-  if (avatar.style !== '2d') return null
+  if (avatar.style === '3d') return null
+  const scale = 0.34
   const tiles = SHEET_POSES.map(([, p], j) => {
     const x = (j % COLS) * TILE
     const y = Math.floor(j / COLS) * TILE
     const bg = (j + Math.floor(j / COLS)) % 2 ? '#C9D6E8' : '#DCE6F2'
-    return `<rect x="${x}" y="${y}" width="${TILE}" height="${TILE}" fill="${bg}"/><svg x="${x}" y="${y}" width="${TILE}" height="${TILE}" viewBox="0 0 ${TILE} ${TILE}">${placeAvatar2D(avatar, p, { s: 0.34, x: TILE / 2, y: TILE - 6 })}</svg>`
+    return `<rect x="${x}" y="${y}" width="${TILE}" height="${TILE}" fill="${bg}"/><svg x="${x}" y="${y}" width="${TILE}" height="${TILE}" viewBox="0 0 ${TILE} ${TILE}">${pixelated(placeAvatar2D(avatar, p, { s: scale, x: TILE / 2, y: TILE - 6 }), scale, j)}</svg>`
   })
   return (
     <svg
@@ -178,7 +187,7 @@ export function AvatarPreview() {
         />
       </AbsoluteFill>
     )
-  const svg = `<rect width="600" height="600" fill="#DCE6F2"/>${placeAvatar2D(avatar, stillPose({ smile: 0.8 }), { s: 0.6, x: 300, y: 900 })}`
+  const svg = `<rect width="600" height="600" fill="#DCE6F2"/>${pixelated(placeAvatar2D(avatar, stillPose({ smile: 0.8 }), { s: 0.6, x: 300, y: 900 }), 0.6, 0)}`
   return (
     <AbsoluteFill>
       <svg

@@ -69,6 +69,9 @@ import { WelcomeCard } from './WelcomeCard'
 export type AgentChatProps = {
   /** The page's one `useAgentSession`, shared with the storyboard panel. */
   agent: AgentSessionState
+  /** Shown inside another surface (the avatar creator): no header, welcome card, setup card or
+   *  model bar, just the conversation and the box. */
+  embedded?: boolean
   /** The tool the welcome card shows first (a link from Ranking Builder: Ranking). */
   firstTool?: AgentTool | null
   /** Shown at the start of the header (the agent page's sidebar button). */
@@ -372,6 +375,7 @@ function useClearWhenDisabled(disabled: boolean, setInput: (value: string) => vo
  */
 export function AgentChat({
   agent,
+  embedded = false,
   firstTool,
   headerStart,
   sessionId,
@@ -626,10 +630,12 @@ export function AgentChat({
   return (
     <ChatModelProvider value={chatModel}>
       <div className="flex h-full flex-col bg-background text-primary">
-        <div className="flex items-center gap-2 border-b border-white/10 px-4 py-3 text-sm font-medium text-secondary">
-          {headerStart}
-          <span className="min-w-0 truncate">{title || session?.title || 'Agent'}</span>
-        </div>
+        {!embedded && (
+          <div className="flex items-center gap-2 border-b border-white/10 px-4 py-3 text-sm font-medium text-secondary">
+            {headerStart}
+            <span className="min-w-0 truncate">{title || session?.title || 'Agent'}</span>
+          </div>
+        )}
         <div
           className="flex-1 overflow-y-auto p-4"
           onLoadCapture={handleImageLoad}
@@ -637,16 +643,23 @@ export function AgentChat({
           ref={scrollRef}
         >
           <div className="flex flex-col gap-3" ref={contentRef}>
-            <WelcomeCard
-              chosenHarness={chosenHarnessOf(session)}
-              firstTool={firstTool}
-              mode={mode}
-              onChoose={chooseMode}
-              presetHarness={presetHarnessOf(session)}
-              startingMode={startingMode}
-              status={harnessStatus}
-            />
-            {items.map((item) =>
+            {!embedded && (
+              <WelcomeCard
+                chosenHarness={chosenHarnessOf(session)}
+                firstTool={firstTool}
+                mode={mode}
+                onChoose={chooseMode}
+                presetHarness={presetHarnessOf(session)}
+                startingMode={startingMode}
+                status={harnessStatus}
+              />
+            )}
+            {(embedded
+              ? items.filter(
+                  (item) => item.type !== 'entry' || item.entry.kind !== 'animation_setup',
+                )
+              : items
+            ).map((item) =>
               item.type === 'activity' ? (
                 <ActivityGroup entries={item.entries} key={item.key} />
               ) : (
@@ -711,7 +724,7 @@ export function AgentChat({
               {buttonLabel}
             </Button>
           </div>
-          <ChatModelBar session={session} />
+          {!embedded && <ChatModelBar session={session} />}
         </AttachmentDropZone>
       </div>
     </ChatModelProvider>

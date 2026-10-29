@@ -13,6 +13,7 @@
  * - hands2d.ts: `drawArm(side, armPose, shoulder, { skin, sleeve, cuff })`, `armFor`, `hand`.
  * - arms3d.ts: `makeArm3D(THREE, { side, skin, sleeve })` → `{ root, pose(armPose) }`.
  * - framing.ts: `Shot`, `BOARD` (each shot's free area), `shotIndex(t)`.
+ * - pixelate.ts: `pixelFilter(id, block, area)`, the SVG filter a pixel-art avatar is drawn through.
  * - sounds.tsx: the gestures' sounds (`DEFAULT_GESTURE_SOUNDS`, the stages' `sounds` prop).
  */
 export * from './arms3d'
@@ -22,5 +23,6 @@ export * from './framing'
 export * from './hands2d'
 export * from './Host2D'
 export * from './Host3D'
+export * from './pixelate'
 export * from './pose'
 export * from './sounds'

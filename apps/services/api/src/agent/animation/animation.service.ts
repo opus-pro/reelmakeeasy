@@ -520,8 +520,9 @@ export class AnimationService {
         success: false,
         text: `There is no voice "${voiceIdArg}": pass a voiceId from the list in its description, or the id of the voice the user picked.`,
       }
-    // Its fixed voice: the one passed, else the one it has (the user may have picked it).
-    const voiceId = voiceIdArg || before?.voiceId || ''
+    // Its fixed voice: the one passed, else the one it has (the user may have picked it), else
+    // the one picked in the avatar creator.
+    const voiceId = voiceIdArg || before?.voiceId || setup.avatarVoiceId || ''
     if (!before && !voiceId)
       return {
         success: false,
@@ -574,6 +575,7 @@ export class AnimationService {
       style,
       voice,
       ...(voiceId ? { voiceId } : {}),
+      ...('description' in chosen && chosen.description ? { look: chosen.description } : {}),
       ...(voiceSample ? { voiceSample } : {}),
     })
     markAvatarSaved(projectDir, avatarId)
@@ -583,7 +585,7 @@ export class AnimationService {
     this.sessions.emitImage(id, preview)
     return {
       success: true,
-      text: `Saved the avatar "${name}" (${style.toUpperCase()}) to the user's avatars: every later Avatar video can use it.${voiceId ? ` Its voice is ${voiceName(voiceId)}, fixed: every video with ${name} speaks in it (the user can change it on the setup card). Record its lines with voices "Host: avatar".` : voiceSample ? ' Its voice sample is made: record its lines with voices "Host: avatar" and they are cloned from it.' : ' Record its lines with voices "Host: avatar".'}${voiceNote} Save again after changing it.`,
+      text: `Saved the avatar "${name}" (${style.toUpperCase()}) to the user's avatars: every later Avatar video can use it.${voiceId ? ` Its voice is ${voiceName(voiceId)}, fixed: every video with ${name} speaks in it (the user can change it on the setup card). Record its lines with voices "Host: avatar".` : voiceSample ? ' Its voice sample is made: record its lines with voices "Host: avatar" and they are cloned from it.' : ' Record its lines with voices "Host: avatar".'}${voiceNote} Save again after changing it.${setup.avatarOnly ? ` This chat only makes the avatar: tell the user in one short line that ${name} is ready to use in any video, and stop (no script, voices, music or video).` : ''}`,
     }
   }
 
@@ -802,10 +804,18 @@ export class AnimationService {
         style: saved.style,
       }
     }
-    const photo = resolveAttachment(this.sessions.attachmentsDir(id), choice.photo)
-    if (!photo || photo.kind !== 'image')
+    const photo = choice.photo
+      ? resolveAttachment(this.sessions.attachmentsDir(id), choice.photo)
+      : undefined
+    if (choice.photo && (!photo || photo.kind !== 'image'))
       throw new AnimationSetupError('Add the photo again: that file is gone or is not a picture.')
-    return { id: null, name: choice.name, photo: photo.path, style: choice.style }
+    return {
+      ...(choice.description ? { description: choice.description } : {}),
+      id: null,
+      name: choice.name,
+      ...(photo ? { photo: photo.path } : {}),
+      style: choice.style,
+    }
   }
 
   private async prepare(

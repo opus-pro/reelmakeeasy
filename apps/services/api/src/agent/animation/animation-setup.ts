@@ -36,8 +36,12 @@ function checkedMusic(music: unknown): AgentAnimationSetup['music'] {
   }
 }
 
+/** The longest description of a new avatar. */
+export const AVATAR_DESCRIPTION_MAX = 600
+
 /** The Avatar video's avatar, checked: a saved one by its id, or a new one (a name, the photo's
- *  attachment name, 2D or 3D). Whether it exists is the service's to check. */
+ *  attachment name and/or a description, 2D, 3D or Pixel art). Whether it exists is the
+ *  service's to check. */
 function parseAvatar(raw: unknown): AgentAnimationAvatar {
   if (!isRecord(raw))
     throw new AnimationSetupError('Pick an avatar, or make a new one from a photo.')
@@ -47,11 +51,22 @@ function parseAvatar(raw: unknown): AgentAnimationAvatar {
   if (name.length > AVATAR_NAME_MAX)
     throw new AnimationSetupError(`Keep the avatar's name under ${AVATAR_NAME_MAX} characters.`)
   const photo = typeof raw['photo'] === 'string' ? raw['photo'].trim() : ''
-  if (!photo) throw new AnimationSetupError('Add a photo to draw the avatar from.')
+  const description = typeof raw['description'] === 'string' ? raw['description'].trim() : ''
+  if (!photo && !description)
+    throw new AnimationSetupError('Add a photo, or describe how the avatar looks.')
+  if (description.length > AVATAR_DESCRIPTION_MAX)
+    throw new AnimationSetupError(
+      `Keep the avatar's description under ${AVATAR_DESCRIPTION_MAX} characters.`,
+    )
   const style = raw['style']
   if (!AVATAR_STYLES.includes(style as AvatarStyle))
-    throw new AnimationSetupError('Pick 2D or 3D for the avatar.')
-  return { name, photo, style: style as AvatarStyle }
+    throw new AnimationSetupError('Pick 2D, 3D or Pixel art for the avatar.')
+  return {
+    ...(description ? { description } : {}),
+    name,
+    ...(photo ? { photo } : {}),
+    style: style as AvatarStyle,
+  }
 }
 
 /**
@@ -61,10 +76,20 @@ function parseAvatar(raw: unknown): AgentAnimationAvatar {
  */
 function parseAvatarStage(
   body: Record<string, unknown>,
-): Pick<AgentAnimationSetup, 'avatar' | 'stage'> {
+): Pick<AgentAnimationSetup, 'avatar' | 'avatarOnly' | 'avatarVoiceId' | 'stage'> {
   const avatar = parseAvatar(body['avatar'])
+  // The avatar creator: a new avatar only, with the voice picked for it.
+  const avatarOnly = body['avatarOnly'] === true
+  if (avatarOnly && 'id' in avatar)
+    throw new AnimationSetupError('The avatar creator makes a new avatar: give it a name.')
+  const voice = typeof body['avatarVoiceId'] === 'string' ? body['avatarVoiceId'].trim() : ''
+  if (voice.length > 200) throw new AnimationSetupError('That is not a voice.')
+  const extra = {
+    ...(avatarOnly ? { avatarOnly } : {}),
+    ...(voice ? { avatarVoiceId: voice } : {}),
+  }
   const raw = body['stage']
-  if (raw === undefined || raw === null || raw === '') return { avatar }
+  if (raw === undefined || raw === null || raw === '') return { avatar, ...extra }
   const stage = animationLook(String(raw))
   if (!isAnimationStyle(raw) || !stage?.withAvatar)
     throw new AnimationSetupError('Pick the style: 2d, 3d or 8bit (Pixel art).')
@@ -72,7 +97,7 @@ function parseAvatarStage(
     throw new AnimationSetupError(
       `A ${stage.label} explainer needs a ${stage.withAvatar.avatarStyles.join(' or ').toUpperCase()} avatar.`,
     )
-  return { avatar, stage: raw }
+  return { avatar, ...extra, stage: raw }
 }
 
 /** The detail level, checked: unset is the default (Extra high). */
@@ -132,7 +157,12 @@ export function animationSetupFromTool(args: unknown): AgentAnimationSetup | nul
   return parseAnimationSetup({
     avatar: text('avatarId')
       ? { id: text('avatarId') }
-      : { name: text('avatarName'), photo: text('avatarPhoto'), style: text('avatarStyle') },
+      : {
+          description: text('avatarDescription'),
+          name: text('avatarName'),
+          photo: text('avatarPhoto'),
+          style: text('avatarStyle'),
+        },
     detail: text('detail') || undefined,
     lengthSec: Number(a['lengthSec']),
     lookId,

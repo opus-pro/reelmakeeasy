@@ -16,7 +16,8 @@ import type { Pose } from './pose'
 export type Avatar2D = {
   draw: (p: Pose) => string
   name: string
-  style: '2d'
+  /** `pixel`: a pixel-art avatar, drawn the same way and always shown cut to a pixel grid. */
+  style: '2d' | 'pixel'
 }
 
 /**

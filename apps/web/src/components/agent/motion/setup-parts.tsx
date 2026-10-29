@@ -227,21 +227,26 @@ const DETAIL_TEXT: Record<VideoDetail, string> = {
   xhigh: 'Film grade: fine parts, thousands of particles, and scenes that break apart and re-form.',
 }
 
-/** How much detail the agent builds in, and what it costs. */
+/** How much detail the agent builds in, and what it costs. `meanings` and `footnote` say what
+ *  the levels mean for something other than a video (an avatar). */
 export function DetailPicker({
   detail,
+  footnote = 'More detail takes longer and uses more tokens, and looks better.',
+  meanings = DETAIL_TEXT,
   onPick,
 }: {
   detail: VideoDetail
+  footnote?: string
+  meanings?: Record<VideoDetail, string>
   onPick: (detail: VideoDetail) => void
 }) {
   return (
     <LevelSlider
-      footnote="More detail takes longer and uses more tokens, and looks better."
+      footnote={footnote}
       label="Detail"
       levels={DETAIL_LEVELS}
       low="Simpler"
-      meaning={DETAIL_TEXT[detail]}
+      meaning={meanings[detail]}
       onPick={onPick}
       recommended={VIDEO_DEFAULT_DETAIL}
       selected={detail}

@@ -5,6 +5,7 @@ import {
   ANIMATION_FPS,
   ANIMATION_SIZE,
   animationLook,
+  AVATAR_STYLE_LABEL,
   renderLookCard,
 } from '@reelmakeeasy/common/animation/looks'
 import { MOTION_MUSIC_ENGINE_INFO } from '@reelmakeeasy/common/motion-reel/reel-config'
@@ -13,13 +14,19 @@ import {
   VIDEO_DETAIL_LABEL,
 } from '@reelmakeeasy/common/motion-reel/video-detail'
 import { presetPath } from '@reelmakeeasy/common/storage/presets'
-import type { AgentAnimationSetup, AnimationLookId, AvatarStyle } from '@shared/types/api/agent'
+import type {
+  AgentAnimationSetup,
+  AnimationLookId,
+  AvatarStyle,
+  VideoDetail,
+} from '@shared/types/api/agent'
 
 import { composerTitle, installComposer } from '../motion-reel/motion-composer'
 import type { ReelMusicSource } from '../motion-reel/motion-project'
 import { run, runtimeDir } from '../motion-reel/motion-runtime'
 
 import { animationDetailBrief } from './animation-detail'
+import { voiceName } from './avatar-voice-list'
 import { musicGrid, musicJsonOf, NO_MUSIC, placeSfx, writeMusicJson } from './animation-music'
 
 /** The animation's Remotion project, inside the chat's working folder. */
@@ -49,6 +56,8 @@ export function composerSettings(setup: AgentAnimationSetup): {
 /** An Avatar video's avatar as the project gets it: a saved one (`id`, its rig file in the
  *  library) or a new one (`id` null, the photo to draw it from). */
 export type ProjectAvatar = {
+  /** How a new avatar looks, in the user's words. */
+  description?: string
   id: null | string
   name: string
   /** The photo a new avatar is drawn from (a file on this computer). */
@@ -244,12 +253,54 @@ export function writeAnimationJson(projectDir: string, spec: AnimationJson): voi
   )
 }
 
+/** How much detail goes into drawing an avatar, per level (the avatar creator's Detail). */
+const AVATAR_DETAIL: Record<VideoDetail, string> = {
+  high: "A rich likeness: two-tone shading and a highlight on the face and hair, the hair in locks, the clothes' seams, buttons and folds, and the small things that make them them (freckles, a watch, earrings).",
+  low: 'A simple, clean figure: the face, hair and clothes in a few flat shapes; the likeness is in the hair, the colours and anything they wear.',
+  medium:
+    'A clear likeness: the face shape, the hair style and parting, the brows and eyes, the clothes with their collar or pattern, a highlight or two.',
+  xhigh:
+    "The most detailed you can draw: every lock of hair with its highlight, shading and a rim light, the lids and lashes, the clothes' fabric (seams, folds, buttons, a logo) and accessories, all still moving with the pose. In 3D: 200 or more parts and smooth curves; in pixel art: a fine grid with dithered shading.",
+}
+
+/** Where a new avatar is drawn from: its photo, its description, or both. */
+function avatarSource(setup: AgentAnimationSetup): string {
+  const fresh = setup.avatar && !('id' in setup.avatar) ? setup.avatar : undefined
+  return [
+    fresh?.photo ? 'the photo in `public/avatar/`' : null,
+    fresh?.description ? `this description: "${fresh.description}"` : null,
+  ]
+    .filter(Boolean)
+    .join(' and ')
+}
+
+/** The avatar creator's brief: one new avatar, nothing else. */
+function renderAvatarBrief(setup: AgentAnimationSetup, avatar?: AnimationJson['avatar']): string {
+  const detail = setup.detail ?? VIDEO_DEFAULT_DETAIL
+  const style =
+    avatar?.style ?? (setup.avatar && 'style' in setup.avatar ? setup.avatar.style : '2d')
+  return [
+    '# Avatar brief',
+    '',
+    `- **Make:** a new avatar named "${avatar?.name ?? ''}", drawn ${AVATAR_STYLE_LABEL[style]}, and nothing else: no script, voices, music or video.`,
+    `- **Draw it from:** ${avatarSource(setup) || 'the photo in `public/avatar/`'}, into \`src/avatar/avatar.ts\` (now the ${AVATAR_STYLE_LABEL[style]} starter).`,
+    `- **Voice:** ${setup.avatarVoiceId ? `the user picked ${voiceName(setup.avatarVoiceId)}; avatar_save keeps it (pass no voiceId)` : "pick the one from avatar_save's list that fits the person (voiceId)"}.`,
+    `- **Detail:** ${VIDEO_DETAIL_LABEL[detail]}`,
+    '',
+    `## Detail: ${VIDEO_DETAIL_LABEL[detail]}`,
+    '',
+    `- ${AVATAR_DETAIL[detail]}`,
+    '',
+  ].join('\n')
+}
+
 /** The brief Claude reads first: what the user chose, in plain words. */
 export function renderAnimationBrief(
   setup: AgentAnimationSetup,
   musicTitle: null | string,
   avatar?: AnimationJson['avatar'],
 ): string {
+  if (setup.avatarOnly) return renderAvatarBrief(setup, avatar)
   const look = animationLook(setup.lookId)
   const detail = setup.detail ?? VIDEO_DEFAULT_DETAIL
   const music =
@@ -272,8 +323,8 @@ export function renderAnimationBrief(
     ...(avatar
       ? [
           avatar.id
-            ? `- **Avatar:** ${avatar.name}, saved (${avatar.style.toUpperCase()}): \`src/avatar/avatar.ts\` is its rig. Use it as it is; change it only when the user asks (then avatar_check and avatar_save again).`
-            : `- **Avatar:** new, ${avatar.style.toUpperCase()}, named "${avatar.name}": draw it first from the photo in \`public/avatar/\` into \`src/avatar/avatar.ts\` (now the ${avatar.style.toUpperCase()} starter), check it with avatar_check, and save it with avatar_save once the user keeps it.`,
+            ? `- **Avatar:** ${avatar.name}, saved (${AVATAR_STYLE_LABEL[avatar.style]}): \`src/avatar/avatar.ts\` is its rig. Use it as it is; change it only when the user asks (then avatar_check and avatar_save again).`
+            : `- **Avatar:** new, ${AVATAR_STYLE_LABEL[avatar.style]}, named "${avatar.name}": draw it first from ${avatarSource(setup) || 'the photo in `public/avatar/`'} into \`src/avatar/avatar.ts\` (now the ${AVATAR_STYLE_LABEL[avatar.style]} starter), check it with avatar_check, and save it with avatar_save once the user keeps it.`,
         ]
       : []),
     '',
