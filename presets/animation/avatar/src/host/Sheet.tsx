@@ -71,7 +71,7 @@ function Label({ text, x, y }: { text: string; x: number; y: number }) {
 export function AvatarSheet() {
   return (
     <AbsoluteFill style={{ background: '#2E3440' }}>
-      {avatar.style === '2d' ? (
+      {avatar.style !== '3d' ? (
         <Sheet2D />
       ) : (
         <Sheet3D avatar={avatar} tiles={SHEET_POSES} size={SIZE} cols={COLS} />
@@ -84,12 +84,13 @@ export function AvatarSheet() {
 }
 
 function Sheet2D() {
-  if (avatar.style !== '2d') return null
+  if (avatar.style === '3d') return null
+  const scale = 0.34
   const tiles = SHEET_POSES.map(([, p], j) => {
     const x = (j % COLS) * TILE
     const y = Math.floor(j / COLS) * TILE
     const bg = (j + Math.floor(j / COLS)) % 2 ? '#C9D6E8' : '#DCE6F2'
-    return `<rect x="${x}" y="${y}" width="${TILE}" height="${TILE}" fill="${bg}"/><svg x="${x}" y="${y}" width="${TILE}" height="${TILE}" viewBox="0 0 ${TILE} ${TILE}">${placeAvatar2D(avatar, p, { s: 0.34, x: TILE / 2, y: TILE - 6 })}</svg>`
+    return `<rect x="${x}" y="${y}" width="${TILE}" height="${TILE}" fill="${bg}"/><svg x="${x}" y="${y}" width="${TILE}" height="${TILE}" viewBox="0 0 ${TILE} ${TILE}">${placeAvatar2D(avatar, p, { s: scale, x: TILE / 2, y: TILE - 6 })}</svg>`
   })
   return (
     <svg

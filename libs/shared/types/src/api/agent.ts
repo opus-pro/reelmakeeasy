@@ -31,12 +31,14 @@ export type AnimationStyleId = Exclude<AnimationLookId, 'avatar'>
 export type VideoDetail = 'high' | 'low' | 'medium' | 'xhigh'
 
 /** How an avatar is drawn. */
-export type AvatarStyle = '2d' | '3d'
+export type AvatarStyle = '2d' | '3d' | 'pixel'
 
 /** A saved avatar (`GET /api/agent/avatars`). */
 export type AgentAvatar = {
   createdAt: string
   id: string
+  /** How the user described it in the avatar creator ('' when they didn't). */
+  look: string
   name: string
   /** Its picture (head and shoulders), or null before it has one. */
   previewUrl: null | string
@@ -50,16 +52,30 @@ export type AgentAvatar = {
   voiceSampleUrl: null | string
 }
 
+/** A new avatar's gender, in the avatar creator's Surprise me. */
+export type AvatarGender = 'female' | 'male'
+
 /** The Avatar video's avatar: a saved one, or a new one Claude draws from a photo (an attachment
- *  of the chat, by its name). */
+ *  of the chat, by its name), a description of how it looks, or both; with neither, a gender
+ *  (Surprise me), and Claude makes up the rest. */
 export type AgentAnimationAvatar =
   | { id: string }
-  | { name: string; photo: string; style: AvatarStyle }
+  | {
+      description?: string
+      gender?: AvatarGender
+      name: string
+      photo?: string
+      style: AvatarStyle
+    }
 
 /** What the Claude Animation setup card sends (`POST /api/agent/sessions/:id/animation`). */
 export type AgentAnimationSetup = {
   /** The Avatar video look's avatar (only with lookId `avatar`). */
   avatar?: AgentAnimationAvatar
+  /** The avatar creator: draw, check and save the new avatar only, no video. */
+  avatarOnly?: boolean
+  /** A new avatar's fixed voice, picked in the creator (a voice library id). */
+  avatarVoiceId?: string
   /** An Avatar explainer's style, the world the host is drawn in: `2d` or `3d` (the avatar's own
    *  style), or `8bit` (Pixel art, with a 2D or 3D avatar). Unset: the avatar's own style. */
   stage?: AnimationStyleId

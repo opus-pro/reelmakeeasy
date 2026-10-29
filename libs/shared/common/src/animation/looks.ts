@@ -1,4 +1,4 @@
-import type { AnimationLookId, AnimationStyleId } from '@shared/types/api/agent'
+import type { AnimationLookId, AnimationStyleId, AvatarStyle } from '@shared/types/api/agent'
 
 /**
  * Claude Animation's looks: the visual styles Claude draws a narrated short in, every
@@ -25,8 +25,9 @@ export type AnimationLook = {
   /** A style's Avatar explainer version: the user's avatar hosts it in this style. */
   withAvatar?: {
     description: string
-    /** The avatar styles it takes: one, or the user's pick. */
-    avatarStyles: readonly ('2d' | '3d')[]
+    /** The avatar styles it takes (any: the avatar's style and the world's are separate), the
+     *  one that matches the world first. */
+    avatarStyles: readonly AvatarStyle[]
     /** How the host lives in this world, for look.md. */
     host: string
     /** The avatar kit draws this world itself (its sets): the style's own skill isn't needed. */
@@ -57,9 +58,10 @@ export const ANIMATION_LOOKS: readonly AnimationLook[] = [
     palette: ['#FFF4E0', '#2B2140', '#FF7A59', '#4CC9F0', '#FFD166'],
     skill: 'reelmakeeasy-animation-2d',
     withAvatar: {
-      avatarStyles: ['2d'],
-      description: 'Your avatar hosts it as a 2D cartoon, pointing at pictures as it talks.',
-      host: 'The avatar drawn 2D, waist up, talking to the camera in a flat cartoon set.',
+      avatarStyles: ['2d', '3d', 'pixel'],
+      description:
+        'Your avatar hosts it in a flat 2D cartoon world, pointing at pictures as it talks.',
+      host: 'The avatar waist up, talking to the camera in a flat cartoon set.',
       ownWorld: true,
     },
   },
@@ -74,9 +76,9 @@ export const ANIMATION_LOOKS: readonly AnimationLook[] = [
     palette: ['#0E1116', '#F5F7FA', '#5EEAD4', '#F59E0B', '#A78BFA'],
     skill: 'reelmakeeasy-animation-3d',
     withAvatar: {
-      avatarStyles: ['3d'],
-      description: 'Your avatar hosts it as a 3D figure, in the 3D world it explains.',
-      host: 'The avatar as a 3D figure in the 3D scene, under its studio light.',
+      avatarStyles: ['3d', '2d', 'pixel'],
+      description: 'Your avatar hosts it in a 3D world, the one it explains.',
+      host: 'The avatar in the 3D scene, under its studio light.',
       ownWorld: true,
     },
   },
@@ -91,9 +93,9 @@ export const ANIMATION_LOOKS: readonly AnimationLook[] = [
     palette: ['#10101A', '#F8F8F8', '#FF004D', '#29ADFF', '#FFEC27', '#00E436'],
     skill: 'reelmakeeasy-animation-8bit',
     withAvatar: {
-      avatarStyles: ['2d', '3d'],
-      description: 'Your avatar hosts it in pixel art, inside the game world, drawn 2D or 3D.',
-      host: 'The avatar drawn into the pixel world with the same pixel grid (`PixelTalkingHead`): a 3D avatar stands in the low-res scene, a 2D one is pixelated on top of it.',
+      avatarStyles: ['pixel', '2d', '3d'],
+      description: 'Your avatar hosts it in a pixel-art game world.',
+      host: 'The avatar drawn into the pixel world with the same pixel grid (`PixelTalkingHead`): a pixel-art or 2D avatar is cut to the grid on top of the scene, a 3D one stands in the low-res scene.',
     },
   },
   {
@@ -111,9 +113,24 @@ export const ANIMATION_LOOKS: readonly AnimationLook[] = [
 ]
 
 /** Avatars are made in these styles. */
-export const AVATAR_STYLES = ['2d', '3d'] as const
+export const AVATAR_STYLES = ['2d', '3d', 'pixel'] as const
+/** How each avatar style is named to the user. */
+export const AVATAR_STYLE_LABEL: Record<AvatarStyle, string> = {
+  '2d': '2D',
+  '3d': '3D',
+  pixel: 'Pixel art',
+}
 /** The longest avatar name. */
 export const AVATAR_NAME_MAX = 40
+/** A new avatar's genders, in the avatar creator's Surprise me. */
+export const AVATAR_GENDERS = ['male', 'female'] as const
+
+/** How a described avatar is drawn: in pixel art or 3D when its description says so, else 2D. */
+export function avatarStyleFromDescription(description: string): AvatarStyle {
+  if (/pixel|\b(8|16)[- ]?bit\b|\bsprite\b/i.test(description)) return 'pixel'
+  if (/\b3[- ]?d\b|three[- ]dimensional/i.test(description)) return '3d'
+  return '2d'
+}
 
 export const ANIMATION_LOOK_IDS: readonly AnimationLookId[] = ANIMATION_LOOKS.map((l) => l.id)
 

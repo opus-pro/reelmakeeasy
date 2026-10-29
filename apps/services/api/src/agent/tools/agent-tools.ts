@@ -197,6 +197,11 @@ export const AGENT_TOOLS: Record<AgentToolName, DynamicToolSpec> = {
           minimum: 10,
           type: 'integer',
         },
+        avatarDescription: {
+          description:
+            "Avatar video with a new avatar: how it looks, in the user's words (with or instead of a photo).",
+          type: 'string',
+        },
         avatarId: {
           description: 'Avatar video with a saved avatar: its id (from the options).',
           type: 'string',
@@ -207,12 +212,13 @@ export const AGENT_TOOLS: Record<AgentToolName, DynamicToolSpec> = {
         },
         avatarPhoto: {
           description:
-            'Avatar video with a new avatar: the photo to draw it from, an image the user attached (its path, e.g. attachments/me.jpg).',
+            'Avatar video with a new avatar: the photo to draw it from, an image the user attached (its path, e.g. attachments/me.jpg). Optional with a description.',
           type: 'string',
         },
         avatarStyle: {
-          description: 'Avatar video with a new avatar: drawn in 2D or 3D.',
-          enum: ['2d', '3d'],
+          description:
+            'Avatar video with a new avatar: drawn in 2D, 3D or pixel art (pixel). Unset: as its description says (3D or pixel art when it says so), else 2D.',
+          enum: ['2d', '3d', 'pixel'],
           type: 'string',
         },
         detail: {

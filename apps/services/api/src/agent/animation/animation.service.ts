@@ -491,7 +491,7 @@ export class AnimationService {
     return {
       success: true,
       text: [
-        `Rendered the avatar's check sheet (the user sees it too): ${ANIMATION_DIR}/${path.relative(projectDir, sheet)}. Open it${photo ? ` next to the photo, ${ANIMATION_DIR}/${path.relative(projectDir, photo)},` : ''} and check: does it look like the person (face shape, skin tone, hair style and colour, eyes, glasses, beard, clothes)? Does every mouth shape read, does the blink close both eyes, do the hands land where each gesture says, is nothing cut off or detached?`,
+        `Rendered the avatar's check sheet (the user sees it too): ${ANIMATION_DIR}/${path.relative(projectDir, sheet)}. Open it${photo ? ` next to the photo, ${ANIMATION_DIR}/${path.relative(projectDir, photo)},` : ''} and check: does it look like the person, or as brief.md describes it (face shape, skin tone, hair style and colour, eyes, glasses, beard, clothes)? Does every mouth shape read, does the blink close both eyes, do the hands land where each gesture says, is nothing cut off or detached?`,
         'Fix what is off in src/avatar/avatar.ts and check again. When it looks right, show the user and ask with a card whether to keep it ("Keep this avatar (Recommended)" or "Change something"), then save it with avatar_save.',
       ].join(' '),
     }
@@ -520,12 +520,13 @@ export class AnimationService {
         success: false,
         text: `There is no voice "${voiceIdArg}": pass a voiceId from the list in its description, or the id of the voice the user picked.`,
       }
-    // Its fixed voice: the one passed, else the one it has (the user may have picked it).
-    const voiceId = voiceIdArg || before?.voiceId || ''
+    // Its fixed voice: the one passed, else the one it has (the user may have picked it), else
+    // the one picked in the avatar creator.
+    const voiceId = voiceIdArg || before?.voiceId || setup.avatarVoiceId || ''
     if (!before && !voiceId)
       return {
         success: false,
-        text: 'Pass voiceId: the fixed voice this avatar keeps in every video, the one from the list that best fits the person in the photo (or the voice the user asked for).',
+        text: 'Pass voiceId: the fixed voice this avatar keeps in every video, the one from the list that best fits the avatar (or the voice the user asked for).',
       }
     const voice = (typeof a['voice'] === 'string' && a['voice'].trim()) || before?.voice || ''
     if (!voiceId && voice.length < 8)
@@ -574,6 +575,7 @@ export class AnimationService {
       style,
       voice,
       ...(voiceId ? { voiceId } : {}),
+      ...('description' in chosen && chosen.description ? { look: chosen.description } : {}),
       ...(voiceSample ? { voiceSample } : {}),
     })
     markAvatarSaved(projectDir, avatarId)
@@ -583,7 +585,7 @@ export class AnimationService {
     this.sessions.emitImage(id, preview)
     return {
       success: true,
-      text: `Saved the avatar "${name}" (${style.toUpperCase()}) to the user's avatars: every later Avatar video can use it.${voiceId ? ` Its voice is ${voiceName(voiceId)}, fixed: every video with ${name} speaks in it (the user can change it on the setup card). Record its lines with voices "Host: avatar".` : voiceSample ? ' Its voice sample is made: record its lines with voices "Host: avatar" and they are cloned from it.' : ' Record its lines with voices "Host: avatar".'}${voiceNote} Save again after changing it.`,
+      text: `Saved the avatar "${name}" (${style.toUpperCase()}) to the user's avatars: every later Avatar video can use it.${voiceId ? ` Its voice is ${voiceName(voiceId)}, fixed: every video with ${name} speaks in it (the user can change it on the setup card). Record its lines with voices "Host: avatar".` : voiceSample ? ' Its voice sample is made: record its lines with voices "Host: avatar" and they are cloned from it.' : ' Record its lines with voices "Host: avatar".'}${voiceNote} Save again after changing it.${setup.avatarOnly ? ` This chat only makes the avatar: tell the user in one short line that ${name} is ready to use in any video, and stop (no script, voices, music or video).` : ''}`,
     }
   }
 
@@ -802,10 +804,18 @@ export class AnimationService {
         style: saved.style,
       }
     }
-    const photo = resolveAttachment(this.sessions.attachmentsDir(id), choice.photo)
-    if (!photo || photo.kind !== 'image')
+    const photo = choice.photo
+      ? resolveAttachment(this.sessions.attachmentsDir(id), choice.photo)
+      : undefined
+    if (choice.photo && (!photo || photo.kind !== 'image'))
       throw new AnimationSetupError('Add the photo again: that file is gone or is not a picture.')
-    return { id: null, name: choice.name, photo: photo.path, style: choice.style }
+    return {
+      ...(choice.description ? { description: choice.description } : {}),
+      id: null,
+      name: choice.name,
+      ...(photo ? { photo: photo.path } : {}),
+      style: choice.style,
+    }
   }
 
   private async prepare(

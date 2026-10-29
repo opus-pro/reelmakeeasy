@@ -8,6 +8,7 @@ import {
   ANIMATION_DIR,
   markAvatarSaved,
   prepareAnimationProject,
+  hostInWorld,
   projectLibs,
 } from './animation-project'
 
@@ -235,6 +236,58 @@ describe('prepareAnimationProject', () => {
       )
       expect(projectLibs({ ...head, stage: '3d' })).toEqual(['2d', '3d', 'avatar'])
       expect(projectLibs(setup2d)).toEqual(['2d'])
+    })
+
+    it('says which host kit draws each avatar in each world', () => {
+      expect(hostInWorld('2d', '3d')).toMatch(
+        /^a 3D avatar in a flat 2D world: `TalkingHead3D` with `backdrop`/,
+      )
+      expect(hostInWorld('3d', '2d')).toMatch(/^a flat 2D avatar in a 3D world: `TalkingHead3D`/)
+      expect(hostInWorld('2d', 'pixel')).toMatch(
+        /`TalkingHead2D` \(it draws the avatar cut to its pixel grid\)/,
+      )
+      expect(hostInWorld('8bit', '3d')).toMatch(/`PixelTalkingHead`/)
+    })
+
+    it('makes only the avatar in the creator: from a description, as pixel art', async () => {
+      const { projectDir } = await prepareAnimationProject({
+        avatar: { description: 'a tiny robot', id: null, name: 'Pip', style: 'pixel' },
+        music: null,
+        setup: {
+          ...head,
+          avatar: { description: 'a tiny robot', name: 'Pip', style: 'pixel' },
+          avatarOnly: true,
+          avatarVoiceId: 'kokoro-am_eric',
+          detail: 'low',
+        },
+        workspace,
+      })
+      expect(rig(projectDir)).toContain("style: 'pixel'")
+      const brief = fs.readFileSync(path.join(projectDir, 'brief.md'), 'utf8')
+      expect(brief).toMatch(/^# Avatar brief/)
+      expect(brief).toContain('drawn Pixel art, and nothing else')
+      expect(brief).toContain('this description: "a tiny robot"')
+      expect(brief).toContain('the user picked Kokoro Eric')
+      expect(brief).toContain('## Detail: Low')
+    })
+
+    it("makes up an avatar for Surprise me: Claude's own idea of a woman, in 3D", async () => {
+      const { projectDir } = await prepareAnimationProject({
+        avatar: { id: null, name: 'Ada', style: '3d' },
+        music: null,
+        setup: {
+          ...head,
+          avatar: { gender: 'female', name: 'Ada', style: '3d' },
+          avatarOnly: true,
+        },
+        workspace,
+      })
+      expect(rig(projectDir)).toContain("style: '3d'")
+      const brief = fs.readFileSync(path.join(projectDir, 'brief.md'), 'utf8')
+      expect(brief).toContain('drawn 3D, and nothing else')
+      expect(brief).toContain(
+        '**Draw it from:** your own idea (the user picked Surprise me): a woman who suits the name "Ada"',
+      )
     })
 
     it("keeps Claude's rig for the same avatar, and swaps in another avatar's", async () => {

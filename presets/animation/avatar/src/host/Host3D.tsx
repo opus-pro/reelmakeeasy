@@ -3,8 +3,9 @@ import { AbsoluteFill, useCurrentFrame, useVideoConfig } from 'remotion'
 
 import { createEngine3D, type Engine3D, THREE } from '../stage'
 
-import type { Avatar3D } from './avatar-types'
+import type { Avatar, Avatar3D } from './avatar-types'
 import { type Area, BOARD, type Shot, shotIndex, shotProgress } from './framing'
+import { PLACE, placeAvatar2D } from './Host2D'
 import { type Cue, hostPose, type Pose } from './pose'
 import { type GestureSounds, GestureSoundTrack } from './sounds'
 
@@ -39,24 +40,31 @@ export type Set3D = { update?: (t: number, i: number, shot: Shot) => void }
 /**
  * A 3D talking head: the 3D look's engine (studio light), the set Claude builds, the avatar posed
  * from the voice and the cues, the camera per shot, and the board (SVG pictures over the frame).
- * Put `<Voice />`, `<Music />` and `<Captions />` around it in `Animation.tsx`.
+ * Put `<Voice />`, `<Music />` and `<Captions />` around it in `Animation.tsx`. It mixes styles:
+ * - a 3D avatar stands in the scene; a 2D or pixel-art one is drawn flat over the 3D world,
+ *   where a 2D host would stand in that shot (`PLACE`);
+ * - `backdrop`, a flat 2D world (SVG) behind the scene, for a 3D avatar in a 2D world: the
+ *   scene is then see-through (no sky, fog or ground), only the host and what `set` adds.
  */
 export function TalkingHead3D({
   avatar,
+  backdrop,
   background = '#1B1F2A',
   board = () => '',
   cues = [],
-  set,
+  set = () => ({}),
   shots,
   sounds,
 }: {
-  avatar: Avatar3D
+  avatar: Avatar
+  /** A flat 2D world for line i at t, as SVG for the screen, behind the 3D scene. */
+  backdrop?: (t: number, i: number, shot: Shot) => string
   background?: string
   /** Pictures for line i at t, as SVG for the 1080×1920 screen, inside `area` (the free space). */
   board?: (t: number, i: number, area: Area) => string
   cues?: Cue[]
   /** Builds the set once (walls, props, lights) in E.scene; the avatar stands at the origin. */
-  set: (E: Engine3D) => Set3D
+  set?: (E: Engine3D) => Set3D
   shots: Shot[]
   /** The gestures' sounds: on by default (a boop on a wave, a ding on a thumbs up…); false for
    *  none, or your own per gesture. */
@@ -68,7 +76,7 @@ export function TalkingHead3D({
   const overlay = useRef<HTMLCanvasElement>(null)
   const made = useRef<null | {
     E: Engine3D
-    host: { pose: (p: Pose) => void; root: THREE.Object3D }
+    host: null | { pose: (p: Pose) => void; root: THREE.Object3D }
     stage: Set3D
   }>(null)
   const t = frame / fps
@@ -76,23 +84,41 @@ export function TalkingHead3D({
   const shot = shots[i] ?? 'medium'
   useLayoutEffect(() => {
     if (!made.current && gl.current && overlay.current) {
-      const E = createEngine3D({ background, gl: gl.current, overlay: overlay.current })
-      const host = avatar.build(THREE)
-      host.root.position.y = WAIST_Y
-      E.scene.add(host.root)
+      const E = createEngine3D({
+        background,
+        gl: gl.current,
+        overlay: overlay.current,
+        transparent: !!backdrop,
+      })
+      const host = avatar.style === '3d' ? (avatar as Avatar3D).build(THREE) : null
+      if (host) {
+        host.root.position.y = WAIST_Y
+        E.scene.add(host.root)
+      }
       made.current = { E, host, stage: set(E) }
     }
     if (!made.current) return
     const { E, host, stage } = made.current
-    host.pose(hostPose(t, cues))
+    host?.pose(hostPose(t, cues))
     stage.update?.(t, i, shot)
     frameShot(E.camera, shot, shotProgress(t, durationInFrames / fps), t)
     E.sync()
     E.render()
-  }, [avatar, background, cues, durationInFrames, fps, i, set, shot, t])
+  }, [avatar, backdrop, background, cues, durationInFrames, fps, i, set, shot, t])
+  // A flat avatar in the 3D world: drawn where a 2D host would stand in this shot.
+  const flat = avatar.style === '3d' ? '' : placeAvatar2D(avatar, hostPose(t, cues), PLACE[shot])
   return (
     <AbsoluteFill>
       {sounds !== false && <GestureSoundTrack cues={cues} sounds={sounds} />}
+      {backdrop && (
+        <svg
+          dangerouslySetInnerHTML={{ __html: backdrop(t, i, shot) }}
+          height="100%"
+          style={{ inset: 0, position: 'absolute' }}
+          viewBox="0 0 1080 1920"
+          width="100%"
+        />
+      )}
       <canvas
         height={1920}
         ref={gl}
@@ -105,6 +131,15 @@ export function TalkingHead3D({
         style={{ display: 'none', left: 0, position: 'absolute', top: 0 }}
         width={1080}
       />
+      {flat && (
+        <svg
+          dangerouslySetInnerHTML={{ __html: flat }}
+          height="100%"
+          style={{ inset: 0, position: 'absolute' }}
+          viewBox="0 0 1080 1920"
+          width="100%"
+        />
+      )}
       <svg
         dangerouslySetInnerHTML={{ __html: board(t, i, BOARD[shot]) }}
         height="100%"

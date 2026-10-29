@@ -152,6 +152,8 @@ function SetupForm({
   const [detail, setDetail] = useState<VideoDetail>(VIDEO_DEFAULT_DETAIL)
   const [music, setMusic] = useState<MusicPick>(() => defaultMusic(options, first))
   const [musicTouched, setMusicTouched] = useState(false)
+  // The saved avatars, and any the avatar creator makes while the card is open.
+  const [avatars, setAvatars] = useState(options.avatars)
   const [avatar, setAvatar] = useState<AvatarPick>(() =>
     firstAvatarPick(options.avatars, first?.withAvatar.avatarStyles),
   )
@@ -169,7 +171,7 @@ function SetupForm({
 
   const pickStyle = (next: Style) => {
     setStyleId(next.id)
-    setAvatar((current) => fitAvatarPick(current, options.avatars, next.withAvatar.avatarStyles))
+    setAvatar((current) => fitAvatarPick(current, avatars, next.withAvatar.avatarStyles))
     // The look's own track follows it, until the user picks the music themselves.
     if (!musicTouched) setMusic(defaultMusic(options, withAvatar ? hostLook : next))
   }
@@ -216,10 +218,13 @@ function SetupForm({
         <StyleGrid onPick={pickStyle} selected={styleId} styles={styles} withAvatar={withAvatar} />
         {talkingHead && style && (
           <AvatarPicker
-            avatars={options.avatars}
+            avatars={avatars}
+            onCreated={(made) => {
+              setAvatars((all) => [made, ...all.filter((a) => a.id !== made.id)])
+              setAvatar({ id: made.id, kind: 'saved' })
+            }}
             onPick={setAvatar}
             pick={avatar}
-            sessionId={sessionId}
             styles={style.withAvatar.avatarStyles}
           />
         )}
@@ -302,7 +307,7 @@ function SetupForm({
             {!lengthOk
               ? `Pick a length from ${options.minLengthSec} to ${options.maxLengthSec} seconds.`
               : !avatarOk
-                ? 'Add a photo and a name for the new avatar.'
+                ? 'Pick an avatar, or make one with New avatar.'
                 : "Say what it's about, or pick Surprise me."}
           </span>
         )}

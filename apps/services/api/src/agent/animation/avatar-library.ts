@@ -26,6 +26,8 @@ const ID = /^av-[a-f0-9]{10}$/
 export type AvatarRecord = {
   createdAt: string
   id: string
+  /** How the user described it in the avatar creator, when they did. */
+  look?: string
   name: string
   style: AvatarStyle
   updatedAt: string
@@ -62,6 +64,7 @@ export function readAvatar(id: string): AvatarRecord | null {
     return {
       createdAt: raw.createdAt ?? new Date(0).toISOString(),
       id,
+      ...(typeof raw.look === 'string' && raw.look.trim() ? { look: raw.look.trim() } : {}),
       name: raw.name,
       style: raw.style as AvatarStyle,
       updatedAt: raw.updatedAt ?? raw.createdAt ?? new Date(0).toISOString(),
@@ -90,6 +93,7 @@ export function listAvatars(): AgentAvatar[] {
     .map((a) => ({
       createdAt: a.createdAt,
       id: a.id,
+      look: a.look ?? '',
       name: a.name,
       previewUrl: fs.existsSync(path.join(avatarDir(a.id), 'preview.png'))
         ? storeUri(`${AVATAR_FOLDER}/${a.id}/preview.png`)
@@ -119,6 +123,8 @@ export function avatarVoice(id: string): null | { text: string; wav: string } {
  */
 export function saveAvatar(o: {
   id: string
+  /** How the user described it; unset keeps the one it has. */
+  look?: string
   name: string
   photo?: string
   preview: string
@@ -136,6 +142,7 @@ export function saveAvatar(o: {
   const record: AvatarRecord = {
     createdAt: before?.createdAt ?? now,
     id: o.id,
+    ...((o.look ?? before?.look) ? { look: o.look ?? before?.look } : {}),
     name: o.name,
     style: o.style,
     updatedAt: now,
@@ -167,6 +174,7 @@ export function setAvatarVoice(id: string, voiceId: null | string): AvatarRecord
   const record: AvatarRecord = {
     createdAt: before.createdAt,
     id: before.id,
+    ...(before.look ? { look: before.look } : {}),
     name: before.name,
     style: before.style,
     updatedAt: new Date().toISOString(),

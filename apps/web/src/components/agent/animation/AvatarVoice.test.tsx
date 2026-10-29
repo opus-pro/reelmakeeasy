@@ -42,6 +42,7 @@ jest.mock('@/components/voice', () => ({
 const ALLEN: AgentAvatar = {
   createdAt: '2026-10-27T00:00:00Z',
   id: 'av-0123456789',
+  look: '',
   name: 'Allen',
   previewUrl: null,
   style: '2d',
