@@ -3,8 +3,10 @@ import {
   ANIMATION_MIN_SEC,
   ANIMATION_SUBJECT_MAX,
   animationLook,
+  AVATAR_GENDERS,
   AVATAR_NAME_MAX,
   AVATAR_STYLES,
+  avatarStyleFromDescription,
   isAnimationStyle,
 } from '@reelmakeeasy/common/animation/looks'
 import { isVideoDetail, VIDEO_DEFAULT_DETAIL } from '@reelmakeeasy/common/motion-reel/video-detail'
@@ -13,6 +15,7 @@ import { ensureError } from '@reelmakeeasy/common/utils/error-handler'
 import type {
   AgentAnimationAvatar,
   AgentAnimationSetup,
+  AvatarGender,
   AvatarStyle,
   VideoDetail,
 } from '@shared/types/api/agent'
@@ -40,8 +43,8 @@ function checkedMusic(music: unknown): AgentAnimationSetup['music'] {
 export const AVATAR_DESCRIPTION_MAX = 600
 
 /** The Avatar video's avatar, checked: a saved one by its id, or a new one (a name, the photo's
- *  attachment name and/or a description, 2D, 3D or Pixel art). Whether it exists is the
- *  service's to check. */
+ *  attachment name and/or a description, or a gender alone for Surprise me; 2D, 3D or Pixel art,
+ *  by default as its description says). Whether it exists is the service's to check. */
 function parseAvatar(raw: unknown): AgentAnimationAvatar {
   if (!isRecord(raw))
     throw new AnimationSetupError('Pick an avatar, or make a new one from a photo.')
@@ -52,17 +55,21 @@ function parseAvatar(raw: unknown): AgentAnimationAvatar {
     throw new AnimationSetupError(`Keep the avatar's name under ${AVATAR_NAME_MAX} characters.`)
   const photo = typeof raw['photo'] === 'string' ? raw['photo'].trim() : ''
   const description = typeof raw['description'] === 'string' ? raw['description'].trim() : ''
-  if (!photo && !description)
-    throw new AnimationSetupError('Add a photo, or describe how the avatar looks.')
+  const gender = raw['gender'] ?? ''
+  if (gender !== '' && !AVATAR_GENDERS.includes(gender as AvatarGender))
+    throw new AnimationSetupError('Pick male or female for the avatar.')
+  if (!photo && !description && !gender)
+    throw new AnimationSetupError('Add a photo, describe how the avatar looks, or pick Surprise me.')
   if (description.length > AVATAR_DESCRIPTION_MAX)
     throw new AnimationSetupError(
       `Keep the avatar's description under ${AVATAR_DESCRIPTION_MAX} characters.`,
     )
-  const style = raw['style']
+  const style = raw['style'] || avatarStyleFromDescription(description)
   if (!AVATAR_STYLES.includes(style as AvatarStyle))
     throw new AnimationSetupError('Pick 2D, 3D or Pixel art for the avatar.')
   return {
     ...(description ? { description } : {}),
+    ...(gender ? { gender: gender as AvatarGender } : {}),
     name,
     ...(photo ? { photo } : {}),
     style: style as AvatarStyle,

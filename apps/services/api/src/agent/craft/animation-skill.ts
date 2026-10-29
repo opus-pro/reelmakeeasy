@@ -145,6 +145,7 @@ const LOOK_SECTION: Record<AnimationLookId, string[]> = {
     'When the user asks to change a saved avatar (new glasses, a different shirt), change `avatar.ts`, check, and save again (the same avatar is updated; pass a new `voice` only to change the voice).',
     '',
     '- **From a description:** a new avatar can come from a photo, a description, or both (`brief.md` says which). With no photo, draw what the description says and fill in the rest so it reads as one person; with both, the photo is who it is and the description how to draw it ("in a hoodie", "anime eyes").',
+    '- **Surprise me:** with neither, `brief.md` gives only a name, a man or a woman, and 2D or 3D: make up a look of your own that suits the name, distinctive and friendly (a hair style, skin tone, clothes and colours you choose, nothing generic), and check it against what you set out to draw.',
     "- **Pixel art** (`style: 'pixel'`): drawn like a 2D avatar and always shown cut to a pixel grid of about 9 units of its box (the sheet shows it so). Use bold, flat shapes of a few colours: no thin lines, no gradients, nothing under about 20 units; the likeness is in the hair's shape, the colours and what they wear.",
     "- **The avatar creator:** when `brief.md` says this chat only makes the avatar, draw it, check it, ask, save it, say it's ready, and stop.",
     '',

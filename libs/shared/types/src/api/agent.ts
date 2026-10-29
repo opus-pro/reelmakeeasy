@@ -52,11 +52,21 @@ export type AgentAvatar = {
   voiceSampleUrl: null | string
 }
 
+/** A new avatar's gender, in the avatar creator's Surprise me. */
+export type AvatarGender = 'female' | 'male'
+
 /** The Avatar video's avatar: a saved one, or a new one Claude draws from a photo (an attachment
- *  of the chat, by its name), a description of how it looks, or both. */
+ *  of the chat, by its name), a description of how it looks, or both; with neither, a gender
+ *  (Surprise me), and Claude makes up the rest. */
 export type AgentAnimationAvatar =
   | { id: string }
-  | { description?: string; name: string; photo?: string; style: AvatarStyle }
+  | {
+      description?: string
+      gender?: AvatarGender
+      name: string
+      photo?: string
+      style: AvatarStyle
+    }
 
 /** What the Claude Animation setup card sends (`POST /api/agent/sessions/:id/animation`). */
 export type AgentAnimationSetup = {

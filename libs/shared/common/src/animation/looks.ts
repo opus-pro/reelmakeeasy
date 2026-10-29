@@ -122,6 +122,15 @@ export const AVATAR_STYLE_LABEL: Record<AvatarStyle, string> = {
 }
 /** The longest avatar name. */
 export const AVATAR_NAME_MAX = 40
+/** A new avatar's genders, in the avatar creator's Surprise me. */
+export const AVATAR_GENDERS = ['male', 'female'] as const
+
+/** How a described avatar is drawn: in pixel art or 3D when its description says so, else 2D. */
+export function avatarStyleFromDescription(description: string): AvatarStyle {
+  if (/pixel|\b(8|16)[- ]?bit\b|\bsprite\b/i.test(description)) return 'pixel'
+  if (/\b3[- ]?d\b|three[- ]dimensional/i.test(description)) return '3d'
+  return '2d'
+}
 
 export const ANIMATION_LOOK_IDS: readonly AnimationLookId[] = ANIMATION_LOOKS.map((l) => l.id)
 

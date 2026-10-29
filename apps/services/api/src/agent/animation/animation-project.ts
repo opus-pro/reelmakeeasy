@@ -277,15 +277,20 @@ export function hostInWorld(stage: AnimationLookId, avatar: AvatarStyle): string
     : `a ${kind} avatar in a flat 2D world: \`TalkingHead2D\`${avatar === 'pixel' ? ' (it draws the avatar cut to its pixel grid)' : ''}.`
 }
 
-/** Where a new avatar is drawn from: its photo, its description, or both. */
+/** Where a new avatar is drawn from: its photo, its description, or both; with neither (Surprise
+ *  me), Claude's own idea of a man or woman who suits the name. */
 function avatarSource(setup: AgentAnimationSetup): string {
   const fresh = setup.avatar && !('id' in setup.avatar) ? setup.avatar : undefined
-  return [
-    fresh?.photo ? 'the photo in `public/avatar/`' : null,
-    fresh?.description ? `this description: "${fresh.description}"` : null,
+  if (!fresh) return ''
+  const who = fresh.gender ? `a ${fresh.gender === 'female' ? 'woman' : 'man'}` : null
+  const from = [
+    fresh.photo ? 'the photo in `public/avatar/`' : null,
+    fresh.description ? `this description: "${fresh.description}"` : null,
   ]
     .filter(Boolean)
     .join(' and ')
+  if (from) return who ? `${from} (${who})` : from
+  return `your own idea (the user picked Surprise me): ${who ?? 'a person'} who suits the name "${fresh.name}", with a face, hair, skin tone, clothes and colours you choose, friendly and easy to recognise`
 }
 
 /** The avatar creator's brief: one new avatar, nothing else. */

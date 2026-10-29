@@ -271,6 +271,25 @@ describe('prepareAnimationProject', () => {
       expect(brief).toContain('## Detail: Low')
     })
 
+    it("makes up an avatar for Surprise me: Claude's own idea of a woman, in 3D", async () => {
+      const { projectDir } = await prepareAnimationProject({
+        avatar: { id: null, name: 'Ada', style: '3d' },
+        music: null,
+        setup: {
+          ...head,
+          avatar: { gender: 'female', name: 'Ada', style: '3d' },
+          avatarOnly: true,
+        },
+        workspace,
+      })
+      expect(rig(projectDir)).toContain("style: '3d'")
+      const brief = fs.readFileSync(path.join(projectDir, 'brief.md'), 'utf8')
+      expect(brief).toContain('drawn 3D, and nothing else')
+      expect(brief).toContain(
+        '**Draw it from:** your own idea (the user picked Surprise me): a woman who suits the name "Ada"',
+      )
+    })
+
     it("keeps Claude's rig for the same avatar, and swaps in another avatar's", async () => {
       const { projectDir } = await prepareAnimationProject({
         avatar: { id: null, name: 'Sam', style: '2d' },

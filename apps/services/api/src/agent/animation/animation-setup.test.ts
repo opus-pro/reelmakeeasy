@@ -30,7 +30,7 @@ describe('parseAnimationSetup', () => {
     expect(() => parseAnimationSetup(head)).toThrow(/Pick an avatar/)
     expect(() =>
       parseAnimationSetup({ ...head, avatar: { name: 'Sam', photo: '', style: '2d' } }),
-    ).toThrow(/Add a photo, or describe how the avatar looks/)
+    ).toThrow(/Add a photo, describe how the avatar looks, or pick Surprise me/)
     // A description alone will do, in pixel art too.
     expect(
       parseAnimationSetup({
@@ -38,6 +38,23 @@ describe('parseAnimationSetup', () => {
         avatar: { description: ' a tiny robot ', name: 'Pip', style: 'pixel' },
       }).avatar,
     ).toEqual({ description: 'a tiny robot', name: 'Pip', style: 'pixel' })
+    // Unset, the style is as the description says, else 2D.
+    const styleOf = (description: string) => {
+      const avatar = parseAnimationSetup({ ...head, avatar: { description, name: 'Pip' } }).avatar
+      return avatar && 'style' in avatar ? avatar.style : null
+    }
+    expect(styleOf('a 3D robot with glowing eyes')).toBe('3d')
+    expect(styleOf('a pixel-art knight')).toBe('pixel')
+    expect(styleOf('an 8-bit wizard')).toBe('pixel')
+    expect(styleOf('a cheerful chef')).toBe('2d')
+    // Surprise me: a gender and a style, nothing else.
+    expect(
+      parseAnimationSetup({ ...head, avatar: { gender: 'female', name: 'Ada', style: '3d' } })
+        .avatar,
+    ).toEqual({ gender: 'female', name: 'Ada', style: '3d' })
+    expect(() =>
+      parseAnimationSetup({ ...head, avatar: { gender: 'robot', name: 'Ada', style: '3d' } }),
+    ).toThrow(/male or female/)
     expect(() =>
       parseAnimationSetup({ ...head, avatar: { name: 'Sam', photo: 'me.jpg', style: '4d' } }),
     ).toThrow(/2D, 3D or Pixel art/)

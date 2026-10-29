@@ -1,12 +1,23 @@
 'use client'
 
-import { AVATAR_NAME_MAX, AVATAR_STYLE_LABEL } from '@reelmakeeasy/common/animation/looks'
+import {
+  AVATAR_GENDERS,
+  AVATAR_NAME_MAX,
+  AVATAR_STYLE_LABEL,
+  avatarStyleFromDescription,
+} from '@reelmakeeasy/common/animation/looks'
 import { VIDEO_DEFAULT_DETAIL } from '@reelmakeeasy/common/motion-reel/video-detail'
-import type { AgentAvatar, AgentSession, AvatarStyle, VideoDetail } from '@shared/types/api/agent'
+import type {
+  AgentAvatar,
+  AgentSession,
+  AvatarGender,
+  AvatarStyle,
+  VideoDetail,
+} from '@shared/types/api/agent'
 import { Button, cn, Dialog } from '@shared/ui'
 import { useAtomValue } from 'jotai'
-import { Check, ImagePlus, Pause, Play } from 'lucide-react'
-import { useEffect, useRef, useState } from 'react'
+import { Check, ImagePlus, Pause, PenLine, Play, Sparkles } from 'lucide-react'
+import { type ReactNode, useEffect, useRef, useState } from 'react'
 
 import { apiOriginAtom } from '@/atom/apiOrigin'
 import { usePresetVoiceOptions, type VoiceOption, VoiceSelectionDialog } from '@/components/voice'
@@ -15,7 +26,7 @@ import { useAudio } from '@/hooks/useAudio'
 
 import { AgentChat } from '../AgentChat'
 import { attachmentName, uploadAttachment } from '../attachments/attachments'
-import { ChipRow, DetailPicker, LABEL_CLASS } from '../motion/setup-parts'
+import { DetailPicker, LABEL_CLASS } from '../motion/setup-parts'
 import { useAgentSession } from '../useAgentSession'
 
 const DESCRIPTION_MAX = 600
@@ -31,8 +42,9 @@ const AVATAR_DETAIL: Record<VideoDetail, string> = {
 }
 
 /**
- * The avatar creator, its own step before any video: a name, a photo and/or a description, the
- * style (2D, 3D or Pixel art, those the video's style takes), the detail and its voice. Generate
+ * The avatar creator, its own step before any video: a name; a photo and/or a description (drawn
+ * in 3D or pixel art when it says so, else 2D), or Surprise me (2D or 3D, male or female, and
+ * Claude makes up the rest); the detail and its voice. Generate
  * starts Claude on it in a chat of its own, shown here: Claude draws it, checks it, asks to keep
  * it, and saves it; "Use this avatar" then picks it on the card.
  */
@@ -45,7 +57,8 @@ export function AvatarCreator({
   onClose: () => void
   onCreated: (avatar: AgentAvatar) => void
   open: boolean
-  /** The avatar styles the video's style takes (the first is the default). */
+  /** The avatar styles the video's style takes, its own first (Surprise me starts on 3D for a 3D
+   *  video). */
   styles: readonly AvatarStyle[]
 }) {
   const [sessionId, setSessionId] = useState<null | string>(null)
@@ -82,6 +95,27 @@ export function AvatarCreator({
   )
 }
 
+/** How the user gives the avatar's look: a photo and/or a description, or Surprise me. */
+type LookWay = 'describe' | 'surprise'
+
+/** Ideas to start a description from, one per way an avatar can be drawn. */
+const IDEAS = [
+  {
+    label: '2D cartoon chef',
+    text: 'A 2D cartoon chef with a curly mustache, rosy cheeks and a tall white hat',
+  },
+  {
+    label: '3D robot',
+    text: 'A friendly 3D robot with a round head, big glowing blue eyes and a little antenna',
+  },
+  {
+    label: 'Pixel-art knight',
+    text: 'A pixel-art knight in shiny blue armour, with a red cape and a big grin',
+  },
+] as const
+
+const GENDER_LABEL: Record<AvatarGender, string> = { female: 'Female', male: 'Male' }
+
 function AvatarForm({
   onSession,
   onStarted,
@@ -96,9 +130,12 @@ function AvatarForm({
   const apiOrigin = useAtomValue(apiOriginAtom)
   const { fetchApiDomain } = useApi()
   const [name, setName] = useState('')
+  const [way, setWay] = useState<LookWay>('describe')
   const [photo, setPhoto] = useState<null | { name: string; preview: string }>(null)
-  const [style, setStyle] = useState<AvatarStyle>(styles[0] ?? '2d')
   const [description, setDescription] = useState('')
+  // Surprise me: 2D or 3D (3D first when the video is 3D) and a gender.
+  const [kind, setKind] = useState<AvatarStyle>(styles[0] === '3d' ? '3d' : '2d')
+  const [gender, setGender] = useState<AvatarGender | null>(null)
   const [detail, setDetail] = useState<VideoDetail>(VIDEO_DEFAULT_DETAIL)
   const [voice, setVoice] = useState<null | VoiceOption>(null)
   const [uploading, setUploading] = useState(false)
@@ -107,6 +144,7 @@ function AvatarForm({
   const fileRef = useRef<HTMLInputElement>(null)
   const preview = photo?.preview
   useEffect(() => () => void (preview && URL.revokeObjectURL(preview)), [preview])
+  const drawn = avatarStyleFromDescription(description)
 
   // The creator's own chat, made on the first photo or on Generate.
   const ensureSession = async (): Promise<string> => {
@@ -138,21 +176,34 @@ function AvatarForm({
     }
   }
 
-  const ready = !!name.trim() && (!!photo || !!description.trim()) && !uploading
+  const missing = !name.trim()
+    ? 'Give it a name.'
+    : way === 'surprise'
+      ? gender
+        ? null
+        : 'Pick male or female.'
+      : photo || description.trim()
+        ? null
+        : 'Add a photo, or describe how it looks.'
+  const ready = !missing && !uploading
   const generate = async () => {
     if (!ready || pending) return
     setPending(true)
     setError(null)
     try {
       const id = await ensureSession()
+      const avatar =
+        way === 'surprise'
+          ? { gender, name: name.trim(), style: kind }
+          : {
+              ...(description.trim() ? { description: description.trim() } : {}),
+              name: name.trim(),
+              ...(photo ? { photo: photo.name } : {}),
+              style: drawn,
+            }
       const res = await fetchApiDomain('/api/agent/sessions/{id}/animation', {
         data: {
-          avatar: {
-            ...(description.trim() ? { description: description.trim() } : {}),
-            name: name.trim(),
-            ...(photo ? { photo: photo.name } : {}),
-            style,
-          },
+          avatar,
           avatarOnly: true,
           ...(voice ? { avatarVoiceId: voice.value } : {}),
           detail,
@@ -175,83 +226,127 @@ function AvatarForm({
 
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto pr-1">
-      <div className="flex items-start gap-4">
-        <button
-          aria-label={photo ? 'Change the photo' : 'Add a photo'}
-          className="flex size-24 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-dashed border-white/25 bg-white/[0.04] transition-colors hover:border-white/50"
-          disabled={uploading}
-          onClick={() => fileRef.current?.click()}
-          type="button"
-        >
-          {photo ? (
-            // eslint-disable-next-line @next/next/no-img-element -- a local preview of the upload
-            <img alt="" className="size-full object-cover" src={photo.preview} />
-          ) : (
-            <ImagePlus className="size-6 text-white/50" />
-          )}
-        </button>
+      <div className="flex flex-col gap-1.5">
+        <label className={LABEL_CLASS} htmlFor="avatar-name">
+          Name
+        </label>
         <input
-          accept="image/jpeg,image/png,image/webp"
-          aria-label="Photo for the avatar"
-          className="hidden"
-          onChange={(e) => {
-            void upload(e.target.files?.[0])
-            e.target.value = ''
-          }}
-          ref={fileRef}
-          type="file"
+          className="w-full rounded-md border border-white/10 bg-black/30 px-2.5 py-1.5 text-sm text-primary placeholder:text-tertiary focus:border-white/30 focus:outline-none"
+          id="avatar-name"
+          maxLength={AVATAR_NAME_MAX}
+          onChange={(e) => setName(e.target.value)}
+          placeholder="e.g. Sam"
+          value={name}
         />
-        <div className="flex min-w-0 flex-1 flex-col gap-1.5">
-          <label className={LABEL_CLASS} htmlFor="avatar-name">
-            Name
-          </label>
-          <input
-            className="w-full rounded-md border border-white/10 bg-black/30 px-2.5 py-1.5 text-sm text-primary placeholder:text-tertiary focus:border-white/30 focus:outline-none"
-            id="avatar-name"
-            maxLength={AVATAR_NAME_MAX}
-            onChange={(e) => setName(e.target.value)}
-            placeholder="e.g. Sam"
-            value={name}
-          />
+      </div>
+      <div className="flex flex-col gap-2">
+        <span className={LABEL_CLASS}>How it looks</span>
+        <Choices
+          label="How it looks"
+          onPick={setWay}
+          options={[
+            { icon: <PenLine className="size-4" />, label: 'Describe it', value: 'describe' },
+            { icon: <Sparkles className="size-4" />, label: 'Surprise me', value: 'surprise' },
+          ]}
+          selected={way}
+        />
+      </div>
+      {way === 'describe' ? (
+        <div className="flex flex-col gap-2">
+          <div className="flex items-stretch gap-3">
+            <button
+              aria-label={photo ? 'Change the photo' : 'Add a photo'}
+              className="flex w-24 shrink-0 flex-col items-center justify-center gap-1 overflow-hidden rounded-lg border border-dashed border-white/25 bg-white/[0.04] text-xs text-white/50 transition-colors hover:border-white/50"
+              disabled={uploading}
+              onClick={() => fileRef.current?.click()}
+              type="button"
+            >
+              {photo ? (
+                // eslint-disable-next-line @next/next/no-img-element -- a local preview of the upload
+                <img alt="" className="size-full object-cover" src={photo.preview} />
+              ) : (
+                <>
+                  <ImagePlus className="size-6" />
+                  {uploading ? 'Uploading…' : 'Photo'}
+                </>
+              )}
+            </button>
+            <input
+              accept="image/jpeg,image/png,image/webp"
+              aria-label="Photo for the avatar"
+              className="hidden"
+              onChange={(e) => {
+                void upload(e.target.files?.[0])
+                e.target.value = ''
+              }}
+              ref={fileRef}
+              type="file"
+            />
+            <div className="flex min-w-0 flex-1 flex-col gap-1.5">
+              <label className={LABEL_CLASS} htmlFor="avatar-description">
+                {photo ? 'Describe it (optional)' : 'Describe how it looks'}
+              </label>
+              <textarea
+                className="min-h-[72px] flex-1 resize-y rounded-lg border border-white/10 bg-black/30 px-3 py-2 text-sm text-primary placeholder:text-tertiary focus:border-white/30 focus:outline-none"
+                id="avatar-description"
+                maxLength={DESCRIPTION_MAX}
+                onChange={(e) => setDescription(e.target.value)}
+                placeholder={
+                  photo
+                    ? 'e.g. in a red hoodie, with round glasses'
+                    : 'e.g. a cheerful woman in her 30s, curly red hair, round glasses, a green sweater'
+                }
+                value={description}
+              />
+            </div>
+          </div>
+          <div className="flex flex-wrap items-center gap-1.5">
+            <span className="text-xs text-tertiary">Ideas:</span>
+            {IDEAS.map((idea) => (
+              <button
+                className="rounded-full border border-white/10 px-2.5 py-1 text-xs text-secondary transition-colors hover:border-white/30 hover:text-primary"
+                key={idea.label}
+                onClick={() => setDescription(idea.text)}
+                type="button"
+              >
+                {idea.label}
+              </button>
+            ))}
+          </div>
           <span className="text-xs text-tertiary">
-            {uploading
-              ? 'Uploading the photo…'
-              : 'A clear photo, face to the camera. Optional when you describe it.'}
+            A photo of someone, a description, or both. Drawn in {AVATAR_STYLE_LABEL[drawn]}
+            {drawn === '2d' ? ': say 3D or pixel art to draw it that way.' : '.'}
           </span>
         </div>
-      </div>
-      {styles.length > 1 ? (
-        <ChipRow
-          label="Style"
-          onPick={setStyle}
-          options={styles.map((value) => ({ label: AVATAR_STYLE_LABEL[value], value }))}
-          selected={style}
-        />
       ) : (
-        <div className="flex flex-col gap-1.5">
-          <span className={LABEL_CLASS}>Style</span>
-          <span className="text-sm text-primary">
-            {AVATAR_STYLE_LABEL[style]}, like the video&apos;s style
+        <div className="flex flex-col gap-3">
+          <div className="flex flex-col gap-2">
+            <span className={LABEL_CLASS}>Kind</span>
+            <Choices
+              label="Kind"
+              onPick={setKind}
+              options={(['2d', '3d'] as const).map((value) => ({
+                label: AVATAR_STYLE_LABEL[value],
+                recommended: value === '2d',
+                value,
+              }))}
+              selected={kind}
+            />
+          </div>
+          <div className="flex flex-col gap-2">
+            <span className={LABEL_CLASS}>Gender</span>
+            <Choices
+              label="Gender"
+              onPick={setGender}
+              options={AVATAR_GENDERS.map((value) => ({ label: GENDER_LABEL[value], value }))}
+              selected={gender}
+            />
+          </div>
+          <span className="text-xs text-tertiary">
+            Claude makes up the rest: the face, hair, clothes and colours.
           </span>
         </div>
       )}
-      <div className="flex flex-col gap-1.5">
-        <label className={LABEL_CLASS} htmlFor="avatar-description">
-          {photo ? 'Describe it (optional)' : 'Describe how it looks'}
-        </label>
-        <textarea
-          className="min-h-[64px] resize-y rounded-lg border border-white/10 bg-black/30 px-3 py-2 text-sm text-primary placeholder:text-tertiary focus:border-white/30 focus:outline-none"
-          id="avatar-description"
-          maxLength={DESCRIPTION_MAX}
-          onChange={(e) => setDescription(e.target.value)}
-          placeholder={
-            photo
-              ? 'e.g. in a red hoodie, with round glasses'
-              : 'e.g. a cheerful woman in her 30s, curly red hair, round glasses, a green sweater'
-          }
-          value={description}
-        />
-      </div>
       <DetailPicker
         detail={detail}
         footnote="More detail takes longer to draw, and looks more like them."
@@ -261,15 +356,53 @@ function AvatarForm({
       <VoicePick onPick={setVoice} voice={voice} />
       {error && <p className="text-xs text-amber-400">{error}</p>}
       <div className="mt-auto flex items-center justify-end gap-3 pt-2">
-        {!ready && !pending && (
-          <span className="mr-auto text-xs text-secondary">
-            {!name.trim() ? 'Give it a name.' : 'Add a photo, or describe how it looks.'}
-          </span>
-        )}
+        {missing && !pending && <span className="mr-auto text-xs text-secondary">{missing}</span>}
         <Button disabled={!ready || pending} onClick={() => void generate()} size="sm">
           {pending ? 'Starting…' : 'Generate avatar'}
         </Button>
       </div>
+    </div>
+  )
+}
+
+/** One choice of a few, as large buttons (a radio group), "Recommended" on those it suits. */
+function Choices<T extends string>({
+  label,
+  onPick,
+  options,
+  selected,
+}: {
+  label: string
+  onPick: (value: T) => void
+  options: readonly { icon?: ReactNode; label: string; recommended?: boolean; value: T }[]
+  selected: null | T
+}) {
+  return (
+    <div aria-label={label} className="flex flex-wrap gap-2" role="radiogroup">
+      {options.map((o) => (
+        <button
+          aria-checked={o.value === selected}
+          aria-label={o.label}
+          className={cn(
+            'flex items-center gap-2 rounded-lg border px-4 py-2 text-sm font-medium transition-colors',
+            o.value === selected
+              ? 'border-white/60 bg-white/15 text-primary'
+              : 'border-white/10 text-secondary hover:border-white/30 hover:text-primary',
+          )}
+          key={o.value}
+          onClick={() => onPick(o.value)}
+          role="radio"
+          type="button"
+        >
+          {o.icon}
+          {o.label}
+          {o.recommended && (
+            <span className="rounded bg-accent-green/15 px-1.5 py-0.5 text-[10px] font-medium text-accent-green">
+              Recommended
+            </span>
+          )}
+        </button>
+      ))}
     </div>
   )
 }

@@ -216,7 +216,8 @@ export const AGENT_TOOLS: Record<AgentToolName, DynamicToolSpec> = {
           type: 'string',
         },
         avatarStyle: {
-          description: 'Avatar video with a new avatar: drawn in 2D, 3D or pixel art (pixel).',
+          description:
+            'Avatar video with a new avatar: drawn in 2D, 3D or pixel art (pixel). Unset: as its description says (3D or pixel art when it says so), else 2D.',
           enum: ['2d', '3d', 'pixel'],
           type: 'string',
         },

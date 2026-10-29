@@ -377,7 +377,7 @@ export function animationNextSteps(
   if (setup.avatarOnly)
     return [
       `${readSkill ? `Read the \`${skill}\` skill, then` : `Follow the \`${skill}\` skill:`} read \`animation/brief.md\`: this chat is the avatar creator.`,
-      'Draw the user\'s new avatar as the skill\'s "First: the avatar" says, from what brief.md gives (the photo in `animation/public/avatar/`, the description, or both), at the detail it asks: write `src/avatar/avatar.ts`, check it with avatar_check until it looks right, show it and ask with {ASK} whether to keep it ("Keep this avatar (Recommended)" or "Change something"), then save it with avatar_save. Then say in one line that it is ready to use in any video, and stop: no script, voices, music or video.',
+      'Draw the user\'s new avatar as the skill\'s "First: the avatar" says, from what brief.md gives (the photo in `animation/public/avatar/`, the description, or both; for Surprise me, your own idea), at the detail it asks: write `src/avatar/avatar.ts`, check it with avatar_check until it looks right, show it and ask with {ASK} whether to keep it ("Keep this avatar (Recommended)" or "Change something"), then save it with avatar_save. Then say in one line that it is ready to use in any video, and stop: no script, voices, music or video.',
     ].join(' ')
   return [
     `${readSkill ? `Read the \`${skill}\` skill, then` : `Follow the \`${skill}\` skill:`} read \`animation/brief.md\` and \`animation/look.md\`.`,

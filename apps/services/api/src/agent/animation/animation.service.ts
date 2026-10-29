@@ -491,7 +491,7 @@ export class AnimationService {
     return {
       success: true,
       text: [
-        `Rendered the avatar's check sheet (the user sees it too): ${ANIMATION_DIR}/${path.relative(projectDir, sheet)}. Open it${photo ? ` next to the photo, ${ANIMATION_DIR}/${path.relative(projectDir, photo)},` : ''} and check: does it look like the person (face shape, skin tone, hair style and colour, eyes, glasses, beard, clothes)? Does every mouth shape read, does the blink close both eyes, do the hands land where each gesture says, is nothing cut off or detached?`,
+        `Rendered the avatar's check sheet (the user sees it too): ${ANIMATION_DIR}/${path.relative(projectDir, sheet)}. Open it${photo ? ` next to the photo, ${ANIMATION_DIR}/${path.relative(projectDir, photo)},` : ''} and check: does it look like the person, or as brief.md describes it (face shape, skin tone, hair style and colour, eyes, glasses, beard, clothes)? Does every mouth shape read, does the blink close both eyes, do the hands land where each gesture says, is nothing cut off or detached?`,
         'Fix what is off in src/avatar/avatar.ts and check again. When it looks right, show the user and ask with a card whether to keep it ("Keep this avatar (Recommended)" or "Change something"), then save it with avatar_save.',
       ].join(' '),
     }
@@ -526,7 +526,7 @@ export class AnimationService {
     if (!before && !voiceId)
       return {
         success: false,
-        text: 'Pass voiceId: the fixed voice this avatar keeps in every video, the one from the list that best fits the person in the photo (or the voice the user asked for).',
+        text: 'Pass voiceId: the fixed voice this avatar keeps in every video, the one from the list that best fits the avatar (or the voice the user asked for).',
       }
     const voice = (typeof a['voice'] === 'string' && a['voice'].trim()) || before?.voice || ''
     if (!voiceId && voice.length < 8)
