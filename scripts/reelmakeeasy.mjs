@@ -38,6 +38,7 @@ import path from 'node:path'
 import readline from 'node:readline/promises'
 import { Readable } from 'node:stream'
 import { pipeline } from 'node:stream/promises'
+import tls from 'node:tls'
 import { fileURLToPath } from 'node:url'
 
 import {
@@ -49,6 +50,7 @@ import {
   outputSignature,
   parseBuildStamp,
   planSummary,
+  pnpmCommand,
   runPorts,
   sourceFingerprint,
   WEB_BUILD_ID,
@@ -145,6 +147,20 @@ function loadEnv() {
 }
 
 // ---------- helpers ----------
+
+/** How to start pnpm with `args` on this computer: `{ command, args, shell }` for spawn, and
+ *  `label` ("pnpm exec prisma") to name it, however it starts. */
+const pnpm = (args) => ({
+  ...pnpmCommand(args, {
+    env: process.env,
+    execPath: process.execPath,
+    platform: process.platform,
+  }),
+  label: `pnpm ${args.slice(0, 2).join(' ')}`,
+})
+
+/** A command's file name here: its .exe on Windows. */
+const exeName = (name) => (process.platform === 'win32' ? `${name}.exe` : name)
 
 function hasCommand(cmd) {
   return (
@@ -370,7 +386,8 @@ function readBuildStamp(env) {
 
 function runBuildStep(what, pnpmArgs, env) {
   console.log(dim(`\nBuilding ${what}…`))
-  const res = spawnSync('pnpm', pnpmArgs, { cwd: ROOT, env, stdio: 'inherit' })
+  const p = pnpm(pnpmArgs)
+  const res = spawnSync(p.command, p.args, { cwd: ROOT, env, shell: p.shell, stdio: 'inherit' })
   if (res.status !== 0) {
     throw new Error(
       `Building ${what} failed (see the lines above). Fix it, then run \`pnpm reelmakeeasy build\`.`,
@@ -433,8 +450,15 @@ async function buildAppInSetup(env, report) {
     await report.task(
       'Building the app (a few minutes; later starts are quick)',
       async () => {
-        const nx = (target, targetEnv) =>
-          report.run('pnpm', ['exec', 'nx', 'run', target], { cwd: ROOT, env: targetEnv })
+        const nx = (target, targetEnv) => {
+          const p = pnpm(['exec', 'nx', 'run', target])
+          return report.run(p.command, p.args, {
+            cwd: ROOT,
+            env: targetEnv,
+            label: p.label,
+            shell: p.shell,
+          })
+        }
         if (plan.api) await nx('api:build', env)
         if (plan.web) await nx('web:build', webEnv(env))
       },
@@ -486,6 +510,25 @@ function localTtsEnv(env, extra = {}) {
     HF_HUB_VERBOSITY: 'error',
     ...extra,
   }
+}
+
+/**
+ * Antivirus HTTPS scanning and company proxies re-sign traffic with a root of their own, which
+ * uv and Python's requests don't trust: their downloads then fail on the certificate. A file the
+ * user names in SSL_CERT_FILE goes to both (requests reads only REQUESTS_CA_BUNDLE). Else, on
+ * Windows, where such a root sits in the Windows certificate store, writes this Node's roots and
+ * that store to one file for both; a Node without tls.getCACertificates (before 22.15) has uv
+ * read the store itself.
+ */
+function certificateEnv(env) {
+  if (env.SSL_CERT_FILE) return { REQUESTS_CA_BUNDLE: env.REQUESTS_CA_BUNDLE || env.SSL_CERT_FILE }
+  if (process.platform !== 'win32' || env.REQUESTS_CA_BUNDLE) return {}
+  if (typeof tls.getCACertificates !== 'function') return { UV_NATIVE_TLS: '1' }
+  const certs = new Set([...tls.getCACertificates('bundled'), ...tls.getCACertificates('system')])
+  const file = path.join(localTtsHome(env), 'ca-certificates.pem')
+  fs.mkdirSync(path.dirname(file), { recursive: true })
+  fs.writeFileSync(file, `${[...certs].map((pem) => pem.trim()).join('\n')}\n`)
+  return { REQUESTS_CA_BUNDLE: file, SSL_CERT_FILE: file }
 }
 
 function readLocalTtsState(env) {
@@ -633,7 +676,13 @@ function notInstalledWarning(parts, err) {
   const what = parts.map((part) => part.title).join(' and ')
   const why = err instanceof Error ? err.message : String(err)
   const instead = parts.map((part) => part.instead).join(' ')
-  return `${what[0].toUpperCase()}${what.slice(1)} not installed: ${why}\n  ${instead} Retry with \`pnpm reelmakeeasy setup\`.`
+  return `${what[0].toUpperCase()}${what.slice(1)} not installed: ${why}\n  ${certificateHint(why)}${instead} Retry with \`pnpm reelmakeeasy setup\`.`
+}
+
+/** Why a download failed on its certificate, when it did: something re-signs HTTPS here. */
+function certificateHint(why) {
+  if (!/certificate|UnknownIssuer/i.test(why)) return ''
+  return 'Something on this network re-signs HTTPS (antivirus HTTPS scanning or a company proxy). Set SSL_CERT_FILE to a file with its root certificate, or turn the scanning off for setup. '
 }
 
 /**
@@ -651,13 +700,14 @@ async function setupLocalTts(env, { backend, parts, qwen }, report) {
   const home = localTtsHome(env)
   const python = localTtsPython(env)
   const uv = await ensureUv(env, report)
+  const certificates = certificateEnv(env)
   const hash = requirementsHash(backend)
   const state = readLocalTtsState(env)
 
   if (state?.requirements !== hash || !fs.existsSync(python)) {
     const install = async () => {
       fs.mkdirSync(home, { recursive: true })
-      const pyEnv = localTtsEnv(env)
+      const pyEnv = localTtsEnv(env, certificates)
       if (!fs.existsSync(python)) {
         await report.run(uv, ['venv', '--python', '3.12', '--quiet', path.join(home, 'venv')], {
           env: pyEnv,
@@ -699,7 +749,7 @@ async function setupLocalTts(env, { backend, parts, qwen }, report) {
               part.engines.join(','),
               ...part.args(),
             ],
-            { env: localTtsEnv(env, { LOCAL_TTS_DEVICE: backend }) },
+            { env: localTtsEnv(env, { ...certificates, LOCAL_TTS_DEVICE: backend }) },
           ),
         { done: part.done, extra: downloadedSoFar(env) },
       )
@@ -771,26 +821,49 @@ function probeCli(binary, args) {
   return { ok: r.status === 0, out: `${r.stdout ?? ''}${r.stderr ?? ''}` }
 }
 
-const CODEX_CHECK = {
+/** The Windows Codex app's CLI, newest build first: %LOCALAPPDATA%\\OpenAI\\Codex\\bin\\<build>\\codex.exe. */
+function windowsCodexApps(env) {
+  const bin = path.join(
+    env.LOCALAPPDATA || path.join(os.homedir(), 'AppData', 'Local'),
+    'OpenAI',
+    'Codex',
+    'bin',
+  )
+  try {
+    return fs
+      .readdirSync(bin, { withFileTypes: true })
+      .filter((entry) => entry.isDirectory())
+      .map((entry) => path.join(bin, entry.name))
+      .sort((a, b) => fs.statSync(b).mtimeMs - fs.statSync(a).mtimeMs)
+      .map((dir) => path.join(dir, 'codex.exe'))
+  } catch {
+    return []
+  }
+}
+
+const codexCheck = (env) => ({
   bin: 'CODEX_BIN',
   // Where the API also looks (apps/services/api/src/agent/codex/codex-locator.ts).
-  fallbacks: [
-    '/Applications/Codex.app/Contents/Resources/codex',
-    '/Applications/ChatGPT.app/Contents/Resources/codex-cli/bin/codex',
-  ],
+  fallbacks:
+    process.platform === 'win32'
+      ? windowsCodexApps(env)
+      : [
+          '/Applications/Codex.app/Contents/Resources/codex',
+          '/Applications/ChatGPT.app/Contents/Resources/codex-cli/bin/codex',
+        ],
   name: 'codex',
   signedIn: (binary) => {
     const out = probeCli(binary, ['login', 'status']).out
     return /logged in/i.test(out) && !/not logged in/i.test(out)
   },
   versionOf: (out) => out.trim().replace(/^codex-cli\s+/, ''),
-}
+})
 
 const claudeCheck = (env) => ({
   bin: 'CLAUDE_BIN',
   fallbacks: [
-    path.join(os.homedir(), '.claude/local/claude'),
-    path.join(os.homedir(), '.local/bin/claude'),
+    path.join(os.homedir(), '.claude', 'local', exeName('claude')),
+    path.join(os.homedir(), '.local', 'bin', exeName('claude')),
   ],
   name: 'claude',
   signedIn: (binary) => {
@@ -800,10 +873,11 @@ const claudeCheck = (env) => ({
   versionOf: (out) => out.trim().split(/\s+/)[0],
 })
 
-/** `{ ok, detail }` for one agent harness: installed, its version, signed in. */
+/** `{ ok, detail }` for one agent harness: installed, its version, signed in. On Windows only
+ *  its .exe counts on PATH: a .cmd shim can't be started without a shell, as in the API. */
 function harnessCheck(env, { bin, fallbacks, name, signedIn, versionOf }) {
   const binary =
-    env[bin]?.trim() || (hasCommand(name) ? name : fallbacks.find((p) => fs.existsSync(p)))
+    env[bin]?.trim() || (hasCommand(exeName(name)) ? name : fallbacks.find((p) => fs.existsSync(p)))
   if (!binary) return { detail: `not installed (set ${bin} if it is elsewhere)`, ok: false }
   const version = probeCli(binary, ['--version'])
   if (!version.ok) return { detail: `${binary} did not answer`, ok: false }
@@ -812,7 +886,7 @@ function harnessCheck(env, { bin, fallbacks, name, signedIn, versionOf }) {
 }
 
 const AGENT_HARNESS_CHECKS = (env) => [
-  ['Agent: Codex', CODEX_CHECK],
+  ['Agent: Codex', codexCheck(env)],
   ['Agent: Claude Code', claudeCheck(env)],
 ]
 
@@ -864,8 +938,9 @@ function makeReporter({ guide }) {
   return report
 }
 
-/** Runs a command; fails with the end of its output. `quiet` keeps the output until then. */
-function runCommand(command, commandArgs, options = {}, quiet = false) {
+/** Runs a command; fails with the end of its output. `quiet` keeps the output until then.
+ *  `label` names the command in that failure (default: its name and first two arguments). */
+function runCommand(command, commandArgs, { label, ...options } = {}, quiet = false) {
   return new Promise((resolve, reject) => {
     const child = spawn(command, commandArgs, {
       ...options,
@@ -879,7 +954,7 @@ function runCommand(command, commandArgs, options = {}, quiet = false) {
     child.on('exit', (code) => {
       if (code === 0) return resolve()
       const tail = output.trim().split('\n').slice(-30).join('\n')
-      const failed = `${path.basename(command)} ${commandArgs.slice(0, 2).join(' ')} failed`
+      const failed = `${label ?? `${path.basename(command)} ${commandArgs.slice(0, 2).join(' ')}`} failed`
       reject(new Error(tail ? `${failed}:\n${tail}` : failed))
     })
   })
@@ -913,12 +988,10 @@ async function setup() {
 
   await report.task(
     'Preparing the database',
-    () =>
-      report.run(
-        'pnpm',
-        ['exec', 'prisma', 'generate', `--schema=${PRISMA_SCHEMA}`, '--no-hints'],
-        { cwd: ROOT },
-      ),
+    () => {
+      const p = pnpm(['exec', 'prisma', 'generate', `--schema=${PRISMA_SCHEMA}`, '--no-hints'])
+      return report.run(p.command, p.args, { cwd: ROOT, label: p.label, shell: p.shell })
+    },
     { done: 'Database ready' },
   )
   if ((await tryEnsurePresetPack(current, report)) === false) {
@@ -1132,7 +1205,7 @@ function setupAgentHarness(env, report) {
     chosen: chosenProviders(env, stored).llm,
     ready: {
       claude: harnessCheck(env, claudeCheck(env)).ok,
-      codex: harnessCheck(env, CODEX_CHECK).ok,
+      codex: harnessCheck(env, codexCheck(env)).ok,
       endpoint: Boolean(env.LLM_BASE_URL),
       gemini: Boolean(env.GEMINI_API_KEY),
     },
@@ -1355,8 +1428,8 @@ const LABEL_COLORS = { api: 36, tts: 33, web: 35 }
  * `optional` children (the local server) may exit without stopping the app; `optional` then says
  * what falls back.
  */
-function run(label, command, commandArgs, env, { cwd = ROOT, optional = '' } = {}) {
-  const child = spawn(command, commandArgs, { cwd, env, stdio: ['ignore', 'pipe', 'pipe'] })
+function run(label, command, commandArgs, env, { cwd = ROOT, optional = '', shell = false } = {}) {
+  const child = spawn(command, commandArgs, { cwd, env, shell, stdio: ['ignore', 'pipe', 'pipe'] })
   const prefix = color(LABEL_COLORS[label])(`[${label}]`)
   for (const stream of [child.stdout, child.stderr]) {
     readline
@@ -1445,15 +1518,13 @@ async function startServices(env) {
   // Async on purpose: the embedded mongod's output is drained by this process's
   // event loop, and blocking it (execFileSync) lets the pipe fill and mongod hang.
   await new Promise((resolve, reject) => {
-    const push = spawn(
-      'pnpm',
-      ['exec', 'prisma', 'db', 'push', `--schema=${PRISMA_SCHEMA}`, '--skip-generate'],
-      {
-        cwd: ROOT,
-        env,
-        stdio: ['ignore', 'pipe', 'pipe'],
-      },
-    )
+    const p = pnpm(['exec', 'prisma', 'db', 'push', `--schema=${PRISMA_SCHEMA}`, '--skip-generate'])
+    const push = spawn(p.command, p.args, {
+      cwd: ROOT,
+      env,
+      shell: p.shell,
+      stdio: ['ignore', 'pipe', 'pipe'],
+    })
     // Kept to say why it failed.
     let output = ''
     for (const stream of [push.stdout, push.stderr])
@@ -1490,21 +1561,18 @@ async function dev() {
   const env = loadEnv()
   warnMissingVideoKey(env)
   const { webPort } = await startServices(env)
-  run('api', 'pnpm', ['exec', 'nx', 'run', 'api:dev', '--output-style=stream'], env)
-  run(
-    'web',
-    'pnpm',
-    [
-      'exec',
-      'nx',
-      'run',
-      'web:dev',
-      '--output-style=stream',
-      `--port=${webPort}`,
-      `--hostname=${listenHost(env)}`,
-    ],
-    { ...env, NEXT_TELEMETRY_DISABLED: '1' },
-  )
+  const api = pnpm(['exec', 'nx', 'run', 'api:dev', '--output-style=stream'])
+  run('api', api.command, api.args, env, { shell: api.shell })
+  const web = pnpm([
+    'exec',
+    'nx',
+    'run',
+    'web:dev',
+    '--output-style=stream',
+    `--port=${webPort}`,
+    `--hostname=${listenHost(env)}`,
+  ])
+  run('web', web.command, web.args, { ...env, NEXT_TELEMETRY_DISABLED: '1' }, { shell: web.shell })
   printStarting(webPort)
 }
 

@@ -80,6 +80,49 @@ describe('ensureAgentCodexHome', () => {
     expect(warn).toHaveBeenCalledTimes(1)
   })
 
+  describe('where symlinks are refused (Windows without admin rights or Developer Mode)', () => {
+    const eperm = () => {
+      throw Object.assign(new Error('EPERM: operation not permitted, symlink'), { code: 'EPERM' })
+    }
+    let symlink: jest.SpyInstance
+
+    beforeEach(() => {
+      symlink = jest.spyOn(fs, 'symlinkSync').mockImplementation(eperm)
+    })
+
+    afterEach(() => {
+      jest.restoreAllMocks()
+    })
+
+    it("hard-links the user's auth.json, and later checks leave it alone without a warning", () => {
+      const target = path.join(userHome, 'auth.json')
+      fs.writeFileSync(target, '{"login":"user"}')
+      const warn = jest.fn()
+      ensureAgentCodexHome({ home, userHome, warn })
+      const link = path.join(home, 'auth.json')
+      expect(fs.statSync(link).ino).toBe(fs.statSync(target).ino)
+      expect(warn).toHaveBeenCalledTimes(1)
+      ensureAgentCodexHome({ home, userHome, warn })
+      expect(warn).toHaveBeenCalledTimes(1)
+      expect(symlink).toHaveBeenCalledTimes(1)
+    })
+
+    it('copies it when a hard link fails too (another drive)', () => {
+      const target = path.join(userHome, 'auth.json')
+      fs.writeFileSync(target, '{"login":"user"}')
+      jest.spyOn(fs, 'linkSync').mockImplementation(eperm)
+      ensureAgentCodexHome({ home, userHome })
+      const link = path.join(home, 'auth.json')
+      expect(fs.readFileSync(link, 'utf8')).toBe('{"login":"user"}')
+      expect(fs.statSync(link).ino).not.toBe(fs.statSync(target).ino)
+    })
+
+    it('does nothing yet when the user is not signed in', () => {
+      expect(() => ensureAgentCodexHome({ home, userHome })).not.toThrow()
+      expect(fs.existsSync(path.join(home, 'auth.json'))).toBe(false)
+    })
+  })
+
   it('rewrites config.toml on every call, overwriting user edits', () => {
     ensureAgentCodexHome({ home, userHome })
     fs.writeFileSync(path.join(home, 'config.toml'), 'user edit\n')

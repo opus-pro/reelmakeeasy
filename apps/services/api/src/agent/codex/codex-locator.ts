@@ -17,20 +17,72 @@ const APP_BUNDLES = [
 export interface LocatorDeps {
   env: Record<string, string | undefined>
   exists: (p: string) => boolean
+  /** The folders in a folder, newest first (default: read from disk). */
+  list?: (dir: string) => string[]
+  /** Whose path rules to follow (default: this computer's). */
+  platform?: NodeJS.Platform
+}
+
+/** The path functions for `platform`'s paths. */
+export const pathFor = (platform: NodeJS.Platform): path.PlatformPath =>
+  platform === 'win32' ? path.win32 : path.posix
+
+/** The folders on PATH. A copy of a Windows env keeps Windows' own spelling (`Path`), which only
+ *  the live process.env matches whatever the case. */
+export function pathDirs(env: LocatorDeps['env'], platform: NodeJS.Platform): string[] {
+  const value = env['PATH'] ?? (platform === 'win32' ? env['Path'] : undefined) ?? ''
+  return value.split(pathFor(platform).delimiter).filter(Boolean)
+}
+
+/** A command's file: on Windows only its .exe, as a .cmd shim needs a shell to start, which
+ *  execFile doesn't use. */
+export const commandFile = (name: string, platform: NodeJS.Platform): string =>
+  platform === 'win32' ? `${name}.exe` : name
+
+/** The folders in `dir`, most recently changed first; none when it can't be read. */
+function newestFoldersIn(dir: string): string[] {
+  try {
+    return fs
+      .readdirSync(dir, { withFileTypes: true })
+      .filter((entry) => entry.isDirectory())
+      .map((entry) => path.join(dir, entry.name))
+      .sort((a, b) => fs.statSync(b).mtimeMs - fs.statSync(a).mtimeMs)
+  } catch {
+    return []
+  }
+}
+
+/** The Windows Codex app's CLI, newest build first: it keeps one at
+ *  %LOCALAPPDATA%\OpenAI\Codex\bin\<build>\codex.exe, in a folder each update renames, off PATH. */
+function windowsAppBinaries(env: LocatorDeps['env'], list: (dir: string) => string[]): string[] {
+  const profile = env['USERPROFILE']
+  const local =
+    env['LOCALAPPDATA'] || (profile ? path.win32.join(profile, 'AppData', 'Local') : undefined)
+  if (!local) return []
+  return list(path.win32.join(local, 'OpenAI', 'Codex', 'bin')).map((dir) =>
+    path.win32.join(dir, 'codex.exe'),
+  )
 }
 
 /** A CLI check's exit code and output; `timedOut` when it was stopped for taking too long. */
 export type RunFn = (args: string[]) => Promise<{ code: number; out: string; timedOut?: boolean }>
 
-/** CODEX_BIN, then `codex` on PATH, then the Codex and ChatGPT desktop app bundles. */
-export function findCodexBinary({ env, exists }: LocatorDeps): null | string {
+/** CODEX_BIN, then `codex` on PATH, then the desktop apps: the Codex and ChatGPT app bundles on
+ *  macOS, the Codex app on Windows. */
+export function findCodexBinary({
+  env,
+  exists,
+  list = newestFoldersIn,
+  platform = process.platform,
+}: LocatorDeps): null | string {
   const override = env['CODEX_BIN']?.trim()
   if (override) return exists(override) ? override : null
-  for (const dir of (env['PATH'] ?? '').split(path.delimiter).filter(Boolean)) {
-    const candidate = path.join(dir, 'codex')
+  for (const dir of pathDirs(env, platform)) {
+    const candidate = pathFor(platform).join(dir, commandFile('codex', platform))
     if (exists(candidate)) return candidate
   }
-  return APP_BUNDLES.find(exists) ?? null
+  const apps = platform === 'win32' ? windowsAppBinaries(env, list) : APP_BUNDLES
+  return apps.find(exists) ?? null
 }
 
 export async function probeCodex(binary: string, run: RunFn): Promise<CodexStatus> {

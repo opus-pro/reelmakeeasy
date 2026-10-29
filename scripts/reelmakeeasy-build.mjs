@@ -8,6 +8,7 @@
  * Without git, only a missing output (or changed web settings) triggers a build.
  */
 import { createHash } from 'node:crypto'
+import path from 'node:path'
 
 /** The API bundle `nx run api:build` writes (the same one `pnpm dev` builds and runs). */
 export const API_BUNDLE = 'apps/services/api/dist/main.js'
@@ -137,4 +138,25 @@ export function buildCheck(plan) {
     name: 'Build',
     ok: !summary,
   }
+}
+
+/** An argument for cmd.exe: quoted when it holds anything but plain path and flag characters. */
+const cmdArg = (arg) => (/^[\w@+=:,./\\-]+$/.test(arg) ? arg : `"${arg.replaceAll('"', '""')}"`)
+
+/**
+ * How to start pnpm with `args`: `{ command, args, shell }` for spawn. Inside `pnpm reelmakeeasy`,
+ * pnpm names itself in npm_execpath. On Windows that is run directly, its script with this Node
+ * or its own pnpm.exe, because a plain `pnpm` there is a pnpm.cmd shim, which Node starts only
+ * through a shell (CVE-2024-27980). Without it, pnpm.cmd through cmd.exe, the arguments quoted.
+ * Elsewhere `pnpm` from PATH.
+ */
+export function pnpmCommand(args, { env, execPath, platform }) {
+  if (platform !== 'win32') return { args, command: 'pnpm', shell: false }
+  const self = env.npm_execpath ?? ''
+  const name = path.win32.basename(self).toLowerCase()
+  if (/^pnpm\.[cm]?js$/.test(name))
+    return { args: [self, ...args], command: execPath, shell: false }
+  if (name === 'pnpm.exe') return { args, command: self, shell: false }
+  // One command line, not args: Node joins args unquoted under a shell (and warns about it).
+  return { args: [], command: ['pnpm.cmd', ...args].map(cmdArg).join(' '), shell: true }
 }

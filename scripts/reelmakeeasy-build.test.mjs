@@ -8,6 +8,7 @@ import {
   outputSignature,
   parseBuildStamp,
   planSummary,
+  pnpmCommand,
   runPorts,
   sourceFingerprint,
   webBuildSettings,
@@ -200,5 +201,60 @@ describe('planSummary and buildCheck', () => {
       name: 'Build',
       ok: false,
     })
+  })
+})
+
+describe('pnpmCommand', () => {
+  const node = 'C:\\Program Files\\nodejs\\node.exe'
+  const win = (npm_execpath) => ({
+    env: npm_execpath ? { npm_execpath } : {},
+    execPath: node,
+    platform: 'win32',
+  })
+
+  it('runs pnpm from PATH off Windows', () => {
+    const args = ['exec', 'nx', 'run', 'api:build']
+    assert.deepEqual(
+      pnpmCommand(args, {
+        env: { npm_execpath: '/x/pnpm.mjs' },
+        execPath: '/n',
+        platform: 'darwin',
+      }),
+      { args, command: 'pnpm', shell: false },
+    )
+  })
+
+  it("on Windows runs pnpm's own script with this Node, or its pnpm.exe, without a shell", () => {
+    const script = 'C:\\Users\\a b\\AppData\\Local\\node\\corepack\\pnpm\\11.18.0\\bin\\pnpm.mjs'
+    for (const self of [script, script.replace('.mjs', '.cjs')]) {
+      assert.deepEqual(pnpmCommand(['exec', 'prisma'], win(self)), {
+        args: [self, 'exec', 'prisma'],
+        command: node,
+        shell: false,
+      })
+    }
+    const exe = 'C:\\Users\\a\\.local\\pnpm-exe\\PNPM.EXE'
+    assert.deepEqual(pnpmCommand(['exec', 'prisma'], win(exe)), {
+      args: ['exec', 'prisma'],
+      command: exe,
+      shell: false,
+    })
+  })
+
+  it('on Windows falls back to pnpm.cmd through cmd.exe, quoting arguments with spaces', () => {
+    // npm sets npm_execpath to itself under `npm run`: that is not pnpm.
+    for (const self of [undefined, 'C:\\nodejs\\node_modules\\npm\\bin\\npm-cli.js']) {
+      assert.deepEqual(
+        pnpmCommand(
+          ['exec', 'prisma', 'generate', '--schema=C:\\Users\\First Last\\s.prisma'],
+          win(self),
+        ),
+        {
+          args: [],
+          command: 'pnpm.cmd exec prisma generate "--schema=C:\\Users\\First Last\\s.prisma"',
+          shell: true,
+        },
+      )
+    }
   })
 })

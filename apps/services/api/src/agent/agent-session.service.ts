@@ -805,7 +805,8 @@ export class AgentSessionService implements OnModuleDestroy {
     } catch {
       // No link yet.
     }
-    fs.symlinkSync(projectDir, link)
+    // A junction on Windows: a directory symlink there needs admin rights or Developer Mode.
+    fs.symlinkSync(projectDir, link, process.platform === 'win32' ? 'junction' : 'dir')
   }
 
   listSessions(): AgentSession[] {

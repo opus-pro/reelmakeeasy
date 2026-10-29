@@ -605,9 +605,25 @@ def cmd_detect(_args) -> None:
     )
 
 
+def copy_instead_of_symlinks(os_name: str = os.name) -> None:
+    """
+    On Windows, has huggingface_hub copy files into its cache instead of
+    symlinking them. Windows refuses symlinks without admin rights or Developer
+    Mode, and huggingface_hub before 1.0 marks a cache folder "symlinks work"
+    before testing it, so snapshot_download's parallel threads try os.symlink
+    meanwhile and fail with WinError 1314.
+    """
+    if os_name != "nt":
+        return
+    from huggingface_hub import file_download
+
+    file_download.are_symlinks_supported = lambda cache_dir=None: False
+
+
 def cmd_download(args) -> None:
     from huggingface_hub import snapshot_download
 
+    copy_instead_of_symlinks()
     backend = detect_backend()
     engines = args.engines.split(",") if args.engines else default_engines(backend)
     for repo, files in downloads_for(backend, engines):

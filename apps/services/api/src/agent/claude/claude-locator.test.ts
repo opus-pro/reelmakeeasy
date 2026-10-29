@@ -12,23 +12,62 @@ const exists = (paths: string[]) => (p: string) => paths.includes(p)
 
 describe('findClaudeBinary', () => {
   it('prefers CLAUDE_BIN, then PATH, then the installer locations', () => {
+    const platform = 'darwin'
     expect(
-      findClaudeBinary({ env: { CLAUDE_BIN: '/x/claude' }, exists: exists(['/x/claude']) }),
+      findClaudeBinary({
+        env: { CLAUDE_BIN: '/x/claude' },
+        exists: exists(['/x/claude']),
+        platform,
+      }),
     ).toBe('/x/claude')
-    expect(findClaudeBinary({ env: { CLAUDE_BIN: '/missing' }, exists: exists([]) })).toBeNull()
-    expect(findClaudeBinary({ env: { PATH: '/a:/b' }, exists: exists(['/b/claude']) })).toBe(
-      '/b/claude',
-    )
+    expect(
+      findClaudeBinary({ env: { CLAUDE_BIN: '/missing' }, exists: exists([]), platform }),
+    ).toBeNull()
+    expect(
+      findClaudeBinary({ env: { PATH: '/a:/b' }, exists: exists(['/b/claude']), platform }),
+    ).toBe('/b/claude')
     expect(
       findClaudeBinary({
         env: { HOME: '/h', PATH: '' },
         exists: exists(['/h/.claude/local/claude']),
+        platform,
       }),
     ).toBe('/h/.claude/local/claude')
     expect(
-      findClaudeBinary({ env: { HOME: '/h', PATH: '' }, exists: exists(['/h/.local/bin/claude']) }),
+      findClaudeBinary({
+        env: { HOME: '/h', PATH: '' },
+        exists: exists(['/h/.local/bin/claude']),
+        platform,
+      }),
     ).toBe('/h/.local/bin/claude')
-    expect(findClaudeBinary({ env: { PATH: '' }, exists: exists([]) })).toBeNull()
+    expect(findClaudeBinary({ env: { PATH: '' }, exists: exists([]), platform })).toBeNull()
+  })
+
+  it('on Windows finds claude.exe on Path (any case) or in USERPROFILE, never a .cmd shim', () => {
+    const platform = 'win32'
+    expect(
+      findClaudeBinary({
+        env: { Path: 'C:\\a;C:\\b' },
+        exists: exists(['C:\\b\\claude.exe']),
+        platform,
+      }),
+    ).toBe('C:\\b\\claude.exe')
+    // A bare `claude` or an npm `claude.cmd` can't be started without a shell.
+    expect(
+      findClaudeBinary({
+        env: { PATH: 'C:\\npm' },
+        exists: exists(['C:\\npm\\claude', 'C:\\npm\\claude.cmd']),
+        platform,
+      }),
+    ).toBeNull()
+    const installed = 'C:\\Users\\a b\\.local\\bin\\claude.exe'
+    expect(
+      findClaudeBinary({
+        env: { PATH: '', USERPROFILE: 'C:\\Users\\a b' },
+        exists: exists([installed]),
+        platform,
+      }),
+    ).toBe(installed)
   })
 })
 

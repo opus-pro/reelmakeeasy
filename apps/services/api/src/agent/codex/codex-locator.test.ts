@@ -10,19 +10,74 @@ import {
 const CHATGPT = '/Applications/ChatGPT.app/Contents/Resources/codex-cli/bin/codex'
 
 describe('findCodexBinary', () => {
+  const platform = 'darwin'
+
   it('prefers CODEX_BIN, then PATH, then Codex.app, then ChatGPT.app', () => {
     const exists = (p: string) => ['/opt/codex', '/usr/local/bin/codex', CHATGPT].includes(p)
     expect(
-      findCodexBinary({ env: { CODEX_BIN: '/opt/codex', PATH: '/usr/local/bin' }, exists }),
+      findCodexBinary({
+        env: { CODEX_BIN: '/opt/codex', PATH: '/usr/local/bin' },
+        exists,
+        platform,
+      }),
     ).toBe('/opt/codex')
-    expect(findCodexBinary({ env: { PATH: '/usr/local/bin' }, exists })).toBe(
+    expect(findCodexBinary({ env: { PATH: '/usr/local/bin' }, exists, platform })).toBe(
       '/usr/local/bin/codex',
     )
-    expect(findCodexBinary({ env: { PATH: '/nowhere' }, exists })).toBe(CHATGPT)
+    expect(findCodexBinary({ env: { PATH: '/nowhere' }, exists, platform })).toBe(CHATGPT)
   })
 
   it('returns null when nothing exists', () => {
-    expect(findCodexBinary({ env: { PATH: '/nowhere' }, exists: () => false })).toBeNull()
+    expect(findCodexBinary({ env: { PATH: '/nowhere' }, exists: () => false, platform })).toBeNull()
+  })
+})
+
+describe('findCodexBinary on Windows', () => {
+  const platform = 'win32'
+  const bin = 'C:\\Users\\a\\AppData\\Local\\OpenAI\\Codex\\bin'
+  // Newest first, as the default lister sorts them.
+  const builds = (dir: string) => (dir === bin ? [`${bin}\\new`, `${bin}\\old`] : [])
+
+  it('finds codex.exe on Path (any case), never a bare name or a .cmd shim', () => {
+    const exists = (p: string) => p === 'C:\\tools\\codex.exe'
+    expect(findCodexBinary({ env: { Path: 'C:\\x;C:\\tools' }, exists, platform })).toBe(
+      'C:\\tools\\codex.exe',
+    )
+    const shims = (p: string) => ['C:\\npm\\codex', 'C:\\npm\\codex.cmd'].includes(p)
+    expect(findCodexBinary({ env: { PATH: 'C:\\npm' }, exists: shims, platform })).toBeNull()
+  })
+
+  it("falls back to the Codex app's newest build, from LOCALAPPDATA or USERPROFILE", () => {
+    const exists = (p: string) => p.endsWith('codex.exe') && p.startsWith(bin)
+    expect(
+      findCodexBinary({
+        env: { LOCALAPPDATA: 'C:\\Users\\a\\AppData\\Local', PATH: '' },
+        exists,
+        list: builds,
+        platform,
+      }),
+    ).toBe(`${bin}\\new\\codex.exe`)
+    const onlyOld = (p: string) => p === `${bin}\\old\\codex.exe`
+    expect(
+      findCodexBinary({
+        env: { PATH: '', USERPROFILE: 'C:\\Users\\a' },
+        exists: onlyOld,
+        list: builds,
+        platform,
+      }),
+    ).toBe(`${bin}\\old\\codex.exe`)
+    expect(findCodexBinary({ env: { PATH: '' }, exists, list: builds, platform })).toBeNull()
+  })
+
+  it('never looks in the macOS app bundles', () => {
+    expect(
+      findCodexBinary({
+        env: { PATH: '' },
+        exists: (p) => p === CHATGPT,
+        list: () => [],
+        platform,
+      }),
+    ).toBeNull()
   })
 })
 

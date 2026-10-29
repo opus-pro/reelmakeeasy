@@ -6,7 +6,7 @@ This file is for AI coding agents (Claude Code, Codex, Cursor and similar) asked
 
 Walk them through it in the chat, one short step at a time. Use your harness's question or choice UI when it has one (for example Claude Code's question picker); otherwise ask in plain text and wait for the answer. Keep every message short: say what you're doing, not why it matters.
 
-1. **Check the computer yourself, without asking.** Node 22 or later, FFmpeg (`ffmpeg -version`), pnpm (`corepack enable`), and whether Codex or Claude Code is installed and signed in (`codex login status`, `claude auth status`). If something is missing, say what and offer to install it.
+1. **Check the computer yourself, without asking.** Node 22 or later, FFmpeg (`ffmpeg -version`), pnpm (`corepack enable`; on Windows, `npm i -g pnpm` when that fails with EPERM), and whether Codex or Claude Code is installed and signed in (`codex login status`, `claude auth status`). If something is missing, say what and offer to install it.
 2. **Ask which video keys they have:** fal, Gemini, or both. They need at least one. **Recommend fal.ai** when they have none yet: with their Codex or Claude Code it makes a 30-second video for about $0.70, against about $3 on Gemini; they register at https://fal.ai/dashboard/keys. If neither Codex nor Claude Code is signed in, a fal key alone isn't enough, because fal can't write or plan: they need a Gemini key (it does both) or to sign in to Codex or Claude Code. Then ask only for the key or keys they picked, with the link to get one if they don't have it yet (see the table below).
 3. **Ask "[optional] ElevenLabs key?"** and say it can be skipped. Without it, ElevenLabs voices run through fal, and so does caption timing when it isn't done on this computer.
 4. **Ask about local voices:** both (free voices, about a 10 GB download), Kokoro only (0.4 GB), Qwen3 only (about 10 GB), or skip (those voices then run on fal). Qwen3 needs the memory listed in Step 3. Then ask "Time captions on this computer? Free, about 2 GB": yes, or skip (captions are then timed online).
@@ -46,6 +46,8 @@ Don't echo key values back in chat or write them anywhere except `.env` (which i
    corepack enable         # provides pnpm
    ```
    Missing FFmpeg: install it (`brew install ffmpeg` on macOS, `sudo apt-get install -y ffmpeg` on Debian/Ubuntu).
+
+   On Windows, `corepack enable` fails with `EPERM` when Node is in `C:\Program Files\nodejs` and the user isn't an administrator. Run `npm i -g pnpm` instead: it installs pnpm in the user's own folder, which the Node installer already put on `PATH`.
 
 2. **Install dependencies.**
    ```bash
