@@ -86,7 +86,8 @@ describe('signed upload URLs', () => {
     const signed = signedWrite(first, 'projects/p1/a.png', 60_000)
     const keyFile = path.join(dataDir, 'file-signing.key')
 
-    expect(fs.statSync(keyFile).mode & 0o777).toBe(0o600)
+    // Windows has no POSIX modes: stat reports 0o666 for any file that isn't read-only.
+    if (process.platform !== 'win32') expect(fs.statSync(keyFile).mode & 0o777).toBe(0o600)
     expect(first.verifyUploadSignature(signed)).toBe(true)
     // A restart reads the same key back, so URLs minted before it still verify.
     expect(loadFresh().verifyUploadSignature(signed)).toBe(true)

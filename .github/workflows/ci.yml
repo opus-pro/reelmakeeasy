@@ -92,7 +92,8 @@ jobs:
         with:
           node-version: 22
           cache: pnpm
-      - id: deps
+      - name: Install
+        id: deps
         run: |
           pnpm install --frozen-lockfile
           if ($LASTEXITCODE) { exit $LASTEXITCODE }
