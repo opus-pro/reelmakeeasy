@@ -293,8 +293,27 @@ function avatarSource(setup: AgentAnimationSetup): string {
   return `your own idea (the user picked Surprise me): ${who ?? 'a person'} who suits the name "${fresh.name}", with a face, hair, skin tone, clothes and colours you choose, friendly and easy to recognise`
 }
 
+/** The avatar editor's brief: one change to a saved avatar, nothing else. */
+function renderAvatarEditBrief(
+  setup: AgentAnimationSetup,
+  avatar?: AnimationJson['avatar'],
+): string {
+  const name = avatar?.name ?? 'the avatar'
+  return [
+    '# Avatar brief',
+    '',
+    `- **Change:** the saved avatar "${name}" (${AVATAR_STYLE_LABEL[avatar?.style ?? '2d']}), and nothing else: no script, voices, music or video. \`src/avatar/avatar.ts\` is its rig.`,
+    `- **What the user asks:** "${setup.avatarChange ?? ''}". Change only that, and keep everything else as it is.`,
+    `- **Photo:** ${avatar?.id ? 'the one it was drawn from, if any, is in `public/avatar/`' : 'none'}.`,
+    '- **Voice:** it keeps its own (pass no voiceId to avatar_save).',
+    '- **Save:** avatar_save updates this same avatar; the user may ask for more changes in this chat, so change, check and save again for each.',
+    '',
+  ].join('\n')
+}
+
 /** The avatar creator's brief: one new avatar, nothing else. */
 function renderAvatarBrief(setup: AgentAnimationSetup, avatar?: AnimationJson['avatar']): string {
+  if (setup.avatar && 'id' in setup.avatar) return renderAvatarEditBrief(setup, avatar)
   const detail = setup.detail ?? VIDEO_DEFAULT_DETAIL
   const style =
     avatar?.style ?? (setup.avatar && 'style' in setup.avatar ? setup.avatar.style : '2d')

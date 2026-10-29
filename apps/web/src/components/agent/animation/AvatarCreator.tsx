@@ -386,7 +386,7 @@ function Choices<T extends string>({
           className={cn(
             'flex items-center gap-2 rounded-lg border px-4 py-2 text-sm font-medium transition-colors',
             o.value === selected
-              ? 'border-white/60 bg-white/15 text-primary'
+              ? 'border-violet-300 bg-violet-400/15 text-primary shadow-[inset_0_0_0_1px_rgb(196_181_253)]'
               : 'border-white/10 text-secondary hover:border-white/30 hover:text-primary',
           )}
           key={o.value}

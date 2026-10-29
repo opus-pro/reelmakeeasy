@@ -39,13 +39,14 @@ jest.mock('@/components/voice', () => ({
   ),
 }))
 
-const ALLEN: AgentAvatar = {
+const SAM: AgentAvatar = {
   createdAt: '2026-10-27T00:00:00Z',
   id: 'av-0123456789',
   look: '',
-  name: 'Allen',
+  name: 'Sam',
   previewUrl: null,
   style: '2d',
+  updatedAt: '2026-10-29T00:00:00Z',
   voiceDescription: 'a calm, clear young man',
   voiceId: 'kokoro-am_michael',
   voiceSampleUrl: null,
@@ -59,10 +60,10 @@ describe('AvatarVoice', () => {
 
   it('shows the fixed voice, plays it, and saves a new one to the avatar', async () => {
     const onChange = jest.fn()
-    mockFetch.mockResolvedValue({ data: { ...ALLEN, voiceId: 'qwen3-ryan' }, ok: true })
-    render(<AvatarVoice avatar={ALLEN} onChange={onChange} />)
+    mockFetch.mockResolvedValue({ data: { ...SAM, voiceId: 'qwen3-ryan' }, ok: true })
+    render(<AvatarVoice avatar={SAM} onChange={onChange} />)
     expect(screen.getByText('Kokoro Michael')).toBeTruthy()
-    expect(screen.getByText('Allen speaks in this voice in every video.')).toBeTruthy()
+    expect(screen.getByText('Sam speaks in this voice in every video.')).toBeTruthy()
     fireEvent.click(screen.getByRole('button', { name: 'Play the voice' }))
     expect(mockToggle).toHaveBeenCalledWith(
       expect.stringContaining('av-0123456789'),
@@ -83,7 +84,7 @@ describe('AvatarVoice', () => {
   it('says a voice made from the description can drift, and offers a fixed one', () => {
     render(
       <AvatarVoice
-        avatar={{ ...ALLEN, voiceId: null, voiceSampleUrl: '/sample.wav' }}
+        avatar={{ ...SAM, voiceId: null, voiceSampleUrl: '/sample.wav' }}
         onChange={jest.fn()}
       />,
     )

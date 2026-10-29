@@ -59,7 +59,9 @@ function parseAvatar(raw: unknown): AgentAnimationAvatar {
   if (gender !== '' && !AVATAR_GENDERS.includes(gender as AvatarGender))
     throw new AnimationSetupError('Pick male or female for the avatar.')
   if (!photo && !description && !gender)
-    throw new AnimationSetupError('Add a photo, describe how the avatar looks, or pick Surprise me.')
+    throw new AnimationSetupError(
+      'Add a photo, describe how the avatar looks, or pick Surprise me.',
+    )
   if (description.length > AVATAR_DESCRIPTION_MAX)
     throw new AnimationSetupError(
       `Keep the avatar's description under ${AVATAR_DESCRIPTION_MAX} characters.`,
@@ -83,15 +85,20 @@ function parseAvatar(raw: unknown): AgentAnimationAvatar {
  */
 function parseAvatarStage(
   body: Record<string, unknown>,
-): Pick<AgentAnimationSetup, 'avatar' | 'avatarOnly' | 'avatarVoiceId' | 'stage'> {
+): Pick<AgentAnimationSetup, 'avatar' | 'avatarChange' | 'avatarOnly' | 'avatarVoiceId' | 'stage'> {
   const avatar = parseAvatar(body['avatar'])
-  // The avatar creator: a new avatar only, with the voice picked for it.
+  // The avatar creator (a new avatar, with the voice picked for it), or the avatar editor (a
+  // saved one, and what to change in it): the avatar only, no video.
   const avatarOnly = body['avatarOnly'] === true
-  if (avatarOnly && 'id' in avatar)
-    throw new AnimationSetupError('The avatar creator makes a new avatar: give it a name.')
+  const change = typeof body['avatarChange'] === 'string' ? body['avatarChange'].trim() : ''
+  const editing = avatarOnly && 'id' in avatar
+  if (editing && !change) throw new AnimationSetupError('Say what to change in the avatar.')
+  if (change.length > AVATAR_DESCRIPTION_MAX)
+    throw new AnimationSetupError(`Keep what to change under ${AVATAR_DESCRIPTION_MAX} characters.`)
   const voice = typeof body['avatarVoiceId'] === 'string' ? body['avatarVoiceId'].trim() : ''
   if (voice.length > 200) throw new AnimationSetupError('That is not a voice.')
   const extra = {
+    ...(editing ? { avatarChange: change } : {}),
     ...(avatarOnly ? { avatarOnly } : {}),
     ...(voice ? { avatarVoiceId: voice } : {}),
   }

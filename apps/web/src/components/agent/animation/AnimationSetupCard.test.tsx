@@ -5,7 +5,23 @@ import { AnimationSetupCard } from './AnimationSetupCard'
 import { useAnimationOptions } from './useAnimationOptions'
 
 jest.mock('./useAnimationOptions', () => ({ useAnimationOptions: jest.fn() }))
-jest.mock('./AvatarVoice', () => ({ AvatarVoice: () => null }))
+// The avatar editor: "Save Sam as Samuel" stands in for Claude changing it and saving it.
+jest.mock('./AvatarEditor', () => ({
+  AvatarEditor: ({
+    avatar,
+    onClose,
+  }: {
+    avatar: { name: string }
+    onClose: (a: null | object) => void
+  }) => (
+    <button
+      onClick={() => onClose({ ...avatar, name: 'Samuel', updatedAt: '2026-10-30T00:00:00Z' })}
+      type="button"
+    >
+      Save {avatar.name} as Samuel
+    </button>
+  ),
+}))
 // The avatar creator: "Make Ana" stands in for Claude making and saving one.
 jest.mock('./AvatarCreator', () => ({
   AvatarCreator: ({ onCreated, styles }: { onCreated: (a: object) => void; styles: string[] }) => (
@@ -18,6 +34,7 @@ jest.mock('./AvatarCreator', () => ({
           name: 'Ana',
           previewUrl: null,
           style: styles[0],
+          updatedAt: '2026-10-29T00:00:00Z',
           voiceDescription: '',
           voiceId: null,
           voiceSampleUrl: null,
@@ -276,6 +293,7 @@ describe('AnimationSetupCard', () => {
       name,
       previewUrl: '/p.png',
       style,
+      updatedAt: '2026-10-28T00:00:00Z',
       voiceDescription: 'warm',
       voiceId: 'kokoro-am_michael',
       voiceSampleUrl: null,
@@ -319,6 +337,22 @@ describe('AnimationSetupCard', () => {
       // The pick stays: a 2D avatar can host a 3D world.
       expect(screen.getByRole('radio', { name: 'Sam (2D)' }).getAttribute('aria-checked')).toBe(
         'true',
+      )
+    })
+
+    it('edits an avatar from its pencil, with no voice row on the card', () => {
+      renderCard({ ...OPTIONS, avatars })
+      fireEvent.click(explainer())
+      // The voice is the editor's now.
+      expect(screen.queryByText('Voice')).toBeNull()
+      expect(screen.getByRole('button', { name: 'Edit Sam' })).toBeTruthy()
+      fireEvent.click(screen.getByRole('button', { name: 'Edit Sam' }))
+      fireEvent.click(screen.getByRole('button', { name: 'Save Sam as Samuel' }))
+      // The tile shows it as saved, still picked, and its picture is the new one.
+      const tile = screen.getByRole('radio', { name: 'Samuel (2D)' })
+      expect(tile.getAttribute('aria-checked')).toBe('true')
+      expect(tile.querySelector('img')?.getAttribute('src')).toBe(
+        '/p.png?v=2026-10-30T00%3A00%3A00Z',
       )
     })
 
