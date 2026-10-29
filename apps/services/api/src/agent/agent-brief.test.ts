@@ -498,3 +498,30 @@ describe('Claude Animation chats', () => {
     expect(briefs.ANIMATION_FREE_KICKOFF).toMatch(/animation_setup with no arguments/)
   })
 })
+
+describe('animationNextSteps for the avatar creator and editor', () => {
+  const head = {
+    lengthSec: 15,
+    lookId: 'avatar' as const,
+    music: { source: 'none' as const },
+    subject: null,
+  }
+
+  it('draws a new avatar in the creator, and changes a saved one in the editor', () => {
+    const made = briefs.animationNextSteps({
+      ...head,
+      avatar: { description: 'a robot', name: 'Pip', style: 'pixel' },
+      avatarOnly: true,
+    })
+    expect(made).toContain('this chat is the avatar creator')
+    const edited = briefs.animationNextSteps({
+      ...head,
+      avatar: { id: 'av-0123456789' },
+      avatarChange: 'shorter hair',
+      avatarOnly: true,
+    })
+    expect(edited).toContain('this chat is the avatar editor')
+    expect(edited).toContain('it updates the same avatar')
+    expect(edited).toContain('When the user asks for more changes in this chat, do the same again.')
+  })
+})

@@ -99,10 +99,22 @@ export function listAvatars(): AgentAvatar[] {
         ? storeUri(`${AVATAR_FOLDER}/${a.id}/preview.png`)
         : null,
       style: a.style,
+      updatedAt: a.updatedAt,
       voiceDescription: a.voice,
       voiceId: a.voiceId ?? null,
       voiceSampleUrl: avatarVoice(a.id)?.wav ?? null,
     }))
+}
+
+/** The photo a saved avatar was drawn from, when it has one (a file on disk). */
+export function savedAvatarPhoto(id: string): null | string {
+  const dir = avatarDir(id)
+  try {
+    const name = fs.readdirSync(dir).find((n) => n.startsWith('photo.'))
+    return name ? path.join(dir, name) : null
+  } catch {
+    return null
+  }
 }
 
 /** A saved avatar's voice sample, when it has one: the WAV's address and what it says. */

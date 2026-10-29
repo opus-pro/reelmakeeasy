@@ -13,7 +13,7 @@ const timed = (text: string, from = 0) =>
 describe("an animation's captions", () => {
   it.each([
     'Tonight, the Moon moves about 3.8 centimeters farther from Earth each year.',
-    'Good evening, I am Allen, and this is the Knowledge Desk.',
+    'Good evening, I am Sam, and this is the Knowledge Desk.',
     'So why is it leaving? The answer is the tides.',
     'It lasted c. 22 hours, 400 million years ago.',
   ])('groups words exactly as the app captions do: %s', (line) => {
@@ -41,11 +41,11 @@ describe("an animation's captions", () => {
   })
 
   it('breaks after punctuation and clears the screen through a long pause', () => {
-    const words = [...timed('Good evening,'), ...timed('I am Allen.', 2.5)]
+    const words = [...timed('Good evening,'), ...timed('I am Sam.', 2.5)]
     const chunks = captionChunks(words)
     expect(chunks.map((c) => c.words.map((w) => w.text).join(' '))).toEqual([
       'Good evening,',
-      'I am Allen.',
+      'I am Sam.',
     ])
     expect(chunkAt(chunks, 1.5)).toBeNull()
   })

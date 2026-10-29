@@ -72,7 +72,7 @@ describe('reviewing an animation', () => {
     fs.mkdirSync(path.join(dir, 'src', 'scenes'), { recursive: true })
     fs.writeFileSync(
       path.join(dir, 'src', 'scenes', 'talk.tsx'),
-      `<Sfx name="pop" at={1} />\nconst SOUNDS = [{ at: 2, name: 'ding' }, { at: 3, name: 'boing' }]\nconst person = { name: 'Allen' }`,
+      `<Sfx name="pop" at={1} />\nconst SOUNDS = [{ at: 2, name: 'ding' }, { at: 3, name: 'boing' }]\nconst person = { name: 'Sam' }`,
     )
     fs.mkdirSync(path.join(dir, 'src', 'host'))
     fs.writeFileSync(path.join(dir, 'src', 'host', 'sounds.tsx'), `{ name: 'boop' } <Sfx`)

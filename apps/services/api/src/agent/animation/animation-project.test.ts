@@ -290,6 +290,29 @@ describe('prepareAnimationProject', () => {
       )
     })
 
+    it('changes a saved avatar in the editor: its own brief, its rig to change', async () => {
+      const saved = path.join(workspace, 'max.ts')
+      fs.writeFileSync(saved, '// Max')
+      const { projectDir } = await prepareAnimationProject({
+        avatar: { id: 'av-0123456789', name: 'Max', rig: saved, style: '2d' },
+        music: null,
+        setup: {
+          ...head,
+          avatar: { id: 'av-0123456789' },
+          avatarChange: 'shorter hair',
+          avatarOnly: true,
+        },
+        workspace,
+      })
+      const brief = fs.readFileSync(path.join(projectDir, 'brief.md'), 'utf8')
+      expect(brief).toMatch(/^# Avatar brief/)
+      expect(brief).toContain('**Change:** the saved avatar "Max" (2D), and nothing else')
+      expect(brief).toContain('**What the user asks:** "shorter hair".')
+      expect(brief).toContain('avatar_save updates this same avatar')
+      expect(brief).not.toContain('## Detail')
+      expect(rig(projectDir)).toBe('// Max')
+    })
+
     it("keeps Claude's rig for the same avatar, and swaps in another avatar's", async () => {
       const { projectDir } = await prepareAnimationProject({
         avatar: { id: null, name: 'Sam', style: '2d' },

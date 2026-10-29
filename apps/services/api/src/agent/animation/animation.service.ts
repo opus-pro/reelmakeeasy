@@ -86,6 +86,7 @@ import {
   newAvatarId,
   readAvatar,
   saveAvatar,
+  savedAvatarPhoto,
 } from './avatar-library'
 import { fixedVoiceEngine, fixedVoiceSpeech, isKnownVoice } from './avatar-voice'
 import { voiceName } from './avatar-voice-list'
@@ -585,7 +586,7 @@ export class AnimationService {
     this.sessions.emitImage(id, preview)
     return {
       success: true,
-      text: `Saved the avatar "${name}" (${style.toUpperCase()}) to the user's avatars: every later Avatar video can use it.${voiceId ? ` Its voice is ${voiceName(voiceId)}, fixed: every video with ${name} speaks in it (the user can change it on the setup card). Record its lines with voices "Host: avatar".` : voiceSample ? ' Its voice sample is made: record its lines with voices "Host: avatar" and they are cloned from it.' : ' Record its lines with voices "Host: avatar".'}${voiceNote} Save again after changing it.${setup.avatarOnly ? ` This chat only makes the avatar: tell the user in one short line that ${name} is ready to use in any video, and stop (no script, voices, music or video).` : ''}`,
+      text: `Saved the avatar "${name}" (${style.toUpperCase()}) to the user's avatars: every later Avatar video can use it.${voiceId ? ` Its voice is ${voiceName(voiceId)}, fixed: every video with ${name} speaks in it (the user can change it on the setup card). Record its lines with voices "Host: avatar".` : voiceSample ? ' Its voice sample is made: record its lines with voices "Host: avatar" and they are cloned from it.' : ' Record its lines with voices "Host: avatar".'}${voiceNote} Save again after changing it.${setup.avatarOnly ? ` This chat only makes the avatar: tell the user in one short line that ${name} is ${before ? 'updated' : 'ready to use in any video'}, and stop (no script, voices, music or video).` : ''}`,
     }
   }
 
@@ -797,9 +798,12 @@ export class AnimationService {
         throw new AnimationSetupError(
           `${saved.name} is drawn ${saved.style.toUpperCase()}: pick a ${styles.join(' or ').toUpperCase()} avatar for this style.`,
         )
+      // The avatar editor gets the photo it was drawn from, to check the likeness against.
+      const photo = setup.avatarOnly ? savedAvatarPhoto(saved.id) : null
       return {
         id: saved.id,
         name: saved.name,
+        ...(photo ? { photo } : {}),
         rig: path.join(avatarDir(saved.id), 'avatar.ts'),
         style: saved.style,
       }

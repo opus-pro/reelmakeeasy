@@ -373,6 +373,12 @@ export function animationNextSteps(
 ): string {
   const skill = `reelmakeeasy-animation-${setup.lookId}`
   const newAvatar = setup.avatar && !('id' in setup.avatar)
+  // The avatar editor: one saved avatar changed, nothing else.
+  if (setup.avatarOnly && !newAvatar)
+    return [
+      `${readSkill ? `Read the \`${skill}\` skill, then` : `Follow the \`${skill}\` skill:`} read \`animation/brief.md\`: this chat is the avatar editor.`,
+      'Change the user\'s saved avatar as brief.md says, and only that: edit `src/avatar/avatar.ts`, check it with avatar_check until it looks right, show it and ask with {ASK} whether to keep it ("Keep this avatar (Recommended)" or "Change something"), then save it with avatar_save (it updates the same avatar). Then say in one line that it is updated, and stop: no script, voices, music or video. When the user asks for more changes in this chat, do the same again.',
+    ].join(' ')
   // The avatar creator: the avatar, nothing else.
   if (setup.avatarOnly)
     return [

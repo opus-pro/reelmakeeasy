@@ -36,6 +36,7 @@ import {
   firstAvatarPick,
   fitAvatarPick,
 } from './AvatarPicker'
+import { SelectedRing } from './SelectedRing'
 import { useAnimationOptions } from './useAnimationOptions'
 
 export type AnimationSetupCardProps = {
@@ -224,6 +225,9 @@ function SetupForm({
               setAvatar({ id: made.id, kind: 'saved' })
             }}
             onPick={setAvatar}
+            onUpdated={(changed) =>
+              setAvatars((all) => all.map((a) => (a.id === changed.id ? changed : a)))
+            }
             pick={avatar}
             styles={style.withAvatar.avatarStyles}
           />
@@ -388,10 +392,8 @@ function StyleGrid({
               aria-checked={style.id === selected}
               aria-label={style.label}
               className={cn(
-                'group flex flex-col overflow-hidden rounded-lg border text-left transition-colors disabled:cursor-not-allowed disabled:opacity-40',
-                style.id === selected
-                  ? 'border-white/70 ring-1 ring-white/50'
-                  : 'border-white/10 hover:border-white/30',
+                'group relative flex flex-col overflow-hidden rounded-lg border border-white/10 text-left transition-colors disabled:cursor-not-allowed disabled:opacity-40',
+                style.id !== selected && 'hover:border-white/30',
               )}
               disabled={disabled}
               key={style.id}
@@ -418,6 +420,7 @@ function StyleGrid({
               <span className="flex h-8 items-center justify-center px-2 text-center text-xs leading-tight font-medium text-primary">
                 {style.label}
               </span>
+              {style.id === selected && <SelectedRing />}
             </button>
           )
         })}

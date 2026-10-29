@@ -54,6 +54,7 @@ When the user asks to change a saved avatar (new glasses, a different shirt), ch
 - **Surprise me:** with neither, `brief.md` gives only a name, a man or a woman, and 2D, 3D or pixel art: make up a look of your own that suits the name, distinctive and friendly (a hair style, skin tone, clothes and colours you choose, nothing generic), and check it against what you set out to draw.
 - **Pixel art** (`style: 'pixel'`): drawn like a 2D avatar and always shown cut to a pixel grid of about 9 units of its box (the sheet shows it so). Use bold, flat shapes of a few colours: no thin lines, no gradients, nothing under about 20 units; the likeness is in the hair's shape, the colours and what they wear.
 - **The avatar creator:** when `brief.md` says this chat only makes the avatar, draw it, check it, ask, save it, say it's ready, and stop.
+- **The avatar editor:** when `brief.md` asks for a change to a saved avatar, change only that in its rig (keep the face, colours and everything else as they are), check it, ask, save it (the same avatar is updated), say it's updated, and stop. More changes asked in the same chat: the same again.
 
 ### The rig contract
 

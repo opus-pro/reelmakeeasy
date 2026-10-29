@@ -71,9 +71,18 @@ describe('parseAnimationSetup', () => {
       avatarVoiceId: 'kokoro-am_eric',
     })
     expect(made).toMatchObject({ avatarOnly: true, avatarVoiceId: 'kokoro-am_eric' })
+    // The avatar editor: a saved avatar, and what to change in it.
     expect(() =>
       parseAnimationSetup({ ...head, avatar: { id: 'av-0123456789' }, avatarOnly: true }),
-    ).toThrow(/makes a new avatar/)
+    ).toThrow(/Say what to change/)
+    expect(
+      parseAnimationSetup({
+        ...head,
+        avatar: { id: 'av-0123456789' },
+        avatarChange: ' shorter hair ',
+        avatarOnly: true,
+      }),
+    ).toMatchObject({ avatar: { id: 'av-0123456789' }, avatarChange: 'shorter hair' })
     // A video never takes the creator's fields unless it is one.
     expect(
       parseAnimationSetup({ ...head, avatar: { id: 'av-0123456789' } }).avatarOnly,

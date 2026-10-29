@@ -43,6 +43,8 @@ export type AgentAvatar = {
   /** Its picture (head and shoulders), or null before it has one. */
   previewUrl: null | string
   style: AvatarStyle
+  /** When it was last saved (its picture changes with it). */
+  updatedAt: string
   /** How it sounds, in words (the voice made from it when it has no fixed voice). */
   voiceDescription: string
   /** Its fixed voice, every video the same: a voice library id (a preset or one of the user's
@@ -72,7 +74,10 @@ export type AgentAnimationAvatar =
 export type AgentAnimationSetup = {
   /** The Avatar video look's avatar (only with lookId `avatar`). */
   avatar?: AgentAnimationAvatar
-  /** The avatar creator: draw, check and save the new avatar only, no video. */
+  /** The avatar editor: what to change in the saved avatar (with `avatarOnly`). */
+  avatarChange?: string
+  /** The avatar creator, or with a saved avatar the avatar editor: draw (or change), check and
+   *  save the avatar only, no video. */
   avatarOnly?: boolean
   /** A new avatar's fixed voice, picked in the creator (a voice library id). */
   avatarVoiceId?: string
