@@ -1,9 +1,9 @@
 ---
 name: reelmakeeasy-animation-8bit
-description: How to write and build a ReelMakeEasy Claude Animation in the 8-bit look (a narrated pixel-art explainer like an old video game, drawn in code with three.js in Remotion). Use in every 8-bit Claude Animation chat, before writing the script, recording the voice, building scenes, rendering or changing it.
+description: How to write and build a ReelMakeEasy Claude Animation in the Pixel art look (8-bit, a narrated pixel-art explainer like an old video game, drawn in code with three.js in Remotion), and the pixel world an Avatar explainer in Pixel art stands in. Use in every Pixel art Claude Animation chat, before writing the script, recording the voice, building scenes, rendering or changing it.
 ---
 
-# Claude Animation: 8-bit
+# Claude Animation: Pixel art
 
 A Claude Animation is a short vertical video (9:16) that you draw and animate yourself, every frame in code, as a Remotion project. No AI video or image model makes any of it: the voices come from the app, the pictures from your code. It looks good when it teaches one surprising, true thing clearly, and the picture moves with what is being said.
 
@@ -35,7 +35,7 @@ Remotion is installed. Its own skills (`remotion-best-practices`, `remotion-mark
 - A picture change lands on the word it shows (the number appears on "500", the arrow on "flows").
 - `useMouth(who)` gives a speaker's mouth (0..1) and vowel on every frame; `useSpeaking()` says who is talking.
 
-## The 8-bit look: a narrated pixel-art explainer
+## The Pixel art look (8-bit): a narrated pixel-art explainer
 
 A low-resolution 3D scene drawn blocky and dithered like an old video game, with crisp pixel-font captions and labels on top, and a narrator.
 

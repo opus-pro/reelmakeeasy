@@ -5,6 +5,7 @@ import {
   animationLook,
   AVATAR_NAME_MAX,
   AVATAR_STYLES,
+  isAnimationStyle,
 } from '@reelmakeeasy/common/animation/looks'
 import { isVideoDetail, VIDEO_DEFAULT_DETAIL } from '@reelmakeeasy/common/motion-reel/video-detail'
 import { localTtsSupports } from '@reelmakeeasy/common/tts/local-tts'
@@ -53,6 +54,27 @@ function parseAvatar(raw: unknown): AgentAnimationAvatar {
   return { name, photo, style: style as AvatarStyle }
 }
 
+/**
+ * An Avatar explainer's avatar and style, checked: the style is the world the host is drawn in
+ * (2D and 3D take an avatar drawn the same way, Pixel art either). Unset: the avatar's own. A
+ * saved avatar's style is the service's to check.
+ */
+function parseAvatarStage(
+  body: Record<string, unknown>,
+): Pick<AgentAnimationSetup, 'avatar' | 'stage'> {
+  const avatar = parseAvatar(body['avatar'])
+  const raw = body['stage']
+  if (raw === undefined || raw === null || raw === '') return { avatar }
+  const stage = animationLook(String(raw))
+  if (!isAnimationStyle(raw) || !stage?.withAvatar)
+    throw new AnimationSetupError('Pick the style: 2d, 3d or 8bit (Pixel art).')
+  if ('style' in avatar && !stage.withAvatar.avatarStyles.includes(avatar.style))
+    throw new AnimationSetupError(
+      `A ${stage.label} explainer needs a ${stage.withAvatar.avatarStyles.join(' or ').toUpperCase()} avatar.`,
+    )
+  return { avatar, stage: raw }
+}
+
 /** The detail level, checked: unset is the default (Extra high). */
 function parseDetail(raw: unknown): VideoDetail {
   if (raw === undefined || raw === null || raw === '') return VIDEO_DEFAULT_DETAIL
@@ -82,7 +104,7 @@ export function parseAnimationSetup(body: unknown): AgentAnimationSetup {
       `Keep what it is about under ${ANIMATION_SUBJECT_MAX} characters.`,
     )
   return {
-    ...(look.id === 'avatar' ? { avatar: parseAvatar(body['avatar']) } : {}),
+    ...(look.id === 'avatar' ? parseAvatarStage(body) : {}),
     detail: parseDetail(body['detail']),
     lengthSec,
     lookId: look.id,
@@ -115,6 +137,7 @@ export function animationSetupFromTool(args: unknown): AgentAnimationSetup | nul
     lengthSec: Number(a['lengthSec']),
     lookId,
     music,
+    stage: text('stage') || undefined,
     subject: typeof a['subject'] === 'string' ? a['subject'] : null,
   })
 }

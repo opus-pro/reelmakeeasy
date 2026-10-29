@@ -38,6 +38,21 @@ describe('parseAnimationSetup', () => {
     expect(parseAnimationSetup({ ...ok, avatar: { id: 'av-0123456789' } }).avatar).toBeUndefined()
   })
 
+  it("takes an Avatar explainer's style: 2D and 3D take their own avatars, Pixel art either", () => {
+    const head = { ...ok, avatar: { id: 'av-0123456789' }, lookId: 'avatar' }
+    expect(parseAnimationSetup(head).stage).toBeUndefined()
+    expect(parseAnimationSetup({ ...head, stage: '8bit' }).stage).toBe('8bit')
+    const fresh = (style: string, stage: string) =>
+      parseAnimationSetup({ ...head, avatar: { name: 'Sam', photo: 'me.jpg', style }, stage })
+    expect(fresh('2d', '8bit').stage).toBe('8bit')
+    expect(fresh('3d', '8bit').stage).toBe('8bit')
+    expect(fresh('3d', '3d').stage).toBe('3d')
+    expect(() => fresh('2d', '3d')).toThrow(/A 3D explainer needs a 3D avatar/)
+    expect(() => parseAnimationSetup({ ...head, stage: 'avatar' })).toThrow(/Pick the style/)
+    // Another look never carries a style.
+    expect(parseAnimationSetup({ ...ok, stage: '8bit' }).stage).toBeUndefined()
+  })
+
   it("takes an Advanced chat's avatar from flat arguments", () => {
     expect(
       animationSetupFromTool({

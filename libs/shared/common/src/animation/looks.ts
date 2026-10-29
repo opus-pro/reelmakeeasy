@@ -1,4 +1,4 @@
-import type { AnimationLookId } from '@shared/types/api/agent'
+import type { AnimationLookId, AnimationStyleId } from '@shared/types/api/agent'
 
 /**
  * Claude Animation's looks: the visual styles Claude draws a narrated short in, every
@@ -22,6 +22,16 @@ export type AnimationLook = {
   /** Background first, then text, then accents (hex). */
   palette: string[]
   skill: string
+  /** A style's Avatar explainer version: the user's avatar hosts it in this style. */
+  withAvatar?: {
+    description: string
+    /** The avatar styles it takes: one, or the user's pick. */
+    avatarStyles: readonly ('2d' | '3d')[]
+    /** How the host lives in this world, for look.md. */
+    host: string
+    /** The avatar kit draws this world itself (its sets): the style's own skill isn't needed. */
+    ownWorld?: boolean
+  }
 }
 
 export const ANIMATION_FPS = 30
@@ -46,6 +56,12 @@ export const ANIMATION_LOOKS: readonly AnimationLook[] = [
     look: 'Flat, bright cartoon: two characters with faces (objects, food, animals, people, the Moon) in a simple setting, thick soft outlines, big eyes, a speech bubble for who is talking.',
     palette: ['#FFF4E0', '#2B2140', '#FF7A59', '#4CC9F0', '#FFD166'],
     skill: 'reelmakeeasy-animation-2d',
+    withAvatar: {
+      avatarStyles: ['2d'],
+      description: 'Your avatar hosts it as a 2D cartoon, pointing at pictures as it talks.',
+      host: 'The avatar drawn 2D, waist up, talking to the camera in a flat cartoon set.',
+      ownWorld: true,
+    },
   },
   {
     cast: 'narrator',
@@ -57,17 +73,28 @@ export const ANIMATION_LOOKS: readonly AnimationLook[] = [
     look: 'Clean 3D: one detailed hero object or machine under soft studio light, a dark ground with fog, labels with leader lines on the parts being explained, a camera that is always moving.',
     palette: ['#0E1116', '#F5F7FA', '#5EEAD4', '#F59E0B', '#A78BFA'],
     skill: 'reelmakeeasy-animation-3d',
+    withAvatar: {
+      avatarStyles: ['3d'],
+      description: 'Your avatar hosts it as a 3D figure, in the 3D world it explains.',
+      host: 'The avatar as a 3D figure in the 3D scene, under its studio light.',
+      ownWorld: true,
+    },
   },
   {
     cast: 'narrator',
     defaultTrackId: 'neon-drive',
     description: 'Pixel art, like an old video game, with a narrator.',
     id: '8bit',
-    label: '8-bit',
+    label: 'Pixel art',
     lengths: [...ANIMATION_LENGTHS],
     look: 'Pixel art like an old video game: a low-resolution 3D scene drawn blocky and dithered, x-ray cutaways, crisp pixel-font captions and labels, a busy screen with at least three things moving.',
     palette: ['#10101A', '#F8F8F8', '#FF004D', '#29ADFF', '#FFEC27', '#00E436'],
     skill: 'reelmakeeasy-animation-8bit',
+    withAvatar: {
+      avatarStyles: ['2d', '3d'],
+      description: 'Your avatar hosts it in pixel art, inside the game world, drawn 2D or 3D.',
+      host: 'The avatar drawn into the pixel world with the same pixel grid (`PixelTalkingHead`): a 3D avatar stands in the low-res scene, a 2D one is pixelated on top of it.',
+    },
   },
   {
     cast: 'host',
@@ -75,7 +102,7 @@ export const ANIMATION_LOOKS: readonly AnimationLook[] = [
     defaultTrackId: null,
     description: 'Your own avatar talks to the camera, waist up, with gestures.',
     id: 'avatar',
-    label: 'Avatar',
+    label: 'Avatar explainer',
     lengths: [...ANIMATION_LENGTHS],
     look: "The avatar (a 2D cartoon or a 3D figure drawn from the user's photo) waist up in a simple set, looking into the camera, lip-synced, gesturing on its key words, with pictures popping up beside or above it on the words they show.",
     palette: ['#1B1F2A', '#F5F7FA', '#FFD166', '#4CC9F0', '#FF7A59'],
@@ -90,20 +117,34 @@ export const AVATAR_NAME_MAX = 40
 
 export const ANIMATION_LOOK_IDS: readonly AnimationLookId[] = ANIMATION_LOOKS.map((l) => l.id)
 
+/** The styles the card offers; with "Avatar explainer" ticked, the avatar hosts it in one. */
+export const ANIMATION_STYLES = ANIMATION_LOOKS.filter(
+  (l): l is AnimationLook & { id: AnimationStyleId } => l.id !== 'avatar',
+)
+
+export const isAnimationStyle = (id: unknown): id is AnimationStyleId =>
+  ANIMATION_STYLES.some((s) => s.id === id)
+
 export function animationLook(id: string): AnimationLook | undefined {
   return ANIMATION_LOOKS.find((look) => look.id === id)
 }
 
-/** The look card the agent reads (`animation/look.md`). */
-export function renderLookCard(look: AnimationLook): string {
+/** The look card the agent reads (`animation/look.md`). An Avatar explainer names its style
+ *  (`stage`): the world the host is drawn in, its palette and the style's skill too. */
+export function renderLookCard(look: AnimationLook, stage?: AnimationLook): string {
+  const world = look.id === 'avatar' && stage?.withAvatar ? stage : undefined
+  // The 2D and 3D hosts bring their own sets; Pixel art is a world the host steps into.
+  const own = world?.withAvatar?.ownWorld
   return [
-    `# Look: ${look.label}`,
+    `# Look: ${look.label}${world ? `, in ${world.label}` : ''}`,
     '',
-    `- **What it is:** ${look.description}`,
-    `- **Look:** ${look.look}`,
-    `- **Palette:** ${look.palette.join(', ')} (background, text, accents)`,
+    `- **What it is:** ${world?.withAvatar?.description ?? look.description}`,
+    `- **Look:** ${world && !own ? `${world.withAvatar?.host ?? ''} The world: ${world.look}` : look.look}`,
+    `- **Palette:** ${(world && !own ? world : look).palette.join(', ')} (background, text, accents)`,
     `- **Voices:** ${look.cast === 'duo' ? 'two characters taking turns, each a designed voice' : look.cast === 'host' ? "the avatar's own voice (Host: avatar)" : 'one narrator'}`,
-    `- **How to build it:** follow the \`${look.skill}\` skill.`,
+    world && !own
+      ? `- **How to build it:** follow the \`${look.skill}\` skill for the host, and the \`${world.skill}\` skill for the world it stands in.`
+      : `- **How to build it:** follow the \`${look.skill}\` skill.`,
     '',
   ].join('\n')
 }

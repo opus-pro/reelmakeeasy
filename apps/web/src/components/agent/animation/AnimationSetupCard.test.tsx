@@ -35,6 +35,11 @@ const OPTIONS: AgentAnimationOptions = {
       label: '2D',
       lengths: [15, 30, 45, 60, 90],
       previewUrl: null,
+      withAvatar: {
+        avatarStyles: ['2d'],
+        description: 'Your avatar hosts it as a 2D cartoon.',
+        previewUrl: '/api/presets/animation/looks/avatar.mp4',
+      },
     },
     {
       defaultLengthSec: 30,
@@ -44,22 +49,32 @@ const OPTIONS: AgentAnimationOptions = {
       label: '3D',
       lengths: [15, 30, 45, 60, 90],
       previewUrl: '/api/presets/animation/looks/3d.mp4',
+      withAvatar: {
+        avatarStyles: ['3d'],
+        description: 'Your avatar hosts it as a 3D figure.',
+        previewUrl: null,
+      },
     },
     {
       defaultLengthSec: 30,
       defaultTrackId: 'neon-drive',
       description: 'Pixel art, like an old video game, with a narrator.',
       id: '8bit',
-      label: '8-bit',
+      label: 'Pixel art',
       lengths: [15, 30, 45, 60, 90],
       previewUrl: null,
+      withAvatar: {
+        avatarStyles: ['2d', '3d'],
+        description: 'Your avatar hosts it in pixel art.',
+        previewUrl: null,
+      },
     },
     {
       defaultLengthSec: 30,
       defaultTrackId: 'data-pulse',
       description: 'Your own avatar talks to the camera, waist up, with gestures.',
       id: 'avatar',
-      label: 'Avatar',
+      label: 'Avatar explainer',
       lengths: [15, 30, 45, 60, 90],
       previewUrl: null,
     },
@@ -225,44 +240,74 @@ describe('AnimationSetupCard', () => {
     expect(screen.getByText('No music')).toBeTruthy()
   })
 
-  describe('an Avatar video', () => {
+  describe('an Avatar explainer', () => {
     const subject = () =>
       fireEvent.change(screen.getByRole('textbox', { name: "What's it about?" }), {
         target: { value: 'Why we yawn' },
       })
+    const explainer = () => screen.getByRole('checkbox', { name: /Avatar explainer/ })
+    const saved = (id: string, name: string, style: '2d' | '3d') => ({
+      createdAt: '2026-10-27T00:00:00Z',
+      id,
+      name,
+      previewUrl: '/p.png',
+      style,
+      voiceDescription: 'warm',
+      voiceId: 'kokoro-am_michael',
+      voiceSampleUrl: null,
+    })
+    const avatars = [saved('av-0000000002', 'Sam', '2d'), saved('av-0000000003', 'Max', '3d')]
 
-    it('picks the newest saved avatar and sends it', () => {
-      const onSubmit = renderCard({
-        ...OPTIONS,
-        avatars: [
-          {
-            createdAt: '2026-10-27T00:00:00Z',
-            id: 'av-0123456789',
-            name: 'Sam',
-            previewUrl: '/p.png',
-            style: '2d',
-            voiceDescription: 'warm',
-            voiceId: 'kokoro-am_michael',
-            voiceSampleUrl: null,
-          },
-        ],
-      })
-      fireEvent.click(look(/^Avatar$/))
+    it('offers three styles, and with the avatar ticked sends the avatar look in that style', () => {
+      const onSubmit = renderCard({ ...OPTIONS, avatars })
+      expect(screen.getAllByRole('radio', { name: /^(2D|3D|Pixel art)$/ })).toHaveLength(3)
+      expect(screen.queryByRole('radio', { name: 'Avatar explainer' })).toBeNull()
+      fireEvent.click(explainer())
+      // The style tiles switch to their avatar versions.
+      expect(
+        document.querySelector('video[src="/api/presets/animation/looks/avatar.mp4"]'),
+      ).toBeTruthy()
+      expect(screen.getByText('Your avatar hosts it as a 2D cartoon.')).toBeTruthy()
       expect(screen.getByRole('radio', { name: 'Sam (2D)' }).getAttribute('aria-checked')).toBe(
         'true',
       )
       subject()
       fireEvent.click(screen.getByRole('button', { name: 'Build it' }))
       expect(onSubmit).toHaveBeenCalledWith(
-        expect.objectContaining({ avatar: { id: 'av-0123456789' }, lookId: 'avatar' }),
+        expect.objectContaining({
+          avatar: { id: 'av-0000000002' },
+          lookId: 'avatar',
+          stage: '2d',
+        }),
       )
     })
 
-    it('makes a new avatar only with a photo and a name', async () => {
+    it('shows the avatars drawn in the style: 2D ones for 2D, 3D for 3D, either for Pixel art', () => {
+      renderCard({ ...OPTIONS, avatars })
+      fireEvent.click(explainer())
+      const names = () =>
+        screen
+          .getAllByRole('radio', { name: /\((2D|3D)\)$/ })
+          .map((r) => r.getAttribute('aria-label'))
+      expect(names()).toEqual(['Sam (2D)'])
+      fireEvent.click(look(/^3D$/))
+      expect(names()).toEqual(['Max (3D)'])
+      // The pick moves to an avatar that fits.
+      expect(screen.getByRole('radio', { name: 'Max (3D)' }).getAttribute('aria-checked')).toBe(
+        'true',
+      )
+      fireEvent.click(look(/^Pixel art$/))
+      expect(names()).toEqual(['Sam (2D)', 'Max (3D)'])
+    })
+
+    it('makes a new avatar only with a photo and a name, 2D or 3D in Pixel art', async () => {
       global.URL.createObjectURL = jest.fn(() => 'blob:photo')
       global.URL.revokeObjectURL = jest.fn()
       const onSubmit = renderCard()
-      fireEvent.click(look(/^Avatar$/))
+      fireEvent.click(explainer())
+      // 2D takes a 2D avatar: no choice to make.
+      expect(screen.getByText(/Drawn as a 2D cartoon, like the style/)).toBeTruthy()
+      fireEvent.click(look(/^Pixel art$/))
       subject()
       expect((screen.getByRole('button', { name: 'Build it' }) as HTMLButtonElement).disabled).toBe(
         true,
@@ -280,8 +325,22 @@ describe('AnimationSetupCard', () => {
         expect.objectContaining({
           avatar: { name: 'Ana', photo: 'me.jpg', style: '3d' },
           lookId: 'avatar',
+          stage: '8bit',
         }),
       )
+    })
+
+    it("lets 2D be picked with the avatar even when its characters' voices can't be made", () => {
+      renderCard({
+        ...OPTIONS,
+        avatars,
+        looks: OPTIONS.looks.map((l) =>
+          l.id === '2d' ? { ...l, disabledReason: 'Needs Qwen3 voices.' } : l,
+        ),
+      })
+      expect(look(/^2D$/).disabled).toBe(true)
+      fireEvent.click(explainer())
+      expect(look(/^2D$/).disabled).toBe(false)
     })
   })
 })

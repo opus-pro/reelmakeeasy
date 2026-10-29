@@ -23,6 +23,9 @@ export type AgentMode =
  *  user's own avatar (2D or 3D) talking to the camera. */
 export type AnimationLookId = '2d' | '3d' | '8bit' | 'avatar'
 
+/** A style the card offers (`8bit` is Pixel art); an Avatar explainer is drawn in one of them. */
+export type AnimationStyleId = Exclude<AnimationLookId, 'avatar'>
+
 /** How much detail goes into a code video (Motion Reel, Claude Animation), the user's pick on the
  *  setup card: `xhigh` is Extra high. */
 export type VideoDetail = 'high' | 'low' | 'medium' | 'xhigh'
@@ -57,6 +60,9 @@ export type AgentAnimationAvatar =
 export type AgentAnimationSetup = {
   /** The Avatar video look's avatar (only with lookId `avatar`). */
   avatar?: AgentAnimationAvatar
+  /** An Avatar explainer's style, the world the host is drawn in: `2d` or `3d` (the avatar's own
+   *  style), or `8bit` (Pixel art, with a 2D or 3D avatar). Unset: the avatar's own style. */
+  stage?: AnimationStyleId
   /** How much detail to build in; unset (a chat set up before it existed): Extra high. */
   detail?: VideoDetail
   /** About this long, in seconds: a whole number from 10 to 90. */
@@ -88,6 +94,9 @@ export type AgentAnimationOptions = {
     lengths: number[]
     /** A short silent clip of the look (null until the preset pack has one). */
     previewUrl: null | string
+    /** A style's Avatar explainer version (your avatar hosts it): what it is and its clip;
+     *  absent for the avatar look itself. */
+    withAvatar?: { avatarStyles: AvatarStyle[]; description: string; previewUrl: null | string }
   }[]
   tracks: AgentMotionOptions['tracks']
 }

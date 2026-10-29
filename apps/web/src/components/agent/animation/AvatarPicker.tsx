@@ -26,12 +26,30 @@ export type AvatarPick =
 
 export const AVATAR_NAME_MAX = 40
 
-/** The first pick: the newest saved avatar, else a new one. */
-export function firstAvatarPick(avatars: AgentAvatar[]): AvatarPick {
-  const newest = avatars[0]
+const BOTH: readonly AvatarStyle[] = ['2d', '3d']
+
+/** The first pick among the avatars drawn in `styles`: the newest, else a new one. */
+export function firstAvatarPick(
+  avatars: AgentAvatar[],
+  styles: readonly AvatarStyle[] = BOTH,
+): AvatarPick {
+  const newest = avatars.find((a) => styles.includes(a.style))
   return newest
     ? { id: newest.id, kind: 'saved' }
-    : { kind: 'new', name: '', photo: null, style: '2d' }
+    : { kind: 'new', name: '', photo: null, style: styles[0] ?? '2d' }
+}
+
+/** A pick that fits `styles` (the style picked on the card): the same one when it does, a new
+ *  avatar redrawn in an allowed style (its photo and name kept), else the first fitting pick. */
+export function fitAvatarPick(
+  pick: AvatarPick,
+  avatars: AgentAvatar[],
+  styles: readonly AvatarStyle[],
+): AvatarPick {
+  if (pick.kind === 'new')
+    return styles.includes(pick.style) ? pick : { ...pick, style: styles[0] ?? '2d' }
+  const saved = avatars.find((a) => a.id === pick.id)
+  return saved && styles.includes(saved.style) ? pick : firstAvatarPick(avatars, styles)
 }
 
 /** What the card sends for a pick, or null while a new one is missing its name or photo. */
@@ -44,23 +62,31 @@ export function avatarChoice(pick: AvatarPick): AgentAnimationAvatar | null {
 
 const TILE =
   'flex w-24 shrink-0 flex-col overflow-hidden rounded-lg border text-left transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-white/50'
+/** A tile's name strip: the same height on every tile, the name centred in it. */
+const NAME =
+  'flex h-8 min-w-0 items-center justify-center px-2 text-center text-xs font-medium text-primary'
 
 /**
- * The Avatar video's avatar: the user's saved avatars as picture tiles (the picked one's voice
- * under them, to listen to and change), and "New avatar" (a photo, a name, 2D or 3D), which
- * Claude draws from the photo before the video.
+ * The Avatar explainer's avatar: the user's saved avatars drawn in the picked style as picture
+ * tiles (the picked one's voice under them, to listen to and change), and "New avatar" (a photo,
+ * a name, and 2D or 3D where the style takes either), which Claude draws from the photo first.
  */
 export function AvatarPicker({
   avatars,
   onPick,
   pick,
   sessionId,
+  styles = BOTH,
 }: {
   avatars: AgentAvatar[]
   onPick: (pick: AvatarPick) => void
   pick: AvatarPick
   sessionId: string
+  /** The avatar styles the picked style takes: 2D takes 2D avatars, 3D 3D, Pixel art either. */
+  styles?: readonly AvatarStyle[]
 }) {
+  const shown = avatars.filter((a) => styles.includes(a.style))
+  const either = styles.length > 1
   const apiOrigin = useAtomValue(apiOriginAtom)
   const [uploading, setUploading] = useState(false)
   const [error, setError] = useState<null | string>(null)
@@ -114,12 +140,12 @@ export function AvatarPicker({
           role="radio"
           type="button"
         >
-          <span className="flex aspect-square w-full items-center justify-center bg-white/[0.04]">
+          <span className="flex aspect-[1/1] w-full shrink-0 items-center justify-center bg-white/[0.04]">
             <Plus className="size-6 text-white/50" />
           </span>
-          <span className="truncate px-2 py-1.5 text-xs font-medium text-primary">New avatar</span>
+          <span className={NAME}>New avatar</span>
         </button>
-        {avatars.map((a) => (
+        {shown.map((a) => (
           <button
             aria-checked={pick.kind === 'saved' && pick.id === a.id}
             aria-label={`${a.name} (${a.style.toUpperCase()})`}
@@ -138,15 +164,20 @@ export function AvatarPicker({
               // eslint-disable-next-line @next/next/no-img-element -- served by the local API
               <img
                 alt=""
-                className="aspect-square w-full bg-white/5 object-cover"
+                className="aspect-[1/1] w-full shrink-0 bg-white/5 object-cover"
                 src={a.previewUrl}
               />
             ) : (
-              <span className="flex aspect-square w-full items-center justify-center bg-white/[0.04] text-lg font-semibold text-white/40">
+              <span className="flex aspect-[1/1] w-full shrink-0 items-center justify-center bg-white/[0.04] text-lg font-semibold text-white/40">
                 {a.name.slice(0, 1).toUpperCase()}
               </span>
             )}
-            <span className="truncate px-2 py-1.5 text-xs font-medium text-primary">{a.name}</span>
+            <span className={cn(NAME, 'gap-1')}>
+              <span className="truncate">{a.name}</span>
+              {either && (
+                <span className="text-[10px] text-secondary">{a.style.toUpperCase()}</span>
+              )}
+            </span>
           </button>
         ))}
       </div>
@@ -211,15 +242,21 @@ export function AvatarPicker({
                 value={pick.name}
               />
             </label>
-            <ChipRow
-              label="Drawn in"
-              onPick={(style) => setNew({ ...pick, style })}
-              options={[
-                { label: '2D cartoon', value: '2d' as const },
-                { label: '3D figure', value: '3d' as const },
-              ]}
-              selected={pick.style}
-            />
+            {either ? (
+              <ChipRow
+                label="Drawn in"
+                onPick={(style) => setNew({ ...pick, style })}
+                options={[
+                  { label: '2D cartoon', value: '2d' as const },
+                  { label: '3D figure', value: '3d' as const },
+                ]}
+                selected={pick.style}
+              />
+            ) : (
+              <span className="pb-1 text-xs text-secondary">
+                Drawn {pick.style === '3d' ? 'as a 3D figure' : 'as a 2D cartoon'}, like the style.
+              </span>
+            )}
           </div>
         </div>
       )}

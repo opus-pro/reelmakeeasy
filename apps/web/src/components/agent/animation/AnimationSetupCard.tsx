@@ -9,11 +9,11 @@ import type {
   AgentAnimationOptions,
   AgentAnimationSetup,
   AgentAnimationSetupView,
-  AnimationLookId,
+  AnimationStyleId,
   VideoDetail,
 } from '@shared/types/api/agent'
 import { Button, cn } from '@shared/ui'
-import { Sparkles } from 'lucide-react'
+import { Check, Sparkles } from 'lucide-react'
 import { useRef, useState } from 'react'
 
 import {
@@ -29,7 +29,13 @@ import {
 } from '../motion/setup-parts'
 import { Spinner } from '../Spinner'
 
-import { avatarChoice, type AvatarPick, AvatarPicker, firstAvatarPick } from './AvatarPicker'
+import {
+  avatarChoice,
+  type AvatarPick,
+  AvatarPicker,
+  firstAvatarPick,
+  fitAvatarPick,
+} from './AvatarPicker'
 import { useAnimationOptions } from './useAnimationOptions'
 
 export type AnimationSetupCardProps = {
@@ -39,13 +45,19 @@ export type AnimationSetupCardProps = {
 }
 
 type Look = AgentAnimationOptions['looks'][number]
+/** A style the card offers (2D, 3D, Pixel art), with its Avatar explainer version. */
+type Style = Look & { id: AnimationStyleId; withAvatar: NonNullable<Look['withAvatar']> }
+
+const isStyle = (look: Look): look is Style => !!look.withAvatar
 
 const SUBJECT_MAX = 600
 
 /**
- * A Claude Animation chat's first step: the look (2D, 3D or 8-bit), what it's about (or Surprise
- * me: Claude picks a fun fact), the music, the length and the detail. Sending it locks the card while
- * ReelMakeEasy readies the project; the chat then opens and the card shows what was chosen.
+ * A Claude Animation chat's first step: the style (2D, 3D or Pixel art) and whether the user's
+ * avatar hosts it (Avatar explainer: every style switches to its version with the avatar, and the
+ * avatar picker shows), what it's about (or Surprise me: Claude picks a fun fact), the music, the
+ * length and the detail. Sending it locks the card while ReelMakeEasy readies the project; the
+ * chat then opens and the card shows what was chosen.
  */
 export function AnimationSetupCard({ entry, onSubmit, sessionId }: AnimationSetupCardProps) {
   if (entry.state === 'chosen' && entry.setup) return <ChosenSetup setup={entry.setup} />
@@ -126,17 +138,24 @@ function SetupForm({
   options,
   sessionId,
 }: Omit<AnimationSetupCardProps, 'entry'> & { options: AgentAnimationOptions }) {
-  const first = options.looks.find((l) => !l.disabledReason) ?? options.looks[0]
-  const [lookId, setLookId] = useState<AnimationLookId | undefined>(first?.id)
-  const look = options.looks.find((l) => l.id === lookId)
+  const styles = options.looks.filter(isStyle)
+  const hostLook = options.looks.find((l) => l.id === 'avatar')
+  const first = styles.find((l) => !l.disabledReason) ?? styles[0]
+  const [styleId, setStyleId] = useState<AnimationStyleId | undefined>(first?.id)
+  const [withAvatar, setWithAvatar] = useState(false)
+  const style = styles.find((l) => l.id === styleId)
+  // The look sent: the style, or with "Avatar explainer" ticked the avatar look in that style.
+  const look = withAvatar ? hostLook : style
   const [subject, setSubject] = useState('')
   const [surprise, setSurprise] = useState(false)
   const [lengthSec, setLengthSec] = useState(first?.defaultLengthSec ?? 30)
   const [detail, setDetail] = useState<VideoDetail>(VIDEO_DEFAULT_DETAIL)
   const [music, setMusic] = useState<MusicPick>(() => defaultMusic(options, first))
   const [musicTouched, setMusicTouched] = useState(false)
-  const [avatar, setAvatar] = useState<AvatarPick>(() => firstAvatarPick(options.avatars))
-  const talkingHead = lookId === 'avatar'
+  const [avatar, setAvatar] = useState<AvatarPick>(() =>
+    firstAvatarPick(options.avatars, first?.withAvatar.avatarStyles),
+  )
+  const talkingHead = withAvatar
   const avatarSent = talkingHead ? avatarChoice(avatar) : null
   const [pending, setPending] = useState(false)
   const inFlightRef = useRef(false)
@@ -148,10 +167,15 @@ function SetupForm({
     Number.isInteger(typed) && typed >= options.minLengthSec && typed <= options.maxLengthSec
   const length = custom.trim() ? typed : lengthSec
 
-  const pickLook = (next: Look) => {
-    setLookId(next.id)
+  const pickStyle = (next: Style) => {
+    setStyleId(next.id)
+    setAvatar((current) => fitAvatarPick(current, options.avatars, next.withAvatar.avatarStyles))
     // The look's own track follows it, until the user picks the music themselves.
-    if (!musicTouched) setMusic(defaultMusic(options, next))
+    if (!musicTouched) setMusic(defaultMusic(options, withAvatar ? hostLook : next))
+  }
+  const pickAvatarExplainer = (on: boolean) => {
+    setWithAvatar(on)
+    if (!musicTouched) setMusic(defaultMusic(options, on ? hostLook : style))
   }
   const pickMusic = (next: MusicPick) => {
     setMusicTouched(true)
@@ -160,10 +184,12 @@ function SetupForm({
 
   const lengthOk = !custom.trim() || customOk
   const avatarOk = !talkingHead || !!avatarSent
+  // A style's own reason (2D's characters need designed voices) doesn't hold with the avatar.
+  const blocked = !withAvatar && !!style?.disabledReason
   const ready =
-    !!look && !look.disabledReason && (surprise || !!subject.trim()) && lengthOk && avatarOk
+    !!look && !!style && !blocked && (surprise || !!subject.trim()) && lengthOk && avatarOk
   const submit = async () => {
-    if (!ready || !look || inFlightRef.current) return
+    if (!ready || !look || !style || inFlightRef.current) return
     inFlightRef.current = true
     setPending(true)
     const ok = await onSubmit({
@@ -172,6 +198,7 @@ function SetupForm({
       lengthSec: length,
       lookId: look.id,
       music: musicChoice(music),
+      ...(withAvatar ? { stage: style.id } : {}),
       subject: surprise ? null : subject.trim(),
     })
     // On success stay locked until the chat opens (`animation_setup`) or the card comes back.
@@ -185,13 +212,15 @@ function SetupForm({
     <div className={CARD_CLASS}>
       <Header />
       <fieldset className="flex flex-col gap-4" disabled={pending}>
-        <LookGrid looks={options.looks} onPick={pickLook} selected={lookId} />
-        {talkingHead && (
+        <AvatarExplainerCheck checked={withAvatar} onChange={pickAvatarExplainer} />
+        <StyleGrid onPick={pickStyle} selected={styleId} styles={styles} withAvatar={withAvatar} />
+        {talkingHead && style && (
           <AvatarPicker
             avatars={options.avatars}
             onPick={setAvatar}
             pick={avatar}
             sessionId={sessionId}
+            styles={style.withAvatar.avatarStyles}
           />
         )}
         <div className="flex flex-col gap-1.5">
@@ -268,7 +297,7 @@ function SetupForm({
           {pending ? 'Getting it ready…' : 'Build it'}
         </Button>
         {pending && <Spinner className="text-secondary" />}
-        {!ready && !pending && !look?.disabledReason && (
+        {!ready && !pending && !blocked && (
           <span className="text-xs text-secondary">
             {!lengthOk
               ? `Pick a length from ${options.minLengthSec} to ${options.maxLengthSec} seconds.`
@@ -282,59 +311,132 @@ function SetupForm({
   )
 }
 
-function LookGrid({
-  looks,
+/** "Avatar explainer": ticked, the user's avatar hosts the video in whichever style is picked. */
+function AvatarExplainerCheck({
+  checked,
+  onChange,
+}: {
+  checked: boolean
+  onChange: (checked: boolean) => void
+}) {
+  return (
+    <label
+      className={cn(
+        'flex max-w-md cursor-pointer items-center gap-3 rounded-lg border px-3 py-2 transition-colors',
+        checked ? 'border-violet-300/60 bg-violet-400/10' : 'border-white/10 hover:border-white/25',
+      )}
+    >
+      <input
+        checked={checked}
+        className="peer sr-only"
+        onChange={(e) => onChange(e.target.checked)}
+        type="checkbox"
+      />
+      <span
+        aria-hidden
+        className={cn(
+          'flex size-5 shrink-0 items-center justify-center rounded-md border-2 transition-all duration-150 peer-focus-visible:ring-2 peer-focus-visible:ring-violet-300/60',
+          checked
+            ? 'border-violet-400 bg-violet-400 shadow-[0_0_10px_rgb(167_139_250/0.55)]'
+            : 'border-white/30 bg-transparent',
+        )}
+      >
+        <Check
+          className={cn(
+            'size-3.5 text-white transition-transform duration-150',
+            checked ? 'scale-100' : 'scale-0',
+          )}
+          strokeWidth={3.5}
+        />
+      </span>
+      <span className="flex flex-col">
+        <span className="text-sm font-medium text-primary">Avatar explainer</span>
+        <span className="text-xs text-secondary">
+          Your avatar hosts it, in whichever style you pick.
+        </span>
+      </span>
+    </label>
+  )
+}
+
+/** The styles as tiles: each one's clip, or its Avatar explainer clip while that is ticked. */
+function StyleGrid({
   onPick,
   selected,
+  styles,
+  withAvatar,
 }: {
-  looks: Look[]
-  onPick: (look: Look) => void
-  selected: AnimationLookId | undefined
+  onPick: (style: Style) => void
+  selected: AnimationStyleId | undefined
+  styles: Style[]
+  withAvatar: boolean
 }) {
-  const current = looks.find((l) => l.id === selected)
+  const current = styles.find((l) => l.id === selected)
   return (
     <div className="flex flex-col gap-1.5">
-      <span className={LABEL_CLASS}>Look</span>
-      <div className="grid max-w-md grid-cols-4 gap-2" role="radiogroup">
-        {looks.map((look) => (
-          <button
-            aria-checked={look.id === selected}
-            aria-label={look.label}
-            className={cn(
-              'group flex flex-col overflow-hidden rounded-lg border text-left transition-colors disabled:cursor-not-allowed disabled:opacity-40',
-              look.id === selected
-                ? 'border-white/70 ring-1 ring-white/50'
-                : 'border-white/10 hover:border-white/30',
-            )}
-            disabled={!!look.disabledReason}
-            key={look.id}
-            onClick={() => onPick(look)}
-            role="radio"
-            title={look.disabledReason ?? look.description}
-            type="button"
-          >
-            <LookPreview look={look} />
-            <span className="px-2 py-1.5 text-xs leading-tight font-medium text-primary">
-              {look.label}
-            </span>
-          </button>
-        ))}
+      <span className={LABEL_CLASS}>Style</span>
+      <div className="grid max-w-md grid-cols-3 gap-2" role="radiogroup">
+        {styles.map((style) => {
+          const disabled = !withAvatar && !!style.disabledReason
+          return (
+            <button
+              aria-checked={style.id === selected}
+              aria-label={style.label}
+              className={cn(
+                'group flex flex-col overflow-hidden rounded-lg border text-left transition-colors disabled:cursor-not-allowed disabled:opacity-40',
+                style.id === selected
+                  ? 'border-white/70 ring-1 ring-white/50'
+                  : 'border-white/10 hover:border-white/30',
+              )}
+              disabled={disabled}
+              key={style.id}
+              onClick={() => onPick(style)}
+              role="radio"
+              title={disabled ? style.disabledReason : style.description}
+              type="button"
+            >
+              <span className="relative">
+                <LookPreview
+                  label={style.label}
+                  previewUrl={
+                    withAvatar
+                      ? (style.withAvatar.previewUrl ?? style.previewUrl)
+                      : style.previewUrl
+                  }
+                />
+                {withAvatar && (
+                  <span className="absolute top-1.5 left-1.5 rounded bg-violet-500/80 px-1.5 py-0.5 text-[10px] font-medium text-white">
+                    + avatar
+                  </span>
+                )}
+              </span>
+              <span className="flex h-8 items-center justify-center px-2 text-center text-xs leading-tight font-medium text-primary">
+                {style.label}
+              </span>
+            </button>
+          )
+        })}
       </div>
-      {current && <p className="text-xs text-secondary">{current.description}</p>}
-      {looks
-        .filter((l) => l.disabledReason)
-        .map((l) => (
-          <p className="text-xs text-amber-400" key={l.id}>
-            {l.label}: <span>{l.disabledReason}</span>
-          </p>
-        ))}
+      {current && (
+        <p className="text-xs text-secondary">
+          {withAvatar ? current.withAvatar.description : current.description}
+        </p>
+      )}
+      {!withAvatar &&
+        styles
+          .filter((l) => l.disabledReason)
+          .map((l) => (
+            <p className="text-xs text-amber-400" key={l.id}>
+              {l.label}: <span>{l.disabledReason}</span>
+            </p>
+          ))}
     </div>
   )
 }
 
 /** A look's looping preview, or (until the preset pack has one) its name on a plain tile. */
-function LookPreview({ look }: { look: Look }) {
-  if (look.previewUrl)
+function LookPreview({ label, previewUrl }: { label: string; previewUrl: null | string }) {
+  if (previewUrl)
     return (
       <video
         autoPlay
@@ -342,12 +444,12 @@ function LookPreview({ look }: { look: Look }) {
         loop
         muted
         playsInline
-        src={look.previewUrl}
+        src={previewUrl}
       />
     )
   return (
     <span className="flex aspect-[9/16] w-full items-center justify-center bg-white/[0.04] text-2xl font-semibold text-white/30">
-      {look.label}
+      {label}
     </span>
   )
 }

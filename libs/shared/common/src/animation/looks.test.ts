@@ -12,6 +12,7 @@ import {
   ANIMATION_LOOKS,
   ANIMATION_MAX_SEC,
   ANIMATION_MIN_SEC,
+  ANIMATION_STYLES,
   animationLook,
   renderLookCard,
 } from './looks'
@@ -38,8 +39,8 @@ describe('animation looks', () => {
     expect(ANIMATION_LOOKS.map((l) => [l.id, l.label])).toEqual([
       ['2d', '2D'],
       ['3d', '3D'],
-      ['8bit', '8-bit'],
-      ['avatar', 'Avatar'],
+      ['8bit', 'Pixel art'],
+      ['avatar', 'Avatar explainer'],
     ])
   })
 
@@ -55,6 +56,20 @@ describe('animation looks', () => {
   it('picks library tracks that exist', () => {
     for (const look of ANIMATION_LOOKS)
       if (look.defaultTrackId) expect(motionReelTrack(look.defaultTrackId)).toBeTruthy()
+  })
+
+  it("names an Avatar explainer's style on its card: Pixel art adds its world and skill", () => {
+    const avatar = animationLook('avatar')!
+    const pixel = renderLookCard(avatar, animationLook('8bit'))
+    expect(pixel).toMatch(/^# Look: Avatar explainer, in Pixel art/)
+    expect(pixel).toContain('reelmakeeasy-animation-avatar')
+    expect(pixel).toContain('reelmakeeasy-animation-8bit')
+    expect(pixel).toContain('PixelTalkingHead')
+    // 2D and 3D hosts bring their own sets: the avatar skill alone.
+    const flat = renderLookCard(avatar, animationLook('2d'))
+    expect(flat).toMatch(/^# Look: Avatar explainer, in 2D/)
+    expect(flat).not.toContain('reelmakeeasy-animation-2d')
+    expect(ANIMATION_STYLES.map((l) => l.id)).toEqual(['2d', '3d', '8bit'])
   })
 
   it('names its skill and palette on the look card', () => {

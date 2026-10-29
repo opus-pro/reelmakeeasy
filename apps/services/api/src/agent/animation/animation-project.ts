@@ -107,9 +107,9 @@ export async function prepareAnimationProject(o: {
   if (!look) throw new Error(`Unknown look: ${o.setup.lookId}`)
 
   copyTree(presetPath('animation/template'), projectDir)
-  // An Avatar video draws its avatar in 2D or 3D: both libraries, then its own host kit.
-  for (const lib of look.id === 'avatar' ? ['2d', '3d', 'avatar'] : [look.id])
-    copyTree(presetPath(`animation/${lib}`), projectDir)
+  // An Avatar video draws its avatar in 2D or 3D: both libraries, then its own host kit (and in
+  // Pixel art, the pixel stage and the host's pixel kit).
+  for (const lib of projectLibs(o.setup)) copyTree(presetPath(`animation/${lib}`), projectDir)
   if (!o.musicOnly) linkRuntime(projectDir)
   if (o.avatar && !o.musicOnly) placeAvatar(projectDir, o.avatar)
 
@@ -176,7 +176,11 @@ export async function prepareAnimationProject(o: {
     width: ANIMATION_SIZE.width,
   }
   writeAnimationJson(projectDir, spec)
-  if (!o.musicOnly) fs.writeFileSync(path.join(projectDir, 'look.md'), renderLookCard(look))
+  if (!o.musicOnly)
+    fs.writeFileSync(
+      path.join(projectDir, 'look.md'),
+      renderLookCard(look, o.setup.stage ? animationLook(o.setup.stage) : undefined),
+    )
   fs.writeFileSync(
     path.join(projectDir, 'brief.md'),
     renderAnimationBrief(o.setup, o.music?.title ?? null, avatar),
@@ -260,7 +264,7 @@ export function renderAnimationBrief(
     '# Claude Animation brief',
     '',
     `- **About:** ${setup.subject ?? 'Pick a surprising, true fun fact yourself, in everyday words, and say which one in your plan.'}`,
-    `- **Look:** ${look?.label ?? setup.lookId} (see look.md)`,
+    `- **Look:** ${look?.label ?? setup.lookId}${setup.stage ? `, in ${animationLook(setup.stage)?.label ?? setup.stage}` : ''} (see look.md)`,
     `- **Length:** about ${setup.lengthSec} s`,
     `- **Frame:** 9:16, ${ANIMATION_SIZE.width}×${ANIMATION_SIZE.height}, ${ANIMATION_FPS} fps`,
     `- **Music:** ${music}`,
@@ -273,9 +277,16 @@ export function renderAnimationBrief(
         ]
       : []),
     '',
-    animationDetailBrief(setup.lookId, detail),
+    animationDetailBrief(setup.lookId, detail, setup.stage),
     '',
   ].join('\n')
+}
+
+/** The preset libraries a project gets, in order: its look's; an Avatar explainer's 2D and 3D
+ *  kits and host kit, and in Pixel art the pixel stage and the host's pixel kit. */
+export function projectLibs(setup: AgentAnimationSetup): string[] {
+  if (setup.lookId !== 'avatar') return [setup.lookId]
+  return ['2d', '3d', 'avatar', ...(setup.stage === '8bit' ? ['8bit', 'avatar-pixel'] : [])]
 }
 
 /**
