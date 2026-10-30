@@ -78,6 +78,27 @@ QWEN3_MODELS = {
     },
 }
 
+# The Apple Silicon builds LOCAL_TTS_QWEN3_PRECISION picks from: 8bit (the default) or bf16, the
+# full-precision weights, which speak more clearly (fewer wobbles and slurred words) for about
+# twice the memory and download.
+QWEN3_MLX_PRECISIONS = ("8bit", "bf16")
+
+
+def qwen3_models(family: str) -> dict[str, str]:
+    """The Qwen3 repos for a backend family, in the precision LOCAL_TTS_QWEN3_PRECISION picks."""
+    models = QWEN3_MODELS[family]
+    precision = os.environ.get("LOCAL_TTS_QWEN3_PRECISION", "").strip().lower() or "8bit"
+    if precision not in QWEN3_MLX_PRECISIONS:
+        print(
+            f"LOCAL_TTS_QWEN3_PRECISION={precision} isn't one of "
+            f"{', '.join(QWEN3_MLX_PRECISIONS)}: using 8bit.",
+            file=sys.stderr,
+        )
+        precision = "8bit"
+    if family != "mlx" or precision == "8bit":
+        return models
+    return {mode: repo.removesuffix("-8bit") + f"-{precision}" for mode, repo in models.items()}
+
 # 12 codec frames per second: 4096 tokens is about 5.7 minutes, far above one chunk.
 QWEN3_MAX_TOKENS = 4096
 # Sampling temperature for a cloned voice (the models' default is 0.9). Lower keeps every line
@@ -221,7 +242,7 @@ def downloads_for(backend: str, engines: list[str]) -> list[tuple[str, list[str]
     if "kokoro" in engines:
         repos.append((KOKORO_MODELS[family], None))
     if "qwen3" in engines:
-        repos.extend((repo, None) for repo in QWEN3_MODELS[family].values())
+        repos.extend((repo, None) for repo in qwen3_models(family).values())
     repos.extend(stt.model_downloads(asr_hardware(backend), engines))
     return repos
 
@@ -487,7 +508,7 @@ class Engines:
         mode = "clone" if ref_audio else "custom" if voice else "design"
         if mode == "design" and not instruct:
             raise ValueError("Qwen3 needs a voice, a voice description or reference audio")
-        repo = QWEN3_MODELS[model_family(self.backend)][mode]
+        repo = qwen3_models(model_family(self.backend))[mode]
 
         if self.backend == "mlx":
             from mlx_audio.utils import load_model
