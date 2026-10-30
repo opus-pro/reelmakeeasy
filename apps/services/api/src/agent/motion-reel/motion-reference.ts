@@ -1,14 +1,19 @@
 import fs from 'node:fs'
+import os from 'node:os'
 import path from 'node:path'
 
+import { Logger } from '@reelmakeeasy/common/logger'
 import { alignmentReport, analyseBeatGrid } from '@reelmakeeasy/common/motion-reel/beat-grid'
 import { decodeAudioMono } from '@reelmakeeasy/common/motion-reel/decode-audio'
 import type { MotionReelReference } from '@reelmakeeasy/common/motion-reel/reel-config'
+import { ensureError } from '@reelmakeeasy/common/utils/error-handler'
 import { normalizeBrandUrl } from '@reelmakeeasy/common/utils/normalize-brand-url'
 import { validateOutboundUrl } from '@reelmakeeasy/common/utils/outbound-url'
 import { chromium } from 'playwright'
 
 import { motionReelDir, run, runtimeDir } from './motion-runtime'
+
+const logger = new Logger('MotionReference')
 
 /** Where a reel's reference files go: under `public/` so a scene may show a website's screenshots. */
 export const REFERENCE_DIR = path.join('public', 'reference')
@@ -249,10 +254,24 @@ function median(values: number[]): number {
     : ((sorted[mid - 1] as number) + (sorted[mid] as number)) / 2
 }
 
+/**
+ * Where the browser runs from on macOS: a copy of it per browser version, outside the data folder.
+ * macOS stops a browser kept in Documents, Desktop or iCloud Drive from reading its own folder when
+ * the Remotion CLI starts it, so every full render failed there (`icudtl.dat not found in bundle`).
+ */
+export function browserCopiesDir(): string {
+  const cache = process.env['XDG_CACHE_HOME'] || path.join(os.homedir(), '.cache')
+  return path.join(cache, 'reelmakeeasy', 'chrome-headless-shell')
+}
+
 /** The headless browser Remotion downloaded into the runtime (the same one that renders):
  *  `node_modules/.remotion/chrome-headless-shell/<platform>/<folder>/chrome-headless-shell`, beside
- *  a `VERSION` file. Undefined when it isn't there. */
-export function remotionBrowserPath(root: string = runtimeDir()): string | undefined {
+ *  a `VERSION` file. Undefined when it isn't there. With `copies` (on macOS), it is that browser in
+ *  its copy there (see `browserCopiesDir`). */
+export function remotionBrowserPath(
+  root: string = runtimeDir(),
+  copies: null | string = process.platform === 'darwin' ? browserCopiesDir() : null,
+): string | undefined {
   const base = path.join(root, 'node_modules', '.remotion', 'chrome-headless-shell')
   const dirs = (dir: string) =>
     fs.existsSync(dir)
@@ -264,10 +283,53 @@ export function remotionBrowserPath(root: string = runtimeDir()): string | undef
   for (const folder of dirs(base).flatMap(dirs)) {
     for (const name of ['chrome-headless-shell', 'chrome-headless-shell.exe']) {
       const file = path.join(folder, name)
-      if (fs.existsSync(file)) return file
+      if (fs.existsSync(file)) return copies ? inCopy(base, file, copies) : file
     }
   }
   return undefined
+}
+
+/**
+ * `file` of the runtime's browser folder `base`, in the copy of that folder for its version under
+ * `copies`, made on first use (a clone on APFS, so it costs no disk space at first). `file` as it
+ * is when the runtime already links to a copy there, or when copying fails.
+ */
+function inCopy(base: string, file: string, copies: string): string {
+  try {
+    const real = fs.realpathSync(base)
+    if (fs.existsSync(copies)) {
+      const inside = path.relative(fs.realpathSync(copies), real)
+      if (inside && !inside.startsWith('..') && !path.isAbsolute(inside)) return file
+    }
+    const version = fs.readFileSync(path.join(base, 'VERSION'), 'utf8').trim()
+    if (!/^[\w.-]+$/.test(version) || version.startsWith('.')) {
+      throw new Error(`unexpected browser version "${version}"`)
+    }
+    const copy = path.join(copies, version)
+    if (!fs.existsSync(copy)) {
+      const partial = `${copy}.${process.pid}.partial`
+      fs.rmSync(partial, { force: true, recursive: true })
+      fs.mkdirSync(copies, { recursive: true })
+      fs.cpSync(real, partial, {
+        mode: fs.constants.COPYFILE_FICLONE,
+        preserveTimestamps: true,
+        recursive: true,
+      })
+      try {
+        fs.renameSync(partial, copy)
+      } catch (error) {
+        // Another ReelMakeEasy on this computer made the same copy first.
+        fs.rmSync(partial, { force: true, recursive: true })
+        if (!fs.existsSync(copy)) throw error
+      }
+    }
+    return path.join(copy, path.relative(base, file))
+  } catch (error) {
+    logger.warn(
+      `The browser runs from the runtime: copying it failed (${ensureError(error).message})`,
+    )
+    return file
+  }
 }
 
 const YT_DLP_ASSET: Partial<Record<string, string>> = {
