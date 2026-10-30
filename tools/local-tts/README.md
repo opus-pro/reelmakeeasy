@@ -12,6 +12,8 @@ Setup detects the hardware and picks a backend:
 | NVIDIA GPU (Windows or Linux) | `cuda` (PyTorch, [qwen-tts](https://pypi.org/project/qwen-tts/) and [kokoro](https://pypi.org/project/kokoro/)) | Kokoro, Qwen3-TTS | `hexgrad/Kokoro-82M`, `Qwen/Qwen3-TTS-12Hz-1.7B-{CustomVoice,VoiceDesign,Base}` | ~14 GB |
 | Anything else | `cpu` | Kokoro | `hexgrad/Kokoro-82M` | ~0.4 GB |
 
+On a Mac, `LOCAL_TTS_QWEN3_PRECISION=bf16` in `.env` swaps the 8-bit Qwen3 models for the full-precision `-bf16` ones. They speak more clearly, with fewer wobbles and slurred words, and are bigger: about 4.2 GB each to download, instead of 2.9 GB. Run setup again after changing it to download them.
+
 Qwen3 also needs enough memory, so setup and the server both check before using it (limits in [`hardware.json`](hardware.json)):
 
 | Machine | Qwen3 minimum | Recommended |

@@ -88,6 +88,19 @@ class EngineChoiceTest(unittest.TestCase):
                 ["mlx-community/whisper-large-v3-turbo-asr-8bit"],
             )
 
+    def test_qwen3_precision_picks_the_mlx_build(self):
+        def clone(backend, precision=None):
+            env = {"LOCAL_TTS_QWEN3_PRECISION": precision} if precision else {}
+            with mock.patch.dict(os.environ, env, clear=True):
+                return [r for r, _ in local_tts.downloads_for(backend, ["qwen3"]) if "Base" in r]
+
+        self.assertEqual(clone("mlx"), ["mlx-community/Qwen3-TTS-12Hz-1.7B-Base-8bit"])
+        self.assertEqual(clone("mlx", "bf16"), ["mlx-community/Qwen3-TTS-12Hz-1.7B-Base-bf16"])
+        # The CUDA and CPU builds are full precision already; a wrong value keeps 8bit.
+        self.assertEqual(clone("cuda", "bf16"), ["Qwen/Qwen3-TTS-12Hz-1.7B-Base"])
+        with mock.patch("sys.stderr"):
+            self.assertEqual(clone("mlx", "16"), ["mlx-community/Qwen3-TTS-12Hz-1.7B-Base-8bit"])
+
     def test_download_skips_local_folders(self):
         calls = []
         fake_hub = mock.MagicMock()
