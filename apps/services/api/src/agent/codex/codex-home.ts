@@ -113,8 +113,10 @@ export function syncAgentSkills(home: string): void {
  * and ReelMakeEasy's (`reelmakeeasy-camera`, `reelmakeeasy-beat-loop`), rewritten here
  * on every start.
  * `auth.json` is a symlink to the user's, so the ChatGPT login and its token
- * refreshes stay shared. A regular file there means Codex replaced the link;
- * it holds a working login, so it is left alone.
+ * refreshes stay shared. Where symlinks aren't allowed (Windows without admin
+ * rights or Developer Mode) it is a hard link to it instead, the same file, or a
+ * copy across drives. A regular file there that isn't the user's means Codex
+ * replaced the link; it holds a working login, so it is left alone.
  */
 export function ensureAgentCodexHome(
   opts: { home?: string; userHome?: string; warn?: (msg: string) => void } = {},
@@ -132,11 +134,34 @@ export function ensureAgentCodexHome(
     stat = null
   }
   if (stat && !stat.isSymbolicLink()) {
-    opts.warn?.(`${link} is a regular file, not a link to ${target}; leaving it in place`)
+    if (!sameFile(link, target))
+      opts.warn?.(`${link} is a regular file, not a link to ${target}; leaving it in place`)
     return home
   }
   if (stat && fs.readlinkSync(link) === target) return home
   if (stat) fs.unlinkSync(link)
-  fs.symlinkSync(target, link)
+  try {
+    fs.symlinkSync(target, link)
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== 'EPERM') throw error
+    // Not signed in yet: nothing to link, so a later start does it.
+    if (!fs.existsSync(target)) return home
+    try {
+      fs.linkSync(target, link)
+    } catch {
+      fs.copyFileSync(target, link)
+    }
+    opts.warn?.(`Can't symlink ${link} to ${target} here; linked or copied it instead`)
+  }
   return home
+}
+
+/** Whether `a` and `b` are one file (a hard link). */
+function sameFile(a: string, b: string): boolean {
+  try {
+    const [x, y] = [fs.statSync(a, { bigint: true }), fs.statSync(b, { bigint: true })]
+    return x.ino === y.ino && x.dev === y.dev
+  } catch {
+    return false
+  }
 }

@@ -70,7 +70,7 @@ ReelMakeEasy needs two things: an AI that **writes and plans** the video, and a 
 
 ### What you need
 
-- **Node.js 22+** and **pnpm** (`corepack enable`)
+- **Node.js 22+** and **pnpm** (`corepack enable`; on Windows, `npm i -g pnpm` if that fails with EPERM)
 - **FFmpeg 7+** on your `PATH` (`brew install ffmpeg`, `apt install ffmpeg`)
 - **MongoDB** needs no install: it's embedded unless you point to your own.
 - **One video key**: `FAL_KEY` (recommended) or `GEMINI_API_KEY`. Either makes complete videos; with both, you pick on the Setup page.

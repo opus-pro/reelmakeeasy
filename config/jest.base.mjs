@@ -6,7 +6,7 @@ import { fileURLToPath } from 'node:url'
 
 const projectRootDir = join(dirname(fileURLToPath(import.meta.url)), '..')
 // resolve the absolute path of given module
-const require = createRequire(join(import.meta.url))
+const require = createRequire(import.meta.url)
 
 const defaultTsJestOptions =
   /** @type {import('ts-jest').TsJestTransformerOptions & Record<string, unknown>} */ ({

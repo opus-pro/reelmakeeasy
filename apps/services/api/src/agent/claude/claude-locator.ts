@@ -4,23 +4,35 @@ import path from 'node:path'
 
 import type { HarnessStatus } from '@shared/types/api/agent'
 
-import type { LocatorDeps, RunFn } from '../codex/codex-locator'
+import {
+  commandFile,
+  type LocatorDeps,
+  pathDirs,
+  pathFor,
+  type RunFn,
+} from '../codex/codex-locator'
 
 import { scrubClaudeEnv } from './claude-config'
 
-/** CLAUDE_BIN, then `claude` on PATH, then the native installer's locations. */
-export function findClaudeBinary({ env, exists }: LocatorDeps): null | string {
+/** CLAUDE_BIN, then `claude` on PATH, then the native installer's locations (in USERPROFILE on
+ *  Windows, which sets no HOME outside Git Bash). */
+export function findClaudeBinary({
+  env,
+  exists,
+  platform = process.platform,
+}: LocatorDeps): null | string {
   const override = env['CLAUDE_BIN']?.trim()
   if (override) return exists(override) ? override : null
-  for (const dir of (env['PATH'] ?? '').split(path.delimiter).filter(Boolean)) {
-    const candidate = path.join(dir, 'claude')
+  const { join } = pathFor(platform)
+  const file = commandFile('claude', platform)
+  for (const dir of pathDirs(env, platform)) {
+    const candidate = join(dir, file)
     if (exists(candidate)) return candidate
   }
-  const home = env['HOME']
+  const home = (platform === 'win32' && env['USERPROFILE']) || env['HOME']
   if (!home) return null
   return (
-    [path.join(home, '.claude/local/claude'), path.join(home, '.local/bin/claude')].find(exists) ??
-    null
+    [join(home, '.claude', 'local', file), join(home, '.local', 'bin', file)].find(exists) ?? null
   )
 }
 

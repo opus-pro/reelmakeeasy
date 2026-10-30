@@ -84,8 +84,9 @@ describe('starting ReelMakeEasy', () => {
       readme.indexOf('## Quick start'),
       readme.indexOf('## How it works'),
     )
-    const commands = quickStart.match(/```bash\n([\s\S]*?)```/)?.[1] ?? ''
-    assert.match(commands.trim().split('\n').at(-1), /^pnpm reelmakeeasy start /)
+    // \r?: Git for Windows checks text files out with CRLF line endings by default.
+    const commands = quickStart.match(/```bash\r?\n([\s\S]*?)```/)?.[1] ?? ''
+    assert.match(commands.trim().split(/\r?\n/).at(-1), /^pnpm reelmakeeasy start /)
     assert.doesNotMatch(commands, /^pnpm dev/m)
   })
 })

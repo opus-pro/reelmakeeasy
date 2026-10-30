@@ -108,6 +108,16 @@ class EngineChoiceTest(unittest.TestCase):
             [{"repo_id": "facebook/wav2vec2-base-960h", "allow_patterns": stt.WAV2VEC2_FILES}],
         )
 
+    def test_download_copies_instead_of_symlinking_on_windows(self):
+        fake_hub = mock.MagicMock()
+        fake_hub.file_download.are_symlinks_supported.return_value = True
+        with mock.patch.dict(sys.modules, {"huggingface_hub": fake_hub}):
+            local_tts.copy_instead_of_symlinks("posix")
+            self.assertTrue(fake_hub.file_download.are_symlinks_supported("cache"))
+            local_tts.copy_instead_of_symlinks("nt")
+            self.assertFalse(fake_hub.file_download.are_symlinks_supported("cache"))
+            self.assertFalse(fake_hub.file_download.are_symlinks_supported())
+
 
 def quiet(test: unittest.TestCase):
     """Hides the server's log lines for the rest of the test."""
