@@ -33,8 +33,9 @@ overrides:
   axios: ^1.20.0 # CVE-2026-101898/-101901/-101903/-101905/-101906/-101907/-101909 (2026-10-02 sweep)
   # GHSA (2026-07-20, LOW): body-parser DoS when an invalid limit silently disables
   # size enforcement. Same-major bumps, transitive via express 4.x/5.x.
-  'body-parser@^1': 1.20.6
-  'body-parser@^2': 2.3.0
+  # + 2026-11-10 sweep (HIGH): 1.20.9 / 2.4.0.
+  'body-parser@^1': 1.20.9
+  'body-parser@^2': 2.4.0
   '@types/express': 4.17.25
   '@types/express-serve-static-core': 4.19.7
   rxjs: 7.8.2
@@ -103,7 +104,7 @@ overrides:
   # (non-breaking).
   'undici@^7': 7.29.1 # CVE-2026-13697 (2026-09-14 sweep); GHSA-vxpw-j846-p89q +6 (HIGH); + CVE-2026-19534 / -84961 (2026-10-02 sweep)
   'qs@^6': 6.16.0 # GHSA-q8mj-m7cp-5q26 (MEDIUM): prototype pollution / DoS; + 2026-10-15 sweep
-  'follow-redirects@^1': 1.16.1 # GHSA-r4q5-vmmm-2653 (MEDIUM): info leak; + CVE-2026-111755 / -111756 (HIGH, 2026-10-23 sweep)
+  'follow-redirects@^1': 1.16.2 # GHSA-r4q5-vmmm-2653 (MEDIUM): info leak; + CVE-2026-111755 / -111756 (HIGH, 2026-10-23 sweep); + 2026-11-10 sweep
   # CVE-2026-111767 / -111768 (HIGH, 2026-10-23 sweep): fixed in 1.32.0. Same major; transitive
   # (auto-installed peer of @anthropic-ai/claude-agent-sdk).
   '@modelcontextprotocol/sdk@^1': 1.32.0
@@ -128,7 +129,8 @@ overrides:
   # CVE-2026-77037 / -77078 / -82333 (2026-09-14 sweep, fixes-only release);
   # GHSA-72gw-mp4g-v24j (HIGH): forces the @nestjs/platform-express 2.1.1 copy.
   # + 2026-10-15 sweep: 2.4.0 (direct dep bumped too).
-  'multer@^2': 2.4.0
+  # + 2026-11-10 sweep: 2.5.0 (direct dep bumped too).
+  'multer@^2': 2.5.0
   'adm-zip@<0.6.1': 0.6.1 # GHSA-xcpc-8h2w-3j85 (HIGH): forces the @module-federation/dts-plugin 0.5.16 copy
   # 2026-09-14 sweep (Trivy 0.72, HIGH): same-major floors for transitive copies with no
   # override yet. deepmerge-ts 7->8 (pinned exactly by @prisma/config) and the
